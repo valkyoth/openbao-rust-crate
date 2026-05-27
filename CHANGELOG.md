@@ -14,6 +14,8 @@ All notable changes to this project are documented here.
   metadata, and backend config helpers.
 - System mount and auth mount list, enable, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
+- ACL policy list, read, write, delete, and prefix-list helpers.
+- Self, token, and token-accessor capability query helpers.
 - Podman-backed real OpenBao integration test for the default `0.2.0`
   feature flow.
 

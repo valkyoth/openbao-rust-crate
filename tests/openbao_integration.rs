@@ -72,16 +72,19 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     let kv1_mount = format!("obrs-kv1-{suffix}");
     let kv2_mount = format!("obrs-kv2-{suffix}");
     let auth_mount = format!("obrs-auth-{suffix}");
+    let policy_name = format!("obrs-policy-{suffix}");
 
     let _ = client.sys().disable_mount(&kv1_mount).await;
     let _ = client.sys().disable_mount(&kv2_mount).await;
     let _ = client.sys().disable_auth_method(&auth_mount).await;
+    let _ = client.sys().delete_policy(&policy_name).await;
 
-    let result = run_flow(&client, &kv1_mount, &kv2_mount, &auth_mount).await;
+    let result = run_flow(&client, &kv1_mount, &kv2_mount, &auth_mount, &policy_name).await;
 
     let _ = client.sys().disable_mount(&kv1_mount).await;
     let _ = client.sys().disable_mount(&kv2_mount).await;
     let _ = client.sys().disable_auth_method(&auth_mount).await;
+    let _ = client.sys().delete_policy(&policy_name).await;
 
     result?;
     Ok(())
@@ -92,6 +95,7 @@ async fn run_flow(
     kv1_mount: &str,
     kv2_mount: &str,
     auth_mount: &str,
+    policy_name: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let seal = client.sys().seal_status().await?;
     assert!(seal.initialized);
@@ -179,6 +183,81 @@ async fn run_flow(
 
     let token_info = client.token().lookup_self().await?;
     assert!(token_info.policies.iter().any(|policy| policy == "root"));
+
+    let capability_path = format!("{kv2_mount}/data/app/config");
+    client
+        .sys()
+        .write_policy(
+            policy_name,
+            &openbao::sys::PolicyWriteRequest {
+                policy: format!("path \"{capability_path}\" {{ capabilities = [\"read\"] }}"),
+                expiration: None,
+                ttl: Some("10m".to_owned()),
+                cas: None,
+                cas_required: None,
+            },
+        )
+        .await?;
+    assert!(
+        client
+            .sys()
+            .list_policies()
+            .await?
+            .policies
+            .iter()
+            .any(|policy| policy == policy_name)
+    );
+    assert!(
+        client
+            .sys()
+            .read_policy(policy_name)
+            .await?
+            .rules
+            .contains(&capability_path)
+    );
+
+    let self_capabilities = client
+        .sys()
+        .capabilities_self([capability_path.clone()])
+        .await?;
+    assert!(
+        self_capabilities
+            .by_path
+            .get(&capability_path)
+            .is_some_and(|capabilities| capabilities.iter().any(|capability| capability == "root"))
+    );
+
+    let child_token = client
+        .token()
+        .create(&openbao::auth::token::TokenCreateRequest {
+            policies: vec![policy_name.to_owned()],
+            ttl: Some("60s".to_owned()),
+            renewable: Some(false),
+            no_default_policy: Some(true),
+            ..Default::default()
+        })
+        .await?;
+    let token_capabilities = client
+        .sys()
+        .capabilities(&child_token.client_token, [capability_path.clone()])
+        .await?;
+    assert!(
+        token_capabilities
+            .by_path
+            .get(&capability_path)
+            .is_some_and(|capabilities| capabilities.iter().any(|capability| capability == "read"))
+    );
+    let accessor_capabilities = client
+        .sys()
+        .capabilities_accessor(&child_token.accessor, [capability_path.clone()])
+        .await?;
+    assert!(
+        accessor_capabilities
+            .by_path
+            .get(&capability_path)
+            .is_some_and(|capabilities| capabilities.iter().any(|capability| capability == "read"))
+    );
+    client.token().revoke(&child_token.client_token).await?;
 
     let wrap_info = client
         .sys()

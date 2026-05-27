@@ -344,6 +344,102 @@ async fn sys_wrapping_wrap_sends_ttl_header() {
 }
 
 #[tokio::test]
+async fn sys_policy_write_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/policy/app-read HTTP/1.1"));
+        assert!(request.contains(r#""policy":"path \"secret/*\" { capabilities = [\"read\"] }""#));
+        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    client
+        .sys()
+        .write_policy(
+            "app-read",
+            &openbao::sys::PolicyWriteRequest {
+                policy: r#"path "secret/*" { capabilities = ["read"] }"#.to_owned(),
+                expiration: None,
+                ttl: None,
+                cas: None,
+                cas_required: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_capabilities_self_sends_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/capabilities-self HTTP/1.1"));
+        assert!(request.contains(r#""paths":["secret/data/app"]"#));
+        assert!(!request.contains(r#""token":"#));
+        let body = r#"{"data":{"capabilities":["read"],"secret/data/app":["read"]}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let capabilities = client
+        .sys()
+        .capabilities_self(["secret/data/app"])
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(capabilities.capabilities, ["read"]);
+    assert_eq!(
+        capabilities.by_path.get("secret/data/app"),
+        Some(&vec!["read".to_owned()])
+    );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn redirects_are_not_followed_with_token_headers() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

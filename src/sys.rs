@@ -11,7 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     Authenticated, Client, Error, Result,
-    path::validate_mount_path,
+    path::{validate_mount_path, validate_secret_path},
     response::{Empty, ResponseEnvelope, WrapInfo},
 };
 
@@ -191,9 +191,74 @@ pub struct WrappingLookup {
     pub creation_ttl: u64,
 }
 
+/// ACL policy list response.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct PolicyList {
+    /// Policy names.
+    #[serde(default)]
+    pub policies: Vec<String>,
+}
+
+/// ACL policy read response.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct PolicyInfo {
+    /// Policy name.
+    pub name: String,
+    /// Policy document.
+    pub rules: String,
+    /// Last modification timestamp, when returned by OpenBao.
+    #[serde(default)]
+    pub modified: Option<String>,
+    /// Policy version, when returned by OpenBao.
+    #[serde(default)]
+    pub version: Option<serde_json::Value>,
+    /// Whether check-and-set is required for future updates.
+    #[serde(default)]
+    pub cas_required: bool,
+}
+
+/// ACL policy create/update request.
+#[derive(Clone, Debug, Serialize)]
+pub struct PolicyWriteRequest {
+    /// Policy document.
+    pub policy: String,
+    /// Expiration timestamp. Mutually exclusive with `ttl`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration: Option<String>,
+    /// Policy lifetime duration. Mutually exclusive with `expiration`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ttl: Option<String>,
+    /// Check-and-set version. Use `-1` for strict create.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cas: Option<i64>,
+    /// Whether check-and-set should be required by this update.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cas_required: Option<bool>,
+}
+
+/// Capabilities returned for queried OpenBao paths.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Capabilities {
+    /// Backwards-compatible capabilities field returned for single-path queries.
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+    /// Capabilities keyed by queried path.
+    #[serde(flatten)]
+    pub by_path: BTreeMap<String, Vec<String>>,
+}
+
 #[derive(Serialize)]
 struct WrappingTokenPayload<'a> {
     token: &'a str,
+}
+
+#[derive(Serialize)]
+struct CapabilitiesPayload<'a> {
+    paths: &'a [String],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    token: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    accessor: Option<&'a str>,
 }
 
 impl<State> Client<State> {
@@ -365,6 +430,121 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Lists ACL policies.
+    pub async fn list_policies(&self) -> Result<PolicyList> {
+        self.client
+            .request_json(Method::GET, "sys/policy", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Lists ACL policies below a policy prefix.
+    pub async fn list_policies_with_prefix(&self, prefix: &str) -> Result<PolicyList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.client
+            .request_json(
+                method,
+                &sys_path("sys/policy", prefix, None)?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads one ACL policy.
+    pub async fn read_policy(&self, name: &str) -> Result<PolicyInfo> {
+        self.client
+            .request_json(
+                Method::GET,
+                &sys_path("sys/policy", name, None)?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Creates or updates an ACL policy.
+    pub async fn write_policy(&self, name: &str, request: &PolicyWriteRequest) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &sys_path("sys/policy", name, None)?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Deletes an ACL policy.
+    pub async fn delete_policy(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &sys_path("sys/policy", name, None)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Queries capabilities for the caller's token.
+    pub async fn capabilities_self<I, P>(&self, paths: I) -> Result<Capabilities>
+    where
+        I: IntoIterator<Item = P>,
+        P: AsRef<str>,
+    {
+        let paths = validate_capability_paths(paths)?;
+        let payload = CapabilitiesPayload {
+            paths: &paths,
+            token: None,
+            accessor: None,
+        };
+        let envelope: ResponseEnvelope<Capabilities> = self
+            .client
+            .request_json(Method::POST, "sys/capabilities-self", Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Queries capabilities for a token value.
+    pub async fn capabilities<I, P>(&self, token: &SecretString, paths: I) -> Result<Capabilities>
+    where
+        I: IntoIterator<Item = P>,
+        P: AsRef<str>,
+    {
+        let paths = validate_capability_paths(paths)?;
+        let payload = CapabilitiesPayload {
+            paths: &paths,
+            token: Some(token.expose_secret()),
+            accessor: None,
+        };
+        let envelope: ResponseEnvelope<Capabilities> = self
+            .client
+            .request_json(Method::POST, "sys/capabilities", Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Queries capabilities for a token accessor.
+    pub async fn capabilities_accessor<I, P>(
+        &self,
+        accessor: &SecretString,
+        paths: I,
+    ) -> Result<Capabilities>
+    where
+        I: IntoIterator<Item = P>,
+        P: AsRef<str>,
+    {
+        let paths = validate_capability_paths(paths)?;
+        let payload = CapabilitiesPayload {
+            paths: &paths,
+            token: None,
+            accessor: Some(accessor.expose_secret()),
+        };
+        let envelope: ResponseEnvelope<Capabilities> = self
+            .client
+            .request_json(Method::POST, "sys/capabilities-accessor", Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Looks up a wrapping token.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
         let payload = WrappingTokenPayload {
@@ -450,6 +630,29 @@ fn sys_path(prefix: &str, mount_path: &str, suffix: Option<&str>) -> Result<Stri
     Ok(segments.join("/"))
 }
 
+fn validate_capability_paths<I, P>(paths: I) -> Result<Vec<String>>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<str>,
+{
+    let mut validated = Vec::new();
+    for path in paths {
+        let path = path.as_ref();
+        if path.trim_matches('/').is_empty() {
+            return Err(Error::InvalidPath(
+                "capability path must not be empty".into(),
+            ));
+        }
+        validated.push(validate_secret_path(path)?.join("/"));
+    }
+    if validated.is_empty() {
+        return Err(Error::InvalidPath(
+            "at least one capability path is required".into(),
+        ));
+    }
+    Ok(validated)
+}
+
 fn deserialize_null_default<'de, D, T>(deserializer: D) -> core::result::Result<T, D::Error>
 where
     D: Deserializer<'de>,
@@ -462,7 +665,7 @@ where
 mod tests {
     #![allow(clippy::panic)]
 
-    use super::sys_path;
+    use super::{sys_path, validate_capability_paths};
 
     #[test]
     fn sys_paths_are_validated() {
@@ -472,5 +675,14 @@ mod tests {
             "sys/mounts/secret/tune"
         );
         assert!(sys_path("sys/mounts", "../secret", None).is_err());
+    }
+
+    #[test]
+    fn capability_paths_are_validated() {
+        let paths = validate_capability_paths(["secret/data/app", "/sys/policy/default"])
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(paths, ["secret/data/app", "sys/policy/default"]);
+        assert!(validate_capability_paths([""]).is_err());
+        assert!(validate_capability_paths(["../secret"]).is_err());
     }
 }

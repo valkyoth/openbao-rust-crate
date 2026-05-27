@@ -85,8 +85,7 @@ history, and response wrapping.
 Support plan:
 
 - `0.1.0`: health and seal status.
-- `0.2.0`: mounts, auth mounts, and response wrapping are implemented; policies
-  and capabilities remain planned.
+- `0.2.0`: mounts, auth mounts, response wrapping, policies, and capabilities.
 - `0.3.0`: audit devices, leases, plugins catalog.
 - `0.6.0`: init, unseal, rekey, rotate with strong safety documentation.
 - `0.8.0`: metrics, quotas, namespaces, storage, diagnostic endpoints.
