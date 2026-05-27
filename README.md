@@ -48,7 +48,7 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 | Typestate auth | Yes | Separate unauthenticated and authenticated client states. |
 | HTTPS by default | Yes | Plain HTTP is rejected unless loopback HTTP is explicitly enabled. |
 | Redirect protection | Yes | Redirect following is disabled to avoid forwarding token headers. |
-| TLS floor | Yes | TLS 1.2 minimum by default; callers can require TLS 1.3. |
+| TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can explicitly opt down to TLS 1.2. |
 | Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
 | Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. |
 | Connection timeout | Yes | 5-second connection timeout by default, configurable by callers. |
@@ -161,7 +161,7 @@ async fn main() -> Result<()> {
     let client = Client::new("https://bao.example.com:8200")?.with_token(token);
 
     let secret = client
-        .kv2("secret")
+        .kv2("secret")?
         .read::<DbCredentials>("production/database")
         .await?;
 

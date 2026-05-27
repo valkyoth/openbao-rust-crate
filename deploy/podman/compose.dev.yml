@@ -6,7 +6,7 @@ networks:
 
 services:
   openbao:
-    image: docker.io/openbao/openbao:latest
+    image: docker.io/openbao/openbao:2.5.4@sha256:436eaf9778cad75507ff70ea26ace30dcbe15606e619ac3823495663d7f7c115
     container_name: openbao_rust_crate_dev
     command: ["server", "-config=/openbao/config/openbao.hcl"]
     cap_add:

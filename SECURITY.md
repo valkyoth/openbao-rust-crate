@@ -36,9 +36,10 @@ Please include:
   payloads, allowing users to wrap sensitive fields in secret types.
 - TLS verification must remain enabled by default.
 - Redirects must remain disabled by default.
-- TLS 1.2 or newer must remain enforced by default.
+- TLS 1.3 or newer must remain enforced by default; TLS 1.2 requires an explicit legacy opt-down.
 - Token accessors are treated as secret material.
-- Plain HTTP is allowed only by explicit localhost opt-in.
+- Plain HTTP is allowed only by explicit numeric loopback IP opt-in. Hostnames such as `localhost` are rejected.
+- Exact certificate or SPKI pinning is not implemented in 0.1.0; use root-only trust with a private CA when pinning would otherwise be required.
 - New dependencies require a release-plan justification and `cargo deny` review.
 
 ## Pentest Gate

@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
         })?;
     let client = Client::new("https://127.0.0.1:9940")?.with_token(token);
     let secret = client
-        .kv2("secret")
+        .kv2("secret")?
         .read::<DatabaseCredentials>("production/database")
         .await?;
 

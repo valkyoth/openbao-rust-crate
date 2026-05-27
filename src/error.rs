@@ -17,6 +17,10 @@ pub enum Error {
     InvalidHeader(String),
     /// TLS configuration is internally inconsistent.
     InvalidTlsConfig(String),
+    /// Timeout configuration is invalid.
+    InvalidTimeout(&'static str),
+    /// A crate invariant was violated.
+    Internal(&'static str),
     /// The request failed before an OpenBao response could be decoded.
     Http(reqwest::Error),
     /// A response body could not be decoded into the expected type.
@@ -45,6 +49,13 @@ impl fmt::Display for Error {
             Self::InvalidTlsConfig(message) => {
                 write!(formatter, "invalid OpenBao TLS configuration: {message}")
             }
+            Self::InvalidTimeout(message) => {
+                write!(
+                    formatter,
+                    "invalid OpenBao timeout configuration: {message}"
+                )
+            }
+            Self::Internal(message) => write!(formatter, "internal OpenBao SDK error: {message}"),
             Self::Http(error) => write!(formatter, "OpenBao HTTP error: {error}"),
             Self::Decode(error) => write!(formatter, "OpenBao decode error: {error}"),
             Self::Api { status, errors } if errors.is_empty() => {
@@ -54,7 +65,11 @@ impl fmt::Display for Error {
                 write!(
                     formatter,
                     "OpenBao API returned {status}: {}",
-                    errors.join("; ")
+                    errors
+                        .iter()
+                        .map(|error| sanitize_api_error(error))
+                        .collect::<Vec<_>>()
+                        .join("; ")
                 )
             }
             Self::MissingField(field) => {
@@ -66,6 +81,14 @@ impl fmt::Display for Error {
             ),
         }
     }
+}
+
+fn sanitize_api_error(error: &str) -> String {
+    error
+        .chars()
+        .filter(|character| !character.is_control())
+        .take(512)
+        .collect()
 }
 
 impl std::error::Error for Error {
@@ -80,5 +103,25 @@ impl std::error::Error for Error {
 impl From<reqwest::Error> for Error {
     fn from(error: reqwest::Error) -> Self {
         Self::Http(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use reqwest::StatusCode;
+
+    use super::Error;
+
+    #[test]
+    fn display_sanitizes_api_errors() {
+        let error = Error::Api {
+            status: StatusCode::BAD_REQUEST,
+            errors: vec![format!("bad\nmessage\r{}", "x".repeat(600))],
+        };
+
+        let message = error.to_string();
+        assert!(!message.contains('\n'));
+        assert!(!message.contains('\r'));
+        assert!(message.len() < 600);
     }
 }

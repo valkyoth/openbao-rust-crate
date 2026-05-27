@@ -79,11 +79,13 @@ struct Kv2WritePayload<T> {
 
 impl Client<Authenticated> {
     /// Uses the KV v2 engine mounted at `mount`.
-    pub fn kv2(&self, mount: impl Into<String>) -> Kv2<'_> {
-        Kv2 {
+    pub fn kv2(&self, mount: impl Into<String>) -> Result<Kv2<'_>> {
+        let mount = mount.into();
+        let mount = validate_mount_path(&mount)?.join("/");
+        Ok(Kv2 {
             client: self,
-            mount: mount.into(),
-        }
+            mount,
+        })
     }
 }
 
@@ -179,8 +181,21 @@ mod tests {
         let client = Client::from_config(config)
             .unwrap_or_else(|error| panic!("{error}"))
             .with_token(SecretString::from("token"));
-        let kv = client.kv2("secret");
+        let kv = client
+            .kv2("secret")
+            .unwrap_or_else(|error| panic!("{error}"));
         assert!(kv.data_path("app/config").is_ok());
         assert!(kv.data_path("../config").is_err());
+    }
+
+    #[test]
+    fn kv2_validates_mount_at_construction() {
+        let config = OpenBaoConfig::new("http://127.0.0.1:8200")
+            .and_then(OpenBaoConfig::allow_localhost_http)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_token(SecretString::from("token"));
+        assert!(client.kv2("../secret").is_err());
     }
 }

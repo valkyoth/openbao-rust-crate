@@ -78,10 +78,8 @@ impl<State> Sys<'_, State> {
                     StatusCode::TOO_MANY_REQUESTS,
                     StatusCode::NOT_IMPLEMENTED,
                     StatusCode::SERVICE_UNAVAILABLE,
-                    StatusCode::from_u16(472)
-                        .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?,
-                    StatusCode::from_u16(473)
-                        .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?,
+                    openbao_status(472)?,
+                    openbao_status(473)?,
                 ],
             )
             .await
@@ -93,4 +91,9 @@ impl<State> Sys<'_, State> {
             .request_json(Method::GET, "sys/seal-status", Option::<&Empty>::None)
             .await
     }
+}
+
+fn openbao_status(code: u16) -> Result<StatusCode> {
+    StatusCode::from_u16(code)
+        .map_err(|_| crate::Error::Internal("invalid OpenBao health status code"))
 }

@@ -2,7 +2,6 @@
 
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroizing;
 
 use crate::{Authenticated, Client, Error, Result, Unauthenticated, path::validate_mount_path};
 
@@ -143,8 +142,7 @@ fn split_login_auth(auth: LoginAuth) -> (SecretString, LoginMetadata) {
 }
 
 fn secret_from_string(value: String) -> SecretString {
-    let value = Zeroizing::new(value);
-    SecretString::from(value.as_str())
+    SecretString::from(value)
 }
 
 impl Client<Unauthenticated> {

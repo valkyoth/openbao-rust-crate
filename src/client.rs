@@ -18,6 +18,8 @@ use crate::{
     response::ErrorEnvelope,
 };
 
+const MAX_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
+
 /// Marker state for clients that do not yet have an authentication token.
 #[derive(Clone, Copy, Debug)]
 pub struct Unauthenticated;
@@ -34,7 +36,7 @@ pub type OpenBao<State = Unauthenticated> = Client<State>;
 pub enum HttpPolicy {
     /// Require `https://` for all OpenBao endpoints.
     HttpsOnly,
-    /// Permit `http://127.0.0.1`, `http://[::1]`, and `http://localhost`.
+    /// Permit plain HTTP only for numeric loopback IPs such as `127.0.0.1` and `[::1]`.
     LocalhostHttpAllowed,
 }
 
@@ -86,13 +88,16 @@ impl OpenBaoConfig {
             namespace: None,
             http_policy: HttpPolicy::HttpsOnly,
             header_mode: HeaderMode::VaultToken,
-            min_tls_version: tls::Version::TLS_1_2,
+            min_tls_version: tls::Version::TLS_1_3,
             root_certificates: Vec::new(),
             root_certificate_mode: RootCertificateMode::MergeWithSystem,
         })
     }
 
-    /// Allows plain HTTP only for loopback development and tests.
+    /// Allows plain HTTP only for numeric loopback IP development and tests.
+    ///
+    /// Hostnames such as `localhost` are intentionally rejected to avoid DNS,
+    /// hosts-file, and proxy ambiguity.
     pub fn allow_localhost_http(mut self) -> Result<Self> {
         self.http_policy = HttpPolicy::LocalhostHttpAllowed;
         self.validate()?;
@@ -100,15 +105,21 @@ impl OpenBaoConfig {
     }
 
     /// Sets a request timeout.
-    pub fn timeout(mut self, timeout: Duration) -> Self {
+    pub fn timeout(mut self, timeout: Duration) -> Result<Self> {
+        if timeout.is_zero() {
+            return Err(Error::InvalidTimeout("request timeout must be non-zero"));
+        }
         self.timeout = timeout;
-        self
+        Ok(self)
     }
 
     /// Sets the TCP/TLS connection establishment timeout.
-    pub fn connect_timeout(mut self, timeout: Duration) -> Self {
+    pub fn connect_timeout(mut self, timeout: Duration) -> Result<Self> {
+        if timeout.is_zero() {
+            return Err(Error::InvalidTimeout("connect timeout must be non-zero"));
+        }
         self.connect_timeout = timeout;
-        self
+        Ok(self)
     }
 
     /// Sets the user agent sent to OpenBao.
@@ -131,10 +142,15 @@ impl OpenBaoConfig {
 
     /// Sets the minimum TLS protocol version.
     ///
-    /// The default is TLS 1.2. High-assurance deployments can set TLS 1.3.
+    /// The default is TLS 1.3. Use [`Self::min_tls_12`] only for audited legacy servers.
     pub fn min_tls_version(mut self, version: tls::Version) -> Self {
         self.min_tls_version = version;
         self
+    }
+
+    /// Explicitly permits TLS 1.2 for legacy OpenBao deployments.
+    pub fn min_tls_12(self) -> Self {
+        self.min_tls_version(tls::Version::TLS_1_2)
     }
 
     /// Adds a trusted root certificate while keeping platform/built-in roots.
@@ -166,7 +182,7 @@ impl OpenBaoConfig {
                 Ok(())
             }
             "http" => Err(Error::InvalidBaseUrl(
-                "plain HTTP is only allowed for explicit localhost development".into(),
+                "plain HTTP is only allowed for explicit numeric loopback development".into(),
             )),
             scheme => Err(Error::InvalidBaseUrl(format!(
                 "unsupported URL scheme `{scheme}`"
@@ -336,19 +352,19 @@ impl<State> Client<State> {
             };
         }
         if let Some(payload) = body {
-            let encoded = Zeroizing::new(
-                serde_json::to_vec(payload).map_err(|error| Error::Decode(error.to_string()))?,
-            );
+            let encoded =
+                serde_json::to_vec(payload).map_err(|error| Error::Decode(error.to_string()))?;
+            // Move the only owned JSON buffer we control into reqwest. The HTTP
+            // stack and OS may still keep their own transport buffers.
             request = request
                 .header(CONTENT_TYPE, "application/json")
-                .body(encoded.as_slice().to_vec());
+                .body(encoded);
         }
 
         let response = request.send().await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            let error = response
-                .json::<ErrorEnvelope>()
+            let error = read_json_response::<ErrorEnvelope>(response)
                 .await
                 .map(|envelope| envelope.errors)
                 .unwrap_or_default();
@@ -360,7 +376,7 @@ impl<State> Client<State> {
         if status == StatusCode::NO_CONTENT {
             return serde_json::from_str("{}").map_err(|error| Error::Decode(error.to_string()));
         }
-        response.json::<T>().await.map_err(Error::Http)
+        read_json_response(response).await
     }
 
     pub(crate) fn url_for_path(&self, path: &str) -> Result<Url> {
@@ -391,10 +407,35 @@ impl<State> fmt::Debug for Client<State> {
 
 fn is_loopback_url(url: &Url) -> bool {
     match url.host_str() {
-        Some("localhost") => true,
         Some(host) => host.parse::<IpAddr>().is_ok_and(|addr| addr.is_loopback()),
         None => false,
     }
+}
+
+async fn read_json_response<T>(mut response: reqwest::Response) -> Result<T>
+where
+    T: DeserializeOwned,
+{
+    if response
+        .content_length()
+        .is_some_and(|length| length > MAX_RESPONSE_BYTES as u64)
+    {
+        return Err(Error::Decode(
+            "OpenBao response exceeds 32 MiB limit".into(),
+        ));
+    }
+
+    let mut body = Vec::new();
+    while let Some(chunk) = response.chunk().await? {
+        if body.len().saturating_add(chunk.len()) > MAX_RESPONSE_BYTES {
+            return Err(Error::Decode(
+                "OpenBao response exceeds 32 MiB limit".into(),
+            ));
+        }
+        body.extend_from_slice(&chunk);
+    }
+
+    serde_json::from_slice(&body).map_err(|error| Error::Decode(error.to_string()))
 }
 
 fn sensitive_header_value(value: &str) -> Result<HeaderValue> {
@@ -431,6 +472,24 @@ mod tests {
             .and_then(OpenBaoConfig::allow_localhost_http)
             .unwrap_or_else(|error| panic!("{error}"));
         assert!(Client::from_config(config).is_ok());
+    }
+
+    #[test]
+    fn rejects_localhost_hostname_for_local_http() {
+        let result = OpenBaoConfig::new("http://localhost:8200")
+            .and_then(OpenBaoConfig::allow_localhost_http);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_zero_timeouts() {
+        let result = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.timeout(core::time::Duration::ZERO));
+        assert!(result.is_err());
+
+        let result = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.connect_timeout(core::time::Duration::ZERO));
+        assert!(result.is_err());
     }
 
     #[test]
