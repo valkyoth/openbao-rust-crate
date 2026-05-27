@@ -25,7 +25,7 @@
   deleted before commit and ignored by `.gitignore`
 - `cargo audit` result: passed, no vulnerabilities reported
 - `cargo deny check` result: passed with duplicate transitive crate warnings from the all-feature TLS graph
-- CodeQL result: pending
+- CodeQL result: pending through GitHub default setup
 - Podman OpenBao integration result: pending
 - SBOM generation result: passed, generated `target/sbom/openbao.cdx.json`
 

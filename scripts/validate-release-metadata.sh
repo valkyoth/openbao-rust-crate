@@ -14,7 +14,6 @@ test -f docs/RELEASE_PLAN.md
 test -f docs/OPENBAO_API_COVERAGE.md
 test -f release-notes/RELEASE_NOTES_0.1.0.md
 test -f .github/workflows/ci.yml
-test -f .github/workflows/codeql.yml
 
 grep -q 'name = "openbao"' Cargo.toml
 grep -q 'version = "0.1.0"' Cargo.toml

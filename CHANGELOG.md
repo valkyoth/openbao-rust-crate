@@ -14,7 +14,8 @@ All notable changes to this project are documented here.
 - System health and seal-status helpers.
 - Raw JSON request escape hatch for unsupported endpoints.
 - Local TLS OpenBao development instance on ports `9940` and `9941`.
-- CI, CodeQL, dependency review, release gates, and security documentation.
+- CI, GitHub CodeQL default setup compatibility, dependency review, release
+  gates, and security documentation.
 
 ### Security
 

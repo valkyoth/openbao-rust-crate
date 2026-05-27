@@ -34,7 +34,7 @@ authentication, AppRole login, KV v2 read/write/list/delete helpers, system
 health and seal-status helpers, a raw JSON request layer for unsupported
 endpoints, a hardened local OpenBao dev instance, and a release process gated by
 formatting, clippy, tests, docs, `cargo audit`, `cargo deny`, SBOM generation,
-CodeQL, and pentest review.
+GitHub CodeQL default setup, and pentest review.
 
 OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 
@@ -110,7 +110,7 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 | Path validation | Yes | Rejects traversal, query/fragment injection, empty segments, control characters, and trailing periods. |
 | Dependency policy | Yes | `cargo deny` enforces source and license policy. |
 | RustSec audit | Yes | `cargo audit` is part of the release gate. |
-| CodeQL | Yes | GitHub workflow included. |
+| CodeQL | Yes | Uses GitHub CodeQL default setup; no advanced workflow is committed. |
 | SBOM | Yes | `scripts/generate-sbom.sh` writes CycloneDX JSON. |
 | Pentest gate | Yes | Release notes record pentest review status before tagging. |
 | Local OpenBao dev stack | Yes | Podman TLS dev instance on `9940` and `9941`. |
@@ -127,8 +127,8 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 - **Small dependency surface**: keeps runtime dependencies narrow and reviewed.
 - **Typed where it matters**: safe typed helpers for common workflows, with a raw
   JSON escape hatch while coverage grows.
-- **Release discipline**: security checks, SBOM, CodeQL, and pentest review are
-  treated as release inputs, not afterthoughts.
+- **Release discipline**: security checks, SBOM, GitHub CodeQL default setup,
+  and pentest review are treated as release inputs, not afterthoughts.
 
 ## Quick Start
 
