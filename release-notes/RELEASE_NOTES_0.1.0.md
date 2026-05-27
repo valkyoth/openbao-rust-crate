@@ -20,7 +20,7 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_1_gate.sh`
-- Result: local pre-pentest gate passed on 2026-05-27
+- Result: local release gate passed on 2026-05-27 after pentest remediations
 - Pentest report: local `PENTEST.md` reviewed on 2026-05-27; report source
   deleted before commit and ignored by `.gitignore`
 - `cargo audit` result: passed, no vulnerabilities reported

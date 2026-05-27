@@ -19,6 +19,8 @@ use crate::{
 };
 
 const MAX_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
+const MAX_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
+const MAX_CONNECT_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// Marker state for clients that do not yet have an authentication token.
 #[derive(Clone, Copy, Debug)]
@@ -109,6 +111,11 @@ impl OpenBaoConfig {
         if timeout.is_zero() {
             return Err(Error::InvalidTimeout("request timeout must be non-zero"));
         }
+        if timeout > MAX_REQUEST_TIMEOUT {
+            return Err(Error::InvalidTimeout(
+                "request timeout exceeds maximum allowed value",
+            ));
+        }
         self.timeout = timeout;
         Ok(self)
     }
@@ -117,6 +124,11 @@ impl OpenBaoConfig {
     pub fn connect_timeout(mut self, timeout: Duration) -> Result<Self> {
         if timeout.is_zero() {
             return Err(Error::InvalidTimeout("connect timeout must be non-zero"));
+        }
+        if timeout > MAX_CONNECT_TIMEOUT {
+            return Err(Error::InvalidTimeout(
+                "connect timeout exceeds maximum allowed value",
+            ));
         }
         self.connect_timeout = timeout;
         Ok(self)
@@ -199,7 +211,7 @@ impl fmt::Debug for OpenBaoConfig {
             .field("timeout", &self.timeout)
             .field("connect_timeout", &self.connect_timeout)
             .field("user_agent", &self.user_agent)
-            .field("namespace", &self.namespace)
+            .field("has_namespace", &self.namespace.is_some())
             .field("http_policy", &self.http_policy)
             .field("header_mode", &self.header_mode)
             .field("min_tls_version", &self.min_tls_version)
@@ -416,6 +428,8 @@ async fn read_json_response<T>(mut response: reqwest::Response) -> Result<T>
 where
     T: DeserializeOwned,
 {
+    validate_json_content_type(&response)?;
+
     if response
         .content_length()
         .is_some_and(|length| length > MAX_RESPONSE_BYTES as u64)
@@ -425,7 +439,7 @@ where
         ));
     }
 
-    let mut body = Vec::new();
+    let mut body = Zeroizing::new(Vec::new());
     while let Some(chunk) = response.chunk().await? {
         if body.len().saturating_add(chunk.len()) > MAX_RESPONSE_BYTES {
             return Err(Error::Decode(
@@ -436,6 +450,25 @@ where
     }
 
     serde_json::from_slice(&body).map_err(|error| Error::Decode(error.to_string()))
+}
+
+fn validate_json_content_type(response: &reqwest::Response) -> Result<()> {
+    let Some(content_type) = response.headers().get(reqwest::header::CONTENT_TYPE) else {
+        return Ok(());
+    };
+    let content_type = content_type
+        .to_str()
+        .map_err(|error| Error::Decode(format!("invalid content-type header: {error}")))?;
+    if !content_type
+        .split(';')
+        .next()
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("application/json"))
+    {
+        return Err(Error::Decode(
+            "unexpected content-type: expected application/json".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn sensitive_header_value(value: &str) -> Result<HeaderValue> {
@@ -493,6 +526,17 @@ mod tests {
     }
 
     #[test]
+    fn rejects_excessive_timeouts() {
+        let result = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.timeout(core::time::Duration::from_secs(301)));
+        assert!(result.is_err());
+
+        let result = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.connect_timeout(core::time::Duration::from_secs(301)));
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn rejects_empty_custom_root_only_store() {
         let result = OpenBaoConfig::new("https://bao.example.com")
             .and_then(|config| config.only_root_certificates(Vec::new()));
@@ -510,5 +554,16 @@ mod tests {
         let debug = format!("{client:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("root-token"));
+    }
+
+    #[test]
+    fn debug_redacts_namespace() {
+        let config = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.namespace("finance/trading-desk/prod"))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let debug = format!("{config:?}");
+        assert!(debug.contains("has_namespace"));
+        assert!(debug.contains("true"));
+        assert!(!debug.contains("finance"));
     }
 }

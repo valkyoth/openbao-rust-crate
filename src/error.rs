@@ -62,15 +62,14 @@ impl fmt::Display for Error {
                 write!(formatter, "OpenBao API returned {status}")
             }
             Self::Api { status, errors } => {
-                write!(
-                    formatter,
-                    "OpenBao API returned {status}: {}",
-                    errors
-                        .iter()
-                        .map(|error| sanitize_api_error(error))
-                        .collect::<Vec<_>>()
-                        .join("; ")
-                )
+                write!(formatter, "OpenBao API returned {status}: ")?;
+                for (index, error) in errors.iter().enumerate() {
+                    if index > 0 {
+                        write!(formatter, "; ")?;
+                    }
+                    write!(formatter, "{}", sanitize_api_error(error))?;
+                }
+                Ok(())
             }
             Self::MissingField(field) => {
                 write!(formatter, "OpenBao response missing field `{field}`")

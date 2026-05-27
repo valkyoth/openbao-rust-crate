@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Kv2<'a> {
     client: &'a Client<Authenticated>,
-    mount: String,
+    mount: Vec<String>,
 }
 
 /// Options for KV v2 writes.
@@ -81,10 +81,9 @@ impl Client<Authenticated> {
     /// Uses the KV v2 engine mounted at `mount`.
     pub fn kv2(&self, mount: impl Into<String>) -> Result<Kv2<'_>> {
         let mount = mount.into();
-        let mount = validate_mount_path(&mount)?.join("/");
         Ok(Kv2 {
             client: self,
-            mount,
+            mount: validate_mount_path(&mount)?,
         })
     }
 }
@@ -151,14 +150,14 @@ impl Kv2<'_> {
     }
 
     fn data_path(&self, path: &str) -> Result<String> {
-        let mut segments = validate_mount_path(&self.mount)?;
+        let mut segments = self.mount.clone();
         segments.push("data".to_owned());
         segments.extend(validate_secret_path(path)?);
         Ok(segments.join("/"))
     }
 
     fn metadata_path(&self, path: &str) -> Result<String> {
-        let mut segments = validate_mount_path(&self.mount)?;
+        let mut segments = self.mount.clone();
         segments.push("metadata".to_owned());
         segments.extend(validate_secret_path(path)?);
         Ok(segments.join("/"))

@@ -1,7 +1,7 @@
 //! AppRole authentication support.
 
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{Authenticated, Client, Error, Result, Unauthenticated, path::validate_mount_path};
 
@@ -42,8 +42,10 @@ struct LoginResponse {
 
 #[derive(Deserialize)]
 struct LoginAuth {
-    client_token: String,
-    accessor: String,
+    #[serde(deserialize_with = "deserialize_secret")]
+    client_token: SecretString,
+    #[serde(deserialize_with = "deserialize_secret")]
+    accessor: SecretString,
     #[serde(default)]
     policies: Vec<String>,
     #[serde(default)]
@@ -131,18 +133,21 @@ fn split_login_auth(auth: LoginAuth) -> (SecretString, LoginMetadata) {
         lease_duration,
         renewable,
     } = auth;
-    let token = secret_from_string(client_token);
     let metadata = LoginMetadata {
-        accessor: secret_from_string(accessor),
+        accessor,
         policies,
         lease_duration,
         renewable,
     };
-    (token, metadata)
+    (client_token, metadata)
 }
 
-fn secret_from_string(value: String) -> SecretString {
-    SecretString::from(value)
+fn deserialize_secret<'de, D>(deserializer: D) -> core::result::Result<SecretString, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    Ok(SecretString::from(value))
 }
 
 impl Client<Unauthenticated> {
@@ -153,5 +158,26 @@ impl Client<Unauthenticated> {
             token: None,
             _state: core::marker::PhantomData,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::panic)]
+
+    use secrecy::ExposeSecret;
+
+    use super::LoginResponse;
+
+    #[test]
+    fn login_auth_deserializes_secrets_into_secret_strings() {
+        let response: LoginResponse = serde_json::from_str(
+            r#"{"auth":{"client_token":"token-value","accessor":"accessor-value"}}"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        let auth = response.auth.unwrap_or_else(|| panic!("auth missing"));
+
+        assert_eq!(auth.client_token.expose_secret(), "token-value");
+        assert_eq!(auth.accessor.expose_secret(), "accessor-value");
     }
 }

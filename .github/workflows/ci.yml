@@ -13,7 +13,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
 
 jobs:
   checks:
@@ -23,19 +22,22 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        # actions/checkout v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Install Rust toolchain
         shell: bash
         run: scripts/ci_install_rust.sh
 
       - name: Cache Rust build output
-        uses: Swatinem/rust-cache@v2
+        # Swatinem/rust-cache v2.7.8
+        uses: Swatinem/rust-cache@aa7c1c80a07a27a84c0aa76d0cef0aad3830e330
         with:
           cache-on-failure: true
 
       - name: Install security tools
-        uses: taiki-e/install-action@v2
+        # taiki-e/install-action v2.49.5
+        uses: taiki-e/install-action@019e22100565643c6890fe3f00da0b63017c1672
         with:
           tool: cargo-deny,cargo-audit,cargo-sbom
 

@@ -39,7 +39,9 @@ Please include:
 - TLS 1.3 or newer must remain enforced by default; TLS 1.2 requires an explicit legacy opt-down.
 - Token accessors are treated as secret material.
 - Plain HTTP is allowed only by explicit numeric loopback IP opt-in. Hostnames such as `localhost` are rejected.
+- Response bodies must remain size-bounded, JSON content-type checked, and zeroized after decoding.
 - Exact certificate or SPKI pinning is not implemented in 0.1.0; use root-only trust with a private CA when pinning would otherwise be required.
+- Third-party GitHub Actions must be pinned to immutable commit SHAs.
 - New dependencies require a release-plan justification and `cargo deny` review.
 
 ## Pentest Gate
