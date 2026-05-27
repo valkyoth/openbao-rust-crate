@@ -1,0 +1,6 @@
+/target/
+/.env
+/.env.*
+!/deploy/podman/openbao.dev.env.example
+/deploy/podman/dev-state/
+/deploy/podman/openbao.dev.env

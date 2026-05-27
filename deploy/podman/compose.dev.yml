@@ -1,0 +1,33 @@
+name: openbao-rust-crate
+
+networks:
+  openbao_internal:
+    internal: true
+
+services:
+  openbao:
+    image: docker.io/openbao/openbao:latest
+    container_name: openbao_rust_crate_dev
+    command: ["server", "-config=/openbao/config/openbao.hcl"]
+    cap_add:
+      - IPC_LOCK
+    environment:
+      BAO_CACERT: /openbao/tls/dev-ca.crt
+    volumes:
+      - ./dev-state/data:/openbao/data:Z
+      - ./openbao.hcl:/openbao/config/openbao.hcl:ro,Z
+      - ./dev-state/tls:/openbao/tls:ro,z
+    ports:
+      - "127.0.0.1:9940:8200"
+      - "127.0.0.1:9941:8201"
+    healthcheck:
+      test: ["CMD", "bao", "status", "-address=https://127.0.0.1:8200", "-ca-cert=/openbao/tls/dev-ca.crt"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    security_opt:
+      - no-new-privileges
+    networks:
+      - openbao_internal
+    restart: unless-stopped

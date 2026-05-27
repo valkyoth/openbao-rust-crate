@@ -1,0 +1,46 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  checks:
+    name: Format, lint, test, and audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: scripts/ci_install_rust.sh
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Install security tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny,cargo-audit,cargo-sbom
+
+      - name: Run checks
+        run: scripts/checks.sh
+
+      - name: Generate SBOM
+        run: scripts/generate-sbom.sh

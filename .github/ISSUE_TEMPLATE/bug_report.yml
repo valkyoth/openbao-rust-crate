@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Do not include real tokens or secrets.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Crate version
+    validations:
+      required: true
+  - type: input
+    id: openbao
+    attributes:
+      label: OpenBao version
+    validations:
+      required: true

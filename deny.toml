@@ -1,0 +1,55 @@
+# openbao dependency policy.
+#
+# The crate is dual-licensed MIT OR Apache-2.0. Runtime dependencies should
+# remain minimal, reviewed, and crates.io-only unless a release plan explicitly
+# approves otherwise.
+
+[graph]
+all-features = true
+
+[licenses]
+confidence-threshold = 0.95
+include-dev = true
+include-build = true
+unused-allowed-license = "allow"
+unused-license-exception = "deny"
+
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+
+[advisories]
+db-path = "/tmp/openbao-rust-crate-cargo-deny-advisory-dbs"
+yanked = "deny"
+unmaintained = "workspace"
+unsound = "workspace"
+unused-ignored-advisory = "deny"
+ignore = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+required-git-spec = "rev"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
