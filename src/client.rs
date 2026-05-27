@@ -335,7 +335,29 @@ impl<State> Client<State> {
         T: DeserializeOwned,
         B: Serialize + ?Sized,
     {
-        let url = self.url_for_path(path)?;
+        self.request_json_query_accepting(method, path, &[], body, accepted_statuses)
+            .await
+    }
+
+    pub(crate) async fn request_json_query_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let mut url = self.url_for_path(path)?;
+        if !query.is_empty() {
+            let mut pairs = url.query_pairs_mut();
+            for (key, value) in query {
+                pairs.append_pair(key, value);
+            }
+        }
         let mut request = self
             .http
             .request(method, url)

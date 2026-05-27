@@ -1,6 +1,8 @@
 //! KV version 2 secrets engine support.
 
-use reqwest::Method;
+use std::collections::BTreeMap;
+
+use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
@@ -22,6 +24,20 @@ pub struct Kv2WriteOptions {
     /// Check-and-set version. Use `0` to require creation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cas: Option<u64>,
+}
+
+/// Backend-level KV v2 configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Kv2Config {
+    /// Number of versions to retain per key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_versions: Option<u64>,
+    /// Whether check-and-set is required for writes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cas_required: Option<bool>,
+    /// Duration after which deleted versions are destroyed, such as `3h`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delete_version_after: Option<String>,
 }
 
 /// A KV v2 secret and its version metadata.
@@ -48,6 +64,47 @@ pub struct Kv2Metadata {
     pub version: u64,
 }
 
+/// Full KV v2 key metadata.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Kv2KeyMetadata {
+    /// Key creation timestamp.
+    pub created_time: String,
+    /// Key update timestamp.
+    pub updated_time: String,
+    /// Current version number.
+    pub current_version: u64,
+    /// Oldest retained version number.
+    pub oldest_version: u64,
+    /// Per-key max version override.
+    #[serde(default)]
+    pub max_versions: Option<u64>,
+    /// Per-key check-and-set requirement.
+    #[serde(default)]
+    pub cas_required: Option<bool>,
+    /// Per-key delete-version-after duration.
+    #[serde(default)]
+    pub delete_version_after: Option<String>,
+    /// Caller-defined metadata.
+    #[serde(default)]
+    pub custom_metadata: Option<BTreeMap<String, String>>,
+    /// Metadata for each retained version.
+    #[serde(default)]
+    pub versions: BTreeMap<String, Kv2VersionMetadata>,
+}
+
+/// Metadata for one KV v2 version.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Kv2VersionMetadata {
+    /// Version creation timestamp.
+    pub created_time: String,
+    /// Version deletion timestamp, when deleted.
+    #[serde(default)]
+    pub deletion_time: String,
+    /// Whether this version was destroyed.
+    #[serde(default)]
+    pub destroyed: bool,
+}
+
 /// KV v2 write response data.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Kv2WriteResponse {
@@ -65,6 +122,23 @@ pub struct Kv2List {
     pub keys: Vec<String>,
 }
 
+/// Options for updating KV v2 key metadata.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct Kv2MetadataOptions {
+    /// Number of versions to retain for this key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_versions: Option<u64>,
+    /// Whether check-and-set is required for this key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cas_required: Option<bool>,
+    /// Duration after which deleted versions are destroyed, such as `3h`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delete_version_after: Option<String>,
+    /// Caller-defined metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_metadata: Option<BTreeMap<String, String>>,
+}
+
 #[derive(Deserialize)]
 struct Kv2ReadEnvelope<T> {
     data: Kv2Secret<T>,
@@ -75,6 +149,11 @@ struct Kv2WritePayload<T> {
     data: T,
     #[serde(skip_serializing_if = "Option::is_none")]
     options: Option<Kv2WriteOptions>,
+}
+
+#[derive(Serialize)]
+struct VersionsPayload<'a> {
+    versions: &'a [u64],
 }
 
 impl Client<Authenticated> {
@@ -97,6 +176,25 @@ impl Kv2<'_> {
         let envelope: Kv2ReadEnvelope<T> = self
             .client
             .request_json(Method::GET, &self.data_path(path)?, Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads a specific KV v2 secret version.
+    pub async fn read_version<T>(&self, path: &str, version: u64) -> Result<Kv2Secret<T>>
+    where
+        T: DeserializeOwned,
+    {
+        let version = version.to_string();
+        let envelope: Kv2ReadEnvelope<T> = self
+            .client
+            .request_json_query_accepting(
+                Method::GET,
+                &self.data_path(path)?,
+                &[("version", version)],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -127,6 +225,32 @@ impl Kv2<'_> {
         Ok(envelope.data)
     }
 
+    /// Patches a KV v2 secret without replacing unspecified fields.
+    pub async fn patch<T>(&self, path: &str, data: T) -> Result<Kv2WriteResponse>
+    where
+        T: Serialize,
+    {
+        self.patch_with_options(path, data, None).await
+    }
+
+    /// Patches a KV v2 secret with optional check-and-set.
+    pub async fn patch_with_options<T>(
+        &self,
+        path: &str,
+        data: T,
+        options: Option<Kv2WriteOptions>,
+    ) -> Result<Kv2WriteResponse>
+    where
+        T: Serialize,
+    {
+        let payload = Kv2WritePayload { data, options };
+        let envelope: ResponseEnvelope<Kv2WriteResponse> = self
+            .client
+            .request_json(Method::PATCH, &self.data_path(path)?, Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Deletes the latest version of a KV v2 secret.
     pub async fn delete_latest(&self, path: &str) -> Result<Empty> {
         self.client
@@ -134,6 +258,42 @@ impl Kv2<'_> {
                 Method::DELETE,
                 &self.data_path(path)?,
                 Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Soft-deletes specific KV v2 versions.
+    pub async fn delete_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
+        let payload = VersionsPayload { versions };
+        self.client
+            .request_json(
+                Method::POST,
+                &self.version_path("delete", path)?,
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Restores soft-deleted KV v2 versions.
+    pub async fn undelete_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
+        let payload = VersionsPayload { versions };
+        self.client
+            .request_json(
+                Method::POST,
+                &self.version_path("undelete", path)?,
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Permanently destroys KV v2 versions.
+    pub async fn destroy_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
+        let payload = VersionsPayload { versions };
+        self.client
+            .request_json(
+                Method::POST,
+                &self.version_path("destroy", path)?,
+                Some(&payload),
             )
             .await
     }
@@ -149,9 +309,74 @@ impl Kv2<'_> {
         Ok(envelope.data)
     }
 
+    /// Reads backend-level KV v2 configuration.
+    pub async fn config(&self) -> Result<Kv2Config> {
+        let envelope: ResponseEnvelope<Kv2Config> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.mount_path("config"),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Updates backend-level KV v2 configuration.
+    pub async fn configure(&self, config: &Kv2Config) -> Result<Empty> {
+        self.client
+            .request_json(Method::POST, &self.mount_path("config"), Some(config))
+            .await
+    }
+
+    /// Reads KV v2 metadata for a key.
+    pub async fn metadata(&self, path: &str) -> Result<Kv2KeyMetadata> {
+        let envelope: ResponseEnvelope<Kv2KeyMetadata> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.metadata_path(path)?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Replaces KV v2 metadata for a key.
+    pub async fn put_metadata(&self, path: &str, metadata: &Kv2MetadataOptions) -> Result<Empty> {
+        self.client
+            .request_json(Method::POST, &self.metadata_path(path)?, Some(metadata))
+            .await
+    }
+
+    /// Patches KV v2 metadata for a key.
+    pub async fn patch_metadata(&self, path: &str, metadata: &Kv2MetadataOptions) -> Result<Empty> {
+        self.client
+            .request_json(Method::PATCH, &self.metadata_path(path)?, Some(metadata))
+            .await
+    }
+
+    /// Permanently deletes all KV v2 metadata and versions for a key.
+    pub async fn delete_metadata(&self, path: &str) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::DELETE,
+                &self.metadata_path(path)?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
     fn data_path(&self, path: &str) -> Result<String> {
         let mut segments = self.mount.clone();
         segments.push("data".to_owned());
+        segments.extend(validate_secret_path(path)?);
+        Ok(segments.join("/"))
+    }
+
+    fn version_path(&self, operation: &str, path: &str) -> Result<String> {
+        let mut segments = self.mount.clone();
+        segments.push(operation.to_owned());
         segments.extend(validate_secret_path(path)?);
         Ok(segments.join("/"))
     }
@@ -161,6 +386,12 @@ impl Kv2<'_> {
         segments.push("metadata".to_owned());
         segments.extend(validate_secret_path(path)?);
         Ok(segments.join("/"))
+    }
+
+    fn mount_path(&self, child: &str) -> String {
+        let mut segments = self.mount.clone();
+        segments.push(child.to_owned());
+        segments.join("/")
     }
 }
 
@@ -185,6 +416,11 @@ mod tests {
             .unwrap_or_else(|error| panic!("{error}"));
         assert!(kv.data_path("app/config").is_ok());
         assert!(kv.data_path("../config").is_err());
+        assert_eq!(
+            kv.version_path("destroy", "app/config")
+                .unwrap_or_else(|error| panic!("{error}")),
+            "secret/destroy/app/config"
+        );
     }
 
     #[test]

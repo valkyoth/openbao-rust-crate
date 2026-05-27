@@ -8,8 +8,9 @@
 //! - OpenBao API URLs are assembled with structured URL path segments;
 //! - authentication state is represented in the type system.
 //!
-//! The public API starts small in `0.1.0`: AppRole login, direct token auth,
-//! KV v2, system health/seal status, and raw JSON calls for advanced users.
+//! The public API covers AppRole login, direct token auth, token lifecycle
+//! helpers, KV v1/v2, system health/seal status, and raw JSON calls for
+//! advanced users.
 
 #![forbid(unsafe_code)]
 
@@ -18,9 +19,9 @@ mod error;
 mod path;
 mod response;
 
-#[cfg(feature = "approle")]
+#[cfg(any(feature = "approle", feature = "token"))]
 pub mod auth;
-#[cfg(feature = "kv2")]
+#[cfg(any(feature = "kv1", feature = "kv2"))]
 pub mod secrets;
 #[cfg(feature = "sys")]
 pub mod sys;

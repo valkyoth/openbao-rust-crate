@@ -29,12 +29,9 @@ lowercase:
 use openbao::Client;
 ```
 
-The current release target is `0.1.0`: secure client construction, direct token
-authentication, AppRole login, KV v2 read/write/list/delete helpers, system
-health and seal-status helpers, a raw JSON request layer for unsupported
-endpoints, a hardened local OpenBao dev instance, and a release process gated by
-formatting, clippy, tests, docs, `cargo audit`, `cargo deny`, SBOM generation,
-GitHub CodeQL default setup, and pentest review.
+The current development target is `0.2.0`: token lifecycle helpers, KV v1, KV v2
+metadata/version/config operations, mount management, response wrapping, and
+real OpenBao integration coverage on top of the secure `0.1.0` core.
 
 OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 
@@ -65,7 +62,7 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 | Bearer auth | Yes | Optional `Authorization: Bearer` header mode. |
 | AppRole login | Yes | Role ID and secret ID are secret-aware; returned token is wrapped in `SecretString`. |
 | Token accessor handling | Yes | AppRole token accessors are treated as secret material. |
-| Token lifecycle helpers | Planned | Lookup, renew, revoke, create, and accessor flows are planned for `0.2.0`. |
+| Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
 | Kubernetes auth | Planned | Planned for `0.4.0`. |
 | TLS certificate auth | Planned | Planned for `0.4.0`. |
 | JWT/OIDC and userpass | Planned | Planned for `0.5.0`. |
@@ -77,10 +74,11 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 | KV v2 read | Yes | Typed deserialization into caller-provided structs. |
 | KV v2 write | Yes | Typed serialization with zeroized intermediate JSON buffer. |
 | KV v2 CAS write | Yes | Optional check-and-set version support. |
+| KV v2 patch | Yes | Partial secret updates with optional check-and-set support. |
 | KV v2 list | Yes | `LIST` method support for metadata paths. |
 | KV v2 delete latest | Yes | Accepts documented `200` and `204` success responses. |
-| KV v2 metadata/version APIs | Planned | Undelete, destroy, metadata, patch, config in `0.2.0`. |
-| KV v1 | Planned | Planned for `0.2.0`. |
+| KV v2 metadata/version APIs | Yes | Version reads, soft delete, undelete, destroy, metadata, and config helpers. |
+| KV v1 | Yes | Read, write, delete, and list helpers for non-versioned KV mounts. |
 | Transit | Planned | Planned for `0.3.0`. |
 | PKI | Planned | Planned for `0.4.0`. |
 | Database credentials | Planned | Planned for `0.5.0`. |
@@ -136,7 +134,7 @@ Add the crate:
 
 ```toml
 [dependencies]
-openbao = "0.1"
+openbao = "0.2"
 secrecy = "0.10.3"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
@@ -219,10 +217,10 @@ Run the normal local checks:
 scripts/checks.sh
 ```
 
-Run the `0.1.0` release gate:
+Run the current release gate:
 
 ```bash
-scripts/release_0_1_gate.sh
+scripts/release_0_2_gate.sh
 ```
 
 No release tag should be cut unless the matching pentest report status is

@@ -6,6 +6,17 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Began the `0.2.0` development line.
+- Token lifecycle helpers for create, lookup, accessor lookup/list, renew, and
+  revoke flows.
+- KV v1 read, write, delete, and list helpers.
+- KV v2 version reads, patch, soft-delete versions, undelete, destroy,
+  metadata, and backend config helpers.
+
+## 0.1.0 - 2026-05-27
+
+### Added
+
 - Initial secure OpenBao SDK scaffold.
 - Typestate client with unauthenticated and authenticated states.
 - Direct token authentication.
@@ -21,7 +32,7 @@ All notable changes to this project are documented here.
 
 - Disabled HTTP redirect following to avoid forwarding token headers to another
   origin.
-- Enforced TLS 1.2 minimum by default with configurable TLS version floor.
+- Enforced TLS 1.3 minimum by default with explicit TLS 1.2 opt-down.
 - Added default connection timeout.
 - Added custom CA and root-only trust store configuration.
 - Removed crate version from the default user agent.
