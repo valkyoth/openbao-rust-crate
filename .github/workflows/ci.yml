@@ -36,10 +36,10 @@ jobs:
           cache-on-failure: true
 
       - name: Install security tools
-        # taiki-e/install-action v2.49.5
-        uses: taiki-e/install-action@019e22100565643c6890fe3f00da0b63017c1672
+        # taiki-e/install-action v2.75.14
+        uses: taiki-e/install-action@0c7a94999971db56e9df89df226240aab222e776
         with:
-          tool: cargo-deny,cargo-audit,cargo-sbom
+          tool: cargo-deny@0.19.6,cargo-audit@0.22.1,cargo-sbom@0.10.0
 
       - name: Run checks
         run: scripts/checks.sh
