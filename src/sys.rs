@@ -15,7 +15,10 @@ use serde::{
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_mount_path, validate_secret_path},
-    response::{Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_string_vec},
+    response::{
+        Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_string_vec,
+        deserialize_optional_bounded_string_vec,
+    },
 };
 
 /// System backend handle.
@@ -112,19 +115,35 @@ pub struct MountConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub force_no_cache: Option<bool>,
     /// Audit non-HMAC request keys.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_bounded_string_vec",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub audit_non_hmac_request_keys: Option<Vec<String>>,
     /// Audit non-HMAC response keys.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_bounded_string_vec",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub audit_non_hmac_response_keys: Option<Vec<String>>,
     /// Listing visibility, such as `unauth`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub listing_visibility: Option<String>,
     /// Passthrough request headers.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_bounded_string_vec",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub passthrough_request_headers: Option<Vec<String>>,
     /// Allowed response headers.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_bounded_string_vec",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub allowed_response_headers: Option<Vec<String>>,
     /// Plugin version.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -854,6 +873,20 @@ mod tests {
         let value = serde_json::json!({ "policies": policies });
         let error = match serde_json::from_value::<PolicyList>(value) {
             Ok(_) => panic!("oversized policy list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn mount_config_header_lists_are_bounded() {
+        let mut headers = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            headers.push(format!("x-header-{index}"));
+        }
+        let value = serde_json::json!({ "allowed_response_headers": headers });
+        let error = match serde_json::from_value::<super::MountConfig>(value) {
+            Ok(_) => panic!("oversized mount header list unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

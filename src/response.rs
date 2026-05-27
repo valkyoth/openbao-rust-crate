@@ -3,7 +3,6 @@
 use core::fmt;
 
 use secrecy::SecretString;
-#[cfg(any(feature = "sys", feature = "token"))]
 use serde::de::Error as DeError;
 use serde::{
     Deserialize, Deserializer, Serialize,
@@ -11,7 +10,6 @@ use serde::{
 };
 
 const MAX_API_ERRORS: usize = 16;
-#[cfg(any(feature = "sys", feature = "token"))]
 pub(crate) const MAX_RESPONSE_STRINGS: usize = 4096;
 
 /// Empty JSON payload used for endpoints that do not require a body.
@@ -33,7 +31,7 @@ pub struct ResponseEnvelope<T> {
     #[serde(default)]
     pub renewable: bool,
     /// Warnings emitted by OpenBao.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
     pub warnings: Option<Vec<String>>,
     /// Response wrapping metadata, when OpenBao returns a wrapped response.
     #[serde(default)]
@@ -90,7 +88,6 @@ fn empty_secret() -> SecretString {
     SecretString::from(String::new())
 }
 
-#[cfg(any(feature = "sys", feature = "token"))]
 pub(crate) fn deserialize_bounded_string_vec<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Vec<String>, D::Error>
@@ -99,6 +96,18 @@ where
 {
     deserializer.deserialize_seq(BoundedStringListVisitor::<MAX_RESPONSE_STRINGS>)
 }
+
+pub(crate) fn deserialize_optional_bounded_string_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<BoundedStringList>::deserialize(deserializer).map(|value| value.map(|value| value.0))
+}
+
+#[derive(Deserialize)]
+struct BoundedStringList(#[serde(deserialize_with = "deserialize_bounded_string_vec")] Vec<String>);
 
 #[cfg(feature = "token")]
 pub(crate) fn deserialize_bounded_secret_string_vec<'de, D>(
@@ -110,10 +119,8 @@ where
     deserializer.deserialize_seq(BoundedSecretStringListVisitor::<MAX_RESPONSE_STRINGS>)
 }
 
-#[cfg(any(feature = "sys", feature = "token"))]
 struct BoundedStringListVisitor<const MAX: usize>;
 
-#[cfg(any(feature = "sys", feature = "token"))]
 impl<'de, const MAX: usize> Visitor<'de> for BoundedStringListVisitor<MAX> {
     type Value = Vec<String>;
 
@@ -126,11 +133,14 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedStringListVisitor<MAX> {
         A: SeqAccess<'de>,
     {
         let mut values = Vec::new();
-        while let Some(value) = seq.next_element::<String>()? {
-            if values.len() >= MAX {
-                return Err(A::Error::custom("OpenBao string list exceeds item limit"));
-            }
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<String>()? else {
+                return Ok(values);
+            };
             values.push(value);
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao string list exceeds item limit"));
         }
         Ok(values)
     }
@@ -152,13 +162,16 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretStringListVisitor<MAX>
         A: SeqAccess<'de>,
     {
         let mut values = Vec::new();
-        while let Some(value) = seq.next_element::<String>()? {
-            if values.len() >= MAX {
-                return Err(A::Error::custom(
-                    "OpenBao secret string list exceeds item limit",
-                ));
-            }
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<String>()? else {
+                return Ok(values);
+            };
             values.push(SecretString::from(value));
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao secret string list exceeds item limit",
+            ));
         }
         Ok(values)
     }
@@ -263,5 +276,19 @@ mod tests {
             serde_json::from_str(&json).unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(envelope.errors.len(), 16);
         assert_eq!(envelope.errors[15], "error-15");
+    }
+
+    #[test]
+    fn response_warnings_are_bounded() {
+        let mut warnings = Vec::new();
+        for index in 0..=super::MAX_RESPONSE_STRINGS {
+            warnings.push(format!("warning-{index}"));
+        }
+        let value = serde_json::json!({ "data": "ok", "warnings": warnings });
+        let error = match serde_json::from_value::<ResponseEnvelope<String>>(value) {
+            Ok(_) => panic!("oversized warning list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
     }
 }

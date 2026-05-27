@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use crate::{
     Authenticated, Client, Result,
     path::{validate_mount_path, validate_secret_path},
-    response::{Empty, ResponseEnvelope},
+    response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
 };
 
 /// Handle for a mounted KV v1 secrets engine.
@@ -20,7 +20,7 @@ pub struct Kv1<'a> {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Kv1List {
     /// Child keys. Directory-like entries end with `/`.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
 }
 
@@ -91,6 +91,8 @@ mod tests {
 
     use crate::{Client, OpenBaoConfig};
 
+    use super::Kv1List;
+
     #[test]
     fn kv1_paths_are_validated() {
         let config = OpenBaoConfig::new("http://127.0.0.1:8200")
@@ -108,5 +110,19 @@ mod tests {
             "secret/app/config"
         );
         assert!(kv.path("../config").is_err());
+    }
+
+    #[test]
+    fn kv1_list_keys_are_bounded() {
+        let mut keys = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            keys.push(format!("key-{index}"));
+        }
+        let value = serde_json::json!({ "keys": keys });
+        let error = match serde_json::from_value::<Kv1List>(value) {
+            Ok(_) => panic!("oversized KV v1 key list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
     }
 }
