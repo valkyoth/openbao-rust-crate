@@ -8,11 +8,11 @@ use std::{
     thread,
 };
 
-use openbao::{Client, OpenBaoConfig};
+use openbao::{Client, Error, OpenBaoConfig};
 use secrecy::SecretString;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct SecretData {
     value: String,
 }
@@ -95,6 +95,49 @@ async fn kv2_delete_accepts_no_content() {
         .delete_latest("app/config")
         .await
         .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn redirects_are_not_followed_with_token_headers() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let _bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let response = concat!(
+            "HTTP/1.1 302 Found\r\n",
+            "location: https://example.invalid/steal-token\r\n",
+            "content-length: 0\r\n",
+            "\r\n"
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let error = match client.kv2("secret").read::<SecretData>("app/config").await {
+        Ok(_) => panic!("redirect response unexpectedly succeeded"),
+        Err(error) => error,
+    };
+    match error {
+        Error::Api { status, .. } => assert_eq!(status, reqwest::StatusCode::FOUND),
+        unexpected => panic!("unexpected error: {unexpected}"),
+    }
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

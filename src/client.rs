@@ -1,14 +1,16 @@
 //! OpenBao client construction and raw request helpers.
 
 use core::{fmt, marker::PhantomData, time::Duration};
+use std::net::IpAddr;
 
 use reqwest::{
-    Method, StatusCode, Url,
+    Certificate, Method, StatusCode, Url,
     header::{ACCEPT, CONTENT_TYPE, HeaderValue},
+    redirect, tls,
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Serialize, de::DeserializeOwned};
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 use crate::{
     Error, Result,
@@ -45,15 +47,28 @@ pub enum HeaderMode {
     Bearer,
 }
 
+/// TLS trust root handling.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RootCertificateMode {
+    /// Trust platform/built-in roots plus any configured extra roots.
+    MergeWithSystem,
+    /// Trust only the explicitly configured roots.
+    OnlyConfigured,
+}
+
 /// Validated OpenBao client configuration.
 #[derive(Clone)]
 pub struct OpenBaoConfig {
     base_url: Url,
     timeout: Duration,
+    connect_timeout: Duration,
     user_agent: String,
     namespace: Option<String>,
     http_policy: HttpPolicy,
     header_mode: HeaderMode,
+    min_tls_version: tls::Version,
+    root_certificates: Vec<Certificate>,
+    root_certificate_mode: RootCertificateMode,
 }
 
 impl OpenBaoConfig {
@@ -66,10 +81,14 @@ impl OpenBaoConfig {
         Ok(Self {
             base_url: url,
             timeout: Duration::from_secs(30),
-            user_agent: concat!("openbao-rust/", env!("CARGO_PKG_VERSION")).to_owned(),
+            connect_timeout: Duration::from_secs(5),
+            user_agent: "openbao-rust-client".to_owned(),
             namespace: None,
             http_policy: HttpPolicy::HttpsOnly,
             header_mode: HeaderMode::VaultToken,
+            min_tls_version: tls::Version::TLS_1_2,
+            root_certificates: Vec::new(),
+            root_certificate_mode: RootCertificateMode::MergeWithSystem,
         })
     }
 
@@ -83,6 +102,12 @@ impl OpenBaoConfig {
     /// Sets a request timeout.
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
+        self
+    }
+
+    /// Sets the TCP/TLS connection establishment timeout.
+    pub fn connect_timeout(mut self, timeout: Duration) -> Self {
+        self.connect_timeout = timeout;
         self
     }
 
@@ -102,6 +127,33 @@ impl OpenBaoConfig {
     pub fn header_mode(mut self, header_mode: HeaderMode) -> Self {
         self.header_mode = header_mode;
         self
+    }
+
+    /// Sets the minimum TLS protocol version.
+    ///
+    /// The default is TLS 1.2. High-assurance deployments can set TLS 1.3.
+    pub fn min_tls_version(mut self, version: tls::Version) -> Self {
+        self.min_tls_version = version;
+        self
+    }
+
+    /// Adds a trusted root certificate while keeping platform/built-in roots.
+    pub fn add_root_certificate(mut self, certificate: Certificate) -> Self {
+        self.root_certificates.push(certificate);
+        self.root_certificate_mode = RootCertificateMode::MergeWithSystem;
+        self
+    }
+
+    /// Uses only the provided root certificates and disables system roots.
+    pub fn only_root_certificates(mut self, certificates: Vec<Certificate>) -> Result<Self> {
+        if certificates.is_empty() {
+            return Err(Error::InvalidTlsConfig(
+                "at least one root certificate is required when system roots are disabled".into(),
+            ));
+        }
+        self.root_certificates = certificates;
+        self.root_certificate_mode = RootCertificateMode::OnlyConfigured;
+        Ok(self)
     }
 
     fn validate(&self) -> Result<()> {
@@ -129,10 +181,14 @@ impl fmt::Debug for OpenBaoConfig {
             .debug_struct("OpenBaoConfig")
             .field("base_url", &self.base_url)
             .field("timeout", &self.timeout)
+            .field("connect_timeout", &self.connect_timeout)
             .field("user_agent", &self.user_agent)
             .field("namespace", &self.namespace)
             .field("http_policy", &self.http_policy)
             .field("header_mode", &self.header_mode)
+            .field("min_tls_version", &self.min_tls_version)
+            .field("root_certificate_count", &self.root_certificates.len())
+            .field("root_certificate_mode", &self.root_certificate_mode)
             .finish()
     }
 }
@@ -152,11 +208,24 @@ impl ClientBuilder {
     /// Builds an unauthenticated OpenBao client.
     pub fn build(self) -> Result<Client<Unauthenticated>> {
         self.config.validate()?;
-        let http = reqwest::Client::builder()
+        let mut builder = reqwest::Client::builder()
             .timeout(self.config.timeout)
+            .connect_timeout(self.config.connect_timeout)
             .user_agent(self.config.user_agent.clone())
             .https_only(self.config.http_policy == HttpPolicy::HttpsOnly)
-            .build()?;
+            .redirect(redirect::Policy::none())
+            .tls_version_min(self.config.min_tls_version);
+
+        builder = match self.config.root_certificate_mode {
+            RootCertificateMode::MergeWithSystem => {
+                builder.tls_certs_merge(self.config.root_certificates.clone())
+            }
+            RootCertificateMode::OnlyConfigured => {
+                builder.tls_certs_only(self.config.root_certificates.clone())
+            }
+        };
+
+        let http = builder.build()?;
 
         Ok(Client {
             config: self.config,
@@ -255,21 +324,24 @@ impl<State> Client<State> {
                     sensitive_header_value(token.expose_secret())?,
                 ),
                 HeaderMode::Bearer => {
-                    let mut bearer =
-                        String::with_capacity("Bearer ".len() + token.expose_secret().len());
+                    let mut bearer = Zeroizing::new(String::with_capacity(
+                        "Bearer ".len() + token.expose_secret().len(),
+                    ));
                     bearer.push_str("Bearer ");
                     bearer.push_str(token.expose_secret());
                     let value = sensitive_header_value(&bearer)
                         .map_err(|error| Error::InvalidHeader(error.to_string()))?;
-                    bearer.zeroize();
                     request.header(reqwest::header::AUTHORIZATION, value)
                 }
             };
         }
         if let Some(payload) = body {
+            let encoded = Zeroizing::new(
+                serde_json::to_vec(payload).map_err(|error| Error::Decode(error.to_string()))?,
+            );
             request = request
                 .header(CONTENT_TYPE, "application/json")
-                .json(payload);
+                .body(encoded.as_slice().to_vec());
         }
 
         let response = request.send().await?;
@@ -318,7 +390,11 @@ impl<State> fmt::Debug for Client<State> {
 }
 
 fn is_loopback_url(url: &Url) -> bool {
-    matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "::1"))
+    match url.host_str() {
+        Some("localhost") => true,
+        Some(host) => host.parse::<IpAddr>().is_ok_and(|addr| addr.is_loopback()),
+        None => false,
+    }
 }
 
 fn sensitive_header_value(value: &str) -> Result<HeaderValue> {
@@ -347,6 +423,21 @@ mod tests {
             .and_then(OpenBaoConfig::allow_localhost_http)
             .unwrap_or_else(|error| panic!("{error}"));
         assert!(Client::from_config(config).is_ok());
+    }
+
+    #[test]
+    fn allows_full_loopback_range_for_local_http() {
+        let config = OpenBaoConfig::new("http://127.0.0.2:8200")
+            .and_then(OpenBaoConfig::allow_localhost_http)
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(Client::from_config(config).is_ok());
+    }
+
+    #[test]
+    fn rejects_empty_custom_root_only_store() {
+        let result = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.only_root_certificates(Vec::new()));
+        assert!(result.is_err());
     }
 
     #[test]

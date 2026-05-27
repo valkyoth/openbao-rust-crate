@@ -2,8 +2,9 @@
 
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroizing;
 
-use crate::{Authenticated, Client, Error, Result, Unauthenticated, response::Empty};
+use crate::{Authenticated, Client, Error, Result, Unauthenticated, path::validate_mount_path};
 
 /// Handle for the AppRole auth method at a configured mount.
 #[derive(Debug)]
@@ -12,11 +13,12 @@ pub struct AppRole<'a> {
     mount: String,
 }
 
-/// Non-secret metadata returned after a successful login.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// Metadata returned after a successful login.
+#[derive(Clone, Debug, Deserialize)]
 pub struct LoginMetadata {
-    /// Token accessor.
-    pub accessor: String,
+    /// Token accessor. Accessors can revoke or look up token metadata, so they
+    /// are treated as secret material.
+    pub accessor: SecretString,
     /// Policies attached to the token.
     #[serde(default)]
     pub policies: Vec<String>,
@@ -53,16 +55,18 @@ struct LoginAuth {
 
 impl Client<Unauthenticated> {
     /// Uses the AppRole auth method mounted at `auth/approle`.
-    pub fn approle(&self) -> AppRole<'_> {
+    pub fn approle(&self) -> Result<AppRole<'_>> {
         self.approle_at("approle")
     }
 
     /// Uses the AppRole auth method mounted at `auth/{mount}`.
-    pub fn approle_at(&self, mount: impl Into<String>) -> AppRole<'_> {
-        AppRole {
+    pub fn approle_at(&self, mount: impl Into<String>) -> Result<AppRole<'_>> {
+        let mount = mount.into();
+        let mount = validate_mount_path(&mount)?.join("/");
+        Ok(AppRole {
             client: self,
-            mount: mount.into(),
-        }
+            mount,
+        })
     }
 
     /// Logs in with AppRole at `auth/approle` and returns an authenticated client.
@@ -72,21 +76,13 @@ impl Client<Unauthenticated> {
         secret_id: SecretString,
     ) -> Result<(Client<Authenticated>, LoginMetadata)> {
         let response = self
-            .approle()
+            .approle()?
             .login_response(&role_id, &secret_id)
             .await?
             .auth
             .ok_or(Error::MissingField("auth"))?;
-        let metadata = LoginMetadata {
-            accessor: response.accessor,
-            policies: response.policies,
-            lease_duration: response.lease_duration,
-            renewable: response.renewable,
-        };
-        Ok((
-            self.with_token(SecretString::from(response.client_token)),
-            metadata,
-        ))
+        let (token, metadata) = split_login_auth(response);
+        Ok((self.with_token(token), metadata))
     }
 }
 
@@ -102,16 +98,9 @@ impl AppRole<'_> {
             .await?
             .auth
             .ok_or(Error::MissingField("auth"))?;
-        let metadata = LoginMetadata {
-            accessor: response.accessor,
-            policies: response.policies,
-            lease_duration: response.lease_duration,
-            renewable: response.renewable,
-        };
+        let (token, metadata) = split_login_auth(response);
         Ok((
-            self.client
-                .clone_without_state()
-                .with_token(SecretString::from(response.client_token)),
+            self.client.clone_without_state().with_token(token),
             metadata,
         ))
     }
@@ -135,6 +124,29 @@ impl AppRole<'_> {
     }
 }
 
+fn split_login_auth(auth: LoginAuth) -> (SecretString, LoginMetadata) {
+    let LoginAuth {
+        client_token,
+        accessor,
+        policies,
+        lease_duration,
+        renewable,
+    } = auth;
+    let token = secret_from_string(client_token);
+    let metadata = LoginMetadata {
+        accessor: secret_from_string(accessor),
+        policies,
+        lease_duration,
+        renewable,
+    };
+    (token, metadata)
+}
+
+fn secret_from_string(value: String) -> SecretString {
+    let value = Zeroizing::new(value);
+    SecretString::from(value.as_str())
+}
+
 impl Client<Unauthenticated> {
     fn clone_without_state(&self) -> Client<Unauthenticated> {
         Client {
@@ -144,9 +156,4 @@ impl Client<Unauthenticated> {
             _state: core::marker::PhantomData,
         }
     }
-}
-
-#[allow(dead_code)]
-fn _empty_payload() -> Empty {
-    Empty {}
 }

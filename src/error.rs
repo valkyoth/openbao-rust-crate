@@ -15,6 +15,8 @@ pub enum Error {
     InvalidPath(String),
     /// An HTTP header value could not be represented safely.
     InvalidHeader(String),
+    /// TLS configuration is internally inconsistent.
+    InvalidTlsConfig(String),
     /// The request failed before an OpenBao response could be decoded.
     Http(reqwest::Error),
     /// A response body could not be decoded into the expected type.
@@ -40,6 +42,9 @@ impl fmt::Display for Error {
             }
             Self::InvalidPath(message) => write!(formatter, "invalid OpenBao path: {message}"),
             Self::InvalidHeader(message) => write!(formatter, "invalid OpenBao header: {message}"),
+            Self::InvalidTlsConfig(message) => {
+                write!(formatter, "invalid OpenBao TLS configuration: {message}")
+            }
             Self::Http(error) => write!(formatter, "OpenBao HTTP error: {error}"),
             Self::Decode(error) => write!(formatter, "OpenBao decode error: {error}"),
             Self::Api { status, errors } if errors.is_empty() => {

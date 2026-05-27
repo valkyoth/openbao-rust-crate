@@ -24,7 +24,7 @@ grep -q 'license = "MIT OR Apache-2.0"' Cargo.toml
 grep -q 'unsafe_code = "forbid"' Cargo.toml
 grep -q '0.1.0 - Secure Core And KV v2' docs/RELEASE_PLAN.md
 grep -q '1.0.0 - First Stable Release' docs/RELEASE_PLAN.md
-grep -q 'Pentest report: pending' release-notes/RELEASE_NOTES_0.1.0.md
+grep -q 'Pentest report:' release-notes/RELEASE_NOTES_0.1.0.md
 
 if git grep -l "base64-ng contributors" -- ':!scripts/validate-release-metadata.sh' >/dev/null 2>&1; then
   echo "stale copied license metadata found" >&2

@@ -27,7 +27,7 @@ pub mod sys;
 
 pub use client::{
     Authenticated, Client, ClientBuilder, HeaderMode, HttpPolicy, OpenBao, OpenBaoConfig,
-    Unauthenticated,
+    RootCertificateMode, Unauthenticated,
 };
 pub use error::{Error, Result};
 pub use response::{Empty, ResponseEnvelope};

@@ -14,6 +14,10 @@ use openbao::Client;
 - Unsafe Rust is forbidden.
 - HTTPS is required by default.
 - Loopback HTTP requires explicit opt-in for tests and local-only development.
+- Redirects are disabled so token headers cannot be forwarded to another host.
+- TLS 1.2 is the default minimum; callers can require TLS 1.3.
+- A 5-second connection timeout is configured by default.
+- Custom CA roots and root-only trust stores are supported for private PKI.
 - Tokens use `secrecy::SecretString` and are redacted from `Debug`.
 - Authentication headers are marked sensitive before requests are sent.
 - URLs are assembled with structured path segments instead of string
@@ -93,7 +97,7 @@ async fn main() -> Result<()> {
     let (client, login) = client.login_approle(role_id, secret_id).await?;
     let health = client.sys().health().await?;
 
-    println!("token accessor: {}", login.accessor);
+    let _token_accessor = login.accessor;
     println!("openbao version: {}", health.version);
     Ok(())
 }

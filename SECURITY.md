@@ -35,6 +35,9 @@ Please include:
 - Any API that can expose secret material must return caller-selected typed
   payloads, allowing users to wrap sensitive fields in secret types.
 - TLS verification must remain enabled by default.
+- Redirects must remain disabled by default.
+- TLS 1.2 or newer must remain enforced by default.
+- Token accessors are treated as secret material.
 - Plain HTTP is allowed only by explicit localhost opt-in.
 - New dependencies require a release-plan justification and `cargo deny` review.
 
