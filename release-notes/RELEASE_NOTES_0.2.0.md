@@ -13,9 +13,9 @@
 - Stable modules carried from `0.1.0`: client configuration, direct token auth,
   AppRole login, KV v2 core read/write/list/delete, sys health/seal status.
 - New `0.2.0` modules started: token lifecycle helpers, KV v1, expanded KV v2
-  metadata/version/config operations.
-- Remaining `0.2.0` work: sys mount/auth mount management, response wrapping,
-  and real OpenBao container integration coverage.
+  metadata/version/config operations, sys mount/auth mount management, and
+  response wrapping.
+- Remaining `0.2.0` work: real OpenBao container integration coverage.
 - Default Cargo features: `approle`, `token`, `kv1`, `kv2`, `sys`, `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
 - Tested OpenBao version: latest release verified before tag.
@@ -33,7 +33,6 @@
 
 ## Known Limitations
 
-- Sys mount and auth mount management are not complete yet.
-- Response wrapping helpers are not complete yet.
+- Real OpenBao integration coverage is not complete yet.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots
   and root-only trust stores for private PKI.

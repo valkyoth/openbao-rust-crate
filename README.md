@@ -91,8 +91,8 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 | --- | --- | --- |
 | Health | Yes | Accepts OpenBao health statuses for active, standby, sealed, and uninitialized nodes. |
 | Seal status | Yes | Typed `/sys/seal-status` helper. |
-| Mount management | Planned | Secret and auth mount enable/list/tune/disable in `0.2.0`. |
-| Response wrapping | Planned | Lookup, wrap, unwrap, and rewrap in `0.2.0`. |
+| Mount management | Yes | Secret and auth mount enable/list/tune/disable helpers. |
+| Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers with secret-aware wrapping tokens. |
 | Audit devices | Planned | Enable/list/disable/hash in `0.3.0`. |
 | Lease helpers | Planned | Safe non-legacy lease endpoints in `0.3.0`. |
 | Init, unseal, rekey, rotate | Planned | Behind explicit safety documentation in `0.6.0`. |

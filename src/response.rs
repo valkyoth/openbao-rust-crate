@@ -31,6 +31,9 @@ pub struct ResponseEnvelope<T> {
     /// Warnings emitted by OpenBao.
     #[serde(default)]
     pub warnings: Option<Vec<String>>,
+    /// Response wrapping metadata, when OpenBao returns a wrapped response.
+    #[serde(default)]
+    pub wrap_info: Option<WrapInfo>,
 }
 
 impl<T: fmt::Debug> fmt::Debug for ResponseEnvelope<T> {
@@ -42,6 +45,39 @@ impl<T: fmt::Debug> fmt::Debug for ResponseEnvelope<T> {
             .field("lease_duration", &self.lease_duration)
             .field("renewable", &self.renewable)
             .field("warnings", &self.warnings)
+            .field("wrap_info", &self.wrap_info)
+            .finish()
+    }
+}
+
+/// Metadata for a response-wrapping token.
+#[derive(Clone, Deserialize)]
+pub struct WrapInfo {
+    /// Wrapping token. Treat as secret material.
+    pub token: SecretString,
+    /// Token accessor, when returned. Treat as secret material.
+    #[serde(default)]
+    pub accessor: Option<SecretString>,
+    /// Wrapping token TTL in seconds.
+    #[serde(default)]
+    pub ttl: u64,
+    /// Wrapped response creation time.
+    #[serde(default)]
+    pub creation_time: Option<String>,
+    /// Wrapped response creation path.
+    #[serde(default)]
+    pub creation_path: Option<String>,
+}
+
+impl fmt::Debug for WrapInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("WrapInfo")
+            .field("token", &"<redacted>")
+            .field("accessor", &self.accessor.as_ref().map(|_| "<redacted>"))
+            .field("ttl", &self.ttl)
+            .field("creation_time", &self.creation_time)
+            .field("creation_path", &self.creation_path)
             .finish()
     }
 }
@@ -104,11 +140,35 @@ mod tests {
             lease_duration: 30,
             renewable: true,
             warnings: None,
+            wrap_info: None,
         };
 
         let debug = format!("{envelope:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("secret-lease"));
+    }
+
+    #[test]
+    fn response_debug_redacts_wrap_info() {
+        let envelope = ResponseEnvelope {
+            data: "ok",
+            lease_id: SecretString::from(""),
+            lease_duration: 0,
+            renewable: false,
+            warnings: None,
+            wrap_info: Some(super::WrapInfo {
+                token: SecretString::from("wrap-token"),
+                accessor: Some(SecretString::from("wrap-accessor")),
+                ttl: 60,
+                creation_time: None,
+                creation_path: None,
+            }),
+        };
+
+        let debug = format!("{envelope:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("wrap-token"));
+        assert!(!debug.contains("wrap-accessor"));
     }
 
     #[test]

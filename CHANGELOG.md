@@ -12,6 +12,8 @@ All notable changes to this project are documented here.
 - KV v1 read, write, delete, and list helpers.
 - KV v2 version reads, patch, soft-delete versions, undelete, destroy,
   metadata, and backend config helpers.
+- System mount and auth mount list, enable, tune, and disable helpers.
+- Response wrapping lookup, wrap, unwrap, and rewrap helpers.
 
 ## 0.1.0 - 2026-05-27
 

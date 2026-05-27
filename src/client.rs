@@ -5,7 +5,7 @@ use std::net::IpAddr;
 
 use reqwest::{
     Certificate, Method, StatusCode, Url,
-    header::{ACCEPT, CONTENT_TYPE, HeaderValue},
+    header::{ACCEPT, CONTENT_TYPE, HeaderName, HeaderValue},
     redirect, tls,
 };
 use secrecy::{ExposeSecret, SecretString};
@@ -339,11 +339,51 @@ impl<State> Client<State> {
             .await
     }
 
+    pub(crate) async fn request_json_headers_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_json_query_headers_accepting(
+            method,
+            path,
+            &[],
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
     pub(crate) async fn request_json_query_accepting<T, B>(
         &self,
         method: Method,
         path: &str,
         query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_json_query_headers_accepting(method, path, query, &[], body, accepted_statuses)
+            .await
+    }
+
+    async fn request_json_query_headers_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        headers: &[(HeaderName, HeaderValue)],
         body: Option<&B>,
         accepted_statuses: &[StatusCode],
     ) -> Result<T>
@@ -363,6 +403,9 @@ impl<State> Client<State> {
             .request(method, url)
             .header(ACCEPT, "application/json")
             .header("X-Vault-Request", "true");
+        for (name, value) in headers {
+            request = request.header(name, value);
+        }
 
         if let Some(namespace) = self.config.namespace.as_deref() {
             request = request.header("X-Vault-Namespace", namespace);

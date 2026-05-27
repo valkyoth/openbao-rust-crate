@@ -10,10 +10,15 @@ use std::{
 
 use openbao::{Client, Error, OpenBaoConfig};
 use secrecy::SecretString;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 struct SecretData {
+    value: String,
+}
+
+#[derive(Serialize)]
+struct WrappedData {
     value: String,
 }
 
@@ -186,6 +191,108 @@ async fn token_lookup_self_sends_documented_path() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert!(info.renewable);
     assert_eq!(info.policies, ["default"]);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_enable_mount_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/mounts/secret HTTP/1.1"));
+        assert!(request.contains(r#""type":"kv""#));
+        assert!(request.contains(r#""version":"2""#));
+        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let mut options = std::collections::BTreeMap::new();
+    options.insert("version".to_owned(), "2".to_owned());
+    let request = openbao::sys::MountEnableRequest {
+        backend_type: "kv".to_owned(),
+        description: None,
+        config: None,
+        options,
+        local: None,
+        seal_wrap: None,
+        external_entropy_access: None,
+    };
+    client
+        .sys()
+        .enable_mount("secret", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_wrapping_wrap_sends_ttl_header() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/wrapping/wrap HTTP/1.1"));
+        assert!(request.contains("x-vault-wrap-ttl: 60s"));
+        assert!(request.contains(r#""value":"ok""#));
+        let body = r#"{"wrap_info":{"token":"wrapping-token","accessor":"wrapping-accessor","ttl":60,"creation_path":"sys/wrapping/wrap"}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let info = client
+        .sys()
+        .wrapping_wrap(
+            "60s",
+            &WrappedData {
+                value: "ok".to_owned(),
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let debug = format!("{info:?}");
+    assert!(debug.contains("<redacted>"));
+    assert!(!debug.contains("wrapping-token"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
