@@ -17,9 +17,9 @@ require() {
 }
 
 prepare_tls_for_container() {
-  chmod 755 "$STATE_DIR" "$TLS_DIR"
+  chmod 750 "$STATE_DIR" "$TLS_DIR"
   chmod 600 "$TLS_DIR/dev-ca.key"
-  chmod 604 "$TLS_DIR/openbao.key"
+  chmod 640 "$TLS_DIR/openbao.key"
   chmod 644 "$TLS_DIR/dev-ca.crt" "$TLS_DIR/openbao.crt"
   if [ -f "$TLS_DIR/dev-ca.srl" ]; then
     chmod 644 "$TLS_DIR/dev-ca.srl"
@@ -105,6 +105,12 @@ compose() {
 }
 
 case "${1:-help}" in
+  prepare)
+    generate_tls
+    prepare_data_volume
+    echo "OpenBao dev assets prepared."
+    echo "BAO_CACERT=$TLS_DIR/dev-ca.crt"
+    ;;
   up)
     generate_tls
     compose pull
@@ -130,7 +136,7 @@ case "${1:-help}" in
     rm -rf "$STATE_DIR"
     ;;
   *)
-    echo "usage: $0 {up|down|logs|status|clean}" >&2
+    echo "usage: $0 {prepare|up|down|logs|status|clean}" >&2
     exit 2
     ;;
 esac

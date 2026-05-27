@@ -195,6 +195,16 @@ async fn main() -> Result<()> {
 The local dev stack uses Podman, TLS, a private CA, and loopback-only ports in
 the requested `994x` range.
 
+Prepare the rootless Podman volume and TLS assets without starting OpenBao:
+
+```bash
+scripts/openbao_dev.sh prepare
+```
+
+This project does not require a `/srv` directory tree for local development:
+raft data lives in a Podman-managed volume, and TLS material lives in the
+ignored `deploy/podman/dev-state/` directory.
+
 ```bash
 scripts/openbao_dev.sh up
 ```
