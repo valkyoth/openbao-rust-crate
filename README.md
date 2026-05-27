@@ -21,22 +21,131 @@
 
 # OpenBao Rust SDK
 
-`openbao` is a secure, async Rust SDK for [OpenBao](https://openbao.org/).
-The crate name on crates.io is intended to be `openbao`; Rust imports are
-lowercase:
+`openbao` is a secure, typed, async Rust SDK for
+[OpenBao](https://openbao.org/), the community-driven open source fork of
+Vault. It is designed for audited secret workflows: HTTPS by default, no
+redirect forwarding, strict path validation, secret-aware token types, and a
+small reviewed dependency surface.
+
+The crate name on crates.io is `openbao`; Rust imports are lowercase:
 
 ```rust
 use openbao::Client;
 ```
 
-The current development target is `0.2.0`: token lifecycle helpers, KV v1, KV v2
-metadata/version/config operations, mount management, response wrapping,
-policies, capabilities, and real OpenBao integration coverage on top of the
-secure `0.1.0` core.
+This README documents the `0.2.0` release line. `0.2.0` expands the secure
+`0.1.0` core with token lifecycle helpers, KV v1, fuller KV v2 operations,
+mount management, response wrapping, ACL policies, capabilities, and a real
+OpenBao integration gate.
 
-OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
+The crate is dual-licensed under MIT or Apache-2.0.
 
-## What Works Today
+## Current Status
+
+Implemented now:
+
+- Async client with typestate authentication.
+- Direct token authentication with `secrecy::SecretString`.
+- AppRole login with secret-aware role ID, secret ID, token, and accessor
+  handling.
+- Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
+  helpers.
+- KV v2 read, write, CAS write, patch, list, latest delete, version read,
+  version delete, undelete, destroy, metadata, and backend config helpers.
+- KV v1 read, write, delete, and list helpers.
+- System health and seal status helpers.
+- Secret and auth mount enable, list, read, tune, and disable helpers.
+- Response wrapping lookup, wrap, unwrap, and rewrap helpers.
+- ACL policy list, read, write, delete, and prefix list helpers.
+- Capability checks for the caller token, an explicit token, or a token
+  accessor.
+- Raw JSON request escape hatch for endpoints that are not typed yet.
+- Local TLS OpenBao Podman stack on `9940` and `9941`.
+- Real OpenBao integration test gate using the pinned OpenBao image.
+
+Planned next:
+
+- `0.3.0`: Transit, audit devices, safe lease helpers, and plugins catalog.
+- `0.4.0`: PKI, Kubernetes auth, and TLS certificate auth.
+- `0.5.0`: database secrets, JWT/OIDC, and userpass.
+- `0.6.0`: SSH, TOTP, and explicitly gated init/unseal/rekey/rotate APIs.
+- `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
+  RabbitMQ.
+- `0.8.0`: remaining auth methods and broader system backend automation.
+
+See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
+[Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
+
+## Trust Dashboard
+
+| Area | Status |
+| --- | --- |
+| License | `MIT OR Apache-2.0` |
+| Rust edition | 2024 |
+| MSRV | Rust `1.95` |
+| Async runtime | Runtime-agnostic client; examples use Tokio |
+| HTTP transport | `reqwest` with redirects disabled |
+| Default TLS backend | Rustls |
+| TLS floor | TLS 1.3 by default; TLS 1.2 requires explicit opt-in |
+| Plain HTTP | Rejected by default; numeric loopback IPs only when explicitly enabled |
+| Token storage | `secrecy::SecretString` |
+| Unsafe policy | `unsafe_code = "forbid"` |
+| Path validation | Rejects traversal, query/fragment injection, empty segments, controls, and trailing periods |
+| Error posture | API error strings are bounded and sanitized before formatting |
+| Dependency policy | `cargo deny` plus RustSec audit in the release gate |
+| Release evidence | fmt, clippy, tests, docs, deny, audit, SBOM, and real OpenBao integration |
+| Pentest gate | Required before tagging a release |
+
+Security details live in [SECURITY.md](SECURITY.md). Release evidence and
+release sequencing live in [release-notes](release-notes) and
+[docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md).
+
+## Install
+
+```toml
+[dependencies]
+openbao = "0.2"
+secrecy = "0.10.3"
+serde = { version = "1.0.228", features = ["derive"] }
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
+```
+
+Some advanced examples below name transport and JSON helper types directly:
+
+```toml
+[dependencies]
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls"] }
+serde_json = "1.0.150"
+```
+
+The crate defaults to the common SDK surface:
+
+```toml
+[dependencies]
+openbao = { version = "0.2", features = ["approle", "token", "kv1", "kv2", "sys", "rustls-tls"] }
+```
+
+For a smaller build, disable defaults and opt into only what the application
+uses:
+
+```toml
+[dependencies]
+openbao = { version = "0.2", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+```
+
+## Features
+
+| Feature | Default | Purpose |
+| --- | --- | --- |
+| `approle` | yes | AppRole authentication helpers. |
+| `token` | yes | Token lifecycle helpers. |
+| `kv1` | yes | KV v1 secrets engine helpers. |
+| `kv2` | yes | KV v2 secrets engine helpers. |
+| `sys` | yes | System backend helpers. |
+| `rustls-tls` | yes | Rustls transport configuration. |
+| `native-tls` | no | Native TLS support through `reqwest/native-tls` for deployments that require it. |
+
+## Support Matrix
 
 ### Client, Transport, And TLS
 
@@ -46,10 +155,10 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 | Typestate auth | Yes | Separate unauthenticated and authenticated client states. |
 | HTTPS by default | Yes | Plain HTTP is rejected unless loopback HTTP is explicitly enabled. |
 | Redirect protection | Yes | Redirect following is disabled to avoid forwarding token headers. |
-| TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can explicitly opt down to TLS 1.2. |
+| TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can opt down to TLS 1.2. |
 | Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
 | Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. |
-| Connection timeout | Yes | 5-second connection timeout by default; caller overrides are bounded at 5 minutes. |
+| Connection timeout | Yes | 5-second connection timeout by default; caller overrides are bounded. |
 | User agent fingerprinting | Yes | Default user agent omits the exact crate version. |
 | Namespace header | Yes | `X-Vault-Namespace` support for namespace-aware deployments. |
 | Raw JSON requests | Yes | Escape hatch for endpoints that are not typed yet. |
@@ -58,11 +167,11 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Direct token auth | Yes | Tokens are accepted as `secrecy::SecretString`. |
+| Direct token auth | Yes | Tokens are accepted as `SecretString`. |
 | `X-Vault-Token` | Yes | Default documented OpenBao-compatible token header. |
 | Bearer auth | Yes | Optional `Authorization: Bearer` header mode. |
-| AppRole login | Yes | Role ID and secret ID are secret-aware; returned token is wrapped in `SecretString`. |
-| Token accessor handling | Yes | AppRole token accessors are treated as secret material. |
+| AppRole login | Yes | Role ID and secret ID are secret-aware; returned token is wrapped. |
+| Token accessor handling | Yes | Accessors are treated as secret material. |
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
 | Kubernetes auth | Planned | Planned for `0.4.0`. |
 | TLS certificate auth | Planned | Planned for `0.4.0`. |
@@ -72,14 +181,12 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| KV v2 read | Yes | Typed deserialization into caller-provided structs. |
-| KV v2 write | Yes | Typed serialization with zeroized intermediate JSON buffer. |
+| KV v2 read/write | Yes | Typed serialization and deserialization. |
 | KV v2 CAS write | Yes | Optional check-and-set version support. |
-| KV v2 patch | Yes | Partial secret updates with documented JSON merge patch content type. |
-| KV v2 list | Yes | `LIST` method support for metadata paths. |
-| KV v2 delete latest | Yes | Accepts documented `200` and `204` success responses. |
-| KV v2 metadata/version APIs | Yes | Version reads, soft delete, undelete, destroy, metadata, and config helpers. |
-| KV v1 | Yes | Read, write, delete, and list helpers for non-versioned KV mounts. |
+| KV v2 patch | Yes | JSON merge patch content type. |
+| KV v2 list/delete versions | Yes | Metadata list, latest delete, soft delete, undelete, and destroy. |
+| KV v2 metadata/config | Yes | Backend and per-key metadata helpers. |
+| KV v1 | Yes | Read, write, delete, and list helpers. |
 | Transit | Planned | Planned for `0.3.0`. |
 | PKI | Planned | Planned for `0.4.0`. |
 | Database credentials | Planned | Planned for `0.5.0`. |
@@ -90,82 +197,57 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Health | Yes | Accepts OpenBao health statuses for active, standby, sealed, and uninitialized nodes. |
+| Health | Yes | Accepts OpenBao active, standby, sealed, and uninitialized health statuses. |
 | Seal status | Yes | Typed `/sys/seal-status` helper. |
-| Mount management | Yes | Secret and auth mount enable/list/tune/disable helpers. |
-| Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers with secret-aware wrapping tokens. |
-| Policies and capabilities | Yes | ACL policy list/read/write/delete plus self/token/accessor capability checks. |
+| Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
+| Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
+| Policies and capabilities | Yes | ACL policy helpers plus self/token/accessor capability checks. |
 | Audit devices | Planned | Enable/list/disable/hash in `0.3.0`. |
 | Lease helpers | Planned | Safe non-legacy lease endpoints in `0.3.0`. |
-| Init, unseal, rekey, rotate | Planned | Behind explicit safety documentation in `0.6.0`. |
+| Init, unseal, rekey, rotate | Planned | Explicit safety documentation in `0.6.0`. |
 | Plugins, quotas, metrics, namespaces | Planned | Planned in the `0.8.0` operations line. |
 
-### Security And Release Process
+## Examples
 
-| Capability | Status | Notes |
-| --- | --- | --- |
-| Unsafe Rust policy | Yes | `unsafe_code = "forbid"`. |
-| Secret handling | Yes | Token-bearing APIs use `SecretString`; intermediate auth buffers are zeroized where practical. |
-| Path validation | Yes | Rejects traversal, query/fragment injection, empty segments, control characters, and trailing periods. |
-| Dependency policy | Yes | `cargo deny` enforces source and license policy. |
-| RustSec audit | Yes | `cargo audit` is part of the release gate. |
-| CodeQL | Yes | Uses GitHub CodeQL default setup; no advanced workflow is committed. |
-| SBOM | Yes | `scripts/generate-sbom.sh` writes CycloneDX JSON. |
-| Pentest gate | Yes | Release notes record pentest review status before tagging. |
-| Local OpenBao dev stack | Yes | Podman TLS dev instance on `9940` and `9941`. |
-
-See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
-[Release Plan](docs/RELEASE_PLAN.md) for the precise road to `1.0.0`.
-
-## Why OpenBao Rust SDK
-
-- **Security first**: HTTPS by default, no redirects, TLS floor, strict path
-  validation, zeroized intermediate auth buffers, and secret-aware types.
-- **OpenBao focused**: follows the current OpenBao `/v1` HTTP API and documented
-  token header behavior.
-- **Small dependency surface**: keeps runtime dependencies narrow and reviewed.
-- **Typed where it matters**: safe typed helpers for common workflows, with a raw
-  JSON escape hatch while coverage grows.
-- **Release discipline**: security checks, SBOM, GitHub CodeQL default setup,
-  and pentest review are treated as release inputs, not afterthoughts.
-
-## Quick Start
-
-Add the crate:
-
-```toml
-[dependencies]
-openbao = "0.2"
-secrecy = "0.10.3"
-serde = { version = "1.0.228", features = ["derive"] }
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
-```
-
-Read a KV v2 secret:
+Create a client from an existing token:
 
 ```rust,no_run
 use openbao::{Client, Result};
 use secrecy::SecretString;
-use serde::Deserialize;
-
-#[derive(Deserialize)]
-struct DbCredentials {
-    username: String,
-    password: SecretString,
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
     let client = Client::new("https://bao.example.com:8200")?.with_token(token);
 
-    let secret = client
-        .kv2("secret")?
-        .read::<DbCredentials>("production/database")
-        .await?;
+    let health = client.sys().health().await?;
+    println!("openbao version: {}", health.version);
+    Ok(())
+}
+```
 
-    println!("username: {}", secret.data.username);
-    let _password = secret.data.password;
+Configure a stricter client with a namespace and root-only trust store:
+
+```rust,no_run
+use openbao::{Client, OpenBaoConfig, Result};
+use reqwest::Certificate;
+use secrecy::SecretString;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let ca_pem = std::fs::read("openbao-ca.pem")
+        .map_err(|error| openbao::Error::InvalidTlsConfig(error.to_string()))?;
+    let ca = Certificate::from_pem(&ca_pem)?;
+
+    let config = OpenBaoConfig::new("https://bao.example.com:8200")?
+        .namespace("admin/team-a")?
+        .only_root_certificates(vec![ca])?;
+
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::from_config(config)?.with_token(token);
+
+    let seal = client.sys().seal_status().await?;
+    println!("sealed: {}", seal.sealed);
     Ok(())
 }
 ```
@@ -191,11 +273,243 @@ async fn main() -> Result<()> {
 }
 ```
 
-Write an ACL policy and check capabilities:
+Write and read KV v2 data:
 
 ```rust,no_run
 use openbao::{Client, Result};
+use secrecy::SecretString;
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Serialize)]
+struct DatabaseCredentials {
+    username: String,
+    password: SecretString,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let kv = client.kv2("secret")?;
+
+    kv.write(
+        "production/database",
+        DatabaseCredentials {
+            username: "app".to_owned(),
+            password: SecretString::from("change-me"),
+        },
+    )
+    .await?;
+
+    let secret = kv
+        .read::<DatabaseCredentials>("production/database")
+        .await?;
+
+    println!("username: {}", secret.data.username);
+    let _password_is_not_logged = secret.data.password;
+    Ok(())
+}
+```
+
+Use KV v2 check-and-set, patch, and version operations:
+
+```rust,no_run
+use openbao::secrets::kv2::{Kv2MetadataOptions, Kv2WriteOptions};
+use openbao::{Client, Result};
+use secrecy::SecretString;
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct Patch {
+    password: SecretString,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let kv = client.kv2("secret")?;
+
+    kv.write_with_options(
+        "app/config",
+        serde_json::json!({ "username": "app", "password": "first" }),
+        Some(Kv2WriteOptions { cas: Some(0) }),
+    )
+    .await?;
+
+    let second = kv
+        .patch("app/config", Patch {
+            password: SecretString::from("rotated"),
+        })
+        .await?;
+
+    let _previous = kv
+        .read_version::<serde_json::Value>("app/config", second.version - 1)
+        .await?;
+    kv.delete_versions("app/config", &[second.version - 1]).await?;
+    kv.undelete_versions("app/config", &[second.version - 1]).await?;
+    kv.destroy_versions("app/config", &[second.version - 1]).await?;
+
+    kv.patch_metadata(
+        "app/config",
+        &Kv2MetadataOptions {
+            max_versions: Some(10),
+            cas_required: Some(true),
+            delete_version_after: Some("24h".to_owned()),
+            custom_metadata: None,
+        },
+    )
+    .await?;
+
+    Ok(())
+}
+```
+
+Use a KV v1 mount:
+
+```rust,no_run
+use openbao::{Client, Result};
+use secrecy::SecretString;
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Serialize)]
+struct Config {
+    endpoint: String,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let kv = client.kv1("legacy-secret")?;
+
+    kv.write("app/config", Config {
+        endpoint: "https://api.example.com".to_owned(),
+    })
+    .await?;
+
+    let config = kv.read::<Config>("app/config").await?;
+    let keys = kv.list("app").await?;
+
+    println!("endpoint: {}", config.endpoint);
+    println!("keys: {}", keys.keys.len());
+    Ok(())
+}
+```
+
+Create, inspect, renew, and revoke a child token:
+
+```rust,no_run
+use openbao::auth::token::TokenCreateRequest;
+use openbao::{Client, Result};
+use secrecy::SecretString;
+use std::collections::BTreeMap;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let root_or_parent = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(root_or_parent);
+
+    let child = client
+        .token()
+        .create(&TokenCreateRequest {
+            policies: vec!["default".to_owned()],
+            meta: BTreeMap::from([("owner".to_owned(), "example".to_owned())]),
+            display_name: Some("example-child".to_owned()),
+            ttl: Some("30m".to_owned()),
+            explicit_max_ttl: Some("1h".to_owned()),
+            renewable: Some(true),
+            ..TokenCreateRequest::default()
+        })
+        .await?;
+
+    let info = client.token().lookup(&child.client_token).await?;
+    println!("renewable: {}", info.renewable);
+
+    let _renewed = client.token().renew(&child.client_token, Some("15m")).await?;
+    client.token().revoke_accessor(&child.accessor).await?;
+    Ok(())
+}
+```
+
+Enable and tune a KV v2 mount:
+
+```rust,no_run
+use openbao::sys::{MountConfig, MountEnableRequest};
+use openbao::{Client, Result};
+use secrecy::SecretString;
+use std::collections::BTreeMap;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+
+    client
+        .sys()
+        .enable_mount(
+            "apps",
+            &MountEnableRequest {
+                backend_type: "kv".to_owned(),
+                description: Some("application secrets".to_owned()),
+                config: Some(MountConfig {
+                    default_lease_ttl: Some(serde_json::json!("30m")),
+                    max_lease_ttl: Some(serde_json::json!("2h")),
+                    ..MountConfig::default()
+                }),
+                options: BTreeMap::from([("version".to_owned(), "2".to_owned())]),
+                local: None,
+                seal_wrap: Some(true),
+                external_entropy_access: None,
+            },
+        )
+        .await?;
+
+    let mounts = client.sys().list_mounts().await?;
+    println!("mount count: {}", mounts.len());
+    Ok(())
+}
+```
+
+Wrap and unwrap JSON data:
+
+```rust,no_run
+use openbao::{Client, Result};
+use secrecy::SecretString;
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Serialize)]
+struct WrappedPayload {
+    nonce: String,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+
+    let wrap = client
+        .sys()
+        .wrapping_wrap("5m", &WrappedPayload {
+            nonce: "one-time".to_owned(),
+        })
+        .await?;
+
+    let payload = client
+        .sys()
+        .wrapping_unwrap::<WrappedPayload>(Some(&wrap.token))
+        .await?;
+
+    println!("payload nonce length: {}", payload.nonce.len());
+    Ok(())
+}
+```
+
+Write an ACL policy and check capabilities:
+
+```rust,no_run
 use openbao::sys::PolicyWriteRequest;
+use openbao::{Client, Result};
 use secrecy::SecretString;
 
 #[tokio::main]
@@ -222,6 +536,32 @@ async fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+Call an endpoint that is not typed yet:
+
+```rust,no_run
+use openbao::{Client, Result};
+use reqwest::Method;
+use secrecy::SecretString;
+use serde_json::Value;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+
+    let response: Value = client
+        .request_json(Method::GET, "sys/internal/specs/openapi", Option::<&Value>::None)
+        .await?;
+
+    println!("openapi keys: {}", response.as_object().map_or(0, |object| object.len()));
+    Ok(())
+}
+```
+
+The raw request layer is intentionally low level. Prefer typed helpers when the
+crate supports an endpoint; use raw JSON to bridge missing OpenBao APIs while
+coverage grows.
 
 ## Local OpenBao Dev Instance
 
