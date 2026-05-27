@@ -14,6 +14,9 @@
 
 #![forbid(unsafe_code)]
 
+#[cfg(not(any(feature = "rustls-tls", feature = "native-tls")))]
+compile_error!("openbao requires either the rustls-tls or native-tls feature");
+
 mod client;
 mod error;
 mod path;

@@ -143,7 +143,7 @@ openbao = { version = "0.2", default-features = false, features = ["kv2", "sys",
 | `kv2` | yes | KV v2 secrets engine helpers. |
 | `sys` | yes | System backend helpers. |
 | `rustls-tls` | yes | Rustls transport configuration. |
-| `native-tls` | no | Native TLS support through `reqwest/native-tls` for deployments that require it. |
+| `native-tls` | no | Legacy native TLS support. Audit before use; it may pull OpenSSL on some targets. |
 
 ## Support Matrix
 
@@ -435,7 +435,7 @@ async fn main() -> Result<()> {
 Enable and tune a KV v2 mount:
 
 ```rust,no_run
-use openbao::sys::{MountConfig, MountEnableRequest};
+use openbao::sys::{LeaseDuration, MountConfig, MountEnableRequest};
 use openbao::{Client, Result};
 use secrecy::SecretString;
 use std::collections::BTreeMap;
@@ -453,8 +453,8 @@ async fn main() -> Result<()> {
                 backend_type: "kv".to_owned(),
                 description: Some("application secrets".to_owned()),
                 config: Some(MountConfig {
-                    default_lease_ttl: Some(serde_json::json!("30m")),
-                    max_lease_ttl: Some(serde_json::json!("2h")),
+                    default_lease_ttl: Some(LeaseDuration::Duration("30m".to_owned())),
+                    max_lease_ttl: Some(LeaseDuration::Duration("2h".to_owned())),
                     ..MountConfig::default()
                 }),
                 options: BTreeMap::from([("version".to_owned(), "2".to_owned())]),

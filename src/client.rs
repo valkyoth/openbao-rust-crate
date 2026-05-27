@@ -339,6 +339,7 @@ impl<State> Client<State> {
             .await
     }
 
+    #[cfg_attr(not(any(feature = "sys", feature = "kv2")), allow(dead_code))]
     pub(crate) async fn request_json_headers_accepting<T, B>(
         &self,
         method: Method,
@@ -408,7 +409,7 @@ impl<State> Client<State> {
         }
 
         if let Some(namespace) = self.config.namespace.as_deref() {
-            request = request.header("X-Vault-Namespace", namespace);
+            request = request.header("X-Vault-Namespace", sensitive_header_value(namespace)?);
         }
         if let Some(token) = self.token.as_ref() {
             request = match self.config.header_mode {
@@ -429,15 +430,16 @@ impl<State> Client<State> {
             };
         }
         if let Some(payload) = body {
-            let encoded =
-                serde_json::to_vec(payload).map_err(|error| Error::Decode(error.to_string()))?;
+            let encoded = Zeroizing::new(
+                serde_json::to_vec(payload).map_err(|error| Error::Decode(error.to_string()))?,
+            );
             let has_content_type = headers.iter().any(|(name, _value)| *name == CONTENT_TYPE);
-            // Move the only owned JSON buffer we control into reqwest. The HTTP
-            // stack and OS may still keep their own transport buffers.
             if !has_content_type {
                 request = request.header(CONTENT_TYPE, "application/json");
             }
-            request = request.body(encoded);
+            // Zero the serialization buffer we control. reqwest and the OS may
+            // still keep independent transport buffers until their own cleanup.
+            request = request.body(Vec::from(&encoded[..]));
         }
 
         let response = request.send().await?;
@@ -520,9 +522,10 @@ where
 }
 
 fn validate_json_content_type(response: &reqwest::Response) -> Result<()> {
-    let Some(content_type) = response.headers().get(reqwest::header::CONTENT_TYPE) else {
-        return Ok(());
-    };
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .ok_or_else(|| Error::Decode("missing content-type header".into()))?;
     let content_type = content_type
         .to_str()
         .map_err(|error| Error::Decode(format!("invalid content-type header: {error}")))?;

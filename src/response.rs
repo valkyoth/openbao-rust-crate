@@ -3,12 +3,16 @@
 use core::fmt;
 
 use secrecy::SecretString;
+#[cfg(any(feature = "sys", feature = "token"))]
+use serde::de::Error as DeError;
 use serde::{
     Deserialize, Deserializer, Serialize,
     de::{IgnoredAny, SeqAccess, Visitor},
 };
 
 const MAX_API_ERRORS: usize = 16;
+#[cfg(any(feature = "sys", feature = "token"))]
+pub(crate) const MAX_RESPONSE_STRINGS: usize = 4096;
 
 /// Empty JSON payload used for endpoints that do not require a body.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
@@ -84,6 +88,80 @@ impl fmt::Debug for WrapInfo {
 
 fn empty_secret() -> SecretString {
     SecretString::from(String::new())
+}
+
+#[cfg(any(feature = "sys", feature = "token"))]
+pub(crate) fn deserialize_bounded_string_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_seq(BoundedStringListVisitor::<MAX_RESPONSE_STRINGS>)
+}
+
+#[cfg(feature = "token")]
+pub(crate) fn deserialize_bounded_secret_string_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_seq(BoundedSecretStringListVisitor::<MAX_RESPONSE_STRINGS>)
+}
+
+#[cfg(any(feature = "sys", feature = "token"))]
+struct BoundedStringListVisitor<const MAX: usize>;
+
+#[cfg(any(feature = "sys", feature = "token"))]
+impl<'de, const MAX: usize> Visitor<'de> for BoundedStringListVisitor<MAX> {
+    type Value = Vec<String>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a list of at most {MAX} strings")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while let Some(value) = seq.next_element::<String>()? {
+            if values.len() >= MAX {
+                return Err(A::Error::custom("OpenBao string list exceeds item limit"));
+            }
+            values.push(value);
+        }
+        Ok(values)
+    }
+}
+
+#[cfg(feature = "token")]
+struct BoundedSecretStringListVisitor<const MAX: usize>;
+
+#[cfg(feature = "token")]
+impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretStringListVisitor<MAX> {
+    type Value = Vec<SecretString>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a list of at most {MAX} secret strings")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while let Some(value) = seq.next_element::<String>()? {
+            if values.len() >= MAX {
+                return Err(A::Error::custom(
+                    "OpenBao secret string list exceeds item limit",
+                ));
+            }
+            values.push(SecretString::from(value));
+        }
+        Ok(values)
+    }
 }
 
 #[derive(Debug, Deserialize)]

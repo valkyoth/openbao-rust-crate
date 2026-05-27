@@ -37,12 +37,25 @@ Please include:
 - TLS verification must remain enabled by default.
 - Redirects must remain disabled by default.
 - TLS 1.3 or newer must remain enforced by default; TLS 1.2 requires an explicit legacy opt-down.
+- The default TLS backend is Rustls. The `native-tls` feature exists only for
+  audited legacy compatibility and may pull OpenSSL on some targets.
 - Token accessors are treated as secret material.
+- Namespace header values are treated as sensitive metadata.
 - Plain HTTP is allowed only by explicit numeric loopback IP opt-in. Hostnames such as `localhost` are rejected.
 - Response bodies must remain size-bounded, JSON content-type checked, and zeroized after decoding.
-- Exact certificate or SPKI pinning is not implemented in 0.1.0; use root-only trust with a private CA when pinning would otherwise be required.
+- JSON request serialization buffers controlled by this crate must be zeroized
+  after handoff to the HTTP stack.
+- Exact certificate or SPKI pinning is not implemented in 0.2.0; use root-only trust with a private CA when pinning would otherwise be required.
 - Third-party GitHub Actions must be pinned to immutable commit SHAs.
 - New dependencies require a release-plan justification and `cargo deny` review.
+
+## Known Limitations
+
+After a JSON request body is handed to `reqwest`, the transport stack, TLS
+backend, kernel, or network device may keep independent plaintext or ciphertext
+buffers until their own cleanup. This crate zeroizes the serialization buffer it
+controls, but it cannot guarantee zeroization of buffers owned by dependencies
+or the operating system.
 
 ## Pentest Gate
 

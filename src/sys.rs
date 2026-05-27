@@ -7,12 +7,15 @@ use reqwest::{
     header::{HeaderName, HeaderValue},
 };
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::{Error as DeError, Visitor},
+};
 
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_mount_path, validate_secret_path},
-    response::{Empty, ResponseEnvelope, WrapInfo},
+    response::{Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_string_vec},
 };
 
 /// System backend handle.
@@ -101,10 +104,10 @@ pub struct MountConfig {
     pub description: Option<String>,
     /// Default lease TTL, in seconds when returned by OpenBao or duration string when submitted.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub default_lease_ttl: Option<serde_json::Value>,
+    pub default_lease_ttl: Option<LeaseDuration>,
     /// Maximum lease TTL, in seconds when returned by OpenBao or duration string when submitted.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_lease_ttl: Option<serde_json::Value>,
+    pub max_lease_ttl: Option<LeaseDuration>,
     /// Whether backend caching is disabled.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub force_no_cache: Option<bool>,
@@ -131,7 +134,95 @@ pub struct MountConfig {
     pub token_type: Option<String>,
     /// User lockout configuration used by auth mounts.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub user_lockout_config: Option<BTreeMap<String, serde_json::Value>>,
+    pub user_lockout_config: Option<UserLockoutConfig>,
+}
+
+/// Lease duration as OpenBao returns or accepts it.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum LeaseDuration {
+    /// Duration in whole seconds.
+    Seconds(u64),
+    /// Duration string such as `30m` or `1h`.
+    Duration(String),
+}
+
+impl Serialize for LeaseDuration {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Seconds(seconds) => serializer.serialize_u64(*seconds),
+            Self::Duration(duration) => serializer.serialize_str(duration),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for LeaseDuration {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(LeaseDurationVisitor)
+    }
+}
+
+struct LeaseDurationVisitor;
+
+impl Visitor<'_> for LeaseDurationVisitor {
+    type Value = LeaseDuration;
+
+    fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter.write_str("a non-negative second count or a duration string")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> core::result::Result<Self::Value, E> {
+        Ok(LeaseDuration::Seconds(value))
+    }
+
+    fn visit_i64<E>(self, value: i64) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        u64::try_from(value)
+            .map(LeaseDuration::Seconds)
+            .map_err(|_| E::custom("duration seconds must not be negative"))
+    }
+
+    fn visit_str<E>(self, value: &str) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        validate_duration_string(value, true)
+            .then(|| LeaseDuration::Duration(value.to_owned()))
+            .ok_or_else(|| E::custom("invalid duration string"))
+    }
+
+    fn visit_string<E>(self, value: String) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        validate_duration_string(&value, true)
+            .then_some(LeaseDuration::Duration(value))
+            .ok_or_else(|| E::custom("invalid duration string"))
+    }
+}
+
+/// User lockout configuration for auth method tuning.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UserLockoutConfig {
+    /// Number of failed attempts before lockout.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lockout_threshold: Option<u64>,
+    /// Lockout duration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lockout_duration: Option<LeaseDuration>,
+    /// Duration after which the failed-attempt counter is reset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lockout_counter_reset_duration: Option<LeaseDuration>,
+    /// Disable lockout handling for the mount.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lockout_disable: Option<bool>,
 }
 
 /// Request for enabling a secrets engine.
@@ -195,7 +286,7 @@ pub struct WrappingLookup {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PolicyList {
     /// Policy names.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub policies: Vec<String>,
 }
 
@@ -211,7 +302,7 @@ pub struct PolicyInfo {
     pub modified: Option<String>,
     /// Policy version, when returned by OpenBao.
     #[serde(default)]
-    pub version: Option<serde_json::Value>,
+    pub version: Option<u64>,
     /// Whether check-and-set is required for future updates.
     #[serde(default)]
     pub cas_required: bool,
@@ -240,7 +331,7 @@ pub struct PolicyWriteRequest {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Capabilities {
     /// Backwards-compatible capabilities field returned for single-path queries.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub capabilities: Vec<String>,
     /// Capabilities keyed by queried path.
     #[serde(flatten)]
@@ -562,6 +653,7 @@ impl Sys<'_, Authenticated> {
     where
         T: Serialize + ?Sized,
     {
+        validate_wrapping_ttl(ttl)?;
         let ttl =
             HeaderValue::from_str(ttl).map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<Option<Empty>> = self
@@ -630,6 +722,44 @@ fn sys_path(prefix: &str, mount_path: &str, suffix: Option<&str>) -> Result<Stri
     Ok(segments.join("/"))
 }
 
+fn validate_wrapping_ttl(ttl: &str) -> Result<()> {
+    if validate_duration_string(ttl, false) {
+        return Ok(());
+    }
+    Err(Error::InvalidHeader(
+        "wrapping TTL must be a positive duration such as 30s, 5m, or 1h".into(),
+    ))
+}
+
+fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
+    if value.is_empty() {
+        return false;
+    }
+
+    let bytes = value.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        let digit_start = index;
+        while index < bytes.len() && bytes[index].is_ascii_digit() {
+            index += 1;
+        }
+        if digit_start == index {
+            return false;
+        }
+        if !allow_zero && bytes[digit_start..index].iter().all(|byte| *byte == b'0') {
+            return false;
+        }
+        if index >= bytes.len() {
+            return false;
+        }
+        match bytes[index] {
+            b's' | b'm' | b'h' => index += 1,
+            _ => return false,
+        }
+    }
+    true
+}
+
 fn validate_capability_paths<I, P>(paths: I) -> Result<Vec<String>>
 where
     I: IntoIterator<Item = P>,
@@ -665,7 +795,9 @@ where
 mod tests {
     #![allow(clippy::panic)]
 
-    use super::{sys_path, validate_capability_paths};
+    use super::{
+        LeaseDuration, PolicyList, sys_path, validate_capability_paths, validate_wrapping_ttl,
+    };
 
     #[test]
     fn sys_paths_are_validated() {
@@ -684,5 +816,46 @@ mod tests {
         assert_eq!(paths, ["secret/data/app", "sys/policy/default"]);
         assert!(validate_capability_paths([""]).is_err());
         assert!(validate_capability_paths(["../secret"]).is_err());
+    }
+
+    #[test]
+    fn wrapping_ttl_is_validated() {
+        assert!(validate_wrapping_ttl("30s").is_ok());
+        assert!(validate_wrapping_ttl("5m").is_ok());
+        assert!(validate_wrapping_ttl("1h").is_ok());
+        assert!(validate_wrapping_ttl("").is_err());
+        assert!(validate_wrapping_ttl("0s").is_err());
+        assert!(validate_wrapping_ttl("-1h").is_err());
+        assert!(validate_wrapping_ttl("forever").is_err());
+    }
+
+    #[test]
+    fn lease_duration_rejects_untyped_json() {
+        assert_eq!(
+            serde_json::from_str::<LeaseDuration>("3600").unwrap_or_else(|error| panic!("{error}")),
+            LeaseDuration::Seconds(3600)
+        );
+        assert_eq!(
+            serde_json::from_str::<LeaseDuration>(r#""30m""#)
+                .unwrap_or_else(|error| panic!("{error}")),
+            LeaseDuration::Duration("30m".to_owned())
+        );
+        assert!(serde_json::from_str::<LeaseDuration>("-1").is_err());
+        assert!(serde_json::from_str::<LeaseDuration>(r#""never""#).is_err());
+        assert!(serde_json::from_str::<LeaseDuration>(r#"{"ttl":3600}"#).is_err());
+    }
+
+    #[test]
+    fn policy_list_is_bounded() {
+        let mut policies = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            policies.push(format!("policy-{index}"));
+        }
+        let value = serde_json::json!({ "policies": policies });
+        let error = match serde_json::from_value::<PolicyList>(value) {
+            Ok(_) => panic!("oversized policy list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
     }
 }

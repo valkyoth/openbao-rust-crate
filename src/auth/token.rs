@@ -8,7 +8,10 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     Authenticated, Client, Error, Result,
-    response::{Empty, ResponseEnvelope},
+    response::{
+        Empty, ResponseEnvelope, deserialize_bounded_secret_string_vec,
+        deserialize_bounded_string_vec,
+    },
 };
 
 /// Handle for the built-in token auth method.
@@ -63,10 +66,10 @@ pub struct TokenAuth {
     /// Token accessor returned by OpenBao.
     pub accessor: SecretString,
     /// Policies attached to the token.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub policies: Vec<String>,
     /// Token policies attached to the token.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub token_policies: Vec<String>,
     /// Token metadata.
     #[serde(default, deserialize_with = "deserialize_null_default")]
@@ -114,7 +117,7 @@ pub struct TokenInfo {
     pub creation_ttl: Option<u64>,
     /// Current TTL in seconds.
     #[serde(default)]
-    pub ttl: Option<i64>,
+    pub ttl: Option<u64>,
     /// Expiration time, when present.
     #[serde(default)]
     pub expire_time: Option<String>,
@@ -131,10 +134,10 @@ pub struct TokenInfo {
     #[serde(default)]
     pub renewable: bool,
     /// Attached policies.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub policies: Vec<String>,
     /// Identity policies.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub identity_policies: Vec<String>,
     /// Token metadata.
     #[serde(default, deserialize_with = "deserialize_null_default")]
@@ -148,7 +151,7 @@ pub struct TokenInfo {
 #[derive(Clone, Debug, Deserialize)]
 pub struct TokenAccessorList {
     /// Token accessors. Accessors can revoke tokens, so keep them secret.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
     pub keys: Vec<SecretString>,
 }
 
@@ -320,4 +323,38 @@ where
     T: Deserialize<'de> + Default,
 {
     Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::panic)]
+
+    use crate::response::ResponseEnvelope;
+
+    use super::{TokenAccessorList, TokenInfo};
+
+    #[test]
+    fn token_ttl_rejects_negative_values() {
+        let error = match serde_json::from_str::<ResponseEnvelope<TokenInfo>>(
+            r#"{"data":{"ttl":-1,"policies":[]}}"#,
+        ) {
+            Ok(_) => panic!("negative ttl unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("invalid value"));
+    }
+
+    #[test]
+    fn token_accessor_list_is_bounded() {
+        let mut keys = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            keys.push(format!("accessor-{index}"));
+        }
+        let value = serde_json::json!({ "keys": keys });
+        let error = match serde_json::from_value::<TokenAccessorList>(value) {
+            Ok(_) => panic!("oversized accessor list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
 }

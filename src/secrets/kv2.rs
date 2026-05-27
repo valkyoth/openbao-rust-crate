@@ -327,7 +327,7 @@ impl Kv2<'_> {
             .client
             .request_json(
                 Method::GET,
-                &self.mount_path("config"),
+                &self.mount_path("config")?,
                 Option::<&Empty>::None,
             )
             .await?;
@@ -337,7 +337,7 @@ impl Kv2<'_> {
     /// Updates backend-level KV v2 configuration.
     pub async fn configure(&self, config: &Kv2Config) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.mount_path("config"), Some(config))
+            .request_json(Method::POST, &self.mount_path("config")?, Some(config))
             .await
     }
 
@@ -397,7 +397,7 @@ impl Kv2<'_> {
 
     fn version_path(&self, operation: &str, path: &str) -> Result<String> {
         let mut segments = self.mount.clone();
-        segments.push(operation.to_owned());
+        segments.extend(validate_mount_path(operation)?);
         segments.extend(validate_secret_path(path)?);
         Ok(segments.join("/"))
     }
@@ -409,10 +409,10 @@ impl Kv2<'_> {
         Ok(segments.join("/"))
     }
 
-    fn mount_path(&self, child: &str) -> String {
+    fn mount_path(&self, child: &str) -> Result<String> {
         let mut segments = self.mount.clone();
-        segments.push(child.to_owned());
-        segments.join("/")
+        segments.extend(validate_mount_path(child)?);
+        Ok(segments.join("/"))
     }
 }
 

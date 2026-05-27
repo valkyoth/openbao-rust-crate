@@ -38,11 +38,15 @@ token = []
 kv1 = []
 kv2 = []
 sys = []
-rustls-tls = []
+# Default TLS backend. Keep this enabled unless a deployment has audited a
+# different transport stack.
+rustls-tls = ["reqwest/rustls"]
+# Legacy compatibility only. Enabling this pulls the platform native TLS stack
+# and may pull OpenSSL on some targets; audit before use in high-security builds.
 native-tls = ["reqwest/native-tls"]
 
 [dependencies]
-reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
