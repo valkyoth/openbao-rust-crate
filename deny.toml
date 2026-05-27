@@ -40,8 +40,6 @@ highlight = "all"
 [advisories]
 db-path = "/tmp/openbao-rust-crate-cargo-deny-advisory-dbs"
 yanked = "deny"
-unmaintained = "all"
-unsound = "all"
 ignore = []
 
 [sources]
