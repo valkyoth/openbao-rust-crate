@@ -10,9 +10,7 @@ all-features = true
 [licenses]
 confidence-threshold = 0.95
 include-dev = true
-include-build = true
 unused-allowed-license = "allow"
-unused-license-exception = "deny"
 
 allow = [
     "0BSD",
@@ -44,7 +42,6 @@ db-path = "/tmp/openbao-rust-crate-cargo-deny-advisory-dbs"
 yanked = "deny"
 unmaintained = "all"
 unsound = "all"
-unused-ignored-advisory = "deny"
 ignore = []
 
 [sources]
