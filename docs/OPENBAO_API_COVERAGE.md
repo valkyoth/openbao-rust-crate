@@ -101,6 +101,7 @@ The official `2.5.x` HTTP API documentation states:
 - `X-Vault-Request: true` is used by the official SDK/CLI behavior;
 - path parameters must not end in periods;
 - applications should accept both `200` and `204` where applicable;
+- KV v2 patch operations use `application/merge-patch+json`;
 - errors commonly use `{"errors": [...]}` for status codes `>= 400`.
 
 The crate follows those documented behaviors by default.

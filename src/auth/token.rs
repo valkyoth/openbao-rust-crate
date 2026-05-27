@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use reqwest::Method;
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     Authenticated, Client, Error, Result,
@@ -69,7 +69,7 @@ pub struct TokenAuth {
     #[serde(default)]
     pub token_policies: Vec<String>,
     /// Token metadata.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub metadata: BTreeMap<String, String>,
     /// Lease duration in seconds.
     #[serde(default)]
@@ -137,7 +137,7 @@ pub struct TokenInfo {
     #[serde(default)]
     pub identity_policies: Vec<String>,
     /// Token metadata.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub meta: BTreeMap<String, String>,
     /// Token type.
     #[serde(default)]
@@ -312,4 +312,12 @@ impl Token<'_> {
             .request_json(Method::POST, "auth/token/revoke-accessor", Some(&payload))
             .await
     }
+}
+
+fn deserialize_null_default<'de, D, T>(deserializer: D) -> core::result::Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
 }

@@ -7,7 +7,7 @@ use reqwest::{
     header::{HeaderName, HeaderValue},
 };
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     Authenticated, Client, Error, Result,
@@ -77,7 +77,7 @@ pub struct MountInfo {
     #[serde(default)]
     pub accessor: Option<SecretString>,
     /// Backend configuration.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_null_default")]
     pub config: MountConfig,
     /// Backend options.
     #[serde(default)]
@@ -448,6 +448,14 @@ fn sys_path(prefix: &str, mount_path: &str, suffix: Option<&str>) -> Result<Stri
         segments.push(suffix.to_owned());
     }
     Ok(segments.join("/"))
+}
+
+fn deserialize_null_default<'de, D, T>(deserializer: D) -> core::result::Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
 }
 
 #[cfg(test)]

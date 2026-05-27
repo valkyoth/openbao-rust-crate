@@ -1,5 +1,4 @@
 ui = true
-disable_mlock = false
 
 storage "raft" {
   path = "/openbao/data"

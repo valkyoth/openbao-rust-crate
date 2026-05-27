@@ -4,17 +4,19 @@ networks:
   openbao_internal:
     internal: true
 
+volumes:
+  openbao_data:
+
 services:
   openbao:
     image: docker.io/openbao/openbao:2.5.4@sha256:436eaf9778cad75507ff70ea26ace30dcbe15606e619ac3823495663d7f7c115
     container_name: openbao_rust_crate_dev
     command: ["server", "-config=/openbao/config/openbao.hcl"]
-    cap_add:
-      - IPC_LOCK
+    user: "100:100"
     environment:
       BAO_CACERT: /openbao/tls/dev-ca.crt
     volumes:
-      - ./dev-state/data:/openbao/data:Z
+      - openbao_data:/openbao/data
       - ./openbao.hcl:/openbao/config/openbao.hcl:ro,Z
       - ./dev-state/tls:/openbao/tls:ro,z
     ports:

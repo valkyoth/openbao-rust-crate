@@ -74,7 +74,7 @@ OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 | KV v2 read | Yes | Typed deserialization into caller-provided structs. |
 | KV v2 write | Yes | Typed serialization with zeroized intermediate JSON buffer. |
 | KV v2 CAS write | Yes | Optional check-and-set version support. |
-| KV v2 patch | Yes | Partial secret updates with optional check-and-set support. |
+| KV v2 patch | Yes | Partial secret updates with documented JSON merge patch content type. |
 | KV v2 list | Yes | `LIST` method support for metadata paths. |
 | KV v2 delete latest | Yes | Accepts documented `200` and `204` success responses. |
 | KV v2 metadata/version APIs | Yes | Version reads, soft delete, undelete, destroy, metadata, and config helpers. |
@@ -209,6 +209,16 @@ Initialize and unseal OpenBao using `bao operator init` and
 `bao operator unseal`, then export `BAO_ADDR=https://127.0.0.1:9940` and
 `BAO_CACERT=deploy/podman/dev-state/tls/dev-ca.crt`.
 
+Run the real OpenBao integration flow:
+
+```bash
+scripts/openbao_integration.sh
+```
+
+The integration script creates a fresh TLS dev instance, initializes and
+unseals it, stores the root token in a temporary `0600` file for the test
+process, and removes that file when the run exits.
+
 ## Release Discipline
 
 Run the normal local checks:
@@ -222,6 +232,9 @@ Run the current release gate:
 ```bash
 scripts/release_0_2_gate.sh
 ```
+
+Set `OPENBAO_SKIP_INTEGRATION=1` only when Podman is unavailable; release
+candidate validation should run the integration gate.
 
 No release tag should be cut unless the matching pentest report status is
 reviewed and recorded in the release notes.

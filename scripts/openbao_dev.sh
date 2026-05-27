@@ -5,8 +5,9 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 PODMAN_DIR="$ROOT_DIR/deploy/podman"
 STATE_DIR="$PODMAN_DIR/dev-state"
 TLS_DIR="$STATE_DIR/tls"
-DATA_DIR="$STATE_DIR/data"
 COMPOSE_FILE="$PODMAN_DIR/compose.dev.yml"
+OPENBAO_IMAGE="docker.io/openbao/openbao:2.5.4@sha256:436eaf9778cad75507ff70ea26ace30dcbe15606e619ac3823495663d7f7c115"
+DATA_VOLUME="openbao-rust-crate_openbao_data"
 
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -15,10 +16,29 @@ require() {
   fi
 }
 
+prepare_tls_for_container() {
+  chmod 755 "$STATE_DIR" "$TLS_DIR"
+  chmod 600 "$TLS_DIR/dev-ca.key"
+  chmod 604 "$TLS_DIR/openbao.key"
+  chmod 644 "$TLS_DIR/dev-ca.crt" "$TLS_DIR/openbao.crt"
+  if [ -f "$TLS_DIR/dev-ca.srl" ]; then
+    chmod 644 "$TLS_DIR/dev-ca.srl"
+  fi
+}
+
+prepare_data_volume() {
+  require podman
+  if ! podman volume inspect "$DATA_VOLUME" >/dev/null 2>&1; then
+    podman volume create "$DATA_VOLUME" >/dev/null
+  fi
+  podman run --rm --user 0:0 --entrypoint chown -v "$DATA_VOLUME:/openbao/data" "$OPENBAO_IMAGE" -R 100:100 /openbao/data >/dev/null
+}
+
 generate_tls() {
   require openssl
-  mkdir -p "$TLS_DIR" "$DATA_DIR"
-  chmod 700 "$STATE_DIR" "$TLS_DIR" "$DATA_DIR"
+  mkdir -p "$TLS_DIR"
+  chmod 755 "$STATE_DIR"
+  chmod 755 "$TLS_DIR"
 
   if [ ! -f "$TLS_DIR/dev-ca.key" ] || [ ! -f "$TLS_DIR/dev-ca.crt" ]; then
     openssl req \
@@ -68,6 +88,14 @@ generate_tls() {
     chmod 600 "$TLS_DIR/openbao.key"
     chmod 644 "$TLS_DIR/openbao.crt"
   fi
+
+  chmod 755 "$TLS_DIR"
+  chmod 600 "$TLS_DIR/dev-ca.key" "$TLS_DIR/openbao.key"
+  chmod 644 "$TLS_DIR/dev-ca.crt" "$TLS_DIR/openbao.crt"
+  if [ -f "$TLS_DIR/dev-ca.srl" ]; then
+    chmod 644 "$TLS_DIR/dev-ca.srl"
+  fi
+  prepare_tls_for_container
 }
 
 compose() {
@@ -80,6 +108,7 @@ case "${1:-help}" in
   up)
     generate_tls
     compose pull
+    prepare_data_volume
     compose up -d
     echo "BAO_ADDR=https://127.0.0.1:9940"
     echo "BAO_CACERT=$TLS_DIR/dev-ca.crt"
@@ -95,7 +124,9 @@ case "${1:-help}" in
     podman exec openbao_rust_crate_dev bao status -address=https://127.0.0.1:8200 -ca-cert=/openbao/tls/dev-ca.crt
     ;;
   clean)
-    compose down
+    compose down -v
+    require podman
+    podman volume rm -f "$DATA_VOLUME" >/dev/null 2>&1 || true
     rm -rf "$STATE_DIR"
     ;;
   *)

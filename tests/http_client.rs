@@ -151,6 +151,52 @@ async fn kv2_read_version_sends_version_query() {
 }
 
 #[tokio::test]
+async fn kv2_patch_sends_merge_patch_content_type() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("PATCH /v1/secret/data/app/config HTTP/1.1"));
+        assert!(request.contains("content-type: application/merge-patch+json"));
+        assert!(!request.contains("content-type: application/json"));
+        let body = r#"{"data":{"created_time":"2026-05-27T00:00:00Z","version":2}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let response = client
+        .kv2("secret")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .patch("app/config", WrappedData { value: "ok".into() })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(response.version, 2);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn token_lookup_self_sends_documented_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

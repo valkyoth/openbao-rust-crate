@@ -431,11 +431,13 @@ impl<State> Client<State> {
         if let Some(payload) = body {
             let encoded =
                 serde_json::to_vec(payload).map_err(|error| Error::Decode(error.to_string()))?;
+            let has_content_type = headers.iter().any(|(name, _value)| *name == CONTENT_TYPE);
             // Move the only owned JSON buffer we control into reqwest. The HTTP
             // stack and OS may still keep their own transport buffers.
-            request = request
-                .header(CONTENT_TYPE, "application/json")
-                .body(encoded);
+            if !has_content_type {
+                request = request.header(CONTENT_TYPE, "application/json");
+            }
+            request = request.body(encoded);
         }
 
         let response = request.send().await?;

@@ -14,6 +14,12 @@ All notable changes to this project are documented here.
   metadata, and backend config helpers.
 - System mount and auth mount list, enable, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
+- Podman-backed real OpenBao integration test for the default `0.2.0`
+  feature flow.
+
+### Fixed
+
+- KV v2 patch helpers now send the documented JSON merge patch content type.
 
 ## 0.1.0 - 2026-05-27
 

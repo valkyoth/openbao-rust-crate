@@ -2,7 +2,10 @@
 
 use std::collections::BTreeMap;
 
-use reqwest::{Method, StatusCode};
+use reqwest::{
+    Method, StatusCode,
+    header::{CONTENT_TYPE, HeaderValue},
+};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
@@ -246,7 +249,16 @@ impl Kv2<'_> {
         let payload = Kv2WritePayload { data, options };
         let envelope: ResponseEnvelope<Kv2WriteResponse> = self
             .client
-            .request_json(Method::PATCH, &self.data_path(path)?, Some(&payload))
+            .request_json_headers_accepting(
+                Method::PATCH,
+                &self.data_path(path)?,
+                &[(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/merge-patch+json"),
+                )],
+                Some(&payload),
+                &[StatusCode::OK],
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -352,7 +364,16 @@ impl Kv2<'_> {
     /// Patches KV v2 metadata for a key.
     pub async fn patch_metadata(&self, path: &str, metadata: &Kv2MetadataOptions) -> Result<Empty> {
         self.client
-            .request_json(Method::PATCH, &self.metadata_path(path)?, Some(metadata))
+            .request_json_headers_accepting(
+                Method::PATCH,
+                &self.metadata_path(path)?,
+                &[(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/merge-patch+json"),
+                )],
+                Some(metadata),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
             .await
     }
 
