@@ -20,13 +20,13 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_1_gate.sh`
-- Result: pending
+- Result: local pre-pentest gate passed on 2026-05-27
 - Pentest report: pending owner-provided report before tag
-- `cargo audit` result: pending
-- `cargo deny check` result: pending
+- `cargo audit` result: passed, no vulnerabilities reported
+- `cargo deny check` result: passed with duplicate transitive crate warnings from the all-feature TLS graph
 - CodeQL result: pending
 - Podman OpenBao integration result: pending
-- SBOM generation result: pending
+- SBOM generation result: passed, generated `target/sbom/openbao.cdx.json`
 
 ## Known Limitations
 
