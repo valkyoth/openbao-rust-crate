@@ -2,11 +2,10 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 0.2.0 - 2026-05-27
 
 ### Added
 
-- Began the `0.2.0` development line.
 - Token lifecycle helpers for create, lookup, accessor lookup/list, renew, and
   revoke flows.
 - KV v1 read, write, delete, and list helpers.
@@ -22,6 +21,18 @@ All notable changes to this project are documented here.
 ### Fixed
 
 - KV v2 patch helpers now send the documented JSON merge patch content type.
+- JSON request serialization buffers controlled by the crate are zeroized after
+  handoff to the HTTP stack.
+- Successful JSON responses now require an `application/json` content type.
+- Namespace headers are marked sensitive.
+- Token TTL responses reject negative values.
+- System TTL/config fields use typed duration and lockout structures instead
+  of unbounded JSON values.
+- Response string lists are bounded for token policies, accessors, policy
+  names, KV list keys, mount header lists, capabilities, and response warnings.
+- KV v2 internal path helpers validate operation and mount child path segments.
+- Response wrapping TTLs are validated before sending.
+- `rustls-tls` now wires to the actual `reqwest/rustls` feature.
 
 ## 0.1.0 - 2026-05-27
 
