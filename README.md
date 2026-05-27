@@ -1,49 +1,138 @@
+<p align="center">
+  <b>Secure, typed, async Rust SDK for OpenBao.</b><br>
+  Memory-safe by default. Minimal dependency surface. Built for audited secret workflows.
+</p>
+
+<div align="center">
+  <a href="https://openbao.org/">OpenBao</a>
+  ·
+  <a href="docs/OPENBAO_API_COVERAGE.md">API Coverage</a>
+  ·
+  <a href="docs/RELEASE_PLAN.md">Release Plan</a>
+  ·
+  <a href="SECURITY.md">Security</a>
+</div>
+
+<br>
+
+<p align="center">
+  <img src="./.github/images/openbao_rust_crate.webp" alt="OpenBao Rust crate overview">
+</p>
+
 # OpenBao Rust SDK
 
 `openbao` is a secure, async Rust SDK for [OpenBao](https://openbao.org/).
-
-The crate name on crates.io is intended to be `openbao`; the project and public
-branding use `OpenBao`. Rust imports are lowercase:
+The crate name on crates.io is intended to be `openbao`; Rust imports are
+lowercase:
 
 ```rust
 use openbao::Client;
 ```
 
-## Security Posture
+The current release target is `0.1.0`: secure client construction, direct token
+authentication, AppRole login, KV v2 read/write/list/delete helpers, system
+health and seal-status helpers, a raw JSON request layer for unsupported
+endpoints, a hardened local OpenBao dev instance, and a release process gated by
+formatting, clippy, tests, docs, `cargo audit`, `cargo deny`, SBOM generation,
+CodeQL, and pentest review.
 
-- Unsafe Rust is forbidden.
-- HTTPS is required by default.
-- Loopback HTTP requires explicit opt-in for tests and local-only development.
-- Redirects are disabled so token headers cannot be forwarded to another host.
-- TLS 1.2 is the default minimum; callers can require TLS 1.3.
-- A 5-second connection timeout is configured by default.
-- Custom CA roots and root-only trust stores are supported for private PKI.
-- Tokens use `secrecy::SecretString` and are redacted from `Debug`.
-- Authentication headers are marked sensitive before requests are sent.
-- URLs are assembled with structured path segments instead of string
-  concatenation.
-- Path traversal, query injection, fragment injection, empty segments, and
-  OpenBao path parameters ending in `.` are rejected client-side.
-- The default token header is the officially documented `X-Vault-Token`.
-- `X-Vault-Request: true` is sent on requests, matching OpenBao SDK behavior.
-- Dependencies are intentionally small and tracked by `cargo audit`,
-  `cargo deny`, CodeQL, Dependabot, and release gates.
+OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 
-## Current Scope
+## What Works Today
 
-Version `0.1.0` provides a functional first SDK slice:
+### Client, Transport, And TLS
 
-- secure client configuration;
-- direct token auth;
-- AppRole login;
-- KV v2 read/write/list/delete;
-- system health and seal status;
-- raw JSON request support for advanced OpenBao APIs.
+| Capability | Status | Notes |
+| --- | --- | --- |
+| Async client | Yes | Built on `reqwest` with a small public API surface. |
+| Typestate auth | Yes | Separate unauthenticated and authenticated client states. |
+| HTTPS by default | Yes | Plain HTTP is rejected unless loopback HTTP is explicitly enabled. |
+| Redirect protection | Yes | Redirect following is disabled to avoid forwarding token headers. |
+| TLS floor | Yes | TLS 1.2 minimum by default; callers can require TLS 1.3. |
+| Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
+| Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. |
+| Connection timeout | Yes | 5-second connection timeout by default, configurable by callers. |
+| User agent fingerprinting | Yes | Default user agent omits the exact crate version. |
+| Namespace header | Yes | `X-Vault-Namespace` support for namespace-aware deployments. |
+| Raw JSON requests | Yes | Escape hatch for endpoints that are not typed yet. |
 
-See [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md) for the complete path to
-`1.0.0`.
+### Authentication
 
-## Install
+| Capability | Status | Notes |
+| --- | --- | --- |
+| Direct token auth | Yes | Tokens are accepted as `secrecy::SecretString`. |
+| `X-Vault-Token` | Yes | Default documented OpenBao-compatible token header. |
+| Bearer auth | Yes | Optional `Authorization: Bearer` header mode. |
+| AppRole login | Yes | Role ID and secret ID are secret-aware; returned token is wrapped in `SecretString`. |
+| Token accessor handling | Yes | AppRole token accessors are treated as secret material. |
+| Token lifecycle helpers | Planned | Lookup, renew, revoke, create, and accessor flows are planned for `0.2.0`. |
+| Kubernetes auth | Planned | Planned for `0.4.0`. |
+| TLS certificate auth | Planned | Planned for `0.4.0`. |
+| JWT/OIDC and userpass | Planned | Planned for `0.5.0`. |
+
+### Secret Engines
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| KV v2 read | Yes | Typed deserialization into caller-provided structs. |
+| KV v2 write | Yes | Typed serialization with zeroized intermediate JSON buffer. |
+| KV v2 CAS write | Yes | Optional check-and-set version support. |
+| KV v2 list | Yes | `LIST` method support for metadata paths. |
+| KV v2 delete latest | Yes | Accepts documented `200` and `204` success responses. |
+| KV v2 metadata/version APIs | Planned | Undelete, destroy, metadata, patch, config in `0.2.0`. |
+| KV v1 | Planned | Planned for `0.2.0`. |
+| Transit | Planned | Planned for `0.3.0`. |
+| PKI | Planned | Planned for `0.4.0`. |
+| Database credentials | Planned | Planned for `0.5.0`. |
+| SSH and TOTP | Planned | Planned for `0.6.0`. |
+| Identity and remaining engines | Planned | Planned for `0.7.0`. |
+
+### System Backend And Operations
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| Health | Yes | Accepts OpenBao health statuses for active, standby, sealed, and uninitialized nodes. |
+| Seal status | Yes | Typed `/sys/seal-status` helper. |
+| Mount management | Planned | Secret and auth mount enable/list/tune/disable in `0.2.0`. |
+| Response wrapping | Planned | Lookup, wrap, unwrap, and rewrap in `0.2.0`. |
+| Audit devices | Planned | Enable/list/disable/hash in `0.3.0`. |
+| Lease helpers | Planned | Safe non-legacy lease endpoints in `0.3.0`. |
+| Init, unseal, rekey, rotate | Planned | Behind explicit safety documentation in `0.6.0`. |
+| Policies and capabilities | Planned | Planned before `1.0.0`. |
+| Plugins, quotas, metrics, namespaces | Planned | Planned in the `0.8.0` operations line. |
+
+### Security And Release Process
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| Unsafe Rust policy | Yes | `unsafe_code = "forbid"`. |
+| Secret handling | Yes | Token-bearing APIs use `SecretString`; intermediate auth buffers are zeroized where practical. |
+| Path validation | Yes | Rejects traversal, query/fragment injection, empty segments, control characters, and trailing periods. |
+| Dependency policy | Yes | `cargo deny` enforces source and license policy. |
+| RustSec audit | Yes | `cargo audit` is part of the release gate. |
+| CodeQL | Yes | GitHub workflow included. |
+| SBOM | Yes | `scripts/generate-sbom.sh` writes CycloneDX JSON. |
+| Pentest gate | Yes | Release notes record pentest review status before tagging. |
+| Local OpenBao dev stack | Yes | Podman TLS dev instance on `9940` and `9941`. |
+
+See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
+[Release Plan](docs/RELEASE_PLAN.md) for the precise road to `1.0.0`.
+
+## Why OpenBao Rust SDK
+
+- **Security first**: HTTPS by default, no redirects, TLS floor, strict path
+  validation, zeroized intermediate auth buffers, and secret-aware types.
+- **OpenBao focused**: follows the current OpenBao `/v1` HTTP API and documented
+  token header behavior.
+- **Small dependency surface**: keeps runtime dependencies narrow and reviewed.
+- **Typed where it matters**: safe typed helpers for common workflows, with a raw
+  JSON escape hatch while coverage grows.
+- **Release discipline**: security checks, SBOM, CodeQL, and pentest review are
+  treated as release inputs, not afterthoughts.
+
+## Quick Start
+
+Add the crate:
 
 ```toml
 [dependencies]
@@ -53,7 +142,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 ```
 
-## Direct Token Example
+Read a KV v2 secret:
 
 ```rust,no_run
 use openbao::{Client, Result};
@@ -82,7 +171,7 @@ async fn main() -> Result<()> {
 }
 ```
 
-## AppRole Example
+Authenticate with AppRole:
 
 ```rust,no_run
 use openbao::{Client, Result};
@@ -108,7 +197,7 @@ async fn main() -> Result<()> {
 The local dev stack uses Podman, TLS, a private CA, and loopback-only ports in
 the requested `994x` range.
 
-```sh
+```bash
 scripts/openbao_dev.sh up
 ```
 
@@ -124,17 +213,17 @@ Initialize and unseal OpenBao using `bao operator init` and
 
 ## Release Discipline
 
-Every version is expected to pass:
+Run the normal local checks:
 
-```sh
+```bash
 scripts/checks.sh
 ```
 
-Stable releases also require:
+Run the `0.1.0` release gate:
 
-```sh
-scripts/stable_release_gate.sh
+```bash
+scripts/release_0_1_gate.sh
 ```
 
-No release tag should be cut until the matching pentest report is reviewed and
-recorded in the release notes.
+No release tag should be cut unless the matching pentest report status is
+reviewed and recorded in the release notes.
