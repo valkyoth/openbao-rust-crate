@@ -40,8 +40,8 @@ The official `2.5.x` API navigation lists:
 Support plan:
 
 - `0.1.0`: AppRole login.
-- `0.2.0`: token lifecycle helpers started; create, lookup, renew, revoke, and
-  accessor flows are implemented.
+- `0.2.0`: token lifecycle helpers; create, lookup, renew, revoke, and accessor
+  flows are implemented.
 - `0.4.0`: Kubernetes and TLS certificate auth.
 - `0.5.0`: JWT/OIDC and userpass.
 - `0.8.0`: LDAP, RADIUS, and Kerberos.
@@ -65,7 +65,7 @@ The official `2.5.x` API navigation lists:
 Support plan:
 
 - `0.1.0`: KV v2.
-- `0.2.0`: KV v1 and expanded KV v2 metadata/version operations started; KV v1
+- `0.2.0`: KV v1 and expanded KV v2 metadata/version operations; KV v1
   read/write/delete/list and KV v2 patch, config, metadata, undelete, destroy,
   and version reads are implemented.
 - `0.3.0`: Transit.

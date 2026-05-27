@@ -47,6 +47,8 @@ Stop condition:
 - KV v2 metadata, undelete, destroy, patch, versions, and config support;
 - sys mounts/auth mounts enable, tune, list, disable;
 - response wrapping lookup, wrap, unwrap, rewrap;
+- ACL policy list/read/write/delete and capability checks for self, token, and
+  accessor;
 - integration tests cover real OpenBao container flow.
 
 Publishable value:

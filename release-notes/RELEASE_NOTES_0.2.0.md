@@ -12,8 +12,8 @@
 
 - Stable modules carried from `0.1.0`: client configuration, direct token auth,
   AppRole login, KV v2 core read/write/list/delete, sys health/seal status.
-- New `0.2.0` modules started: token lifecycle helpers, KV v1, expanded KV v2
-  metadata/version/config operations, sys mount/auth mount management, and
+- New `0.2.0` modules: token lifecycle helpers, KV v1, expanded KV v2
+  metadata/version/config operations, sys mount/auth mount management,
   response wrapping, ACL policies, and capabilities.
 - Real OpenBao container integration coverage now exercises the default
   `0.2.0` feature flow against the pinned TLS Podman dev instance.

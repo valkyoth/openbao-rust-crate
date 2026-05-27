@@ -30,8 +30,9 @@ use openbao::Client;
 ```
 
 The current development target is `0.2.0`: token lifecycle helpers, KV v1, KV v2
-metadata/version/config operations, mount management, response wrapping, and
-real OpenBao integration coverage on top of the secure `0.1.0` core.
+metadata/version/config operations, mount management, response wrapping,
+policies, capabilities, and real OpenBao integration coverage on top of the
+secure `0.1.0` core.
 
 OpenBao Rust SDK is dual-licensed under MIT or Apache-2.0.
 
@@ -186,6 +187,38 @@ async fn main() -> Result<()> {
 
     let _token_accessor = login.accessor;
     println!("openbao version: {}", health.version);
+    Ok(())
+}
+```
+
+Write an ACL policy and check capabilities:
+
+```rust,no_run
+use openbao::{Client, Result};
+use openbao::sys::PolicyWriteRequest;
+use secrecy::SecretString;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+
+    client
+        .sys()
+        .write_policy(
+            "app-read",
+            &PolicyWriteRequest {
+                policy: r#"path "secret/data/app" { capabilities = ["read"] }"#.to_owned(),
+                expiration: None,
+                ttl: None,
+                cas: None,
+                cas_required: None,
+            },
+        )
+        .await?;
+
+    let capabilities = client.sys().capabilities_self(["secret/data/app"]).await?;
+    let _for_path = capabilities.by_path.get("secret/data/app");
     Ok(())
 }
 ```
