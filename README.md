@@ -33,9 +33,10 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.3.0` development line. `0.3.0` builds on the
+This README documents the `0.3.0` release candidate. `0.3.0` builds on the
 published `0.2.0` crate with Transit, audit device helpers, safe exact lease
-lookup, renew, and revoke helpers, and plugin catalog operations.
+lookup, renew, and revoke helpers, plugin catalog operations, and a
+loopback-only OpenBao dev bootstrap helper.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -70,7 +71,6 @@ Implemented now:
 
 Planned next:
 
-- `0.3.0`: Pentest review before tag.
 - `0.4.0`: PKI, Kubernetes auth, and TLS certificate auth.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.

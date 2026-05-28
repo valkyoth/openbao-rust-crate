@@ -3,9 +3,9 @@
 ## Version
 
 - Version: 0.3.0
-- Release date: TBD
+- Release date: 2026-05-28
 - Git tag: `v0.3.0`
-- Git commit: TBD
+- Git commit: tag target for `v0.3.0`
 - License: MIT OR Apache-2.0
 
 ## Scope
@@ -26,7 +26,8 @@
 - Default Cargo features: `approle`, `token`, `kv1`, `kv2`, `transit`, `sys`,
   `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
-- Tested OpenBao version: latest release must be verified before tag.
+- Tested OpenBao version: latest OpenBao release verified as `v2.5.4` on
+  2026-05-28.
 
 ## Security Changes
 
@@ -62,13 +63,16 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_3_gate.sh`
-- Result: pending
-- Pentest report: required before tagging `v0.3.0`
-- `cargo audit` result: pending
-- `cargo deny check` result: pending
+- Result: local release gate passed on 2026-05-28 after pentest remediations.
+- Pentest report: local `PENTEST.md` reviewed on 2026-05-28; all actionable
+  findings for `0.3.0` were remediated before tagging, and the local report
+  was deleted after review.
+- `cargo audit` result: passed on 2026-05-28.
+- `cargo deny check` result: passed on 2026-05-28 with duplicate dependency
+  warnings only.
 - CodeQL result: pending through GitHub default setup
-- Podman OpenBao integration result: pending
-- SBOM generation result: pending
+- Podman OpenBao integration result: passed on 2026-05-28.
+- SBOM generation result: passed on 2026-05-28.
 
 ## Known Limitations
 
