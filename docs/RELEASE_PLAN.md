@@ -38,6 +38,11 @@ reimplemented in applications:
   secret patching, and scoped service-token creation;
 - policy builder helpers for common KV v2 and Transit capabilities so projects
   do not assemble ACL HCL with ad hoc strings;
+- best-effort FIPS posture helpers that validate crate request options against
+  FIPS-oriented allowlists and emit an audit report, without claiming OpenBao,
+  the host, TLS backend, or HSM/KMS module is certified;
+- quantum-readiness helpers that inventory algorithms and prefer hybrid or
+  post-quantum-safe choices when OpenBao exposes stable support;
 - migration examples for projects currently using `vaultrs` or bespoke
   `reqwest` wrappers.
 
@@ -168,10 +173,16 @@ Stop condition:
   namespaces, storage, leader, HA status, loggers, locked users, version
   history;
 - OpenAPI discovery helper.
+- `FipsPosture` helper that can validate supported request builders and typed
+  Transit choices against a conservative allowlist, warn on SHA-1, SHA-3,
+  Ed25519, ChaCha20/XChaCha20, plaintext backup/exportable keys, convergent
+  encryption, weak RSA sizes, and non-HSM/KMS seal assumptions, and produce a
+  machine-readable report of what the crate could and could not verify.
 
 Publishable value:
 
-- operators can automate most OpenBao administration tasks.
+- operators can automate most OpenBao administration tasks and get a
+  non-certifying compliance posture report for OpenBao usage.
 
 ### 0.9.0 - API Stabilization Candidate
 
@@ -181,6 +192,9 @@ Stop condition:
 - feature matrix frozen for `1.0`;
 - migration guide from `0.1` through `0.9`;
 - migration guide from `vaultrs` and bespoke `reqwest` OpenBao wrappers;
+- quantum-readiness design note that tracks OpenBao support, avoids premature
+  API promises, and defines how hybrid/post-quantum profiles will be exposed
+  once stable upstream primitives exist;
 - all docs examples compile;
 - real OpenBao integration suite covers supported default features;
 - fuzz tests cover path validation, error decoding, and response envelopes.

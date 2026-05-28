@@ -26,6 +26,9 @@ Sources:
   env-based client construction, KV v2 service config loading,
   byte-oriented Transit helpers, JWT/JWKS Transit helpers, idempotent admin
   bootstrap, and ACL policy builders.
+- Planned posture helpers:
+  best-effort FIPS profile validation for crate-controlled choices and a
+  future quantum-readiness profile once OpenBao exposes stable primitives.
 
 ## Auth Methods
 
