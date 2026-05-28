@@ -34,9 +34,8 @@ use openbao::Client;
 ```
 
 This README documents the `0.3.0` development line. `0.3.0` builds on the
-published `0.2.0` crate with Transit, audit device helpers, and safe exact
-lease lookup, renew, and revoke helpers. Plugin catalog support is planned
-before tagging `v0.3.0`.
+published `0.2.0` crate with Transit, audit device helpers, safe exact lease
+lookup, renew, and revoke helpers, and plugin catalog operations.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -63,13 +62,15 @@ Implemented now:
   accessor.
 - Audit device list, enable, disable, and hash helpers.
 - Safe exact lease lookup, renew, and revoke helpers.
+- Plugin catalog list, type-list, register, read, delete, and backend reload
+  helpers.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
 Planned next:
 
-- `0.3.0`: Plugins catalog before tag.
+- `0.3.0`: Pentest review before tag.
 - `0.4.0`: PKI, Kubernetes auth, and TLS certificate auth.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated init/unseal/rekey/rotate APIs.
@@ -209,8 +210,9 @@ openbao = { version = "0.3", default-features = false, features = ["kv2", "sys",
 | Policies and capabilities | Yes | ACL policy helpers plus self/token/accessor capability checks. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
+| Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Init, unseal, rekey, rotate | Planned | Explicit safety documentation in `0.6.0`. |
-| Plugins, quotas, metrics, namespaces | Planned | Planned in the `0.8.0` operations line. |
+| Quotas, metrics, namespaces | Planned | Planned in the `0.8.0` operations line. |
 
 ## Examples
 
@@ -641,6 +643,39 @@ async fn main() -> Result<()> {
         let renewed = client.sys().renew_lease(&lease_id, Some(1800)).await?;
         println!("renewed lease seconds: {}", renewed.lease_duration);
     }
+
+    Ok(())
+}
+```
+
+Read and reload a plugin catalog entry:
+
+```rust,no_run
+use openbao::sys::{PluginReloadRequest, PluginType};
+use openbao::{Client, Result};
+use secrecy::SecretString;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+
+    let plugins = client.sys().list_plugins_by_type(PluginType::Secret).await?;
+    if plugins.keys.iter().any(|name| name == "transit") {
+        let _info = client
+            .sys()
+            .read_plugin(PluginType::Secret, "transit", None)
+            .await?;
+    }
+
+    client
+        .sys()
+        .reload_plugin_backend(&PluginReloadRequest {
+            plugin: Some("example-plugin".to_owned()),
+            mounts: Vec::new(),
+            scope: None,
+        })
+        .await?;
 
     Ok(())
 }

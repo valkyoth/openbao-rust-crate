@@ -10,15 +10,16 @@ use reqwest::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
-    de::{Error as DeError, Visitor},
+    de::{Error as DeError, IgnoredAny, SeqAccess, Visitor},
 };
 
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_mount_path, validate_secret_path},
     response::{
-        Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_string_map,
-        deserialize_bounded_string_vec, deserialize_optional_bounded_string_vec,
+        Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
+        deserialize_bounded_string_map, deserialize_bounded_string_vec,
+        deserialize_optional_bounded_string_vec,
     },
 };
 
@@ -455,6 +456,157 @@ impl fmt::Debug for LeaseRenewal {
     }
 }
 
+/// OpenBao plugin catalog type.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PluginType {
+    /// Auth method plugin.
+    Auth,
+    /// Database plugin.
+    Database,
+    /// Secret engine plugin.
+    Secret,
+}
+
+impl PluginType {
+    fn as_path_segment(self) -> &'static str {
+        match self {
+            Self::Auth => "auth",
+            Self::Database => "database",
+            Self::Secret => "secret",
+        }
+    }
+}
+
+/// Summary of all plugin catalog entries grouped by type.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PluginCatalog {
+    /// Auth plugin names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub auth: Vec<String>,
+    /// Database plugin names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub database: Vec<String>,
+    /// Secret plugin names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub secret: Vec<String>,
+    /// Detailed plugin summaries, when returned by OpenBao.
+    #[serde(default, deserialize_with = "deserialize_bounded_plugin_detail_vec")]
+    pub detailed: Vec<PluginDetail>,
+}
+
+/// Plugin catalog entry returned in detailed listings.
+#[derive(Clone, Debug, Deserialize)]
+pub struct PluginDetail {
+    /// Plugin name.
+    pub name: String,
+    /// Plugin type.
+    #[serde(rename = "type")]
+    pub plugin_type: String,
+    /// Plugin version.
+    #[serde(default)]
+    pub version: Option<String>,
+    /// Whether this is built into OpenBao.
+    #[serde(default)]
+    pub builtin: bool,
+    /// OpenBao deprecation status.
+    #[serde(default)]
+    pub deprecation_status: Option<String>,
+}
+
+/// Plugin names for one catalog type.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PluginList {
+    /// Plugin names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+/// Request for registering or updating a plugin catalog entry.
+#[derive(Clone)]
+pub struct PluginRegisterRequest {
+    /// Semantic plugin version.
+    pub version: Option<String>,
+    /// Hex or base64 SHA-256 digest of the plugin binary.
+    pub sha256: String,
+    /// Command used to execute the plugin, relative to OpenBao's plugin directory.
+    pub command: String,
+    /// Command arguments. Treat as secret material because operators often put credentials in args.
+    pub args: Vec<SecretString>,
+    /// Environment entries in `KEY=value` form. Treat as secret material.
+    pub env: Vec<SecretString>,
+    /// Whether the plugin is an OCI-backed declarative plugin.
+    pub oci: Option<bool>,
+}
+
+impl fmt::Debug for PluginRegisterRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PluginRegisterRequest")
+            .field("version", &self.version)
+            .field("sha256", &self.sha256)
+            .field("command", &self.command)
+            .field("args", &format_args!("<{} redacted>", self.args.len()))
+            .field("env", &format_args!("<{} redacted>", self.env.len()))
+            .field("oci", &self.oci)
+            .finish()
+    }
+}
+
+/// Plugin catalog entry configuration.
+#[derive(Clone, Deserialize)]
+pub struct PluginInfo {
+    /// Plugin name.
+    pub name: String,
+    /// Semantic plugin version.
+    #[serde(default)]
+    pub version: Option<String>,
+    /// Whether this plugin is built into OpenBao.
+    #[serde(default)]
+    pub builtin: bool,
+    /// Command used to execute the plugin.
+    #[serde(default)]
+    pub command: Option<String>,
+    /// Plugin binary SHA-256 digest.
+    #[serde(default)]
+    pub sha256: Option<String>,
+    /// Command arguments. Treated as secret material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub args: Vec<SecretString>,
+    /// Environment entries. Treated as secret material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub env: Vec<SecretString>,
+    /// OpenBao deprecation status.
+    #[serde(default)]
+    pub deprecation_status: Option<String>,
+}
+
+impl fmt::Debug for PluginInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PluginInfo")
+            .field("name", &self.name)
+            .field("version", &self.version)
+            .field("builtin", &self.builtin)
+            .field("command", &self.command)
+            .field("sha256", &self.sha256)
+            .field("args", &format_args!("<{} redacted>", self.args.len()))
+            .field("env", &format_args!("<{} redacted>", self.env.len()))
+            .field("deprecation_status", &self.deprecation_status)
+            .finish()
+    }
+}
+
+/// Request for reloading mounted plugin backends.
+#[derive(Clone, Debug, Default)]
+pub struct PluginReloadRequest {
+    /// Plugin name to reload across all mounts on this node or cluster.
+    pub plugin: Option<String>,
+    /// Mount paths to reload.
+    pub mounts: Vec<String>,
+    /// Reload scope, such as `global`.
+    pub scope: Option<String>,
+}
+
 #[derive(Serialize)]
 struct WrappingTokenPayload<'a> {
     token: &'a str,
@@ -480,6 +632,30 @@ struct LeaseRenewPayload<'a> {
 #[derive(Serialize)]
 struct LeaseRevokePayload<'a> {
     lease_id: &'a str,
+}
+
+#[derive(Serialize)]
+struct PluginRegisterPayload<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<&'a str>,
+    sha256: &'a str,
+    command: &'a str,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    args: Vec<&'a str>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    env: Vec<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    oci: Option<bool>,
+}
+
+#[derive(Serialize)]
+struct PluginReloadPayload<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    plugin: Option<&'a str>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    mounts: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scope: Option<&'a str>,
 }
 
 #[derive(Serialize)]
@@ -876,6 +1052,118 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Lists all plugin catalog entries grouped by plugin type.
+    pub async fn list_plugins(&self) -> Result<PluginCatalog> {
+        let envelope: ResponseEnvelope<PluginCatalog> = self
+            .client
+            .request_json(Method::GET, "sys/plugins/catalog", Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists plugin names for one plugin type.
+    pub async fn list_plugins_by_type(&self, plugin_type: PluginType) -> Result<PluginList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let envelope: ResponseEnvelope<PluginList> = self
+            .client
+            .request_json(
+                method,
+                &plugin_catalog_type_path(plugin_type)?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Registers or updates a plugin catalog entry.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint. The SDK treats
+    /// plugin args and env values as secret material because they commonly
+    /// carry credentials or deployment-specific sensitive data.
+    pub async fn register_plugin(
+        &self,
+        plugin_type: PluginType,
+        name: &str,
+        request: &PluginRegisterRequest,
+    ) -> Result<Empty> {
+        let payload = PluginRegisterPayload {
+            version: request.version.as_deref(),
+            sha256: &request.sha256,
+            command: &request.command,
+            args: request
+                .args
+                .iter()
+                .map(|value| value.expose_secret())
+                .collect(),
+            env: request
+                .env
+                .iter()
+                .map(|value| value.expose_secret())
+                .collect(),
+            oci: request.oci,
+        };
+        self.client
+            .request_json(
+                Method::POST,
+                &plugin_catalog_entry_path(plugin_type, name)?,
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Reads one plugin catalog entry.
+    pub async fn read_plugin(
+        &self,
+        plugin_type: PluginType,
+        name: &str,
+        version: Option<&str>,
+    ) -> Result<PluginInfo> {
+        let query = plugin_version_query(version)?;
+        let envelope: ResponseEnvelope<PluginInfo> = self
+            .client
+            .request_json_query_accepting(
+                Method::GET,
+                &plugin_catalog_entry_path(plugin_type, name)?,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Removes one plugin catalog entry.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint.
+    pub async fn delete_plugin(
+        &self,
+        plugin_type: PluginType,
+        name: &str,
+        version: Option<&str>,
+    ) -> Result<Empty> {
+        let query = plugin_version_query(version)?;
+        self.client
+            .request_json_query_accepting(
+                Method::DELETE,
+                &plugin_catalog_entry_path(plugin_type, name)?,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Reloads mounted plugin backends by plugin name or explicit mount paths.
+    ///
+    /// Exactly one of `plugin` or `mounts` must be supplied.
+    pub async fn reload_plugin_backend(&self, request: &PluginReloadRequest) -> Result<Empty> {
+        let payload = validate_plugin_reload_request(request)?;
+        self.client
+            .request_json(Method::POST, "sys/plugins/reload/backend", Some(&payload))
+            .await
+    }
+
     /// Looks up a wrapping token.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
         let payload = WrappingTokenPayload {
@@ -1036,12 +1324,131 @@ fn validate_lease_id(lease_id: &SecretString) -> Result<&str> {
     Ok(lease_id)
 }
 
+fn plugin_catalog_type_path(plugin_type: PluginType) -> Result<String> {
+    Ok(["sys/plugins/catalog", plugin_type.as_path_segment()].join("/"))
+}
+
+fn plugin_catalog_entry_path(plugin_type: PluginType, name: &str) -> Result<String> {
+    let mut segments = vec![
+        "sys/plugins/catalog".to_owned(),
+        plugin_type.as_path_segment().to_owned(),
+    ];
+    segments.extend(validate_mount_path(name)?);
+    Ok(segments.join("/"))
+}
+
+fn plugin_version_query(version: Option<&str>) -> Result<Vec<(&'static str, String)>> {
+    match version {
+        Some(version) => {
+            validate_query_string_value(version, "plugin version")?;
+            Ok(vec![("version", version.to_owned())])
+        }
+        None => Ok(Vec::new()),
+    }
+}
+
+fn validate_plugin_reload_request<'a>(
+    request: &'a PluginReloadRequest,
+) -> Result<PluginReloadPayload<'a>> {
+    let has_plugin = request
+        .plugin
+        .as_deref()
+        .is_some_and(|value| !value.is_empty());
+    let has_mounts = !request.mounts.is_empty();
+    match (has_plugin, has_mounts) {
+        (true, false) | (false, true) => {}
+        (false, false) => {
+            return Err(Error::InvalidPath(
+                "plugin reload requires a plugin name or mount paths".into(),
+            ));
+        }
+        (true, true) => {
+            return Err(Error::InvalidPath(
+                "plugin reload accepts either plugin or mounts, not both".into(),
+            ));
+        }
+    }
+
+    let plugin = match request.plugin.as_deref() {
+        Some(plugin) if !plugin.is_empty() => {
+            let _segments = validate_mount_path(plugin)?;
+            Some(plugin)
+        }
+        _ => None,
+    };
+    let mut mounts = Vec::new();
+    for mount in &request.mounts {
+        mounts.push(validate_mount_path(mount)?.join("/"));
+    }
+    if let Some(scope) = request.scope.as_deref() {
+        validate_query_string_value(scope, "plugin reload scope")?;
+    }
+
+    Ok(PluginReloadPayload {
+        plugin,
+        mounts,
+        scope: request.scope.as_deref(),
+    })
+}
+
+fn validate_query_string_value(value: &str, kind: &'static str) -> Result<()> {
+    if value.is_empty() {
+        return Err(Error::InvalidPath(format!("{kind} must not be empty")));
+    }
+    if value.as_bytes().iter().any(u8::is_ascii_control) {
+        return Err(Error::InvalidPath(format!(
+            "{kind} must not contain control characters"
+        )));
+    }
+    Ok(())
+}
+
 fn deserialize_null_default<'de, D, T>(deserializer: D) -> core::result::Result<T, D::Error>
 where
     D: Deserializer<'de>,
     T: Deserialize<'de> + Default,
 {
     Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+fn deserialize_bounded_plugin_detail_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<PluginDetail>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_seq(
+        BoundedPluginDetailListVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
+struct BoundedPluginDetailListVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedPluginDetailListVisitor<MAX> {
+    type Value = Vec<PluginDetail>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a list of at most {MAX} plugin details")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<PluginDetail>()? else {
+                return Ok(values);
+            };
+            values.push(value);
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao plugin detail list exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
 }
 
 #[cfg(test)]
@@ -1151,5 +1558,58 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn plugin_detail_list_is_bounded() {
+        let mut detailed = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            detailed.push(serde_json::json!({
+                "name": format!("plugin-{index}"),
+                "type": "secret",
+            }));
+        }
+        let value = serde_json::json!({ "detailed": detailed });
+        let error = match serde_json::from_value::<super::PluginCatalog>(value) {
+            Ok(_) => panic!("oversized plugin detail list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn plugin_reload_request_is_validated() {
+        assert!(
+            super::validate_plugin_reload_request(&super::PluginReloadRequest {
+                plugin: Some("database-plugin".to_owned()),
+                mounts: Vec::new(),
+                scope: Some("global".to_owned()),
+            })
+            .is_ok()
+        );
+        assert!(
+            super::validate_plugin_reload_request(&super::PluginReloadRequest {
+                plugin: None,
+                mounts: vec!["secret".to_owned()],
+                scope: None,
+            })
+            .is_ok()
+        );
+        assert!(
+            super::validate_plugin_reload_request(&super::PluginReloadRequest {
+                plugin: None,
+                mounts: Vec::new(),
+                scope: None,
+            })
+            .is_err()
+        );
+        assert!(
+            super::validate_plugin_reload_request(&super::PluginReloadRequest {
+                plugin: Some("database-plugin".to_owned()),
+                mounts: vec!["secret".to_owned()],
+                scope: None,
+            })
+            .is_err()
+        );
     }
 }

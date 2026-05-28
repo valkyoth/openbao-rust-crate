@@ -672,6 +672,202 @@ async fn sys_lease_revoke_uses_non_prefix_endpoint() {
 }
 
 #[tokio::test]
+async fn sys_plugin_catalog_lists_all_plugins() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("GET /v1/sys/plugins/catalog HTTP/1.1"));
+        let body = r#"{"data":{"auth":["ldap"],"database":["postgresql-database-plugin"],"secret":["transit"],"detailed":[{"builtin":true,"deprecation_status":"supported","name":"transit","type":"secret","version":"v2.5.4+builtin.openbao"}]}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let catalog = client
+        .sys()
+        .list_plugins()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(catalog.secret, ["transit"]);
+    assert_eq!(catalog.detailed[0].name, "transit");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_plugin_catalog_entry_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 4096];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            if index == 0 {
+                assert!(
+                    request
+                        .starts_with("POST /v1/sys/plugins/catalog/secret/example-plugin HTTP/1.1")
+                );
+                assert!(request.contains(r#""version":"v1.0.0""#));
+                assert!(request.contains(
+                    r#""sha256":"d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9""#
+                ));
+                assert!(request.contains(r#""command":"example-plugin""#));
+                assert!(request.contains(r#""args":["--config=/secure/path"]"#));
+                assert!(request.contains(r#""env":["TOKEN=secret"]"#));
+                let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+                stream
+                    .write_all(response.as_bytes())
+                    .unwrap_or_else(|error| panic!("{error}"));
+            } else if index == 1 {
+                assert!(request.starts_with(
+                    "GET /v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0 HTTP/1.1"
+                ));
+                let body = r#"{"data":{"args":["--config=/secure/path"],"builtin":false,"command":"example-plugin","env":["TOKEN=secret"],"name":"example-plugin","sha256":"d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9","version":"v1.0.0"}}"#;
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                stream
+                    .write_all(response.as_bytes())
+                    .unwrap_or_else(|error| panic!("{error}"));
+            } else {
+                assert!(request.starts_with(
+                    "DELETE /v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0 HTTP/1.1"
+                ));
+                let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+                stream
+                    .write_all(response.as_bytes())
+                    .unwrap_or_else(|error| panic!("{error}"));
+            }
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    client
+        .sys()
+        .register_plugin(
+            openbao::sys::PluginType::Secret,
+            "example-plugin",
+            &openbao::sys::PluginRegisterRequest {
+                version: Some("v1.0.0".to_owned()),
+                sha256: "d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9"
+                    .to_owned(),
+                command: "example-plugin".to_owned(),
+                args: vec![SecretString::from("--config=/secure/path")],
+                env: vec![SecretString::from("TOKEN=secret")],
+                oci: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let info = client
+        .sys()
+        .read_plugin(
+            openbao::sys::PluginType::Secret,
+            "example-plugin",
+            Some("v1.0.0"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(info.name, "example-plugin");
+    assert_eq!(info.args[0].expose_secret(), "--config=/secure/path");
+    let debug = format!("{info:?}");
+    assert!(debug.contains("<1 redacted>"));
+    assert!(!debug.contains("TOKEN=secret"));
+
+    client
+        .sys()
+        .delete_plugin(
+            openbao::sys::PluginType::Secret,
+            "example-plugin",
+            Some("v1.0.0"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_plugin_reload_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/plugins/reload/backend HTTP/1.1"));
+        assert!(request.contains(r#""plugin":"example-plugin""#));
+        assert!(request.contains(r#""scope":"global""#));
+        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    client
+        .sys()
+        .reload_plugin_backend(&openbao::sys::PluginReloadRequest {
+            plugin: Some("example-plugin".to_owned()),
+            mounts: Vec::new(),
+            scope: Some("global".to_owned()),
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn transit_create_key_sends_documented_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

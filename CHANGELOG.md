@@ -10,6 +10,8 @@ All notable changes to this project are documented here.
 - Safe exact lease lookup, renew, and revoke helpers using JSON body endpoints.
 - Transit key create, read, list, delete, encrypt, decrypt, rewrap, data key,
   random, hash, HMAC, sign, and verify helpers.
+- Plugin catalog list, type-list, register, read, delete, and mounted backend
+  reload helpers.
 - `scripts/release_0_3_gate.sh` and `0.3.0` release-note scaffolding.
 
 ### Security
@@ -19,6 +21,8 @@ All notable changes to this project are documented here.
 - Audit device option maps are bounded during deserialization.
 - Transit plaintext, ciphertext, data keys, random bytes, hashes, and HMACs
   are represented with `SecretString` where they enter or leave the crate.
+- Plugin registration args/env and returned args/env are represented as
+  `SecretString`; detailed catalog lists are bounded during deserialization.
 
 ## 0.2.0 - 2026-05-27
 

@@ -120,7 +120,6 @@ where
 #[derive(Deserialize)]
 struct BoundedStringList(#[serde(deserialize_with = "deserialize_bounded_string_vec")] Vec<String>);
 
-#[cfg(feature = "token")]
 pub(crate) fn deserialize_bounded_secret_string_vec<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Vec<SecretString>, D::Error>
@@ -184,10 +183,8 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedStringMapVisitor<MAX> {
     }
 }
 
-#[cfg(feature = "token")]
 struct BoundedSecretStringListVisitor<const MAX: usize>;
 
-#[cfg(feature = "token")]
 impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretStringListVisitor<MAX> {
     type Value = Vec<SecretString>;
 

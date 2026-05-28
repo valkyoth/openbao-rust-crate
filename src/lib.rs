@@ -10,8 +10,8 @@
 //!
 //! The public API covers AppRole login, direct token auth, token lifecycle
 //! helpers, KV v1/v2, Transit, system health/seal status, mount management,
-//! audit devices, safe exact lease helpers, and raw JSON calls for advanced
-//! users.
+//! audit devices, safe exact lease helpers, plugin catalog operations, and raw
+//! JSON calls for advanced users.
 
 #![forbid(unsafe_code)]
 
