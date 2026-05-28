@@ -6,8 +6,10 @@ use secrecy::SecretString;
 use serde::de::Error as DeError;
 use serde::{
     Deserialize, Deserializer, Serialize,
-    de::{IgnoredAny, SeqAccess, Visitor},
+    de::{IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
+
+use std::collections::BTreeMap;
 
 const MAX_API_ERRORS: usize = 16;
 pub(crate) const MAX_RESPONSE_STRINGS: usize = 4096;
@@ -106,6 +108,15 @@ where
     Option::<BoundedStringList>::deserialize(deserializer).map(|value| value.map(|value| value.0))
 }
 
+pub(crate) fn deserialize_bounded_string_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(BoundedStringMapVisitor::<MAX_RESPONSE_STRINGS>)
+}
+
 #[derive(Deserialize)]
 struct BoundedStringList(#[serde(deserialize_with = "deserialize_bounded_string_vec")] Vec<String>);
 
@@ -141,6 +152,33 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedStringListVisitor<MAX> {
         }
         if seq.next_element::<IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao string list exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
+struct BoundedStringMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedStringMapVisitor<MAX> {
+    type Value = BTreeMap<String, String>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} string pairs")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, String>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao string map exceeds item limit"));
         }
         Ok(values)
     }

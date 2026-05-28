@@ -1,5 +1,6 @@
 //! System backend helpers.
 
+use core::fmt;
 use std::collections::BTreeMap;
 
 use reqwest::{
@@ -16,8 +17,8 @@ use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_mount_path, validate_secret_path},
     response::{
-        Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_string_vec,
-        deserialize_optional_bounded_string_vec,
+        Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_string_map,
+        deserialize_bounded_string_vec, deserialize_optional_bounded_string_vec,
     },
 };
 
@@ -357,9 +358,128 @@ pub struct Capabilities {
     pub by_path: BTreeMap<String, Vec<String>>,
 }
 
+/// Enabled audit device information returned by `/sys/audit`.
+#[derive(Clone, Debug, Deserialize)]
+pub struct AuditDevice {
+    /// Audit device type, such as `file`, `socket`, or `syslog`.
+    #[serde(rename = "type")]
+    pub backend_type: String,
+    /// Human-readable audit device description.
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Audit-device-specific options.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_map")]
+    pub options: BTreeMap<String, String>,
+    /// Whether this audit device is local to the node.
+    #[serde(default)]
+    pub local: bool,
+}
+
+/// Request for enabling an audit device.
+#[derive(Clone, Debug, Serialize)]
+pub struct AuditEnableRequest {
+    /// Audit device type, such as `file`, `socket`, or `syslog`.
+    #[serde(rename = "type")]
+    pub backend_type: String,
+    /// Human-readable audit device description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Audit-device-specific options.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub options: BTreeMap<String, String>,
+    /// Whether this audit device is local to the node.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local: Option<bool>,
+}
+
+/// Audit hash response returned by `/sys/audit-hash/:path`.
+#[derive(Clone, Debug, Deserialize)]
+pub struct AuditHash {
+    /// HMAC value computed by OpenBao for the supplied audit device and input.
+    pub hash: String,
+}
+
+/// Metadata returned by `/sys/leases/lookup`.
+#[derive(Clone, Deserialize)]
+pub struct LeaseLookup {
+    /// Lease identifier. This can revoke the secret and is treated as secret material.
+    pub id: SecretString,
+    /// Lease issue timestamp.
+    pub issue_time: String,
+    /// Lease expiration timestamp.
+    pub expire_time: String,
+    /// Last renewal timestamp, when the lease has been renewed.
+    #[serde(default)]
+    pub last_renewal: Option<String>,
+    /// Whether this lease is renewable.
+    #[serde(default)]
+    pub renewable: bool,
+    /// Remaining lease TTL in seconds.
+    #[serde(default)]
+    pub ttl: u64,
+}
+
+impl fmt::Debug for LeaseLookup {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("LeaseLookup")
+            .field("id", &"<redacted>")
+            .field("issue_time", &self.issue_time)
+            .field("expire_time", &self.expire_time)
+            .field("last_renewal", &self.last_renewal)
+            .field("renewable", &self.renewable)
+            .field("ttl", &self.ttl)
+            .finish()
+    }
+}
+
+/// Result of renewing a lease.
+#[derive(Clone)]
+pub struct LeaseRenewal {
+    /// Renewed lease identifier. This can revoke the secret and is treated as secret material.
+    pub lease_id: SecretString,
+    /// Renewed lease duration in seconds.
+    pub lease_duration: u64,
+    /// Whether this lease remains renewable.
+    pub renewable: bool,
+}
+
+impl fmt::Debug for LeaseRenewal {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("LeaseRenewal")
+            .field("lease_id", &"<redacted>")
+            .field("lease_duration", &self.lease_duration)
+            .field("renewable", &self.renewable)
+            .finish()
+    }
+}
+
 #[derive(Serialize)]
 struct WrappingTokenPayload<'a> {
     token: &'a str,
+}
+
+#[derive(Serialize)]
+struct AuditHashPayload<'a> {
+    input: &'a str,
+}
+
+#[derive(Serialize)]
+struct LeaseLookupPayload<'a> {
+    lease_id: &'a str,
+}
+
+#[derive(Serialize)]
+struct LeaseRenewPayload<'a> {
+    lease_id: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    increment: Option<u64>,
+}
+
+#[derive(Serialize)]
+struct LeaseRevokePayload<'a> {
+    lease_id: &'a str,
 }
 
 #[derive(Serialize)]
@@ -655,6 +775,107 @@ impl Sys<'_, Authenticated> {
         Ok(envelope.data)
     }
 
+    /// Lists enabled audit devices.
+    pub async fn list_audit_devices(&self) -> Result<BTreeMap<String, AuditDevice>> {
+        self.client
+            .request_json(Method::GET, "sys/audit", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Enables an audit device at `path`.
+    pub async fn enable_audit_device(
+        &self,
+        path: &str,
+        request: &AuditEnableRequest,
+    ) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &sys_path("sys/audit", path, None)?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Disables an audit device.
+    ///
+    /// OpenBao creates a new audit salt if a device is later re-enabled, so
+    /// stored audit HMACs from the disabled device cannot be recomputed.
+    pub async fn disable_audit_device(&self, path: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &sys_path("sys/audit", path, None)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Calculates the HMAC OpenBao would write for `input` through an audit device.
+    pub async fn audit_hash(&self, path: &str, input: &SecretString) -> Result<AuditHash> {
+        let payload = AuditHashPayload {
+            input: input.expose_secret(),
+        };
+        self.client
+            .request_json(
+                Method::POST,
+                &sys_path("sys/audit-hash", path, None)?,
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Looks up lease metadata using the non-prefix `/sys/leases/lookup` endpoint.
+    pub async fn lookup_lease(&self, lease_id: &SecretString) -> Result<LeaseLookup> {
+        let payload = LeaseLookupPayload {
+            lease_id: validate_lease_id(lease_id)?,
+        };
+        let envelope: ResponseEnvelope<LeaseLookup> = self
+            .client
+            .request_json(Method::POST, "sys/leases/lookup", Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Renews a non-token lease using the JSON-body `/sys/leases/renew` endpoint.
+    ///
+    /// Token leases should be renewed with the token helpers instead.
+    pub async fn renew_lease(
+        &self,
+        lease_id: &SecretString,
+        increment_seconds: Option<u64>,
+    ) -> Result<LeaseRenewal> {
+        let payload = LeaseRenewPayload {
+            lease_id: validate_lease_id(lease_id)?,
+            increment: increment_seconds,
+        };
+        let envelope: ResponseEnvelope<Option<Empty>> = self
+            .client
+            .request_json(Method::POST, "sys/leases/renew", Some(&payload))
+            .await?;
+        Ok(LeaseRenewal {
+            lease_id: envelope.lease_id,
+            lease_duration: envelope.lease_duration,
+            renewable: envelope.renewable,
+        })
+    }
+
+    /// Revokes one exact lease using the non-prefix `/sys/leases/revoke` endpoint.
+    pub async fn revoke_lease(&self, lease_id: &SecretString) -> Result<Empty> {
+        let payload = LeaseRevokePayload {
+            lease_id: validate_lease_id(lease_id)?,
+        };
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                "sys/leases/revoke",
+                Some(&payload),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     /// Looks up a wrapping token.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
         let payload = WrappingTokenPayload {
@@ -802,6 +1023,19 @@ where
     Ok(validated)
 }
 
+fn validate_lease_id(lease_id: &SecretString) -> Result<&str> {
+    let lease_id = lease_id.expose_secret();
+    if lease_id.is_empty() {
+        return Err(Error::InvalidPath("lease ID must not be empty".into()));
+    }
+    if lease_id.as_bytes().iter().any(u8::is_ascii_control) {
+        return Err(Error::InvalidPath(
+            "lease ID must not contain control characters".into(),
+        ));
+    }
+    Ok(lease_id)
+}
+
 fn deserialize_null_default<'de, D, T>(deserializer: D) -> core::result::Result<T, D::Error>
 where
     D: Deserializer<'de>,
@@ -814,8 +1048,11 @@ where
 mod tests {
     #![allow(clippy::panic)]
 
+    use secrecy::SecretString;
+
     use super::{
-        LeaseDuration, PolicyList, sys_path, validate_capability_paths, validate_wrapping_ttl,
+        LeaseDuration, PolicyList, sys_path, validate_capability_paths, validate_lease_id,
+        validate_wrapping_ttl,
     };
 
     #[test]
@@ -846,6 +1083,13 @@ mod tests {
         assert!(validate_wrapping_ttl("0s").is_err());
         assert!(validate_wrapping_ttl("-1h").is_err());
         assert!(validate_wrapping_ttl("forever").is_err());
+    }
+
+    #[test]
+    fn lease_ids_are_validated_for_json_body_use() {
+        assert!(validate_lease_id(&SecretString::from("database/creds/ro/abc")).is_ok());
+        assert!(validate_lease_id(&SecretString::from("")).is_err());
+        assert!(validate_lease_id(&SecretString::from("database/creds/ro\nabc")).is_err());
     }
 
     #[test]
@@ -887,6 +1131,23 @@ mod tests {
         let value = serde_json::json!({ "allowed_response_headers": headers });
         let error = match serde_json::from_value::<super::MountConfig>(value) {
             Ok(_) => panic!("oversized mount header list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn audit_device_options_are_bounded() {
+        let mut options = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            options.insert(format!("option-{index}"), serde_json::json!("value"));
+        }
+        let value = serde_json::json!({
+            "type": "file",
+            "options": options,
+        });
+        let error = match serde_json::from_value::<super::AuditDevice>(value) {
+            Ok(_) => panic!("oversized audit options unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

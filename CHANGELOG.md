@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## 0.3.0 - Unreleased
+
+### Added
+
+- Audit device list, enable, disable, and hash helpers for the system backend.
+- Safe exact lease lookup, renew, and revoke helpers using JSON body endpoints.
+- `scripts/release_0_3_gate.sh` and `0.3.0` release-note scaffolding.
+
+### Security
+
+- Lease IDs are handled as secret material and redacted from debug output.
+- Lease helper scope intentionally excludes prefix, force, and tidy operations.
+- Audit device option maps are bounded during deserialization.
+
 ## 0.2.0 - 2026-05-27
 
 ### Added

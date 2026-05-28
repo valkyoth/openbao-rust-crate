@@ -440,6 +440,238 @@ async fn sys_capabilities_self_sends_paths() {
 }
 
 #[tokio::test]
+async fn sys_enable_audit_device_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/audit/file HTTP/1.1"));
+        assert!(request.contains(r#""type":"file""#));
+        assert!(request.contains(r#""file_path":"/tmp/openbao-audit.log""#));
+        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let mut options = std::collections::BTreeMap::new();
+    options.insert("file_path".to_owned(), "/tmp/openbao-audit.log".to_owned());
+    let request = openbao::sys::AuditEnableRequest {
+        backend_type: "file".to_owned(),
+        description: None,
+        options,
+        local: None,
+    };
+    client
+        .sys()
+        .enable_audit_device("file", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_audit_hash_sends_secret_input() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/audit-hash/file HTTP/1.1"));
+        assert!(request.contains(r#""input":"secret-value""#));
+        let body = r#"{"hash":"hmac-sha256:abc123"}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let response = client
+        .sys()
+        .audit_hash("file", &SecretString::from("secret-value"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(response.hash, "hmac-sha256:abc123");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_lease_lookup_sends_json_body_endpoint() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/leases/lookup HTTP/1.1"));
+        assert!(request.contains(r#""lease_id":"database/creds/readonly/abc""#));
+        let body = r#"{"data":{"expire_time":"2026-05-28T12:00:00Z","id":"database/creds/readonly/abc","issue_time":"2026-05-28T11:00:00Z","last_renewal":null,"renewable":true,"ttl":3600}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let lookup = client
+        .sys()
+        .lookup_lease(&SecretString::from("database/creds/readonly/abc"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(lookup.renewable);
+    assert_eq!(lookup.ttl, 3600);
+    let debug = format!("{lookup:?}");
+    assert!(debug.contains("<redacted>"));
+    assert!(!debug.contains("database/creds/readonly/abc"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_lease_renew_maps_response_envelope() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/leases/renew HTTP/1.1"));
+        assert!(request.contains(r#""lease_id":"database/creds/readonly/abc""#));
+        assert!(request.contains(r#""increment":1800"#));
+        let body =
+            r#"{"lease_id":"database/creds/readonly/abc","renewable":true,"lease_duration":1800}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let renewal = client
+        .sys()
+        .renew_lease(
+            &SecretString::from("database/creds/readonly/abc"),
+            Some(1800),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(renewal.renewable);
+    assert_eq!(renewal.lease_duration, 1800);
+    let debug = format!("{renewal:?}");
+    assert!(debug.contains("<redacted>"));
+    assert!(!debug.contains("database/creds/readonly/abc"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_lease_revoke_uses_non_prefix_endpoint() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/leases/revoke HTTP/1.1"));
+        assert!(request.contains(r#""lease_id":"database/creds/readonly/abc""#));
+        assert!(!request.contains("/revoke-prefix/"));
+        assert!(!request.contains("/revoke-force/"));
+        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    client
+        .sys()
+        .revoke_lease(&SecretString::from("database/creds/readonly/abc"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn redirects_are_not_followed_with_token_headers() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

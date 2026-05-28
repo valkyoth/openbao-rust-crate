@@ -33,10 +33,10 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.2.0` release line. `0.2.0` expands the secure
-`0.1.0` core with token lifecycle helpers, KV v1, fuller KV v2 operations,
-mount management, response wrapping, ACL policies, capabilities, and a real
-OpenBao integration gate.
+This README documents the `0.3.0` development line. `0.3.0` builds on the
+published `0.2.0` crate with audit device helpers and safe exact lease
+lookup, renew, and revoke helpers. Transit and plugin catalog support are
+planned before tagging `v0.3.0`.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -59,13 +59,15 @@ Implemented now:
 - ACL policy list, read, write, delete, and prefix list helpers.
 - Capability checks for the caller token, an explicit token, or a token
   accessor.
+- Audit device list, enable, disable, and hash helpers.
+- Safe exact lease lookup, renew, and revoke helpers.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
 Planned next:
 
-- `0.3.0`: Transit, audit devices, safe lease helpers, and plugins catalog.
+- `0.3.0`: Transit and plugins catalog before tag.
 - `0.4.0`: PKI, Kubernetes auth, and TLS certificate auth.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated init/unseal/rekey/rotate APIs.
@@ -104,7 +106,7 @@ release sequencing live in [release-notes](release-notes) and
 
 ```toml
 [dependencies]
-openbao = "0.2"
+openbao = "0.3"
 secrecy = "0.10.3"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
@@ -122,7 +124,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.2", features = ["approle", "token", "kv1", "kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.3", features = ["approle", "token", "kv1", "kv2", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -130,7 +132,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.2", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.3", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 ## Features
@@ -202,8 +204,8 @@ openbao = { version = "0.2", default-features = false, features = ["kv2", "sys",
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
 | Policies and capabilities | Yes | ACL policy helpers plus self/token/accessor capability checks. |
-| Audit devices | Planned | Enable/list/disable/hash in `0.3.0`. |
-| Lease helpers | Planned | Safe non-legacy lease endpoints in `0.3.0`. |
+| Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
+| Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Init, unseal, rekey, rotate | Planned | Explicit safety documentation in `0.6.0`. |
 | Plugins, quotas, metrics, namespaces | Planned | Planned in the `0.8.0` operations line. |
 
@@ -537,6 +539,67 @@ async fn main() -> Result<()> {
 }
 ```
 
+Enable an audit device and calculate an audit hash:
+
+```rust,no_run
+use openbao::sys::AuditEnableRequest;
+use openbao::{Client, Result};
+use secrecy::SecretString;
+use std::collections::BTreeMap;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+
+    client
+        .sys()
+        .enable_audit_device(
+            "file",
+            &AuditEnableRequest {
+                backend_type: "file".to_owned(),
+                description: Some("local audit file".to_owned()),
+                options: BTreeMap::from([(
+                    "file_path".to_owned(),
+                    "/var/log/openbao/audit.log".to_owned(),
+                )]),
+                local: None,
+            },
+        )
+        .await?;
+
+    let hash = client
+        .sys()
+        .audit_hash("file", &SecretString::from("known-secret-value"))
+        .await?;
+
+    println!("audit hash prefix: {}", hash.hash.split(':').next().unwrap_or(""));
+    Ok(())
+}
+```
+
+Look up and renew one exact lease:
+
+```rust,no_run
+use openbao::{Client, Result};
+use secrecy::SecretString;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let lease_id = SecretString::from(std::env::var("BAO_LEASE_ID").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+
+    let lease = client.sys().lookup_lease(&lease_id).await?;
+    if lease.renewable {
+        let renewed = client.sys().renew_lease(&lease_id, Some(1800)).await?;
+        println!("renewed lease seconds: {}", renewed.lease_duration);
+    }
+
+    Ok(())
+}
+```
+
 Call an endpoint that is not typed yet:
 
 ```rust,no_run
@@ -613,7 +676,7 @@ scripts/checks.sh
 Run the current release gate:
 
 ```bash
-scripts/release_0_2_gate.sh
+scripts/release_0_3_gate.sh
 ```
 
 Set `OPENBAO_SKIP_INTEGRATION=1` only when Podman is unavailable; release
