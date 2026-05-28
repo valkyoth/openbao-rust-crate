@@ -22,6 +22,10 @@ Sources:
 - Typed error envelope.
 - Health and seal status.
 - OpenAPI discovery support through `/sys/internal/specs/openapi`.
+- Planned downstream ergonomics from Mjolni/Pawalyze review:
+  env-based client construction, KV v2 service config loading,
+  byte-oriented Transit helpers, JWT/JWKS Transit helpers, idempotent admin
+  bootstrap, and ACL policy builders.
 
 ## Auth Methods
 

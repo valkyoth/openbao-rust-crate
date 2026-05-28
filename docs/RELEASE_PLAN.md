@@ -20,6 +20,27 @@ Every release:
 - validates release metadata;
 - records pentest report status before tag.
 
+## Downstream Ergonomics Backlog
+
+Read-only review of Mjolni and Pawalyze on 2026-05-28 showed recurring
+OpenBao glue that should become first-class crate ergonomics instead of being
+reimplemented in applications:
+
+- env-based client construction from `OPENBAO_ADDR`, `BAO_ADDR`, `VAULT_ADDR`,
+  token aliases, namespace, and CA/root-only trust settings;
+- KV v2 service config loading into `BTreeMap<String, SecretString>` and typed
+  structs, with optional fallback behavior for local development;
+- byte-oriented Transit helpers that base64 encode/decode internally for
+  encrypt, decrypt, HMAC, sign, verify, and envelope-key wrapping;
+- Transit signing helpers for JWT/JWKS use cases, including safe extraction of
+  raw signature bytes and asymmetric public key metadata;
+- idempotent admin bootstrap helpers for mounts, Transit keys, policies, KV
+  secret patching, and scoped service-token creation;
+- policy builder helpers for common KV v2 and Transit capabilities so projects
+  do not assemble ACL HCL with ad hoc strings;
+- migration examples for projects currently using `vaultrs` or bespoke
+  `reqwest` wrappers.
+
 ## Version Plan
 
 ### 0.1.0 - Secure Core And KV v2
@@ -63,6 +84,7 @@ Stop condition:
 - encrypt, decrypt, rewrap, datakey, random, hash, hmac, sign, verify;
 - audit device enable/list/disable/hash;
 - lease lookup/renew/revoke supported only on non-legacy safe endpoints;
+- loopback-only dev bootstrap for fresh local OpenBao instances;
 - timing-sensitive docs for transit use cases.
 
 Publishable value:
@@ -77,10 +99,14 @@ Stop condition:
 - Kubernetes auth login/config/role helpers;
 - TLS certificate auth login/config/cert helpers;
 - certificate examples and tests avoid writing private keys to logs.
+- env-based client construction helper for common `OPENBAO_*`, `BAO_*`, and
+  `VAULT_*` deployment variables;
+- KV v2 service config loader for maps and typed structs.
 
 Publishable value:
 
-- users can automate certificates and workload auth.
+- users can automate certificates, workload auth, and service startup secret
+  loading without custom OpenBao glue.
 
 ### 0.5.0 - Database, JWT/OIDC, Userpass
 
@@ -89,11 +115,15 @@ Stop condition:
 - database engine config, roles, static roles, rotate root, credentials;
 - JWT/OIDC role config and JWT login;
 - userpass create/update/delete/login;
+- byte-oriented Transit convenience helpers for envelope encryption and HMAC
+  lookup-token patterns;
+- Transit signing/JWKS helpers for RSA and Ed25519 JWT signing workflows;
 - examples show short-lived database credentials.
 
 Publishable value:
 
-- users can retrieve dynamic credentials and common human/machine auth.
+- users can retrieve dynamic credentials, support common human/machine auth,
+  and move application crypto glue onto typed OpenBao helpers.
 
 ### 0.6.0 - SSH, TOTP, Production Init/Unseal Safety
 
@@ -101,6 +131,9 @@ Stop condition:
 
 - SSH CA/sign/OTP helpers;
 - TOTP key/code/validate helpers;
+- idempotent admin bootstrap builder for mounts, Transit keys, ACL policies,
+  KV secret patching, and scoped service-token creation;
+- ACL policy builder for common KV v2 and Transit permissions;
 - production init, unseal, rekey, rotate APIs behind explicit feature and
   warnings;
 - tests prove production init/unseal APIs cannot be called accidentally from
@@ -108,7 +141,8 @@ Stop condition:
 
 Publishable value:
 
-- users can support operational bootstrap and MFA-style workflows.
+- users can support operational bootstrap, least-privilege service setup, and
+  MFA-style workflows.
 
 ### 0.7.0 - Remaining Secret Engines And Identity
 
@@ -146,6 +180,7 @@ Stop condition:
 - public API audit completed;
 - feature matrix frozen for `1.0`;
 - migration guide from `0.1` through `0.9`;
+- migration guide from `vaultrs` and bespoke `reqwest` OpenBao wrappers;
 - all docs examples compile;
 - real OpenBao integration suite covers supported default features;
 - fuzz tests cover path validation, error decoding, and response envelopes.
