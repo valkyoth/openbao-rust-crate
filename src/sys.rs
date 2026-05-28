@@ -10,7 +10,7 @@ use reqwest::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
-    de::{Error as DeError, IgnoredAny, SeqAccess, Visitor},
+    de::{Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
 
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
     response::{
         Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
         deserialize_bounded_string_map, deserialize_bounded_string_vec,
-        deserialize_optional_bounded_string_vec,
+        deserialize_optional_bounded_string_map, deserialize_optional_bounded_string_vec,
     },
 };
 
@@ -88,7 +88,7 @@ pub struct MountInfo {
     #[serde(default, deserialize_with = "deserialize_null_default")]
     pub config: MountConfig,
     /// Backend options.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_map")]
     pub options: Option<BTreeMap<String, String>>,
     /// Whether this mount is local to the node.
     #[serde(default)]
@@ -349,14 +349,60 @@ pub struct PolicyWriteRequest {
 }
 
 /// Capabilities returned for queried OpenBao paths.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct Capabilities {
     /// Backwards-compatible capabilities field returned for single-path queries.
-    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub capabilities: Vec<String>,
     /// Capabilities keyed by queried path.
     #[serde(flatten)]
     pub by_path: BTreeMap<String, Vec<String>>,
+}
+
+impl<'de> Deserialize<'de> for Capabilities {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(CapabilitiesVisitor)
+    }
+}
+
+struct CapabilitiesVisitor;
+
+impl<'de> Visitor<'de> for CapabilitiesVisitor {
+    type Value = Capabilities;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a bounded OpenBao capabilities object")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut capabilities = None;
+        let mut by_path = BTreeMap::new();
+        while let Some(key) = map.next_key::<String>()? {
+            if key == "capabilities" {
+                if capabilities.is_some() {
+                    return Err(A::Error::custom("duplicate capabilities field"));
+                }
+                capabilities = Some(map.next_value::<BoundedStringList>()?.0);
+                continue;
+            }
+            if by_path.len() >= crate::response::MAX_RESPONSE_STRINGS {
+                let _ignored = map.next_value::<IgnoredAny>()?;
+                return Err(A::Error::custom(
+                    "OpenBao capabilities map exceeds item limit",
+                ));
+            }
+            by_path.insert(key, map.next_value::<BoundedStringList>()?.0);
+        }
+        Ok(Capabilities {
+            capabilities: capabilities.unwrap_or_default(),
+            by_path,
+        })
+    }
 }
 
 /// Enabled audit device information returned by `/sys/audit`.
@@ -526,7 +572,7 @@ pub struct PluginList {
 pub struct PluginRegisterRequest {
     /// Semantic plugin version.
     pub version: Option<String>,
-    /// Hex or base64 SHA-256 digest of the plugin binary.
+    /// 64-character hex SHA-256 digest of the plugin binary.
     pub sha256: String,
     /// Command used to execute the plugin, relative to OpenBao's plugin directory.
     pub command: String,
@@ -709,11 +755,11 @@ impl<State> Sys<'_, State> {
 impl Sys<'_, Authenticated> {
     /// Lists mounted secrets engines.
     pub async fn list_mounts(&self) -> Result<BTreeMap<String, MountInfo>> {
-        let envelope: ResponseEnvelope<BTreeMap<String, MountInfo>> = self
+        let envelope: ResponseEnvelope<MountInfoMap> = self
             .client
             .request_json(Method::GET, "sys/mounts", Option::<&Empty>::None)
             .await?;
-        Ok(envelope.data)
+        Ok(envelope.data.0)
     }
 
     /// Reads one mounted secrets engine.
@@ -780,11 +826,11 @@ impl Sys<'_, Authenticated> {
 
     /// Lists enabled auth methods.
     pub async fn list_auth_methods(&self) -> Result<BTreeMap<String, MountInfo>> {
-        let envelope: ResponseEnvelope<BTreeMap<String, MountInfo>> = self
+        let envelope: ResponseEnvelope<MountInfoMap> = self
             .client
             .request_json(Method::GET, "sys/auth", Option::<&Empty>::None)
             .await?;
-        Ok(envelope.data)
+        Ok(envelope.data.0)
     }
 
     /// Enables an auth method at `mount_path`.
@@ -953,9 +999,11 @@ impl Sys<'_, Authenticated> {
 
     /// Lists enabled audit devices.
     pub async fn list_audit_devices(&self) -> Result<BTreeMap<String, AuditDevice>> {
-        self.client
+        let devices: AuditDeviceMap = self
+            .client
             .request_json(Method::GET, "sys/audit", Option::<&Empty>::None)
-            .await
+            .await?;
+        Ok(devices.0)
     }
 
     /// Enables an audit device at `path`.
@@ -1087,6 +1135,7 @@ impl Sys<'_, Authenticated> {
         name: &str,
         request: &PluginRegisterRequest,
     ) -> Result<Empty> {
+        validate_sha256_hex(&request.sha256, "plugin SHA-256")?;
         let payload = PluginRegisterPayload {
             version: request.version.as_deref(),
             sha256: &request.sha256,
@@ -1259,6 +1308,8 @@ fn validate_wrapping_ttl(ttl: &str) -> Result<()> {
     ))
 }
 
+const MAX_DURATION_COMPONENT: u64 = 8_760_000;
+
 fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
     if value.is_empty() {
         return false;
@@ -1266,6 +1317,7 @@ fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
 
     let bytes = value.as_bytes();
     let mut index = 0;
+    let mut last_unit_order = None;
     while index < bytes.len() {
         let digit_start = index;
         while index < bytes.len() && bytes[index].is_ascii_digit() {
@@ -1274,16 +1326,32 @@ fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
         if digit_start == index {
             return false;
         }
-        if !allow_zero && bytes[digit_start..index].iter().all(|byte| *byte == b'0') {
+        let Ok(component) = core::str::from_utf8(&bytes[digit_start..index])
+            .unwrap_or("")
+            .parse::<u64>()
+        else {
+            return false;
+        };
+        if component > MAX_DURATION_COMPONENT {
+            return false;
+        }
+        if !allow_zero && component == 0 {
             return false;
         }
         if index >= bytes.len() {
             return false;
         }
-        match bytes[index] {
-            b's' | b'm' | b'h' => index += 1,
+        let unit_order = match bytes[index] {
+            b'h' => 0,
+            b'm' => 1,
+            b's' => 2,
             _ => return false,
+        };
+        if last_unit_order.is_some_and(|previous| unit_order <= previous) {
+            return false;
         }
+        last_unit_order = Some(unit_order);
+        index += 1;
     }
     true
 }
@@ -1335,6 +1403,20 @@ fn plugin_catalog_entry_path(plugin_type: PluginType, name: &str) -> Result<Stri
     ];
     segments.extend(validate_mount_path(name)?);
     Ok(segments.join("/"))
+}
+
+fn validate_sha256_hex(value: &str, field: &'static str) -> Result<()> {
+    if value.len() != 64 {
+        return Err(Error::InvalidPath(format!(
+            "{field} must be a 64-character SHA-256 hex digest"
+        )));
+    }
+    if !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(Error::InvalidPath(format!(
+            "{field} must contain only hexadecimal characters"
+        )));
+    }
+    Ok(())
 }
 
 fn plugin_version_query(version: Option<&str>) -> Result<Vec<(&'static str, String)>> {
@@ -1422,6 +1504,96 @@ where
     )
 }
 
+#[derive(Deserialize)]
+struct BoundedStringList(#[serde(deserialize_with = "deserialize_bounded_string_vec")] Vec<String>);
+
+#[derive(Deserialize)]
+struct MountInfoMap(
+    #[serde(deserialize_with = "deserialize_bounded_mount_info_map")] BTreeMap<String, MountInfo>,
+);
+
+#[derive(Deserialize)]
+struct AuditDeviceMap(
+    #[serde(deserialize_with = "deserialize_bounded_audit_device_map")]
+    BTreeMap<String, AuditDevice>,
+);
+
+fn deserialize_bounded_mount_info_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, MountInfo>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_map(BoundedMountInfoMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+struct BoundedMountInfoMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedMountInfoMapVisitor<MAX> {
+    type Value = BTreeMap<String, MountInfo>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} mount entries")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, MountInfo>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao mount map exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
+fn deserialize_bounded_audit_device_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, AuditDevice>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_map(BoundedAuditDeviceMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+struct BoundedAuditDeviceMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedAuditDeviceMapVisitor<MAX> {
+    type Value = BTreeMap<String, AuditDevice>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} audit devices")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, AuditDevice>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao audit device map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedPluginDetailListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedPluginDetailListVisitor<MAX> {
@@ -1459,7 +1631,7 @@ mod tests {
 
     use super::{
         LeaseDuration, PolicyList, sys_path, validate_capability_paths, validate_lease_id,
-        validate_wrapping_ttl,
+        validate_sha256_hex, validate_wrapping_ttl,
     };
 
     #[test]
@@ -1486,8 +1658,12 @@ mod tests {
         assert!(validate_wrapping_ttl("30s").is_ok());
         assert!(validate_wrapping_ttl("5m").is_ok());
         assert!(validate_wrapping_ttl("1h").is_ok());
+        assert!(validate_wrapping_ttl("1h30m").is_ok());
         assert!(validate_wrapping_ttl("").is_err());
         assert!(validate_wrapping_ttl("0s").is_err());
+        assert!(validate_wrapping_ttl("1h1h").is_err());
+        assert!(validate_wrapping_ttl("1m1h").is_err());
+        assert!(validate_wrapping_ttl("999999999999h").is_err());
         assert!(validate_wrapping_ttl("-1h").is_err());
         assert!(validate_wrapping_ttl("forever").is_err());
     }
@@ -1558,6 +1734,72 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn capabilities_path_map_is_bounded() {
+        let mut value = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            value.insert(format!("secret/data/{index}"), serde_json::json!(["read"]));
+        }
+        let error =
+            match serde_json::from_value::<super::Capabilities>(serde_json::Value::Object(value)) {
+                Ok(_) => panic!("oversized capabilities map unexpectedly decoded"),
+                Err(error) => error,
+            };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn mount_and_audit_maps_are_bounded() {
+        let mut mounts = serde_json::Map::new();
+        let mut audits = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            mounts.insert(
+                format!("secret-{index}/"),
+                serde_json::json!({ "type": "kv", "config": {} }),
+            );
+            audits.insert(
+                format!("file-{index}/"),
+                serde_json::json!({ "type": "file", "options": {} }),
+            );
+        }
+
+        let error = match serde_json::from_value::<super::MountInfoMap>(serde_json::Value::Object(
+            mounts,
+        )) {
+            Ok(_) => panic!("oversized mount map unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        let error = match serde_json::from_value::<super::AuditDeviceMap>(
+            serde_json::Value::Object(audits),
+        ) {
+            Ok(_) => panic!("oversized audit device map unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn plugin_sha256_is_validated() {
+        assert!(
+            validate_sha256_hex(
+                "d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9",
+                "sha256"
+            )
+            .is_ok()
+        );
+        assert!(validate_sha256_hex("", "sha256").is_err());
+        assert!(validate_sha256_hex("not-a-sha256", "sha256").is_err());
+        assert!(
+            validate_sha256_hex(
+                "g130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9",
+                "sha256"
+            )
+            .is_err()
+        );
     }
 
     #[test]

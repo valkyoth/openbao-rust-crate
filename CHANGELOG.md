@@ -23,6 +23,13 @@ All notable changes to this project are documented here.
   are represented with `SecretString` where they enter or leave the crate.
 - Plugin registration args/env and returned args/env are represented as
   `SecretString`; detailed catalog lists are bounded during deserialization.
+- Server-controlled maps for capabilities, mounts, audit devices, KV metadata,
+  token metadata, and Transit key versions are bounded during deserialization.
+- SHA-1 Transit hashing is deprecated at compile time, plugin registration
+  SHA-256 digests are validated as 64-character hex, and native TLS now
+  requires the `native-tls-acknowledged` feature.
+- Token and AppRole login response structs no longer implement `Clone`,
+  avoiding accidental extra token/accessor heap copies.
 
 ## 0.2.0 - 2026-05-27
 

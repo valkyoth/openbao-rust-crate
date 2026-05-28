@@ -5,7 +5,10 @@ use std::collections::BTreeMap;
 
 use reqwest::{Method, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize, Deserializer, Serialize,
+    de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
+};
 
 use crate::{
     Authenticated, Client, Error, Result,
@@ -101,6 +104,7 @@ impl TransitRandomSource {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransitHashAlgorithm {
     /// SHA-1. Legacy only.
+    #[deprecated(since = "0.3.0", note = "SHA-1 is broken; use SHA2-256 or stronger")]
     Sha1,
     /// SHA2-224.
     Sha2_224,
@@ -124,6 +128,7 @@ pub enum TransitHashAlgorithm {
 
 impl TransitHashAlgorithm {
     fn as_path_segment(self) -> &'static str {
+        #[allow(deprecated)]
         match self {
             Self::Sha1 => "sha1",
             Self::Sha2_224 => "sha2-224",
@@ -195,7 +200,7 @@ pub struct TransitKeyInfo {
     #[serde(default)]
     pub allow_plaintext_backup: bool,
     /// Key version creation times keyed by version string.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_u64_map")]
     pub keys: BTreeMap<String, u64>,
     /// Minimum version allowed for decryption or verification.
     #[serde(default)]
@@ -444,13 +449,26 @@ pub struct TransitSignRequest {
 }
 
 /// Transit signing response.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct TransitSignResponse {
     /// Signature in OpenBao's encoded format.
-    pub signature: String,
+    pub signature: SecretString,
     /// Derived public key, when returned by OpenBao.
     #[serde(default)]
-    pub public_key: Option<String>,
+    pub public_key: Option<SecretString>,
+}
+
+impl fmt::Debug for TransitSignResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitSignResponse")
+            .field("signature", &"<redacted>")
+            .field(
+                "public_key",
+                &self.public_key.as_ref().map(|_| "<redacted>"),
+            )
+            .finish()
+    }
 }
 
 /// Request for Transit verification.
@@ -459,7 +477,7 @@ pub struct TransitVerifyRequest {
     /// Base64-encoded input.
     pub input: SecretString,
     /// Signature to verify.
-    pub signature: Option<String>,
+    pub signature: Option<SecretString>,
     /// HMAC to verify.
     pub hmac: Option<SecretString>,
     /// Base64-encoded derivation context.
@@ -851,7 +869,10 @@ impl Transit<'_> {
     ) -> Result<TransitVerifyResponse> {
         let payload = TransitVerifyPayload {
             input: request.input.expose_secret(),
-            signature: request.signature.as_deref(),
+            signature: request
+                .signature
+                .as_ref()
+                .map(|secret| secret.expose_secret()),
             hmac: request.hmac.as_ref().map(|secret| secret.expose_secret()),
             context: request
                 .context
@@ -922,6 +943,42 @@ fn validate_key_name(name: &str) -> Result<Vec<String>> {
     validate_mount_path(name)
 }
 
+fn deserialize_bounded_u64_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, u64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(BoundedU64MapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+struct BoundedU64MapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
+    type Value = BTreeMap<String, u64>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} integer values")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, u64>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao integer map exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
@@ -930,7 +987,7 @@ mod tests {
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::{TransitEncryptResponse, TransitKeyList};
+    use super::{TransitEncryptResponse, TransitKeyInfo, TransitKeyList};
 
     #[test]
     fn transit_paths_are_validated() {
@@ -967,6 +1024,23 @@ mod tests {
         let value = serde_json::json!({ "keys": keys });
         let error = match serde_json::from_value::<TransitKeyList>(value) {
             Ok(_) => panic!("oversized Transit key list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn transit_key_version_map_is_bounded() {
+        let mut keys = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            keys.insert(index.to_string(), serde_json::json!(1));
+        }
+        let value = serde_json::json!({
+            "type": "aes256-gcm96",
+            "keys": keys,
+        });
+        let error = match serde_json::from_value::<TransitKeyInfo>(value) {
+            Ok(_) => panic!("oversized Transit key version map unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

@@ -4,13 +4,13 @@ use std::collections::BTreeMap;
 
 use reqwest::Method;
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     Authenticated, Client, Error, Result,
     response::{
         Empty, ResponseEnvelope, deserialize_bounded_secret_string_vec,
-        deserialize_bounded_string_vec,
+        deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
     },
 };
 
@@ -59,7 +59,7 @@ pub struct TokenCreateRequest {
 }
 
 /// Result of creating or renewing a token.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct TokenAuth {
     /// Client token returned by OpenBao.
     pub client_token: SecretString,
@@ -72,7 +72,10 @@ pub struct TokenAuth {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub token_policies: Vec<String>,
     /// Token metadata.
-    #[serde(default, deserialize_with = "deserialize_null_default")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_string_map_or_default"
+    )]
     pub metadata: BTreeMap<String, String>,
     /// Lease duration in seconds.
     #[serde(default)]
@@ -140,7 +143,10 @@ pub struct TokenInfo {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub identity_policies: Vec<String>,
     /// Token metadata.
-    #[serde(default, deserialize_with = "deserialize_null_default")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_string_map_or_default"
+    )]
     pub meta: BTreeMap<String, String>,
     /// Token type.
     #[serde(default)]
@@ -315,14 +321,6 @@ impl Token<'_> {
             .request_json(Method::POST, "auth/token/revoke-accessor", Some(&payload))
             .await
     }
-}
-
-fn deserialize_null_default<'de, D, T>(deserializer: D) -> core::result::Result<T, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Deserialize<'de> + Default,
-{
-    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
 }
 
 #[cfg(test)]

@@ -1094,7 +1094,7 @@ async fn transit_crypto_helpers_use_documented_paths() {
         )
         .await
         .unwrap_or_else(|error| panic!("{error}"));
-    assert_eq!(signature.signature, "vault:v1:signature");
+    assert_eq!(signature.signature.expose_secret(), "vault:v1:signature");
 
     let verified = transit
         .verify(

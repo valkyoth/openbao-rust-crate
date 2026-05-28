@@ -18,6 +18,12 @@
 #[cfg(not(any(feature = "rustls-tls", feature = "native-tls")))]
 compile_error!("openbao requires either the rustls-tls or native-tls feature");
 
+#[cfg(all(feature = "native-tls", not(feature = "native-tls-acknowledged")))]
+compile_error!(
+    "The native-tls feature pulls platform TLS/OpenSSL and may weaken transport security guarantees. \
+     Add feature \"native-tls-acknowledged\" to confirm you have audited this choice."
+);
+
 mod client;
 mod error;
 mod path;

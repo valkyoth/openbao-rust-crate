@@ -437,8 +437,10 @@ impl<State> Client<State> {
             if !has_content_type {
                 request = request.header(CONTENT_TYPE, "application/json");
             }
-            // Zero the serialization buffer we control. reqwest and the OS may
-            // still keep independent transport buffers until their own cleanup.
+            // SECURITY: this copy is intentionally non-zeroing because
+            // reqwest::Body does not accept a Zeroize-on-drop body buffer.
+            // The Zeroizing serialization buffer above is cleared; reqwest,
+            // TLS, kernel, and device buffers are documented residual risks.
             request = request.body(Vec::from(&encoded[..]));
         }
 

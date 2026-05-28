@@ -38,24 +38,34 @@ Please include:
 - Redirects must remain disabled by default.
 - TLS 1.3 or newer must remain enforced by default; TLS 1.2 requires an explicit legacy opt-down.
 - The default TLS backend is Rustls. The `native-tls` feature exists only for
-  audited legacy compatibility and may pull OpenSSL on some targets.
+  audited legacy compatibility, may pull OpenSSL on some targets, and requires
+  the explicit `native-tls-acknowledged` feature.
 - Token accessors are treated as secret material.
 - Namespace header values are treated as sensitive metadata.
 - Plain HTTP is allowed only by explicit numeric loopback IP opt-in. Hostnames such as `localhost` are rejected.
 - Response bodies must remain size-bounded, JSON content-type checked, and zeroized after decoding.
 - JSON request serialization buffers controlled by this crate must be zeroized
   after handoff to the HTTP stack.
-- Exact certificate or SPKI pinning is not implemented in 0.2.0; use root-only trust with a private CA when pinning would otherwise be required.
 - Third-party GitHub Actions must be pinned to immutable commit SHAs.
 - New dependencies require a release-plan justification and `cargo deny` review.
 
-## Known Limitations
+## Residual Secret Memory
 
 After a JSON request body is handed to `reqwest`, the transport stack, TLS
 backend, kernel, or network device may keep independent plaintext or ciphertext
 buffers until their own cleanup. This crate zeroizes the serialization buffer it
 controls, but it cannot guarantee zeroization of buffers owned by dependencies
 or the operating system.
+
+High-assurance deployments should combine this crate with process isolation,
+encrypted swap or disabled swap, core-dump restrictions, short process
+lifetimes for highly sensitive workflows, and host-level memory protections
+appropriate to the environment.
+
+## Known Limitations
+
+Exact certificate or SPKI pinning is not implemented in 0.3.0; use root-only
+trust with a private CA when pinning would otherwise be required.
 
 ## Pentest Gate
 

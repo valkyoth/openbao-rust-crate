@@ -6,12 +6,18 @@ use reqwest::{
     Method, StatusCode,
     header::{CONTENT_TYPE, HeaderValue},
 };
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{
+    Deserialize, Deserializer, Serialize,
+    de::{DeserializeOwned, IgnoredAny, MapAccess, Visitor},
+};
 
 use crate::{
     Authenticated, Client, Result,
     path::{validate_mount_path, validate_secret_path},
-    response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
+    response::{
+        Empty, ResponseEnvelope, deserialize_bounded_string_vec,
+        deserialize_optional_bounded_string_map,
+    },
 };
 
 /// Handle for a mounted KV v2 secrets engine.
@@ -88,10 +94,10 @@ pub struct Kv2KeyMetadata {
     #[serde(default)]
     pub delete_version_after: Option<String>,
     /// Caller-defined metadata.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_map")]
     pub custom_metadata: Option<BTreeMap<String, String>>,
     /// Metadata for each retained version.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_bounded_version_metadata_map")]
     pub versions: BTreeMap<String, Kv2VersionMetadata>,
 }
 
@@ -416,6 +422,46 @@ impl Kv2<'_> {
     }
 }
 
+fn deserialize_bounded_version_metadata_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, Kv2VersionMetadata>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(
+        BoundedVersionMetadataMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
+struct BoundedVersionMetadataMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionMetadataMapVisitor<MAX> {
+    type Value = BTreeMap<String, Kv2VersionMetadata>;
+
+    fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(formatter, "a map of at most {MAX} KV v2 versions")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, Kv2VersionMetadata>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "OpenBao KV v2 version map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
@@ -424,7 +470,7 @@ mod tests {
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::Kv2List;
+    use super::{Kv2KeyMetadata, Kv2List};
 
     #[test]
     fn kv2_paths_are_validated() {
@@ -466,6 +512,45 @@ mod tests {
         let value = serde_json::json!({ "keys": keys });
         let error = match serde_json::from_value::<Kv2List>(value) {
             Ok(_) => panic!("oversized KV v2 key list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn kv2_metadata_maps_are_bounded() {
+        let mut custom_metadata = serde_json::Map::new();
+        let mut versions = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            custom_metadata.insert(format!("key-{index}"), serde_json::json!("value"));
+            versions.insert(
+                index.to_string(),
+                serde_json::json!({
+                    "created_time": "2026-05-28T00:00:00Z",
+                    "deletion_time": "",
+                    "destroyed": false
+                }),
+            );
+        }
+        let base = serde_json::json!({
+            "created_time": "2026-05-28T00:00:00Z",
+            "updated_time": "2026-05-28T00:00:00Z",
+            "current_version": 1,
+            "oldest_version": 1,
+        });
+
+        let mut value = base.clone();
+        value["custom_metadata"] = serde_json::Value::Object(custom_metadata);
+        let error = match serde_json::from_value::<Kv2KeyMetadata>(value) {
+            Ok(_) => panic!("oversized KV v2 custom metadata unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        let mut value = base;
+        value["versions"] = serde_json::Value::Object(versions);
+        let error = match serde_json::from_value::<Kv2KeyMetadata>(value) {
+            Ok(_) => panic!("oversized KV v2 versions unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

@@ -108,6 +108,7 @@ where
     Option::<BoundedStringList>::deserialize(deserializer).map(|value| value.map(|value| value.0))
 }
 
+#[allow(dead_code)]
 pub(crate) fn deserialize_bounded_string_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, String>, D::Error>
@@ -117,9 +118,38 @@ where
     deserializer.deserialize_map(BoundedStringMapVisitor::<MAX_RESPONSE_STRINGS>)
 }
 
+#[allow(dead_code)]
+pub(crate) fn deserialize_optional_bounded_string_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<BTreeMap<String, String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<BoundedStringMap>::deserialize(deserializer).map(|value| value.map(|value| value.0))
+}
+
+#[allow(dead_code)]
+pub(crate) fn deserialize_bounded_string_map_or_default<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Option::<BoundedStringMap>::deserialize(deserializer)?
+        .map(|value| value.0)
+        .unwrap_or_default())
+}
+
 #[derive(Deserialize)]
 struct BoundedStringList(#[serde(deserialize_with = "deserialize_bounded_string_vec")] Vec<String>);
 
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct BoundedStringMap(
+    #[serde(deserialize_with = "deserialize_bounded_string_map")] BTreeMap<String, String>,
+);
+
+#[allow(dead_code)]
 pub(crate) fn deserialize_bounded_secret_string_vec<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Vec<SecretString>, D::Error>
@@ -156,6 +186,7 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedStringListVisitor<MAX> {
     }
 }
 
+#[allow(dead_code)]
 struct BoundedStringMapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedStringMapVisitor<MAX> {
@@ -183,6 +214,7 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedStringMapVisitor<MAX> {
     }
 }
 
+#[allow(dead_code)]
 struct BoundedSecretStringListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretStringListVisitor<MAX> {

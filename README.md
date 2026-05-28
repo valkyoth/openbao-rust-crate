@@ -149,7 +149,8 @@ openbao = { version = "0.3", default-features = false, features = ["kv2", "sys",
 | `transit` | yes | Transit cryptography helpers. |
 | `sys` | yes | System backend helpers. |
 | `rustls-tls` | yes | Rustls transport configuration. |
-| `native-tls` | no | Legacy native TLS support. Audit before use; it may pull OpenSSL on some targets. |
+| `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
+| `native-tls-acknowledged` | no | Explicit acknowledgment for audited native TLS builds. |
 
 ## Support Matrix
 

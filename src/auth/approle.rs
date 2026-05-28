@@ -13,7 +13,7 @@ pub struct AppRole<'a> {
 }
 
 /// Metadata returned after a successful login.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct LoginMetadata {
     /// Token accessor. Accessors can revoke or look up token metadata, so they
     /// are treated as secret material.

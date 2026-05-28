@@ -47,6 +47,8 @@ rustls-tls = ["reqwest/rustls"]
 # Legacy compatibility only. Enabling this pulls the platform native TLS stack
 # and may pull OpenSSL on some targets; audit before use in high-security builds.
 native-tls = ["reqwest/native-tls"]
+# Must be enabled together with native-tls to confirm the transport stack was audited.
+native-tls-acknowledged = []
 
 [dependencies]
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }

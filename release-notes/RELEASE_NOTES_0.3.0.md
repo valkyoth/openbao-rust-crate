@@ -41,6 +41,18 @@
   payloads immediately before handoff to the shared HTTP request layer.
 - Plugin registration args/env and returned args/env are represented as
   `SecretString`; detailed catalog lists are bounded during deserialization.
+- Server-controlled maps for capabilities, mounts, audit devices, KV metadata,
+  token metadata, and Transit key versions are bounded during deserialization.
+- SHA-1 Transit hashing is deprecated at compile time, and Transit signatures
+  and derived public keys are wrapped as `SecretString`.
+- Plugin registration SHA-256 digests are validated as 64-character hex before
+  requests are sent.
+- The legacy `native-tls` feature now requires explicit
+  `native-tls-acknowledged` opt-in after audit.
+- Token and AppRole login response structs no longer implement `Clone`, which
+  avoids accidental extra token/accessor heap copies.
+- Residual request-body memory owned by `reqwest`, TLS, the kernel, or devices
+  is documented in `SECURITY.md`.
 
 ## Security And Stability Gate
 
