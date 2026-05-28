@@ -88,9 +88,11 @@ Support plan:
 - `0.1.0`: health and seal status.
 - `0.2.0`: mounts, auth mounts, response wrapping, policies, and capabilities.
 - `0.3.0`: audit device list/enable/disable/hash, exact lease
-  lookup/renew/revoke, plugin catalog list/type-list/register/read/delete, and
-  mounted plugin backend reload are implemented.
-- `0.6.0`: init, unseal, rekey, rotate with strong safety documentation.
+  lookup/renew/revoke, plugin catalog list/type-list/register/read/delete,
+  mounted plugin backend reload, init status, and loopback-only dev bootstrap
+  are implemented.
+- `0.6.0`: production init, unseal, rekey, rotate with strong safety
+  documentation.
 - `0.8.0`: metrics, quotas, namespaces, storage, diagnostic endpoints.
 
 ## OpenBao-Specific Notes

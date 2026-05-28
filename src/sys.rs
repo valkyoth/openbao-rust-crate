@@ -1,7 +1,7 @@
 //! System backend helpers.
 
-use core::fmt;
-use std::collections::BTreeMap;
+use core::{fmt, marker::PhantomData};
+use std::{collections::BTreeMap, net::IpAddr};
 
 use reqwest::{
     Method, StatusCode,
@@ -14,7 +14,7 @@ use serde::{
 };
 
 use crate::{
-    Authenticated, Client, Error, Result,
+    Authenticated, Client, Error, Result, Unauthenticated,
     path::{validate_mount_path, validate_secret_path},
     response::{
         Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
@@ -49,6 +49,13 @@ pub struct Health {
     pub cluster_id: Option<String>,
 }
 
+/// OpenBao initialization status returned by `/sys/init`.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub struct InitStatus {
+    /// Whether the node has already been initialized.
+    pub initialized: bool,
+}
+
 /// OpenBao seal status response.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SealStatus {
@@ -70,6 +77,98 @@ pub struct SealStatus {
     pub progress: Option<u64>,
     /// Server version.
     pub version: String,
+}
+
+/// OpenBao unseal progress response.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct UnsealStatus {
+    /// Whether the node is still sealed.
+    pub sealed: bool,
+    /// Key shares configured for Shamir seal.
+    #[serde(default)]
+    pub n: Option<u64>,
+    /// Key threshold configured for Shamir seal.
+    #[serde(default)]
+    pub t: Option<u64>,
+    /// Progress toward unseal threshold.
+    #[serde(default)]
+    pub progress: Option<u64>,
+    /// Server version.
+    pub version: String,
+    /// Cluster name when OpenBao is unsealed.
+    #[serde(default)]
+    pub cluster_name: Option<String>,
+    /// Cluster identifier when OpenBao is unsealed.
+    #[serde(default)]
+    pub cluster_id: Option<String>,
+}
+
+/// Options for [`Sys::bootstrap_dev`].
+///
+/// The default is intentionally the smallest useful Shamir setup: one share
+/// and a threshold of one. That is suitable for disposable local development
+/// only and is not a production initialization ceremony.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DevBootstrapOptions {
+    /// Number of Shamir unseal key shares to create.
+    pub secret_shares: u8,
+    /// Number of shares required to unseal the development instance.
+    pub secret_threshold: u8,
+}
+
+impl DevBootstrapOptions {
+    /// Creates validated development bootstrap options.
+    pub fn new(secret_shares: u8, secret_threshold: u8) -> Result<Self> {
+        validate_dev_bootstrap_options(secret_shares, secret_threshold)?;
+        Ok(Self {
+            secret_shares,
+            secret_threshold,
+        })
+    }
+
+    /// Returns the default single-key development configuration.
+    pub const fn single_key() -> Self {
+        Self {
+            secret_shares: 1,
+            secret_threshold: 1,
+        }
+    }
+}
+
+impl Default for DevBootstrapOptions {
+    fn default() -> Self {
+        Self::single_key()
+    }
+}
+
+/// Result from [`Sys::bootstrap_dev`].
+///
+/// This type intentionally does not implement `Clone`. It contains a root
+/// token and unseal shares for a disposable local development instance.
+pub struct DevBootstrap {
+    /// Authenticated root client for the freshly bootstrapped dev instance.
+    pub client: Client<Authenticated>,
+    /// Initial root token returned by OpenBao.
+    pub root_token: SecretString,
+    /// Unseal key shares returned by OpenBao.
+    pub unseal_keys: Vec<SecretString>,
+    /// Base64-encoded unseal key shares returned by OpenBao.
+    pub unseal_keys_base64: Vec<SecretString>,
+    /// Final unseal response after bootstrap.
+    pub unseal_status: UnsealStatus,
+}
+
+impl fmt::Debug for DevBootstrap {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DevBootstrap")
+            .field("client", &self.client)
+            .field("root_token", &"<redacted>")
+            .field("unseal_key_count", &self.unseal_keys.len())
+            .field("unseal_key_base64_count", &self.unseal_keys_base64.len())
+            .field("unseal_status", &self.unseal_status)
+            .finish()
+    }
 }
 
 /// Mount or auth backend information returned by `/sys/mounts` and `/sys/auth`.
@@ -713,6 +812,26 @@ struct CapabilitiesPayload<'a> {
     accessor: Option<&'a str>,
 }
 
+#[derive(Serialize)]
+struct InitPayload {
+    secret_shares: u8,
+    secret_threshold: u8,
+}
+
+#[derive(Deserialize)]
+struct InitResponse {
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    keys: Vec<SecretString>,
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    keys_base64: Vec<SecretString>,
+    root_token: SecretString,
+}
+
+#[derive(Serialize)]
+struct UnsealPayload<'a> {
+    key: &'a str,
+}
+
 impl<State> Client<State> {
     /// Accesses system backend helpers.
     pub fn sys(&self) -> Sys<'_, State> {
@@ -721,6 +840,13 @@ impl<State> Client<State> {
 }
 
 impl<State> Sys<'_, State> {
+    /// Reads `/sys/init` initialization status.
+    pub async fn init_status(&self) -> Result<InitStatus> {
+        self.client
+            .request_json(Method::GET, "sys/init", Option::<&Empty>::None)
+            .await
+    }
+
     /// Reads `/sys/health`.
     ///
     /// Health endpoints intentionally return non-200 status codes for standby,
@@ -748,6 +874,101 @@ impl<State> Sys<'_, State> {
     pub async fn seal_status(&self) -> Result<SealStatus> {
         self.client
             .request_json(Method::GET, "sys/seal-status", Option::<&Empty>::None)
+            .await
+    }
+}
+
+impl Sys<'_, Unauthenticated> {
+    /// Initializes and unseals a fresh loopback OpenBao development instance.
+    ///
+    /// This helper is intentionally narrow:
+    ///
+    /// - it refuses non-loopback targets;
+    /// - it refuses already-initialized OpenBao instances;
+    /// - it uses Shamir key shares and returns root/unseal material in memory;
+    /// - it is for disposable local development and automated tests only.
+    ///
+    /// Do not use this for production, staging, shared labs, HSM/KMS-backed
+    /// auto-unseal deployments, or any environment where root-token and unseal
+    /// key handling must follow an operator ceremony.
+    pub async fn bootstrap_dev(&self, options: &DevBootstrapOptions) -> Result<DevBootstrap> {
+        validate_dev_bootstrap_options(options.secret_shares, options.secret_threshold)?;
+        require_loopback_dev_target(self.client)?;
+
+        let init_status = self.init_status().await?;
+        if init_status.initialized {
+            return Err(Error::InvalidParameter(
+                "dev bootstrap refuses to run against an already initialized OpenBao instance"
+                    .into(),
+            ));
+        }
+
+        let init_response: InitResponse = self
+            .client
+            .request_json(
+                Method::POST,
+                "sys/init",
+                Some(&InitPayload {
+                    secret_shares: options.secret_shares,
+                    secret_threshold: options.secret_threshold,
+                }),
+            )
+            .await?;
+
+        if init_response.root_token.expose_secret().is_empty() {
+            return Err(Error::MissingField("root_token"));
+        }
+        if init_response.keys.len() < usize::from(options.secret_threshold) {
+            return Err(Error::MissingField("keys"));
+        }
+
+        let mut unseal_status = None;
+        for key in init_response
+            .keys
+            .iter()
+            .take(usize::from(options.secret_threshold))
+        {
+            let status = self.unseal_once(key).await?;
+            let sealed = status.sealed;
+            unseal_status = Some(status);
+            if !sealed {
+                break;
+            }
+        }
+
+        let unseal_status = unseal_status.ok_or(Error::MissingField("unseal status"))?;
+        if unseal_status.sealed {
+            return Err(Error::Decode(
+                "OpenBao remained sealed after submitting the configured dev threshold".into(),
+            ));
+        }
+
+        let client = Client {
+            config: self.client.config.clone(),
+            http: self.client.http.clone(),
+            token: None,
+            _state: PhantomData,
+        }
+        .with_token(init_response.root_token.clone());
+
+        Ok(DevBootstrap {
+            client,
+            root_token: init_response.root_token,
+            unseal_keys: init_response.keys,
+            unseal_keys_base64: init_response.keys_base64,
+            unseal_status,
+        })
+    }
+
+    async fn unseal_once(&self, key: &SecretString) -> Result<UnsealStatus> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/unseal",
+                Some(&UnsealPayload {
+                    key: key.expose_secret(),
+                }),
+            )
             .await
     }
 }
@@ -1285,6 +1506,43 @@ impl Sys<'_, Authenticated> {
     }
 }
 
+fn validate_dev_bootstrap_options(secret_shares: u8, secret_threshold: u8) -> Result<()> {
+    if secret_shares == 0 {
+        return Err(Error::InvalidParameter(
+            "secret_shares must be greater than zero".into(),
+        ));
+    }
+    if secret_threshold == 0 {
+        return Err(Error::InvalidParameter(
+            "secret_threshold must be greater than zero".into(),
+        ));
+    }
+    if secret_threshold > secret_shares {
+        return Err(Error::InvalidParameter(
+            "secret_threshold must be less than or equal to secret_shares".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn require_loopback_dev_target<State>(client: &Client<State>) -> Result<()> {
+    let url = client.base_url();
+    let Some(host) = url.host_str() else {
+        return Err(Error::InvalidBaseUrl(
+            "dev bootstrap requires a numeric loopback OpenBao host".into(),
+        ));
+    };
+    if !host
+        .parse::<IpAddr>()
+        .is_ok_and(|address| address.is_loopback())
+    {
+        return Err(Error::InvalidBaseUrl(
+            "dev bootstrap is restricted to numeric loopback OpenBao hosts".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn openbao_status(code: u16) -> Result<StatusCode> {
     StatusCode::from_u16(code)
         .map_err(|_| crate::Error::Internal("invalid OpenBao health status code"))
@@ -1630,8 +1888,9 @@ mod tests {
     use secrecy::SecretString;
 
     use super::{
-        LeaseDuration, PolicyList, sys_path, validate_capability_paths, validate_lease_id,
-        validate_sha256_hex, validate_wrapping_ttl,
+        LeaseDuration, PolicyList, sys_path, validate_capability_paths,
+        validate_dev_bootstrap_options, validate_lease_id, validate_sha256_hex,
+        validate_wrapping_ttl,
     };
 
     #[test]
@@ -1666,6 +1925,15 @@ mod tests {
         assert!(validate_wrapping_ttl("999999999999h").is_err());
         assert!(validate_wrapping_ttl("-1h").is_err());
         assert!(validate_wrapping_ttl("forever").is_err());
+    }
+
+    #[test]
+    fn dev_bootstrap_options_are_validated() {
+        assert!(validate_dev_bootstrap_options(1, 1).is_ok());
+        assert!(validate_dev_bootstrap_options(3, 2).is_ok());
+        assert!(validate_dev_bootstrap_options(0, 0).is_err());
+        assert!(validate_dev_bootstrap_options(1, 0).is_err());
+        assert!(validate_dev_bootstrap_options(1, 2).is_err());
     }
 
     #[test]

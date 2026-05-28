@@ -95,14 +95,16 @@ Publishable value:
 
 - users can retrieve dynamic credentials and common human/machine auth.
 
-### 0.6.0 - SSH, TOTP, Init/Unseal Safety
+### 0.6.0 - SSH, TOTP, Production Init/Unseal Safety
 
 Stop condition:
 
 - SSH CA/sign/OTP helpers;
 - TOTP key/code/validate helpers;
-- init, unseal, rekey, rotate APIs behind explicit feature and warnings;
-- tests prove init/unseal APIs cannot be called accidentally from default docs.
+- production init, unseal, rekey, rotate APIs behind explicit feature and
+  warnings;
+- tests prove production init/unseal APIs cannot be called accidentally from
+  default docs.
 
 Publishable value:
 

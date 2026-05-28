@@ -17,6 +17,8 @@
 - New `0.3.0` modules started: Transit helpers, sys audit device helpers,
   safe exact lease lookup, renew, and revoke helpers, and plugin catalog
   helpers.
+- System helpers now include `/sys/init` status and a loopback-only
+  `bootstrap_dev` convenience flow for disposable local development instances.
 - Transit helpers cover key create/read/list/delete, encrypt, decrypt, rewrap,
   data key, random, hash, HMAC, sign, and verify endpoints.
 - Plugin helpers cover catalog list, type-list, register, read, delete, and
@@ -53,6 +55,9 @@
   avoids accidental extra token/accessor heap copies.
 - Residual request-body memory owned by `reqwest`, TLS, the kernel, or devices
   is documented in `SECURITY.md`.
+- `bootstrap_dev` refuses non-loopback and already-initialized targets, returns
+  root/unseal material as secret values, and is documented as unsuitable for
+  production, shared environments, or HSM/KMS-backed auto-unseal deployments.
 
 ## Security And Stability Gate
 
@@ -73,6 +78,9 @@
   initial typed plugin slice.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots
   and root-only trust stores for private PKI.
+- Production init, unseal, rekey, and rotate APIs remain planned for a later
+  explicitly gated safety surface; `bootstrap_dev` is intentionally limited to
+  fresh loopback development instances.
 - After JSON request bodies are handed to `reqwest`, buffers owned by the HTTP
   stack, TLS backend, operating system, or network device are outside this
   crate's zeroization control.

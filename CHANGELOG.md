@@ -12,6 +12,8 @@ All notable changes to this project are documented here.
   random, hash, HMAC, sign, and verify helpers.
 - Plugin catalog list, type-list, register, read, delete, and mounted backend
   reload helpers.
+- `/sys/init` status and loopback-only `bootstrap_dev` helper for disposable
+  local OpenBao development instances.
 - `scripts/release_0_3_gate.sh` and `0.3.0` release-note scaffolding.
 
 ### Security
@@ -30,6 +32,9 @@ All notable changes to this project are documented here.
   requires the `native-tls-acknowledged` feature.
 - Token and AppRole login response structs no longer implement `Clone`,
   avoiding accidental extra token/accessor heap copies.
+- `bootstrap_dev` refuses non-loopback and already-initialized targets and is
+  documented as unsuitable for production, HSM/KMS auto-unseal, or shared
+  environments.
 
 ## 0.2.0 - 2026-05-27
 

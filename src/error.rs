@@ -19,6 +19,8 @@ pub enum Error {
     InvalidTlsConfig(String),
     /// Timeout configuration is invalid.
     InvalidTimeout(&'static str),
+    /// A request parameter is invalid.
+    InvalidParameter(String),
     /// A crate invariant was violated.
     Internal(&'static str),
     /// The request failed before an OpenBao response could be decoded.
@@ -54,6 +56,9 @@ impl fmt::Display for Error {
                     formatter,
                     "invalid OpenBao timeout configuration: {message}"
                 )
+            }
+            Self::InvalidParameter(message) => {
+                write!(formatter, "invalid OpenBao request parameter: {message}")
             }
             Self::Internal(message) => write!(formatter, "internal OpenBao SDK error: {message}"),
             Self::Http(error) => write!(formatter, "OpenBao HTTP error: {error}"),

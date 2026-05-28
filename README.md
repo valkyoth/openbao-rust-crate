@@ -54,7 +54,7 @@ Implemented now:
 - KV v1 read, write, delete, and list helpers.
 - Transit key create, read, list, delete, encrypt, decrypt, rewrap, data key,
   random, hash, HMAC, sign, and verify helpers.
-- System health and seal status helpers.
+- System health, seal status, and loopback-only dev bootstrap helpers.
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
 - ACL policy list, read, write, delete, and prefix list helpers.
@@ -73,7 +73,7 @@ Planned next:
 - `0.3.0`: Pentest review before tag.
 - `0.4.0`: PKI, Kubernetes auth, and TLS certificate auth.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
-- `0.6.0`: SSH, TOTP, and explicitly gated init/unseal/rekey/rotate APIs.
+- `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
   RabbitMQ.
 - `0.8.0`: remaining auth methods and broader system backend automation.
@@ -205,14 +205,16 @@ openbao = { version = "0.3", default-features = false, features = ["kv2", "sys",
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Health | Yes | Accepts OpenBao active, standby, sealed, and uninitialized health statuses. |
+| Init status | Yes | Typed `/sys/init` status helper. |
 | Seal status | Yes | Typed `/sys/seal-status` helper. |
+| Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
 | Policies and capabilities | Yes | ACL policy helpers plus self/token/accessor capability checks. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
-| Init, unseal, rekey, rotate | Planned | Explicit safety documentation in `0.6.0`. |
+| Production init, unseal, rekey, rotate | Planned | Explicit safety documentation in `0.6.0`. |
 | Quotas, metrics, namespaces | Planned | Planned in the `0.8.0` operations line. |
 
 ## Examples
@@ -736,6 +738,40 @@ Endpoints:
 Initialize and unseal OpenBao using `bao operator init` and
 `bao operator unseal`, then export `BAO_ADDR=https://127.0.0.1:9940` and
 `BAO_CACERT=deploy/podman/dev-state/tls/dev-ca.crt`.
+
+For disposable local development, the crate can initialize and unseal a fresh
+numeric-loopback instance directly:
+
+```rust,no_run
+use openbao::{Client, OpenBaoConfig, Result, sys::DevBootstrapOptions};
+use reqwest::Certificate;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let ca_pem = std::fs::read("deploy/podman/dev-state/tls/dev-ca.crt")
+        .map_err(|error| openbao::Error::InvalidTlsConfig(error.to_string()))?;
+    let ca = Certificate::from_pem(&ca_pem)?;
+
+    let config = OpenBaoConfig::new("https://127.0.0.1:9940")?
+        .only_root_certificates(vec![ca])?;
+    let client = Client::from_config(config)?;
+
+    let bootstrap = client
+        .sys()
+        .bootstrap_dev(&DevBootstrapOptions::single_key())
+        .await?;
+
+    let health = bootstrap.client.sys().health().await?;
+    println!("initialized: {}, sealed: {}", health.initialized, health.sealed);
+    Ok(())
+}
+```
+
+`bootstrap_dev` is not a production initialization ceremony. It creates root
+and unseal material in process memory, uses Shamir keys, refuses non-loopback
+targets, and refuses already initialized servers. Do not use it with HSM/KMS
+auto-unseal, shared environments, or any instance that requires operator key
+ceremony.
 
 Run the real OpenBao integration flow:
 

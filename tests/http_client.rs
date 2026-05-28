@@ -8,7 +8,7 @@ use std::{
     thread,
 };
 
-use openbao::{Client, Error, OpenBaoConfig};
+use openbao::{Client, Error, OpenBaoConfig, sys::DevBootstrapOptions};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
@@ -1394,4 +1394,94 @@ async fn missing_json_content_type_is_rejected() {
     assert!(matches!(error, Error::Decode(_)));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..4 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/init HTTP/1.1"));
+                    r#"{"initialized":false}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/init HTTP/1.1"));
+                    assert!(request.contains(r#""secret_shares":1"#));
+                    assert!(request.contains(r#""secret_threshold":1"#));
+                    r#"{"keys":["unseal-key"],"keys_base64":["dW5zZWFsLWtleQ=="],"root_token":"root-token"}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/sys/unseal HTTP/1.1"));
+                    assert!(request.contains(r#""key":"unseal-key""#));
+                    r#"{"sealed":false,"n":1,"t":1,"progress":0,"version":"2.5.4"}"#
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    r#"{"initialized":true,"sealed":false,"standby":false,"version":"2.5.4"}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+    let bootstrap = client
+        .sys()
+        .bootstrap_dev(&DevBootstrapOptions::default())
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(bootstrap.root_token.expose_secret(), "root-token");
+    assert_eq!(bootstrap.unseal_keys.len(), 1);
+    assert!(!bootstrap.unseal_status.sealed);
+
+    let health = bootstrap
+        .client
+        .sys()
+        .health()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(health.initialized);
+    assert!(!health.sealed);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn dev_bootstrap_refuses_non_loopback_targets_before_http() {
+    let client = Client::new("https://example.com").unwrap_or_else(|error| panic!("{error}"));
+    let error = match client
+        .sys()
+        .bootstrap_dev(&DevBootstrapOptions::default())
+        .await
+    {
+        Ok(_) => panic!("non-loopback dev bootstrap unexpectedly succeeded"),
+        Err(error) => error,
+    };
+    assert!(matches!(error, Error::InvalidBaseUrl(_)));
 }

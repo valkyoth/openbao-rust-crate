@@ -62,6 +62,14 @@ encrypted swap or disabled swap, core-dump restrictions, short process
 lifetimes for highly sensitive workflows, and host-level memory protections
 appropriate to the environment.
 
+## Dev Bootstrap Warning
+
+`Sys::bootstrap_dev` is for disposable local OpenBao development instances
+only. It refuses non-loopback and already initialized targets, but it still
+creates root-token and unseal-key material in the caller process. Do not use it
+for production, staging, shared environments, HSM/KMS-backed auto-unseal, or
+any environment that requires an operator key ceremony.
+
 ## Known Limitations
 
 Exact certificate or SPKI pinning is not implemented in 0.3.0; use root-only
