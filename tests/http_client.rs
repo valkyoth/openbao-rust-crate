@@ -9,7 +9,7 @@ use std::{
 };
 
 use openbao::{Client, Error, OpenBaoConfig};
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -667,6 +667,352 @@ async fn sys_lease_revoke_uses_non_prefix_endpoint() {
         .revoke_lease(&SecretString::from("database/creds/readonly/abc"))
         .await
         .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn transit_create_key_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/transit/keys/app-key HTTP/1.1"));
+        assert!(request.contains(r#""type":"aes256-gcm96""#));
+        assert!(request.contains(r#""derived":true"#));
+        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .create_key(
+            "app-key",
+            &openbao::secrets::transit::TransitCreateKeyRequest {
+                key_type: Some(openbao::secrets::transit::TransitKeyType::Aes256Gcm96),
+                derived: Some(true),
+                ..openbao::secrets::transit::TransitCreateKeyRequest::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn transit_encrypt_and_decrypt_use_secret_payloads() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 4096];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = if index == 0 {
+                assert!(request.starts_with("POST /v1/transit/encrypt/app-key HTTP/1.1"));
+                assert!(request.contains(r#""plaintext":"c2VjcmV0""#));
+                assert!(request.contains(r#""context":"YXBw""#));
+                r#"{"data":{"ciphertext":"vault:v1:ciphertext","key_version":1}}"#
+            } else {
+                assert!(request.starts_with("POST /v1/transit/decrypt/app-key HTTP/1.1"));
+                assert!(request.contains(r#""ciphertext":"vault:v1:ciphertext""#));
+                r#"{"data":{"plaintext":"c2VjcmV0"}}"#
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    let transit = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let encrypted = transit
+        .encrypt(
+            "app-key",
+            &openbao::secrets::transit::TransitEncryptRequest {
+                plaintext: SecretString::from("c2VjcmV0"),
+                associated_data: None,
+                context: Some(SecretString::from("YXBw")),
+                key_version: None,
+                nonce: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(encrypted.ciphertext.expose_secret(), "vault:v1:ciphertext");
+
+    let decrypted = transit
+        .decrypt(
+            "app-key",
+            &openbao::secrets::transit::TransitDecryptRequest {
+                ciphertext: encrypted.ciphertext,
+                associated_data: None,
+                context: Some(SecretString::from("YXBw")),
+                nonce: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(decrypted.plaintext.expose_secret(), "c2VjcmV0");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn transit_crypto_helpers_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..4 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 4096];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match index {
+                0 => {
+                    assert!(request.starts_with("POST /v1/transit/hash/sha2-512 HTTP/1.1"));
+                    assert!(request.contains(r#""input":"cGF5bG9hZA==""#));
+                    r#"{"data":{"sum":"abc123"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/transit/hmac/app-key/sha2-512 HTTP/1.1"));
+                    assert!(request.contains(r#""key_version":2"#));
+                    r#"{"data":{"hmac":"vault:v1:hmac"}}"#
+                }
+                2 => {
+                    assert!(
+                        request.starts_with("POST /v1/transit/sign/signing-key/sha2-256 HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""prehashed":true"#));
+                    r#"{"data":{"signature":"vault:v1:signature"}}"#
+                }
+                _ => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/transit/verify/signing-key/sha2-256 HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""signature":"vault:v1:signature""#));
+                    r#"{"data":{"valid":true}}"#
+                }
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    let transit = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let hash = transit
+        .hash(
+            openbao::secrets::transit::TransitHashAlgorithm::Sha2_512,
+            &openbao::secrets::transit::TransitHashRequest {
+                input: SecretString::from("cGF5bG9hZA=="),
+                format: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(hash.sum.expose_secret(), "abc123");
+
+    let hmac = transit
+        .hmac(
+            "app-key",
+            Some(openbao::secrets::transit::TransitHashAlgorithm::Sha2_512),
+            &openbao::secrets::transit::TransitHmacRequest {
+                input: SecretString::from("cGF5bG9hZA=="),
+                key_version: Some(2),
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(hmac.hmac.expose_secret(), "vault:v1:hmac");
+
+    let signature = transit
+        .sign(
+            "signing-key",
+            Some(openbao::secrets::transit::TransitHashAlgorithm::Sha2_256),
+            &openbao::secrets::transit::TransitSignRequest {
+                input: SecretString::from("cGF5bG9hZA=="),
+                key_version: None,
+                context: None,
+                prehashed: Some(true),
+                signature_algorithm: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(signature.signature, "vault:v1:signature");
+
+    let verified = transit
+        .verify(
+            "signing-key",
+            Some(openbao::secrets::transit::TransitHashAlgorithm::Sha2_256),
+            &openbao::secrets::transit::TransitVerifyRequest {
+                input: SecretString::from("cGF5bG9hZA=="),
+                signature: Some(signature.signature),
+                hmac: None,
+                context: None,
+                prehashed: None,
+                signature_algorithm: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(verified.valid);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn transit_datakey_random_and_rewrap_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 4096];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match index {
+                0 => {
+                    assert!(
+                        request.starts_with("POST /v1/transit/datakey/wrapped/app-key HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""bits":256"#));
+                    r#"{"data":{"ciphertext":"vault:v1:datakey"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/transit/random/platform/32 HTTP/1.1"));
+                    assert!(request.contains(r#""format":"base64""#));
+                    r#"{"data":{"random_bytes":"cmFuZG9t"}}"#
+                }
+                _ => {
+                    assert!(request.starts_with("POST /v1/transit/rewrap/app-key HTTP/1.1"));
+                    assert!(request.contains(r#""ciphertext":"vault:v1:old""#));
+                    r#"{"data":{"ciphertext":"vault:v2:new"}}"#
+                }
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    let transit = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let data_key = transit
+        .data_key(
+            "app-key",
+            openbao::secrets::transit::TransitDataKeyType::Wrapped,
+            &openbao::secrets::transit::TransitDataKeyRequest {
+                bits: Some(256),
+                ..openbao::secrets::transit::TransitDataKeyRequest::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(data_key.ciphertext.expose_secret(), "vault:v1:datakey");
+
+    let random = transit
+        .random_from_source(
+            openbao::secrets::transit::TransitRandomSource::Platform,
+            Some(32),
+            &openbao::secrets::transit::TransitRandomRequest {
+                format: Some(openbao::secrets::transit::TransitOutputFormat::Base64),
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(random.random_bytes.expose_secret(), "cmFuZG9t");
+
+    let rewrapped = transit
+        .rewrap(
+            "app-key",
+            &openbao::secrets::transit::TransitRewrapRequest {
+                ciphertext: SecretString::from("vault:v1:old"),
+                context: None,
+                key_version: None,
+                nonce: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(rewrapped.ciphertext.expose_secret(), "vault:v2:new");
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

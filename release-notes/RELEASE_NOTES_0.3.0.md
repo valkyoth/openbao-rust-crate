@@ -14,10 +14,13 @@
   AppRole login, token lifecycle helpers, KV v1, expanded KV v2 operations,
   sys health/seal status, mount/auth mount management, response wrapping, ACL
   policies, and capabilities.
-- New `0.3.0` modules started: sys audit device helpers and safe exact lease
-  lookup, renew, and revoke helpers.
-- Planned before `0.3.0` tagging: Transit helpers and plugin catalog helpers.
-- Default Cargo features: `approle`, `token`, `kv1`, `kv2`, `sys`, `rustls-tls`.
+- New `0.3.0` modules started: Transit helpers, sys audit device helpers, and
+  safe exact lease lookup, renew, and revoke helpers.
+- Transit helpers cover key create/read/list/delete, encrypt, decrypt, rewrap,
+  data key, random, hash, HMAC, sign, and verify endpoints.
+- Planned before `0.3.0` tagging: plugin catalog helpers.
+- Default Cargo features: `approle`, `token`, `kv1`, `kv2`, `transit`, `sys`,
+  `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
 - Tested OpenBao version: latest release must be verified before tag.
 
@@ -30,6 +33,10 @@
 - Audit device options returned by OpenBao are decoded through a bounded string
   map to avoid disproportionate allocation from compromised servers.
 - Audit hash inputs are accepted as `SecretString`.
+- Transit plaintext, ciphertext, data keys, random bytes, hashes, and HMACs
+  are represented with `SecretString` where they enter or leave the crate.
+- Transit request bodies expose secret material only in internal serialization
+  payloads immediately before handoff to the shared HTTP request layer.
 
 ## Security And Stability Gate
 
@@ -44,8 +51,9 @@
 
 ## Known Limitations
 
-- Transit support is still pending in this development snapshot.
 - Plugin catalog helpers are still pending in this development snapshot.
+- Transit batch, import, export, backup, restore, and BYOK endpoints are not
+  part of this initial typed Transit slice.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots
   and root-only trust stores for private PKI.
 - After JSON request bodies are handed to `reqwest`, buffers owned by the HTTP

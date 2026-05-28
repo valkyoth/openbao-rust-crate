@@ -34,11 +34,12 @@ include = [
 ]
 
 [features]
-default = ["approle", "token", "kv1", "kv2", "sys", "rustls-tls"]
+default = ["approle", "token", "kv1", "kv2", "transit", "sys", "rustls-tls"]
 approle = []
 token = []
 kv1 = []
 kv2 = []
+transit = []
 sys = []
 # Default TLS backend. Keep this enabled unless a deployment has audited a
 # different transport stack.

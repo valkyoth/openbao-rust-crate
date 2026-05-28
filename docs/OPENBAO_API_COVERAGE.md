@@ -68,7 +68,8 @@ Support plan:
 - `0.2.0`: KV v1 and expanded KV v2 metadata/version operations; KV v1
   read/write/delete/list and KV v2 patch, config, metadata, undelete, destroy,
   and version reads are implemented.
-- `0.3.0`: Transit.
+- `0.3.0`: Transit key create/read/list/delete, encrypt, decrypt, rewrap,
+  data key, random, hash, HMAC, sign, and verify are implemented.
 - `0.4.0`: PKI.
 - `0.5.0`: database dynamic credentials.
 - `0.6.0`: SSH and TOTP.

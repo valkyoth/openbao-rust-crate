@@ -34,9 +34,9 @@ use openbao::Client;
 ```
 
 This README documents the `0.3.0` development line. `0.3.0` builds on the
-published `0.2.0` crate with audit device helpers and safe exact lease
-lookup, renew, and revoke helpers. Transit and plugin catalog support are
-planned before tagging `v0.3.0`.
+published `0.2.0` crate with Transit, audit device helpers, and safe exact
+lease lookup, renew, and revoke helpers. Plugin catalog support is planned
+before tagging `v0.3.0`.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -53,6 +53,8 @@ Implemented now:
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
   version delete, undelete, destroy, metadata, and backend config helpers.
 - KV v1 read, write, delete, and list helpers.
+- Transit key create, read, list, delete, encrypt, decrypt, rewrap, data key,
+  random, hash, HMAC, sign, and verify helpers.
 - System health and seal status helpers.
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
@@ -67,7 +69,7 @@ Implemented now:
 
 Planned next:
 
-- `0.3.0`: Transit and plugins catalog before tag.
+- `0.3.0`: Plugins catalog before tag.
 - `0.4.0`: PKI, Kubernetes auth, and TLS certificate auth.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated init/unseal/rekey/rotate APIs.
@@ -124,7 +126,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.3", features = ["approle", "token", "kv1", "kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.3", features = ["approle", "token", "kv1", "kv2", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -143,6 +145,7 @@ openbao = { version = "0.3", default-features = false, features = ["kv2", "sys",
 | `token` | yes | Token lifecycle helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
+| `transit` | yes | Transit cryptography helpers. |
 | `sys` | yes | System backend helpers. |
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Audit before use; it may pull OpenSSL on some targets. |
@@ -189,7 +192,7 @@ openbao = { version = "0.3", default-features = false, features = ["kv2", "sys",
 | KV v2 list/delete versions | Yes | Metadata list, latest delete, soft delete, undelete, and destroy. |
 | KV v2 metadata/config | Yes | Backend and per-key metadata helpers. |
 | KV v1 | Yes | Read, write, delete, and list helpers. |
-| Transit | Planned | Planned for `0.3.0`. |
+| Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, and verify. |
 | PKI | Planned | Planned for `0.4.0`. |
 | Database credentials | Planned | Planned for `0.5.0`. |
 | SSH and TOTP | Planned | Planned for `0.6.0`. |
@@ -395,6 +398,49 @@ async fn main() -> Result<()> {
 
     println!("endpoint: {}", config.endpoint);
     println!("keys: {}", keys.keys.len());
+    Ok(())
+}
+```
+
+Encrypt and decrypt through Transit:
+
+```rust,no_run
+use openbao::secrets::transit::{TransitDecryptRequest, TransitEncryptRequest};
+use openbao::{Client, Result};
+use secrecy::{ExposeSecret, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let transit = client.transit("transit")?;
+
+    let encrypted = transit
+        .encrypt(
+            "app-key",
+            &TransitEncryptRequest {
+                plaintext: SecretString::from("c2VjcmV0"),
+                associated_data: None,
+                context: None,
+                key_version: None,
+                nonce: None,
+            },
+        )
+        .await?;
+
+    let decrypted = transit
+        .decrypt(
+            "app-key",
+            &TransitDecryptRequest {
+                ciphertext: encrypted.ciphertext,
+                associated_data: None,
+                context: None,
+                nonce: None,
+            },
+        )
+        .await?;
+
+    println!("plaintext length: {}", decrypted.plaintext.expose_secret().len());
     Ok(())
 }
 ```
