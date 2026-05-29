@@ -104,6 +104,7 @@ impl TransitRandomSource {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransitHashAlgorithm {
     /// SHA-1. Legacy only.
+    #[cfg(feature = "allow-sha1")]
     #[deprecated(since = "0.3.0", note = "SHA-1 is broken; use SHA2-256 or stronger")]
     Sha1,
     /// SHA2-224.
@@ -128,8 +129,9 @@ pub enum TransitHashAlgorithm {
 
 impl TransitHashAlgorithm {
     fn as_path_segment(self) -> &'static str {
-        #[allow(deprecated)]
         match self {
+            #[cfg(feature = "allow-sha1")]
+            #[allow(deprecated)]
             Self::Sha1 => "sha1",
             Self::Sha2_224 => "sha2-224",
             Self::Sha2_256 => "sha2-256",
@@ -665,6 +667,10 @@ impl Transit<'_> {
     }
 
     /// Encrypts base64-encoded plaintext with a Transit key.
+    ///
+    /// The plaintext is wrapped in `SecretString` and the crate zeroizes its
+    /// serialization buffer, but the HTTP stack can retain transient body
+    /// copies outside this crate's control during request transmission.
     pub async fn encrypt(
         &self,
         name: &str,
@@ -692,6 +698,10 @@ impl Transit<'_> {
     }
 
     /// Decrypts Transit ciphertext.
+    ///
+    /// Ciphertext and returned plaintext are secret-aware at the public API
+    /// boundary. Request and response buffers can still exist transiently in
+    /// the HTTP/TLS stack while the operation is in flight.
     pub async fn decrypt(
         &self,
         name: &str,
@@ -718,6 +728,10 @@ impl Transit<'_> {
     }
 
     /// Rewraps ciphertext to the latest or requested Transit key version.
+    ///
+    /// Ciphertext is secret-aware at the public API boundary. Request buffers
+    /// can still exist transiently in the HTTP/TLS stack while the operation is
+    /// in flight.
     pub async fn rewrap(
         &self,
         name: &str,

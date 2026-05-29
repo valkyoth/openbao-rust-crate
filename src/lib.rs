@@ -13,6 +13,13 @@
 //! health/seal status, dev-only bootstrap, mount management, audit devices,
 //! safe exact lease helpers, plugin catalog operations, and raw JSON calls for
 //! advanced users.
+//!
+//! Secret request payloads are serialized through a zeroizing intermediate
+//! buffer before handoff to `reqwest`. The HTTP stack still owns a normal body
+//! buffer after that handoff, and TLS, kernel, allocator, and device buffers
+//! can retain transient copies outside this crate's control. Treat Transit
+//! plaintext and other request-body secret material as process-resident during
+//! the request lifecycle.
 
 #![forbid(unsafe_code)]
 

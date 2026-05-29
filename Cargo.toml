@@ -55,6 +55,9 @@ kv2 = []
 pki = []
 transit = []
 sys = []
+# Legacy Transit SHA-1 support. Disabled by default so new builds cannot select
+# SHA-1 without an explicit Cargo feature review.
+allow-sha1 = []
 # Default TLS backend. Keep this enabled unless a deployment has audited a
 # different transport stack.
 rustls-tls = ["reqwest/rustls"]

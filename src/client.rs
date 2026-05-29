@@ -19,6 +19,7 @@ use crate::{
 };
 
 const MAX_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
+const MIN_RESPONSE_BYTES: usize = 1024;
 const MAX_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_CONNECT_TIMEOUT: Duration = Duration::from_secs(300);
 const ADDRESS_ENV_KEYS: &[&str] = &["OPENBAO_ADDR", "BAO_ADDR", "VAULT_ADDR"];
@@ -55,7 +56,8 @@ pub type OpenBao<State = Unauthenticated> = Client<State>;
 pub enum HttpPolicy {
     /// Require `https://` for all OpenBao endpoints.
     HttpsOnly,
-    /// Permit plain HTTP only for numeric loopback IPs such as `127.0.0.1` and `[::1]`.
+    /// Permit plain HTTP only for the numeric IPv4 `127.0.0.0/8` loopback
+    /// block and the numeric IPv6 `::1` loopback address.
     LocalhostHttpAllowed,
 }
 
@@ -83,6 +85,7 @@ pub struct OpenBaoConfig {
     base_url: Url,
     timeout: Duration,
     connect_timeout: Duration,
+    max_response_bytes: usize,
     user_agent: String,
     namespace: Option<String>,
     http_policy: HttpPolicy,
@@ -104,6 +107,7 @@ impl OpenBaoConfig {
             base_url: url,
             timeout: Duration::from_secs(30),
             connect_timeout: Duration::from_secs(5),
+            max_response_bytes: MAX_RESPONSE_BYTES,
             user_agent: "openbao-rust-client".to_owned(),
             namespace: None,
             http_policy: HttpPolicy::HttpsOnly,
@@ -130,7 +134,7 @@ impl OpenBaoConfig {
     ///   `BAO_ALLOW_LOCALHOST_HTTP`, `VAULT_ALLOW_LOCALHOST_HTTP`.
     ///
     /// Plain HTTP still requires an explicit local HTTP opt-in and a numeric
-    /// loopback host such as `127.0.0.1`.
+    /// loopback host in the `127.0.0.0/8` range or `::1`.
     pub fn from_env() -> Result<Self> {
         openbao_config_from_env_lookup(|key| env::var(key).ok())
     }
@@ -141,6 +145,9 @@ impl OpenBaoConfig {
     }
 
     /// Allows plain HTTP only for numeric loopback IP development and tests.
+    ///
+    /// This permits the entire IPv4 `127.0.0.0/8` loopback block and the IPv6
+    /// `::1` loopback address. All other hosts still require HTTPS.
     ///
     /// Hostnames such as `localhost` are intentionally rejected to avoid DNS,
     /// hosts-file, and proxy ambiguity.
@@ -178,10 +185,32 @@ impl OpenBaoConfig {
         Ok(self)
     }
 
+    /// Sets the maximum decoded OpenBao response body size.
+    ///
+    /// The default is 32 MiB. Lower this for clients that only call endpoints
+    /// with small responses, such as health, token lookup, or narrowly scoped
+    /// service configuration reads.
+    pub fn max_response_bytes(mut self, bytes: usize) -> Result<Self> {
+        if bytes < MIN_RESPONSE_BYTES {
+            return Err(Error::InvalidParameter(
+                "maximum response size must be at least 1024 bytes".into(),
+            ));
+        }
+        if bytes > MAX_RESPONSE_BYTES {
+            return Err(Error::InvalidParameter(
+                "maximum response size cannot exceed 32 MiB".into(),
+            ));
+        }
+        self.max_response_bytes = bytes;
+        Ok(self)
+    }
+
     /// Sets the user agent sent to OpenBao.
-    pub fn user_agent(mut self, user_agent: impl Into<String>) -> Self {
-        self.user_agent = user_agent.into();
-        self
+    pub fn user_agent(mut self, user_agent: impl Into<String>) -> Result<Self> {
+        let user_agent = user_agent.into();
+        validate_user_agent(&user_agent)?;
+        self.user_agent = user_agent;
+        Ok(self)
     }
 
     /// Sets the `X-Vault-Namespace` header value.
@@ -265,6 +294,7 @@ impl fmt::Debug for OpenBaoConfig {
             .field("base_url", &self.base_url)
             .field("timeout", &self.timeout)
             .field("connect_timeout", &self.connect_timeout)
+            .field("max_response_bytes", &self.max_response_bytes)
             .field("user_agent", &self.user_agent)
             .field("has_namespace", &self.namespace.is_some())
             .field("http_policy", &self.http_policy)
@@ -537,10 +567,11 @@ impl<State> Client<State> {
         let response = request.send().await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            let error = read_json_response::<ErrorEnvelope>(response)
-                .await
-                .map(|envelope| envelope.errors)
-                .unwrap_or_default();
+            let error =
+                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
+                    .await
+                    .map(|envelope| envelope.errors)
+                    .unwrap_or_default();
             return Err(Error::Api {
                 status,
                 errors: error,
@@ -549,7 +580,7 @@ impl<State> Client<State> {
         if status == StatusCode::NO_CONTENT {
             return serde_json::from_str("{}").map_err(|error| Error::Decode(error.to_string()));
         }
-        read_json_response(response).await
+        read_json_response(response, self.config.max_response_bytes).await
     }
 
     pub(crate) fn url_for_path(&self, path: &str) -> Result<Url> {
@@ -583,6 +614,20 @@ fn is_loopback_url(url: &Url) -> bool {
         Some(host) => host.parse::<IpAddr>().is_ok_and(|addr| addr.is_loopback()),
         None => false,
     }
+}
+
+fn validate_user_agent(user_agent: &str) -> Result<()> {
+    if user_agent.is_empty() {
+        return Err(Error::InvalidParameter(
+            "user agent must not be empty".into(),
+        ));
+    }
+    if user_agent.bytes().any(|byte| byte < 0x20 || byte == 0x7f) {
+        return Err(Error::InvalidParameter(
+            "user agent must not contain control characters".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn openbao_config_from_env_lookup<F>(mut lookup: F) -> Result<OpenBaoConfig>
@@ -670,7 +715,10 @@ where
     }
 }
 
-async fn read_json_response<T>(mut response: reqwest::Response) -> Result<T>
+async fn read_json_response<T>(
+    mut response: reqwest::Response,
+    max_response_bytes: usize,
+) -> Result<T>
 where
     T: DeserializeOwned,
 {
@@ -678,18 +726,18 @@ where
 
     if response
         .content_length()
-        .is_some_and(|length| length > MAX_RESPONSE_BYTES as u64)
+        .is_some_and(|length| length > max_response_bytes as u64)
     {
         return Err(Error::Decode(
-            "OpenBao response exceeds 32 MiB limit".into(),
+            "OpenBao response exceeds client limit".into(),
         ));
     }
 
     let mut body = Zeroizing::new(Vec::new());
     while let Some(chunk) = response.chunk().await? {
-        if body.len().saturating_add(chunk.len()) > MAX_RESPONSE_BYTES {
+        if body.len().saturating_add(chunk.len()) > max_response_bytes {
             return Err(Error::Decode(
-                "OpenBao response exceeds 32 MiB limit".into(),
+                "OpenBao response exceeds client limit".into(),
             ));
         }
         body.extend_from_slice(&chunk);
@@ -737,7 +785,7 @@ mod tests {
 
     use super::{
         Client, OpenBaoConfig, env_bool, openbao_config_from_env_lookup,
-        openbao_token_from_env_lookup,
+        openbao_token_from_env_lookup, validate_user_agent,
     };
 
     #[test]
@@ -788,6 +836,37 @@ mod tests {
         let result = OpenBaoConfig::new("https://bao.example.com")
             .and_then(|config| config.connect_timeout(core::time::Duration::from_secs(301)));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn response_size_limit_is_bounded() {
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.max_response_bytes(1024))
+                .is_ok()
+        );
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.max_response_bytes(0))
+                .is_err()
+        );
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.max_response_bytes(super::MAX_RESPONSE_BYTES + 1))
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn user_agent_rejects_control_characters() {
+        assert!(validate_user_agent("openbao-rust-client").is_ok());
+        assert!(validate_user_agent("").is_err());
+        assert!(validate_user_agent("good\r\nX-Injected: bad").is_err());
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.user_agent("good\nbad"))
+                .is_err()
+        );
     }
 
     #[test]

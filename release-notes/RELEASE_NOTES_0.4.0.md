@@ -32,6 +32,8 @@
   environment-style maps with `SecretString` values.
 - Default Cargo features: `approle`, `cert-auth`, `kubernetes-auth`, `token`,
   `kv1`, `kv2`, `pki`, `transit`, `sys`, `rustls-tls`.
+- Non-default Cargo features: `allow-sha1`, `native-tls`,
+  `native-tls-acknowledged`.
 - Minimum supported Rust: 1.90.0.
 - Rust compatibility evidence: full test suite and clippy on 1.90.0; feature
   checks through 1.96.0.
@@ -76,12 +78,23 @@
   segments before returning URLs for external ACME clients.
 - KV v2 service config maps are bounded during deserialization and values are
   represented as `SecretString` with debug redaction.
+- AppRole login policy lists are bounded during deserialization.
+- User-agent values are rejected at configuration time if they contain control
+  characters.
+- Plugin registration SHA-256 digests require canonical lowercase hex.
+- Transit SHA-1 selection is unavailable unless the explicit `allow-sha1`
+  feature is enabled.
+- Clients can lower the default 32 MiB response body limit for workflows that
+  expect smaller OpenBao responses.
+- Crate docs now call out request-body residual buffer risks in the HTTP/TLS
+  stack and the dev bootstrap root-token duplication tradeoff.
 
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_4_gate.sh`
 - Result: pending
-- Pentest report: required before tagging `v0.4.0`
+- Pentest report: local `PENTEST.md` reviewed on 2026-05-29; all actionable
+  findings fixed or documented, and report source deleted before commit.
 - `cargo audit` result: pending
 - `cargo deny check` result: pending
 - CodeQL result: pending through GitHub default setup

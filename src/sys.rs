@@ -149,6 +149,11 @@ pub struct DevBootstrap {
     /// Authenticated root client for the freshly bootstrapped dev instance.
     pub client: Client<Authenticated>,
     /// Initial root token returned by OpenBao.
+    ///
+    /// This is identical to the token stored in [`Self::client`]. Both copies
+    /// are zeroed on drop. Prefer using `client` for API calls and expose this
+    /// field only when an operator ceremony or test fixture needs the raw root
+    /// token.
     pub root_token: SecretString,
     /// Unseal key shares returned by OpenBao.
     pub unseal_keys: Vec<SecretString>,
@@ -1669,9 +1674,12 @@ fn validate_sha256_hex(value: &str, field: &'static str) -> Result<()> {
             "{field} must be a 64-character SHA-256 hex digest"
         )));
     }
-    if !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    if !value
+        .bytes()
+        .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+    {
         return Err(Error::InvalidPath(format!(
-            "{field} must contain only hexadecimal characters"
+            "{field} must contain only lowercase hexadecimal characters"
         )));
     }
     Ok(())
@@ -2064,6 +2072,13 @@ mod tests {
         assert!(
             validate_sha256_hex(
                 "g130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9",
+                "sha256"
+            )
+            .is_err()
+        );
+        assert!(
+            validate_sha256_hex(
+                "D130B9A0FBFDDEF9709D8FF92E5E6053CCD246B78632FC03B8548457026961E9",
                 "sha256"
             )
             .is_err()

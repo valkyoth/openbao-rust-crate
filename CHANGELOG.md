@@ -25,12 +25,25 @@ All notable changes to this project are documented here.
   ACME clients.
 - KV v2 typed data reads and bounded `Kv2ServiceConfig` loading with
   `SecretString` values for environment-style service configuration.
+- Per-client `max_response_bytes` configuration for lowering the default 32
+  MiB response cap.
 - `0.4.0` release-note scaffolding and release gate.
 
 ### Changed
 
 - Lowered the minimum supported Rust version from `1.95.0` to `1.90.0`, with
   compatibility checked through Rust `1.96.0`.
+- `OpenBaoConfig::user_agent` now validates header control characters at
+  configuration time and returns `Result<Self>`.
+- Legacy Transit SHA-1 selection now requires the explicit `allow-sha1`
+  feature.
+
+### Fixed
+
+- Bounded AppRole login policy lists during deserialization.
+- Plugin registration SHA-256 digests now require canonical lowercase hex.
+- Documented request-body residual buffer risks and dev bootstrap root-token
+  duplication.
 
 ## 0.3.0 - 2026-05-28
 

@@ -19,7 +19,10 @@ pub struct LoginMetadata {
     /// are treated as secret material.
     pub accessor: SecretString,
     /// Policies attached to the token.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::response::deserialize_bounded_string_vec"
+    )]
     pub policies: Vec<String>,
     /// Token lease duration in seconds.
     #[serde(default)]
@@ -46,7 +49,10 @@ struct LoginAuth {
     client_token: SecretString,
     #[serde(deserialize_with = "deserialize_secret")]
     accessor: SecretString,
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "crate::response::deserialize_bounded_string_vec"
+    )]
     policies: Vec<String>,
     #[serde(default)]
     lease_duration: u64,
@@ -168,5 +174,19 @@ mod tests {
 
         assert_eq!(auth.client_token.expose_secret(), "token-value");
         assert_eq!(auth.accessor.expose_secret(), "accessor-value");
+    }
+
+    #[test]
+    fn approle_policies_are_bounded() {
+        let mut policies = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            policies.push(format!("policy-{index}"));
+        }
+        let value = serde_json::json!({ "auth": { "client_token": "token", "accessor": "accessor", "policies": policies } });
+        let error = match serde_json::from_value::<LoginResponse>(value) {
+            Ok(_) => panic!("oversized AppRole policy list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
     }
 }

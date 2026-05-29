@@ -176,6 +176,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, and tidy helpers. |
 | `transit` | yes | Transit cryptography helpers. |
 | `sys` | yes | System backend helpers. |
+| `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
 | `native-tls-acknowledged` | no | Explicit acknowledgment for audited native TLS builds. |
@@ -190,6 +191,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | Typestate auth | Yes | Separate unauthenticated and authenticated client states. |
 | HTTPS by default | Yes | Plain HTTP is rejected unless loopback HTTP is explicitly enabled. |
 | Redirect protection | Yes | Redirect following is disabled to avoid forwarding token headers. |
+| Response size cap | Yes | 32 MiB default with per-client lowering for small-response workflows. |
 | TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can opt down to TLS 1.2. |
 | Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
 | Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. |
