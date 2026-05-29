@@ -17,6 +17,12 @@ struct SecretData {
     value: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct NumericSecretData {
+    value: u64,
+}
+
 #[derive(Serialize)]
 struct WrappedData {
     value: String,
@@ -1400,6 +1406,53 @@ async fn response_content_length_uses_client_limit() {
         Err(error) => error,
     };
     assert!(matches!(error, Error::Decode(_)));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn decode_errors_do_not_echo_secret_response_values() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let _bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let body = r#"{"data":{"data":{"value":"SECRET-RESPONSE-FRAGMENT"},"metadata":{"created_time":"2026-05-27T00:00:00Z","deletion_time":"","destroyed":false,"version":1}}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let error = match client
+        .kv2("secret")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .read::<NumericSecretData>("app/config")
+        .await
+    {
+        Ok(_) => panic!("schema-mismatched response unexpectedly succeeded"),
+        Err(error) => error,
+    };
+    let message = error.to_string();
+    assert!(message.contains("did not match expected schema"));
+    assert!(!message.contains("SECRET-RESPONSE-FRAGMENT"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

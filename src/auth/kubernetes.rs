@@ -180,7 +180,7 @@ impl Client<Unauthenticated> {
     ) -> Result<(Client<Authenticated>, KubernetesLoginMetadata)> {
         let response = self.kubernetes()?.login_response(role, &jwt).await?;
         let (token, metadata) = split_login_auth(response);
-        Ok((self.with_token(token), metadata))
+        Ok((self.try_with_token(token)?, metadata))
     }
 }
 
@@ -209,7 +209,7 @@ impl KubernetesAuth<'_> {
         let response = self.login_response(role, &jwt).await?;
         let (token, metadata) = split_login_auth(response);
         Ok((
-            self.client.clone_without_state().with_token(token),
+            self.client.clone_without_state().try_with_token(token)?,
             metadata,
         ))
     }

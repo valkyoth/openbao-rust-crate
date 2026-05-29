@@ -89,7 +89,7 @@ impl Client<Unauthenticated> {
             .auth
             .ok_or(Error::MissingField("auth"))?;
         let (token, metadata) = split_login_auth(response);
-        Ok((self.with_token(token), metadata))
+        Ok((self.try_with_token(token)?, metadata))
     }
 }
 
@@ -107,7 +107,7 @@ impl AppRole<'_> {
             .ok_or(Error::MissingField("auth"))?;
         let (token, metadata) = split_login_auth(response);
         Ok((
-            self.client.clone_without_state().with_token(token),
+            self.client.clone_without_state().try_with_token(token)?,
             metadata,
         ))
     }

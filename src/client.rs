@@ -381,7 +381,7 @@ impl Client<Unauthenticated> {
     pub fn from_env_with_token() -> Result<Client<Authenticated>> {
         let client = Self::from_env()?;
         let token = openbao_token_from_env_lookup(|key| env::var(key).ok())?;
-        Ok(client.with_token(token))
+        client.try_with_token(token)
     }
 
     /// Creates an unauthenticated client from explicit configuration.
@@ -390,6 +390,10 @@ impl Client<Unauthenticated> {
     }
 
     /// Converts the client into an authenticated client using a known token.
+    ///
+    /// This preserves the pre-0.5 infallible API. Prefer [`Self::try_with_token`]
+    /// when accepting token input from configuration or another service so
+    /// header-invalid tokens are rejected before the first request.
     pub fn with_token(self, token: SecretString) -> Client<Authenticated> {
         Client {
             config: self.config,
@@ -397,6 +401,13 @@ impl Client<Unauthenticated> {
             token: Some(token),
             _state: PhantomData,
         }
+    }
+
+    /// Converts the client into an authenticated client after validating that
+    /// the token can be represented safely in the configured auth header.
+    pub fn try_with_token(self, token: SecretString) -> Result<Client<Authenticated>> {
+        validate_token_for_header(&token, self.config.header_mode)?;
+        Ok(self.with_token(token))
     }
 
     #[cfg(any(
@@ -551,7 +562,8 @@ impl<State> Client<State> {
         }
         if let Some(payload) = body {
             let encoded = Zeroizing::new(
-                serde_json::to_vec(payload).map_err(|error| Error::Decode(error.to_string()))?,
+                serde_json::to_vec(payload)
+                    .map_err(|_| Error::Decode("OpenBao request could not be encoded".into()))?,
             );
             let has_content_type = headers.iter().any(|(name, _value)| *name == CONTENT_TYPE);
             if !has_content_type {
@@ -578,7 +590,9 @@ impl<State> Client<State> {
             });
         }
         if status == StatusCode::NO_CONTENT {
-            return serde_json::from_str("{}").map_err(|error| Error::Decode(error.to_string()));
+            return serde_json::from_str("{}").map_err(|_| {
+                Error::Decode("OpenBao response did not match expected schema".into())
+            });
         }
         read_json_response(response, self.config.max_response_bytes).await
     }
@@ -630,6 +644,28 @@ fn validate_user_agent(user_agent: &str) -> Result<()> {
     Ok(())
 }
 
+fn validate_token_for_header(token: &SecretString, header_mode: HeaderMode) -> Result<()> {
+    match header_mode {
+        HeaderMode::VaultToken => validate_header_value(
+            token.expose_secret(),
+            "token must be a valid HTTP header value",
+        ),
+        HeaderMode::Bearer => {
+            let mut bearer = Zeroizing::new(String::with_capacity(
+                "Bearer ".len() + token.expose_secret().len(),
+            ));
+            bearer.push_str("Bearer ");
+            bearer.push_str(token.expose_secret());
+            validate_header_value(&bearer, "token must be valid for Authorization header use")
+        }
+    }
+}
+
+fn validate_header_value(value: &str, message: &'static str) -> Result<()> {
+    HeaderValue::from_str(value).map_err(|_| Error::InvalidHeader(message.into()))?;
+    Ok(())
+}
+
 fn openbao_config_from_env_lookup<F>(mut lookup: F) -> Result<OpenBaoConfig>
 where
     F: FnMut(&str) -> Option<String>,
@@ -649,15 +685,11 @@ where
 
     let cert = match first_env_value(&mut lookup, CA_CERT_ENV_KEYS) {
         Some((_key, path)) => {
-            let pem = fs::read(&path).map_err(|error| {
-                Error::InvalidTlsConfig(format!(
-                    "failed to read configured CA certificate: {error}"
-                ))
+            let pem = fs::read(&path).map_err(|_| {
+                Error::InvalidTlsConfig("failed to read the configured CA certificate file".into())
             })?;
-            Some(Certificate::from_pem(&pem).map_err(|error| {
-                Error::InvalidTlsConfig(format!(
-                    "failed to parse configured CA certificate: {error}"
-                ))
+            Some(Certificate::from_pem(&pem).map_err(|_| {
+                Error::InvalidTlsConfig("failed to parse the configured CA certificate file".into())
             })?)
         }
         None => None,
@@ -743,7 +775,21 @@ where
         body.extend_from_slice(&chunk);
     }
 
-    serde_json::from_slice(&body).map_err(|error| Error::Decode(error.to_string()))
+    serde_json::from_slice(&body).map_err(|error| {
+        Error::Decode(format!(
+            "OpenBao response did not match expected schema ({})",
+            json_error_category(error)
+        ))
+    })
+}
+
+fn json_error_category(error: serde_json::Error) -> &'static str {
+    match error.classify() {
+        serde_json::error::Category::Io => "io",
+        serde_json::error::Category::Syntax => "syntax",
+        serde_json::error::Category::Data => "data",
+        serde_json::error::Category::Eof => "eof",
+    }
 }
 
 fn validate_json_content_type(response: &reqwest::Response) -> Result<()> {
@@ -785,7 +831,7 @@ mod tests {
 
     use super::{
         Client, OpenBaoConfig, env_bool, openbao_config_from_env_lookup,
-        openbao_token_from_env_lookup, validate_user_agent,
+        openbao_token_from_env_lookup, validate_token_for_header, validate_user_agent,
     };
 
     #[test]
@@ -870,6 +916,29 @@ mod tests {
     }
 
     #[test]
+    fn token_header_validation_rejects_invalid_values() {
+        assert!(
+            validate_token_for_header(
+                &SecretString::from("token-value"),
+                super::HeaderMode::VaultToken
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_token_for_header(
+                &SecretString::from("token\nvalue"),
+                super::HeaderMode::VaultToken
+            )
+            .is_err()
+        );
+        assert!(
+            Client::new("https://bao.example.com")
+                .and_then(|client| client.try_with_token(SecretString::from("token\rvalue")))
+                .is_err()
+        );
+    }
+
+    #[test]
     fn rejects_empty_custom_root_only_store() {
         let result = OpenBaoConfig::new("https://bao.example.com")
             .and_then(|config| config.only_root_certificates(Vec::new()));
@@ -948,6 +1017,22 @@ mod tests {
             Err(error) => error,
         };
         assert!(matches!(error, Error::InvalidParameter(_)));
+    }
+
+    #[test]
+    fn env_ca_errors_do_not_echo_filesystem_path() {
+        let env = env_map([
+            ("OPENBAO_ADDR", "https://bao.example.com"),
+            ("OPENBAO_CACERT", "/sensitive/topology/openbao-ca.pem"),
+        ]);
+        let error = match openbao_config_from_env_lookup(|key| env.get(key).cloned()) {
+            Ok(_) => panic!("missing CA file unexpectedly succeeded"),
+            Err(error) => error,
+        };
+        let message = error.to_string();
+        assert!(message.contains("configured CA certificate file"));
+        assert!(!message.contains("/sensitive/topology"));
+        assert!(!message.contains("openbao-ca.pem"));
     }
 
     #[test]

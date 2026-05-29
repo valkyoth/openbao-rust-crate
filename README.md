@@ -259,7 +259,7 @@ use secrecy::SecretString;
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     let health = client.sys().health().await?;
     println!("openbao version: {}", health.version);
@@ -292,8 +292,11 @@ use secrecy::SecretString;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let ca_pem = std::fs::read("openbao-ca.pem")
-        .map_err(|error| openbao::Error::InvalidTlsConfig(error.to_string()))?;
+    let ca_pem = std::fs::read("openbao-ca.pem").map_err(|_| {
+        openbao::Error::InvalidTlsConfig(
+            "failed to read the configured CA certificate file".into(),
+        )
+    })?;
     let ca = Certificate::from_pem(&ca_pem)?;
 
     let config = OpenBaoConfig::new("https://bao.example.com:8200")?
@@ -301,7 +304,7 @@ async fn main() -> Result<()> {
         .only_root_certificates(vec![ca])?;
 
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::from_config(config)?.with_token(token);
+    let client = Client::from_config(config)?.try_with_token(token)?;
 
     let seal = client.sys().seal_status().await?;
     println!("sealed: {}", seal.sealed);
@@ -346,7 +349,7 @@ struct DatabaseCredentials {
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
     let kv = client.kv2("secret")?;
 
     kv.write(
@@ -384,7 +387,7 @@ struct Patch {
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
     let kv = client.kv2("secret")?;
 
     kv.write_with_options(
@@ -438,7 +441,7 @@ struct AppConfig {
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
     let kv = client.kv2("secret")?;
 
     let typed = kv.read_data::<AppConfig>("services/api").await?;
@@ -466,7 +469,7 @@ struct Config {
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
     let kv = client.kv1("legacy-secret")?;
 
     kv.write("app/config", Config {
@@ -493,7 +496,7 @@ use secrecy::{ExposeSecret, SecretString};
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
     let transit = client.transit("transit")?;
 
     let encrypted = transit
@@ -537,7 +540,7 @@ use std::collections::BTreeMap;
 #[tokio::main]
 async fn main() -> Result<()> {
     let root_or_parent = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(root_or_parent);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(root_or_parent)?;
 
     let child = client
         .token()
@@ -572,7 +575,7 @@ use std::collections::BTreeMap;
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     client
         .sys()
@@ -615,7 +618,7 @@ struct WrappedPayload {
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     let wrap = client
         .sys()
@@ -644,7 +647,7 @@ use secrecy::SecretString;
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     client
         .sys()
@@ -677,7 +680,7 @@ use std::collections::BTreeMap;
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     client
         .sys()
@@ -715,7 +718,7 @@ use secrecy::SecretString;
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
     let lease_id = SecretString::from(std::env::var("BAO_LEASE_ID").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     let lease = client.sys().lookup_lease(&lease_id).await?;
     if lease.renewable {
@@ -737,7 +740,7 @@ use secrecy::SecretString;
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     let plugins = client.sys().list_plugins_by_type(PluginType::Secret).await?;
     if plugins.keys.iter().any(|name| name == "transit") {
@@ -771,7 +774,7 @@ use serde_json::Value;
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     let response: Value = client
         .request_json(Method::GET, "sys/internal/specs/openapi", Option::<&Value>::None)
@@ -824,8 +827,11 @@ use reqwest::Certificate;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let ca_pem = std::fs::read("deploy/podman/dev-state/tls/dev-ca.crt")
-        .map_err(|error| openbao::Error::InvalidTlsConfig(error.to_string()))?;
+    let ca_pem = std::fs::read("deploy/podman/dev-state/tls/dev-ca.crt").map_err(|_| {
+        openbao::Error::InvalidTlsConfig(
+            "failed to read the configured CA certificate file".into(),
+        )
+    })?;
     let ca = Certificate::from_pem(&ca_pem)?;
 
     let config = OpenBaoConfig::new("https://127.0.0.1:9940")?

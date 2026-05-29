@@ -62,6 +62,18 @@ encrypted swap or disabled swap, core-dump restrictions, short process
 lifetimes for highly sensitive workflows, and host-level memory protections
 appropriate to the environment.
 
+## Hardened Deployment Profile
+
+For high-assurance builds, keep the default `rustls-tls` backend, do not enable
+`native-tls` or `native-tls-acknowledged`, and do not call
+`OpenBaoConfig::min_tls_12`. Downstream applications can enforce this with CI
+policy checks that reject those feature flags and API calls.
+
+Use `Client::try_with_token` for tokens loaded from configuration or returned
+by another service so invalid header values fail before the first request.
+Lower `OpenBaoConfig::max_response_bytes` for clients that only call
+small-response endpoints.
+
 ## Dev Bootstrap Warning
 
 `Sys::bootstrap_dev` is for disposable local OpenBao development instances
@@ -72,7 +84,7 @@ any environment that requires an operator key ceremony.
 
 ## Known Limitations
 
-Exact certificate or SPKI pinning is not implemented in 0.3.0; use root-only
+Exact certificate or SPKI pinning is not implemented in 0.4.0; use root-only
 trust with a private CA when pinning would otherwise be required.
 
 ## Pentest Gate

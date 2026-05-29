@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## 0.5.0 - Unreleased
+
+### Added
+
+- `Client::try_with_token` for immediate auth-token header validation before
+  building an authenticated client.
+
+### Fixed
+
+- Response schema decode errors no longer include raw serde value fragments,
+  avoiding accidental logging of secret-bearing response data.
+- Environment CA certificate read/parse errors no longer echo local filesystem
+  paths or parser details.
+- Security documentation now includes a hardened deployment profile for
+  avoiding TLS 1.2/native TLS opt-downs and lowering response caps.
+
 ## 0.4.0 - 2026-05-29
 
 ### Added
