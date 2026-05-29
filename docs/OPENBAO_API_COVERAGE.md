@@ -88,10 +88,9 @@ Support plan:
   data key, random, hash, HMAC, sign, and verify are implemented.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
-  revoke, certificate list/read, issuer/key list/read/delete, ACME config/EAB,
-  CRL rotation, and tidy are implemented. Remaining PKI work includes import
-  endpoints, issuer/key update, issuer revocation, and ACME protocol directory
-  helpers.
+  revoke, certificate list/read, issuer/key list/read/delete/update, issuer
+  revocation, CA/key import, ACME config/EAB, CRL rotation, and tidy are
+  implemented. Remaining PKI work includes ACME protocol directory helpers.
 - `0.5.0`: database dynamic credentials.
 - `0.6.0`: SSH and TOTP.
 - `0.7.0`: Kubernetes, LDAP, RabbitMQ, cubbyhole, identity.

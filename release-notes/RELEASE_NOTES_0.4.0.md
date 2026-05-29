@@ -26,12 +26,11 @@
 - PKI helpers cover URL and CRL config, root generation, intermediate
   generation, intermediate signing, signed intermediate install, role
   write/read/list/delete, issue, sign, revoke, certificate list/read,
-  issuer/key list/read/delete, ACME configuration/EAB tokens, CRL rotation, and
-  tidy.
+  issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME
+  configuration/EAB tokens, CRL rotation, and tidy.
 - KV v2 service config helpers cover typed data reads and bounded
   environment-style maps with `SecretString` values.
-- Planned remaining `0.4.0` modules: PKI import/update/revoke issuer and ACME
-  protocol directory helpers.
+- Planned remaining `0.4.0` module: ACME protocol directory helpers.
 - Default Cargo features: `approle`, `cert-auth`, `kubernetes-auth`, `token`,
   `kv1`, `kv2`, `pki`, `transit`, `sys`, `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
@@ -66,6 +65,10 @@
   list fields are bounded during deserialization.
 - PKI issuer/key list responses and issuer URL/usage/manual-chain fields are
   bounded during deserialization.
+- PKI import helpers accept private key PEM bundles as `SecretString` and
+  bound all server-controlled import result lists/maps during deserialization.
+- PKI issuer changes use JSON Merge Patch to avoid OpenBao's `POST` replace
+  semantics resetting omitted issuer fields to defaults.
 - PKI ACME EAB HMAC keys are represented as `SecretString` and redacted from
   debug output; EAB token list responses are bounded during deserialization.
 - KV v2 service config maps are bounded during deserialization and values are
@@ -84,8 +87,8 @@
 
 ## Known Limitations
 
-- Advanced PKI import/update/revoke issuer and ACME protocol directory helpers
-  are not complete yet.
+- ACME protocol directory helpers are not complete yet; authenticated ACME
+  config and EAB administration helpers are implemented.
 - KV service config helpers intentionally accept flat string maps for the
   secret-aware `Kv2ServiceConfig` type; use typed structs for nested JSON.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots

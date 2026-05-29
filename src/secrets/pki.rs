@@ -3,8 +3,11 @@
 use core::fmt;
 use std::collections::BTreeMap;
 
-use reqwest::{Method, StatusCode};
-use secrecy::SecretString;
+use reqwest::{
+    Method, StatusCode,
+    header::{CONTENT_TYPE, HeaderValue},
+};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize,
     de::{IgnoredAny, MapAccess, SeqAccess, Visitor},
@@ -13,7 +16,9 @@ use serde::{
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_mount_path, validate_secret_path},
-    response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
+    response::{
+        Empty, ResponseEnvelope, deserialize_bounded_string_map, deserialize_bounded_string_vec,
+    },
 };
 
 /// Handle for a mounted PKI secrets engine.
@@ -526,6 +531,12 @@ pub struct PkiIssuerInfo {
     /// Leaf not-after behavior reported by OpenBao.
     #[serde(default)]
     pub leaf_not_after_behavior: Option<String>,
+    /// Revocation time as Unix seconds, when this issuer was revoked.
+    #[serde(default)]
+    pub revocation_time: Option<u64>,
+    /// Revocation time formatted as RFC3339, when returned.
+    #[serde(default)]
+    pub revocation_time_rfc3339: Option<String>,
 }
 
 /// PKI key list.
@@ -551,6 +562,43 @@ pub struct PkiKeyInfo {
     /// Key size in bits, when OpenBao returns it.
     #[serde(default)]
     pub key_bits: Option<u64>,
+}
+
+/// Request for patching PKI issuer metadata.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiIssuerPatch {
+    /// New issuer display name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_name: Option<String>,
+    /// Manual issuer chain references.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manual_chain: Option<Vec<String>>,
+    /// Issuer usage flags such as `issuing-certificates` or `crl-signing`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Vec<String>>,
+    /// Leaf not-after behavior, such as `truncate` or `err`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leaf_not_after_behavior: Option<String>,
+}
+
+/// Response from PKI CA/key import endpoints.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiImportResponse {
+    /// Newly imported issuer identifiers.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub imported_issuers: Vec<String>,
+    /// Newly imported key identifiers.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub imported_keys: Vec<String>,
+    /// Issuer identifiers already present in this mount.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub existing_issuers: Vec<String>,
+    /// Key identifiers already present in this mount.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub existing_keys: Vec<String>,
+    /// Issuer-to-key mapping returned by OpenBao.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_map")]
+    pub mapping: BTreeMap<String, String>,
 }
 
 /// PKI ACME server configuration.
@@ -896,6 +944,111 @@ impl Pki<'_> {
             .await
     }
 
+    /// Patches PKI issuer metadata with JSON Merge Patch semantics.
+    ///
+    /// OpenBao also supports `POST /pki/issuer/:issuer_ref`, but that endpoint
+    /// replaces omitted fields with defaults. This helper intentionally uses
+    /// `PATCH` so callers update only the provided fields.
+    pub async fn patch_issuer(
+        &self,
+        issuer_ref: &str,
+        patch: &PkiIssuerPatch,
+    ) -> Result<PkiIssuerInfo> {
+        self.enveloped_with_headers(
+            Method::PATCH,
+            &self.path(&["issuer", issuer_ref])?,
+            &[(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/merge-patch+json"),
+            )],
+            Some(patch),
+        )
+        .await
+    }
+
+    /// Revokes a PKI issuer by issuer reference.
+    pub async fn revoke_issuer(&self, issuer_ref: &str) -> Result<PkiIssuerInfo> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "revoke"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Imports a CA certificate/key PEM bundle through the legacy config path.
+    ///
+    /// This endpoint may import private key material into OpenBao. Use only for
+    /// tightly controlled administrative workflows.
+    pub async fn import_ca_bundle(&self, pem_bundle: &SecretString) -> Result<PkiImportResponse> {
+        let payload = PkiPemBundlePayload {
+            pem_bundle: pem_bundle.expose_secret(),
+        };
+        self.enveloped(Method::POST, &self.path(&["config", "ca"])?, Some(&payload))
+            .await
+    }
+
+    /// Imports CA certificates and private keys as issuer/key entries.
+    ///
+    /// This endpoint may import private key material into OpenBao. Use only for
+    /// tightly controlled administrative workflows.
+    pub async fn import_issuer_bundle(
+        &self,
+        pem_bundle: &SecretString,
+    ) -> Result<PkiImportResponse> {
+        let payload = PkiPemBundlePayload {
+            pem_bundle: pem_bundle.expose_secret(),
+        };
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuers", "import", "bundle"])?,
+            Some(&payload),
+        )
+        .await
+    }
+
+    /// Imports CA certificates without private keys.
+    pub async fn import_issuer_certificates(&self, pem_bundle: &str) -> Result<PkiImportResponse> {
+        let payload = PkiPemBundlePayload { pem_bundle };
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuers", "import", "cert"])?,
+            Some(&payload),
+        )
+        .await
+    }
+
+    /// Imports a single PEM-encoded private key.
+    ///
+    /// This endpoint does not enforce cryptographic strength; callers should
+    /// validate key algorithms and sizes before importing.
+    pub async fn import_key(
+        &self,
+        pem_bundle: &SecretString,
+        key_name: Option<&str>,
+    ) -> Result<PkiKeyInfo> {
+        let payload = PkiImportKeyPayload {
+            pem_bundle: pem_bundle.expose_secret(),
+            key_name,
+        };
+        self.enveloped(
+            Method::POST,
+            &self.path(&["keys", "import"])?,
+            Some(&payload),
+        )
+        .await
+    }
+
+    /// Renames a PKI key.
+    ///
+    /// OpenBao exposes key renaming through `POST /pki/key/:key_ref`; this
+    /// helper keeps the request payload to the only documented mutable field.
+    pub async fn rename_key(&self, key_ref: &str, key_name: &str) -> Result<PkiKeyInfo> {
+        let payload = PkiRenameKeyPayload { key_name };
+        self.enveloped(Method::POST, &self.path(&["key", key_ref])?, Some(&payload))
+            .await
+    }
+
     /// Reads ACME configuration for this PKI mount.
     pub async fn read_acme_config(&self) -> Result<PkiAcmeConfig> {
         self.enveloped(
@@ -985,6 +1138,24 @@ impl Pki<'_> {
         Ok(envelope.data)
     }
 
+    async fn enveloped_with_headers<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        headers: &[(reqwest::header::HeaderName, HeaderValue)],
+        request: Option<&B>,
+    ) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize + ?Sized,
+    {
+        let envelope: ResponseEnvelope<T> = self
+            .client
+            .request_json_headers_accepting(method, path, headers, request, &[StatusCode::OK])
+            .await?;
+        Ok(envelope.data)
+    }
+
     fn path(&self, tail: &[&str]) -> Result<String> {
         let mut segments = self.mount.clone();
         for segment in tail {
@@ -992,6 +1163,23 @@ impl Pki<'_> {
         }
         Ok(segments.join("/"))
     }
+}
+
+#[derive(Serialize)]
+struct PkiPemBundlePayload<'a> {
+    pem_bundle: &'a str,
+}
+
+#[derive(Serialize)]
+struct PkiImportKeyPayload<'a> {
+    pem_bundle: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    key_name: Option<&'a str>,
+}
+
+#[derive(Serialize)]
+struct PkiRenameKeyPayload<'a> {
+    key_name: &'a str,
 }
 
 fn deserialize_bounded_string_or_vec<'de, D>(
@@ -1118,7 +1306,7 @@ mod tests {
 
     use super::{
         PkiAcmeConfig, PkiAcmeEabList, PkiAcmeEabToken, PkiAuthorityBundle, PkiCertificateBundle,
-        PkiIssuerInfo, PkiIssuerList, PkiKeyList, PkiRole, PkiRoleList,
+        PkiImportResponse, PkiIssuerInfo, PkiIssuerList, PkiKeyList, PkiRole, PkiRoleList,
     };
 
     #[test]
@@ -1265,6 +1453,26 @@ mod tests {
         let value = serde_json::json!({ "keys": keys, "key_info": key_info });
         let error = match serde_json::from_value::<PkiAcmeEabList>(value) {
             Ok(_) => panic!("oversized PKI ACME EAB list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn pki_import_response_maps_are_bounded() {
+        let mut mapping = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            mapping.insert(format!("issuer-{index}"), serde_json::json!("key"));
+        }
+        let value = serde_json::json!({
+            "imported_issuers": [],
+            "imported_keys": [],
+            "existing_issuers": [],
+            "existing_keys": [],
+            "mapping": mapping
+        });
+        let error = match serde_json::from_value::<PkiImportResponse>(value) {
+            Ok(_) => panic!("oversized PKI import mapping unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

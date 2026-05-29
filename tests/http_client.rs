@@ -2346,3 +2346,133 @@ async fn pki_acme_config_and_eab_paths_are_documented() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn pki_issuer_patch_revoke_and_import_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..7 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("PATCH /v1/pki/issuer/issuer-1 HTTP/1.1"));
+                    assert!(request.contains("content-type: application/merge-patch+json"));
+                    assert!(request.contains(r#""issuer_name":"root-x2""#));
+                    r#"{"data":{"issuer_id":"issuer-1","issuer_name":"root-x2","key_id":"key-1","usage":"issuing-certificates,crl-signing"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/pki/issuer/issuer-1/revoke HTTP/1.1"));
+                    r#"{"data":{"issuer_id":"issuer-1","issuer_name":"root-x2","key_id":"key-1","revocation_time":1893456002}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/pki/config/ca HTTP/1.1"));
+                    assert!(request.contains(r#""pem_bundle":"-----BEGIN PRIVATE KEY-----"#));
+                    r#"{"data":{"imported_issuers":["issuer-2"],"imported_keys":["key-2"],"existing_issuers":[],"existing_keys":[],"mapping":{"issuer-2":"key-2"}}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/pki/issuers/import/bundle HTTP/1.1"));
+                    assert!(request.contains(r#""pem_bundle":"-----BEGIN PRIVATE KEY-----"#));
+                    r#"{"data":{"imported_issuers":["issuer-3"],"imported_keys":["key-3"],"existing_issuers":[],"existing_keys":[],"mapping":{"issuer-3":"key-3"}}}"#
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/pki/issuers/import/cert HTTP/1.1"));
+                    assert!(request.contains(r#""pem_bundle":"-----BEGIN CERTIFICATE-----"#));
+                    r#"{"data":{"imported_issuers":["issuer-4"],"imported_keys":[],"existing_issuers":[],"existing_keys":[],"mapping":{}}}"#
+                }
+                5 => {
+                    assert!(request.starts_with("POST /v1/pki/keys/import HTTP/1.1"));
+                    assert!(request.contains(r#""key_name":"imported-key""#));
+                    assert!(request.contains(r#""pem_bundle":"-----BEGIN PRIVATE KEY-----"#));
+                    r#"{"data":{"key_id":"key-5","key_name":"imported-key","key_type":"rsa","key_bits":4096}}"#
+                }
+                6 => {
+                    assert!(request.starts_with("POST /v1/pki/key/key-5 HTTP/1.1"));
+                    assert!(request.contains(r#""key_name":"renamed-key""#));
+                    r#"{"data":{"key_id":"key-5","key_name":"renamed-key","key_type":"rsa","key_bits":4096}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let issuer = pki
+        .patch_issuer(
+            "issuer-1",
+            &openbao::secrets::pki::PkiIssuerPatch {
+                issuer_name: Some("root-x2".to_owned()),
+                usage: Some(vec![
+                    "issuing-certificates".to_owned(),
+                    "crl-signing".to_owned(),
+                ]),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer.issuer_name.as_deref(), Some("root-x2"));
+
+    let revoked = pki
+        .revoke_issuer("issuer-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(revoked.revocation_time, Some(1893456002));
+
+    let private_bundle =
+        SecretString::from("-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----");
+    let legacy_import = pki
+        .import_ca_bundle(&private_bundle)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        legacy_import.mapping.get("issuer-2").map(String::as_str),
+        Some("key-2")
+    );
+    let bundle_import = pki
+        .import_issuer_bundle(&private_bundle)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(bundle_import.imported_keys, ["key-3"]);
+    let cert_import = pki
+        .import_issuer_certificates("-----BEGIN CERTIFICATE-----\ncert\n-----END CERTIFICATE-----")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(cert_import.imported_issuers, ["issuer-4"]);
+
+    let imported_key = pki
+        .import_key(&private_bundle, Some("imported-key"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(imported_key.key_name.as_deref(), Some("imported-key"));
+    let renamed = pki
+        .rename_key("key-5", "renamed-key")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(renamed.key_name.as_deref(), Some("renamed-key"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
