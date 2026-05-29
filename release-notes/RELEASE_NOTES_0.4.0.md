@@ -18,10 +18,12 @@
 - New `0.4.0` work started: environment-based client construction for
   OpenBao/Vault-compatible address, token, namespace, CA certificate,
   root-only trust, and loopback HTTP opt-in variables.
-- Planned `0.4.0` modules: PKI helpers, Kubernetes auth helpers, TLS
-  certificate auth helpers, and KV v2 service config loading.
+- Kubernetes auth helpers cover login, auth method config, role
+  write/read/list/delete, and secret-aware service account JWT handling.
+- Planned `0.4.0` modules: PKI helpers, TLS certificate auth helpers, and KV
+  v2 service config loading.
 - Default Cargo features: `approle`, `token`, `kv1`, `kv2`, `transit`, `sys`,
-  `rustls-tls`.
+  `kubernetes-auth`, `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
 - Tested OpenBao version: latest release must be verified before tag.
 
@@ -34,6 +36,13 @@
 - Custom CA files can be merged with system roots or used as the only trusted
   roots through explicit root-only trust variables.
 - Namespace values from environment variables are path-validated before use.
+- Kubernetes service account JWTs and token reviewer JWTs are handled as
+  `SecretString` and exposed only in request payloads immediately before the
+  shared HTTP request layer.
+- Kubernetes role names, mount paths, and login roles are path-validated before
+  request construction.
+- Kubernetes role lists and login metadata maps are bounded during
+  deserialization.
 
 ## Security And Stability Gate
 
@@ -48,7 +57,7 @@
 
 ## Known Limitations
 
-- PKI, Kubernetes auth, TLS certificate auth, and KV service config helpers are
-  not complete at the start of the `0.4.0` development line.
+- PKI, TLS certificate auth, and KV service config helpers are not complete at
+  the start of the `0.4.0` development line.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots
   and root-only trust stores for private PKI.

@@ -30,7 +30,7 @@ mod error;
 mod path;
 mod response;
 
-#[cfg(any(feature = "approle", feature = "token"))]
+#[cfg(any(feature = "approle", feature = "kubernetes-auth", feature = "token"))]
 pub mod auth;
 #[cfg(any(feature = "kv1", feature = "kv2"))]
 pub mod secrets;

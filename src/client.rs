@@ -351,6 +351,15 @@ impl Client<Unauthenticated> {
             _state: PhantomData,
         }
     }
+
+    pub(crate) fn clone_without_state(&self) -> Client<Unauthenticated> {
+        Client {
+            config: self.config.clone(),
+            http: self.http.clone(),
+            token: None,
+            _state: PhantomData,
+        }
+    }
 }
 
 impl<State> Client<State> {

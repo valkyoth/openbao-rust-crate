@@ -9,6 +9,8 @@ All notable changes to this project are documented here.
 - Environment-based client construction from `OPENBAO_*`, `BAO_*`, and
   `VAULT_*` address, token, namespace, CA certificate, root-only trust, and
   loopback HTTP opt-in variables.
+- Kubernetes auth login, auth method config, role write/read/list/delete, and
+  secret-aware service account JWT handling.
 - `0.4.0` release-note scaffolding and release gate.
 
 ## 0.3.0 - 2026-05-28

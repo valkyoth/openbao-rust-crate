@@ -50,7 +50,8 @@ Support plan:
 - `0.1.0`: AppRole login.
 - `0.2.0`: token lifecycle helpers; create, lookup, renew, revoke, and accessor
   flows are implemented.
-- `0.4.0`: Kubernetes and TLS certificate auth.
+- `0.4.0`: Kubernetes login/config/role helpers are implemented; TLS
+  certificate auth remains planned.
 - `0.5.0`: JWT/OIDC and userpass.
 - `0.8.0`: LDAP, RADIUS, and Kerberos.
 

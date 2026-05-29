@@ -47,6 +47,7 @@ Implemented now:
 - Direct token authentication with `secrecy::SecretString`.
 - AppRole login with secret-aware role ID, secret ID, token, and accessor
   handling.
+- Kubernetes auth login plus config and role administration helpers.
 - Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
   helpers.
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
@@ -143,6 +144,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | Feature | Default | Purpose |
 | --- | --- | --- |
 | `approle` | yes | AppRole authentication helpers. |
+| `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `token` | yes | Token lifecycle helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
@@ -181,7 +183,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | AppRole login | Yes | Role ID and secret ID are secret-aware; returned token is wrapped. |
 | Token accessor handling | Yes | Accessors are treated as secret material. |
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
-| Kubernetes auth | Planned | Planned for `0.4.0`. |
+| Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Planned | Planned for `0.4.0`. |
 | JWT/OIDC and userpass | Planned | Planned for `0.5.0`. |
 

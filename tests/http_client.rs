@@ -1485,3 +1485,130 @@ async fn dev_bootstrap_refuses_non_loopback_targets_before_http() {
     };
     assert!(matches!(error, Error::InvalidBaseUrl(_)));
 }
+
+#[tokio::test]
+async fn kubernetes_login_sends_documented_path_and_secret_jwt() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/auth/kubernetes/login HTTP/1.1"));
+        assert!(request.contains(r#""role":"web""#));
+        assert!(request.contains(r#""jwt":"service-account-jwt""#));
+        let body = r#"{"auth":{"client_token":"k8s-token","accessor":"k8s-accessor","policies":["default"],"metadata":{"role":"web"},"lease_duration":3600,"renewable":true}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+    let (client, login) = client
+        .login_kubernetes("web", SecretString::from("service-account-jwt"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(login.accessor.expose_secret(), "k8s-accessor");
+    assert_eq!(client.base_url().as_str(), format!("http://{addr}/"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn kubernetes_admin_config_and_role_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 4096];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/auth/kubernetes/config HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(request.contains(r#""token_reviewer_jwt":"reviewer-jwt""#));
+                    "{}"
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/auth/kubernetes/role/web HTTP/1.1"));
+                    assert!(request.contains(r#""bound_service_account_names":["web"]"#));
+                    assert!(request.contains(r#""bound_service_account_namespaces":["prod"]"#));
+                    "{}"
+                }
+                2 => {
+                    assert!(request.starts_with("LIST /v1/auth/kubernetes/role HTTP/1.1"));
+                    r#"{"data":{"keys":["web"]}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let admin = client
+        .kubernetes_admin()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    admin
+        .configure(&openbao::auth::kubernetes::KubernetesConfig {
+            kubernetes_host: Some("https://kubernetes.default.svc".to_owned()),
+            token_reviewer_jwt: Some(SecretString::from("reviewer-jwt")),
+            ..Default::default()
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .write_role(
+            "web",
+            &openbao::auth::kubernetes::KubernetesRole {
+                bound_service_account_names: vec!["web".to_owned()],
+                bound_service_account_namespaces: vec!["prod".to_owned()],
+                policies: vec!["web".to_owned()],
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let roles = admin
+        .list_roles()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["web"]);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}

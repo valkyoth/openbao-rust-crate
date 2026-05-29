@@ -150,17 +150,6 @@ where
     Ok(SecretString::from(value))
 }
 
-impl Client<Unauthenticated> {
-    fn clone_without_state(&self) -> Client<Unauthenticated> {
-        Client {
-            config: self.config.clone(),
-            http: self.http.clone(),
-            token: None,
-            _state: core::marker::PhantomData,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]

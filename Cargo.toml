@@ -34,8 +34,18 @@ include = [
 ]
 
 [features]
-default = ["approle", "token", "kv1", "kv2", "transit", "sys", "rustls-tls"]
+default = [
+    "approle",
+    "kubernetes-auth",
+    "token",
+    "kv1",
+    "kv2",
+    "transit",
+    "sys",
+    "rustls-tls",
+]
 approle = []
+kubernetes-auth = []
 token = []
 kv1 = []
 kv2 = []
