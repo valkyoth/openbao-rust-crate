@@ -60,7 +60,7 @@ Implemented now:
 - PKI URL and CRL config, root/intermediate generation, intermediate signing
   and install, role write/read/list/delete, issue, sign, revoke, certificate
   list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import,
-  ACME config/EAB, CRL rotate, and tidy helpers.
+  ACME config/EAB/directory URL, CRL rotate, and tidy helpers.
 - Transit key create, read, list, delete, encrypt, decrypt, rewrap, data key,
   random, hash, HMAC, sign, and verify helpers.
 - System health, seal status, and loopback-only dev bootstrap helpers.
@@ -80,7 +80,6 @@ Implemented now:
 
 Planned next:
 
-- `0.4.0`: remaining ACME protocol directory helpers.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
@@ -157,7 +156,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | `token` | yes | Token lifecycle helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
-| `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign, revoke, cert read/list, ACME config/EAB, CRL config/rotate, and tidy helpers. |
+| `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, and tidy helpers. |
 | `transit` | yes | Transit cryptography helpers. |
 | `sys` | yes | System backend helpers. |
 | `rustls-tls` | yes | Rustls transport configuration. |
@@ -209,7 +208,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | KV v2 metadata/config | Yes | Backend, per-key metadata, typed data, and secret-aware service config helpers. |
 | KV v1 | Yes | Read, write, delete, and list helpers. |
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, and verify. |
-| PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB, CRL rotate, and tidy are implemented. |
+| PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | Database credentials | Planned | Planned for `0.5.0`. |
 | SSH and TOTP | Planned | Planned for `0.6.0`. |
 | Identity and remaining engines | Planned | Planned for `0.7.0`. |

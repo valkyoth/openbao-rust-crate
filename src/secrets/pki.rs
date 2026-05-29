@@ -4,7 +4,7 @@ use core::fmt;
 use std::collections::BTreeMap;
 
 use reqwest::{
-    Method, StatusCode,
+    Method, StatusCode, Url,
     header::{CONTENT_TYPE, HeaderValue},
 };
 use secrecy::{ExposeSecret, SecretString};
@@ -1129,6 +1129,41 @@ impl Pki<'_> {
             .await
     }
 
+    /// Returns the default ACME directory URL for use with ACME clients.
+    ///
+    /// OpenBao ACME directory endpoints are unauthenticated by OpenBao token
+    /// and are internally authenticated by the ACME protocol. This helper only
+    /// builds the documented directory URL; it does not implement ACME
+    /// account, order, authorization, or challenge flows.
+    pub fn acme_directory_url(&self) -> Result<Url> {
+        self.client
+            .url_for_path(&self.path(&["acme", "directory"])?)
+    }
+
+    /// Returns an issuer-scoped ACME directory URL for use with ACME clients.
+    pub fn issuer_acme_directory_url(&self, issuer_ref: &str) -> Result<Url> {
+        self.client
+            .url_for_path(&self.path(&["issuer", issuer_ref, "acme", "directory"])?)
+    }
+
+    /// Returns a role-scoped ACME directory URL for use with ACME clients.
+    pub fn role_acme_directory_url(&self, role: &str) -> Result<Url> {
+        self.client
+            .url_for_path(&self.path(&["roles", role, "acme", "directory"])?)
+    }
+
+    /// Returns an issuer-and-role-scoped ACME directory URL for use with ACME clients.
+    pub fn issuer_role_acme_directory_url(&self, issuer_ref: &str, role: &str) -> Result<Url> {
+        self.client.url_for_path(&self.path(&[
+            "issuer",
+            issuer_ref,
+            "roles",
+            role,
+            "acme",
+            "directory",
+        ])?)
+    }
+
     async fn enveloped<T, B>(&self, method: Method, path: &str, request: Option<&B>) -> Result<T>
     where
         T: for<'de> Deserialize<'de>,
@@ -1301,6 +1336,8 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedEabInfoMapVisitor<MAX> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+
+    use crate::{Client, OpenBaoConfig};
 
     use secrecy::{ExposeSecret, SecretString};
 
@@ -1476,5 +1513,42 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn pki_acme_directory_urls_are_validated_and_built_from_base_url() {
+        let config =
+            OpenBaoConfig::new("https://bao.example.com").unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_token(SecretString::from("token"));
+        let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(
+            pki.acme_directory_url()
+                .unwrap_or_else(|error| panic!("{error}"))
+                .as_str(),
+            "https://bao.example.com/v1/pki/acme/directory"
+        );
+        assert_eq!(
+            pki.issuer_acme_directory_url("issuer-1")
+                .unwrap_or_else(|error| panic!("{error}"))
+                .as_str(),
+            "https://bao.example.com/v1/pki/issuer/issuer-1/acme/directory"
+        );
+        assert_eq!(
+            pki.role_acme_directory_url("web")
+                .unwrap_or_else(|error| panic!("{error}"))
+                .as_str(),
+            "https://bao.example.com/v1/pki/roles/web/acme/directory"
+        );
+        assert_eq!(
+            pki.issuer_role_acme_directory_url("issuer-1", "web")
+                .unwrap_or_else(|error| panic!("{error}"))
+                .as_str(),
+            "https://bao.example.com/v1/pki/issuer/issuer-1/roles/web/acme/directory"
+        );
+        assert!(pki.issuer_acme_directory_url("../issuer").is_err());
+        assert!(pki.role_acme_directory_url("web?x=1").is_err());
     }
 }

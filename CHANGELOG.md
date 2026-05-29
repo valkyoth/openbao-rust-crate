@@ -21,6 +21,8 @@ All notable changes to this project are documented here.
 - PKI issuer and key list/read/delete helpers.
 - PKI issuer patch/revoke, CA/key import, and key rename helpers.
 - PKI ACME configuration and external account binding token helpers.
+- PKI ACME directory URL helpers for handing documented directory endpoints to
+  ACME clients.
 - KV v2 typed data reads and bounded `Kv2ServiceConfig` loading with
   `SecretString` values for environment-style service configuration.
 - `0.4.0` release-note scaffolding and release gate.

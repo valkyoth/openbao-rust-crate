@@ -27,10 +27,9 @@
   generation, intermediate signing, signed intermediate install, role
   write/read/list/delete, issue, sign, revoke, certificate list/read,
   issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME
-  configuration/EAB tokens, CRL rotation, and tidy.
+  configuration/EAB tokens/directory URL helpers, CRL rotation, and tidy.
 - KV v2 service config helpers cover typed data reads and bounded
   environment-style maps with `SecretString` values.
-- Planned remaining `0.4.0` module: ACME protocol directory helpers.
 - Default Cargo features: `approle`, `cert-auth`, `kubernetes-auth`, `token`,
   `kv1`, `kv2`, `pki`, `transit`, `sys`, `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
@@ -71,6 +70,8 @@
   semantics resetting omitted issuer fields to defaults.
 - PKI ACME EAB HMAC keys are represented as `SecretString` and redacted from
   debug output; EAB token list responses are bounded during deserialization.
+- PKI ACME directory URL helpers validate mount, issuer, and role path
+  segments before returning URLs for external ACME clients.
 - KV v2 service config maps are bounded during deserialization and values are
   represented as `SecretString` with debug redaction.
 
@@ -87,8 +88,8 @@
 
 ## Known Limitations
 
-- ACME protocol directory helpers are not complete yet; authenticated ACME
-  config and EAB administration helpers are implemented.
+- Full ACME account/order/authorization/challenge protocol flows are not
+  implemented; use the directory URL helpers with dedicated ACME clients.
 - KV service config helpers intentionally accept flat string maps for the
   secret-aware `Kv2ServiceConfig` type; use typed structs for nested JSON.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots
