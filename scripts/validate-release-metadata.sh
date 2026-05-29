@@ -21,7 +21,7 @@ test -f .github/workflows/ci.yml
 grep -q 'name = "openbao"' Cargo.toml
 grep -q 'version = "0.4.0"' Cargo.toml
 grep -q 'edition = "2024"' Cargo.toml
-grep -q 'rust-version = "1.95"' Cargo.toml
+grep -q 'rust-version = "1.90"' Cargo.toml
 grep -q 'license = "MIT OR Apache-2.0"' Cargo.toml
 grep -q 'unsafe_code = "forbid"' Cargo.toml
 grep -q '0.1.0 - Secure Core And KV v2' docs/RELEASE_PLAN.md

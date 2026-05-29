@@ -27,6 +27,11 @@ All notable changes to this project are documented here.
   `SecretString` values for environment-style service configuration.
 - `0.4.0` release-note scaffolding and release gate.
 
+### Changed
+
+- Lowered the minimum supported Rust version from `1.95.0` to `1.90.0`, with
+  compatibility checked through Rust `1.96.0`.
+
 ## 0.3.0 - 2026-05-28
 
 ### Added

@@ -95,7 +95,7 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | --- | --- |
 | License | `MIT OR Apache-2.0` |
 | Rust edition | 2024 |
-| MSRV | Rust `1.95` |
+| MSRV | Rust `1.90.0` |
 | Async runtime | Runtime-agnostic client; examples use Tokio |
 | HTTP transport | `reqwest` with redirects disabled |
 | Default TLS backend | Rustls |
@@ -112,6 +112,23 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 Security details live in [SECURITY.md](SECURITY.md). Release evidence and
 release sequencing live in [release-notes](release-notes) and
 [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md).
+
+## Rust Version Support
+
+The minimum supported Rust version is Rust `1.90.0`. New deployments should
+prefer the latest stable Rust; as of May 29, 2026, that is Rust `1.96.0`.
+
+Compatibility evidence for `0.4.0`:
+
+| Rust | Local Evidence |
+| --- | --- |
+| `1.90.0` | Full test suite and clippy passed. |
+| `1.91.0` | `cargo check --all-features` passed. |
+| `1.92.0` | `cargo check --all-features` passed. |
+| `1.93.0` | `cargo check --all-features` passed. |
+| `1.94.0` | `cargo check --all-features` passed. |
+| `1.95.0` | `cargo check --all-features` passed. |
+| `1.96.0` | `cargo check --all-features` passed. |
 
 ## Install
 

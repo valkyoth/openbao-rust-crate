@@ -9,6 +9,7 @@ is cut until the owner provides a pentest report for the exact release commit.
 Every release:
 
 - checks latest Rust and key dependency versions;
+- verifies the documented Rust support range for the release;
 - runs `cargo fmt --all --check`;
 - runs `cargo clippy --all-targets --all-features -- -D warnings`;
 - runs `cargo test --all-targets --all-features`;

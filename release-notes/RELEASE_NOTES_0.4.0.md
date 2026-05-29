@@ -32,7 +32,9 @@
   environment-style maps with `SecretString` values.
 - Default Cargo features: `approle`, `cert-auth`, `kubernetes-auth`, `token`,
   `kv1`, `kv2`, `pki`, `transit`, `sys`, `rustls-tls`.
-- Minimum supported Rust: 1.95.0.
+- Minimum supported Rust: 1.90.0.
+- Rust compatibility evidence: full test suite and clippy on 1.90.0; feature
+  checks through 1.96.0.
 - Tested OpenBao version: latest release must be verified before tag.
 
 ## Security Changes
