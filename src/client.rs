@@ -4,7 +4,7 @@ use core::{fmt, marker::PhantomData, time::Duration};
 use std::{env, fs, net::IpAddr};
 
 use reqwest::{
-    Certificate, Method, StatusCode, Url,
+    Certificate, Identity, Method, StatusCode, Url,
     header::{ACCEPT, CONTENT_TYPE, HeaderName, HeaderValue},
     redirect, tls,
 };
@@ -90,6 +90,7 @@ pub struct OpenBaoConfig {
     min_tls_version: tls::Version,
     root_certificates: Vec<Certificate>,
     root_certificate_mode: RootCertificateMode,
+    client_identity: Option<Identity>,
 }
 
 impl OpenBaoConfig {
@@ -110,6 +111,7 @@ impl OpenBaoConfig {
             min_tls_version: tls::Version::TLS_1_3,
             root_certificates: Vec::new(),
             root_certificate_mode: RootCertificateMode::MergeWithSystem,
+            client_identity: None,
         })
     }
 
@@ -226,6 +228,17 @@ impl OpenBaoConfig {
         Ok(self)
     }
 
+    /// Sets the client certificate identity used for mutual TLS.
+    ///
+    /// TLS certificate auth requires OpenBao's listener to request/verify a
+    /// client certificate. Prefer identities loaded from tightly permissioned
+    /// files and avoid logging certificate/key parsing errors that include
+    /// secret paths.
+    pub fn client_identity(mut self, identity: Identity) -> Self {
+        self.client_identity = Some(identity);
+        self
+    }
+
     fn validate(&self) -> Result<()> {
         match self.base_url.scheme() {
             "https" => Ok(()),
@@ -259,6 +272,7 @@ impl fmt::Debug for OpenBaoConfig {
             .field("min_tls_version", &self.min_tls_version)
             .field("root_certificate_count", &self.root_certificates.len())
             .field("root_certificate_mode", &self.root_certificate_mode)
+            .field("has_client_identity", &self.client_identity.is_some())
             .finish()
     }
 }
@@ -294,6 +308,9 @@ impl ClientBuilder {
                 builder.tls_certs_only(self.config.root_certificates.clone())
             }
         };
+        if let Some(identity) = self.config.client_identity.clone() {
+            builder = builder.identity(identity);
+        }
 
         let http = builder.build()?;
 
@@ -352,6 +369,11 @@ impl Client<Unauthenticated> {
         }
     }
 
+    #[cfg(any(
+        feature = "approle",
+        feature = "cert-auth",
+        feature = "kubernetes-auth"
+    ))]
     pub(crate) fn clone_without_state(&self) -> Client<Unauthenticated> {
         Client {
             config: self.config.clone(),

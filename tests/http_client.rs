@@ -1612,3 +1612,157 @@ async fn kubernetes_admin_config_and_role_use_documented_paths() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn cert_login_sends_documented_path_and_role_name() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/auth/cert/login HTTP/1.1"));
+        assert!(request.contains(r#""name":"web-ca""#));
+        let body = r#"{"auth":{"client_token":"cert-token","accessor":"cert-accessor","policies":["web"],"lease_duration":3600,"renewable":true}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+    let (client, login) = client
+        .login_cert(Some("web-ca"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        login.accessor.as_ref().map(SecretString::expose_secret),
+        Some("cert-accessor")
+    );
+    assert_eq!(client.base_url().as_str(), format!("http://{addr}/"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn cert_admin_roles_config_and_crls_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/auth/cert/config HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(request.contains(r#""disable_binding":true"#));
+                    "{}"
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/auth/cert/certs/web-ca HTTP/1.1"));
+                    assert!(request.contains(r#""certificate":"-----BEGIN CERTIFICATE-----"#));
+                    assert!(request.contains(r#""allowed_dns_sans":["web.example.com"]"#));
+                    "{}"
+                }
+                2 => {
+                    assert!(
+                        request.starts_with("LIST /v1/auth/cert/certs?after=old&limit=10 HTTP/1.1")
+                    );
+                    r#"{"data":{"keys":["web-ca"]}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/auth/cert/crls/web-crl HTTP/1.1"));
+                    assert!(request.contains(r#""url":"https://example.com/web.crl""#));
+                    "{}"
+                }
+                4 => {
+                    assert!(request.starts_with("LIST /v1/auth/cert/crls HTTP/1.1"));
+                    r#"{"data":{"keys":["web-crl"]}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let admin = client
+        .cert_admin()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    admin
+        .configure(&openbao::auth::cert::CertAuthConfig {
+            disable_binding: Some(true),
+            ..Default::default()
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .write_role(
+            "web-ca",
+            &openbao::auth::cert::CertRole {
+                certificate: "-----BEGIN CERTIFICATE-----".to_owned(),
+                allowed_dns_sans: vec!["web.example.com".to_owned()],
+                token_policies: vec!["web".to_owned()],
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let roles = admin
+        .list_roles(Some("old"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["web-ca"]);
+    admin
+        .write_crl(
+            "web-crl",
+            &openbao::auth::cert::CertCrl {
+                url: "https://example.com/web.crl".to_owned(),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let crls = admin
+        .list_crls(None, None)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(crls.keys, ["web-crl"]);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}

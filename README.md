@@ -34,8 +34,9 @@ use openbao::Client;
 ```
 
 This README documents the `0.4.0` development line. `0.4.0` builds on the
-published `0.3.0` crate with PKI, Kubernetes auth, TLS certificate auth, and
-service-startup ergonomics planned for this release.
+published `0.3.0` crate with environment-based client construction,
+Kubernetes auth, TLS certificate auth, PKI, and service-startup ergonomics
+planned for this release.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -48,6 +49,8 @@ Implemented now:
 - AppRole login with secret-aware role ID, secret ID, token, and accessor
   handling.
 - Kubernetes auth login plus config and role administration helpers.
+- TLS certificate auth login, method config, CA role, and CRL administration
+  helpers.
 - Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
   helpers.
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
@@ -72,7 +75,7 @@ Implemented now:
 
 Planned next:
 
-- `0.4.0`: PKI, Kubernetes auth, TLS certificate auth, and KV service config loading.
+- `0.4.0`: PKI and KV service config loading.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
@@ -128,7 +131,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.4", features = ["approle", "token", "kv1", "kv2", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.4", features = ["approle", "cert-auth", "kubernetes-auth", "token", "kv1", "kv2", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -144,6 +147,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | Feature | Default | Purpose |
 | --- | --- | --- |
 | `approle` | yes | AppRole authentication helpers. |
+| `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `token` | yes | Token lifecycle helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
@@ -167,6 +171,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can opt down to TLS 1.2. |
 | Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
 | Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. |
+| Client TLS identity | Yes | Optional mutual TLS client identity for TLS certificate auth. |
 | Connection timeout | Yes | 5-second connection timeout by default; caller overrides are bounded. |
 | User agent fingerprinting | Yes | Default user agent omits the exact crate version. |
 | Namespace header | Yes | `X-Vault-Namespace` support for namespace-aware deployments. |
@@ -184,7 +189,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | Token accessor handling | Yes | Accessors are treated as secret material. |
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
-| TLS certificate auth | Planned | Planned for `0.4.0`. |
+| TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
 | JWT/OIDC and userpass | Planned | Planned for `0.5.0`. |
 
 ### Secret Engines

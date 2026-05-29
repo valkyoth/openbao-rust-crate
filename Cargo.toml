@@ -36,6 +36,7 @@ include = [
 [features]
 default = [
     "approle",
+    "cert-auth",
     "kubernetes-auth",
     "token",
     "kv1",
@@ -45,6 +46,7 @@ default = [
     "rustls-tls",
 ]
 approle = []
+cert-auth = []
 kubernetes-auth = []
 token = []
 kv1 = []

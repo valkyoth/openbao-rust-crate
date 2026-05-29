@@ -11,6 +11,8 @@ All notable changes to this project are documented here.
   loopback HTTP opt-in variables.
 - Kubernetes auth login, auth method config, role write/read/list/delete, and
   secret-aware service account JWT handling.
+- TLS certificate auth login, auth method config, CA role write/read/list/delete,
+  CRL write/read/list/delete, and mutual TLS client identity configuration.
 - `0.4.0` release-note scaffolding and release gate.
 
 ## 0.3.0 - 2026-05-28

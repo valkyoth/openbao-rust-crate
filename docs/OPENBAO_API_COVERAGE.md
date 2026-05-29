@@ -1,6 +1,6 @@
 # OpenBao API Coverage Plan
 
-Checked against official OpenBao `2.5.x` documentation on 2026-05-28.
+Checked against official OpenBao `2.5.x` documentation on 2026-05-29.
 
 Sources:
 
@@ -10,6 +10,8 @@ Sources:
 - System backend: https://openbao.org/api-docs/system/
 - KV v2: https://openbao.org/api-docs/secret/kv/kv-v2/
 - AppRole: https://openbao.org/api-docs/auth/approle/
+- Kubernetes auth: https://openbao.org/api-docs/auth/kubernetes/
+- TLS certificate auth: https://openbao.org/api-docs/auth/cert/
 - Transit: https://openbao.org/api-docs/secret/transit/
 
 ## Foundation
@@ -50,8 +52,8 @@ Support plan:
 - `0.1.0`: AppRole login.
 - `0.2.0`: token lifecycle helpers; create, lookup, renew, revoke, and accessor
   flows are implemented.
-- `0.4.0`: Kubernetes login/config/role helpers are implemented; TLS
-  certificate auth remains planned.
+- `0.4.0`: Kubernetes login/config/role helpers and TLS certificate
+  login/config/role/CRL helpers are implemented.
 - `0.5.0`: JWT/OIDC and userpass.
 - `0.8.0`: LDAP, RADIUS, and Kerberos.
 

@@ -20,10 +20,13 @@
   root-only trust, and loopback HTTP opt-in variables.
 - Kubernetes auth helpers cover login, auth method config, role
   write/read/list/delete, and secret-aware service account JWT handling.
-- Planned `0.4.0` modules: PKI helpers, TLS certificate auth helpers, and KV
-  v2 service config loading.
-- Default Cargo features: `approle`, `token`, `kv1`, `kv2`, `transit`, `sys`,
-  `kubernetes-auth`, `rustls-tls`.
+- TLS certificate auth helpers cover login, auth method config, CA role
+  write/read/list/delete, CRL write/read/list/delete, and mutual TLS client
+  identity configuration.
+- Planned remaining `0.4.0` modules: PKI helpers and KV v2 service config
+  loading.
+- Default Cargo features: `approle`, `cert-auth`, `kubernetes-auth`, `token`,
+  `kv1`, `kv2`, `transit`, `sys`, `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
 - Tested OpenBao version: latest release must be verified before tag.
 
@@ -43,6 +46,13 @@
   request construction.
 - Kubernetes role lists and login metadata maps are bounded during
   deserialization.
+- TLS certificate auth role names, CRL names, mount paths, and login role names
+  are path-validated before request construction.
+- TLS certificate auth tokens/accessors are represented as `SecretString`,
+  role/CRL lists and CRL serial maps are bounded during deserialization, and
+  role fields accept both documented comma-delimited strings and arrays.
+- Mutual TLS client identities are configured through `OpenBaoConfig` and are
+  redacted from debug output as a boolean presence flag only.
 
 ## Security And Stability Gate
 
@@ -57,7 +67,6 @@
 
 ## Known Limitations
 
-- PKI, TLS certificate auth, and KV service config helpers are not complete at
-  the start of the `0.4.0` development line.
+- PKI and KV service config helpers are not complete yet.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots
   and root-only trust stores for private PKI.
