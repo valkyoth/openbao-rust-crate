@@ -33,10 +33,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.4.0` development line. `0.4.0` builds on the
+This README documents the `0.4.0` release line. `0.4.0` builds on the
 published `0.3.0` crate with environment-based client construction,
-Kubernetes auth, TLS certificate auth, PKI, and service-startup ergonomics
-planned for this release.
+Kubernetes auth, TLS certificate auth, PKI, and service-startup ergonomics.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 

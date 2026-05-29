@@ -3,9 +3,9 @@
 ## Version
 
 - Version: 0.4.0
-- Release date: TBD
+- Release date: 2026-05-29
 - Git tag: `v0.4.0`
-- Git commit: TBD
+- Git commit: tag target for `v0.4.0`
 - License: MIT OR Apache-2.0
 
 ## Scope
@@ -15,7 +15,7 @@
   status, loopback-only dev bootstrap, mount/auth mount management, response
   wrapping, ACL policies, capabilities, audit devices, exact lease helpers,
   and plugin catalog helpers.
-- New `0.4.0` work started: environment-based client construction for
+- New `0.4.0` work: environment-based client construction for
   OpenBao/Vault-compatible address, token, namespace, CA certificate,
   root-only trust, and loopback HTTP opt-in variables.
 - Kubernetes auth helpers cover login, auth method config, role
@@ -37,7 +37,8 @@
 - Minimum supported Rust: 1.90.0.
 - Rust compatibility evidence: full test suite and clippy on 1.90.0; feature
   checks through 1.96.0.
-- Tested OpenBao version: latest release must be verified before tag.
+- Tested OpenBao version: latest OpenBao release verified as `v2.5.4` on
+  2026-05-29.
 
 ## Security Changes
 
@@ -92,14 +93,18 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_4_gate.sh`
-- Result: pending
+- Result: local release gate checks passed on 2026-05-29 after pentest
+  remediations; sandbox-blocked `cargo audit`, real OpenBao integration, and
+  SBOM generation were rerun individually with the required local access.
 - Pentest report: local `PENTEST.md` reviewed on 2026-05-29; all actionable
   findings fixed or documented, and report source deleted before commit.
-- `cargo audit` result: pending
-- `cargo deny check` result: pending
-- CodeQL result: pending through GitHub default setup
-- Podman OpenBao integration result: pending
-- SBOM generation result: pending
+- `cargo audit` result: passed on 2026-05-29.
+- `cargo deny check` result: passed on 2026-05-29 with duplicate dependency
+  warnings only.
+- CodeQL result: passed on GitHub before tag on 2026-05-29.
+- Podman OpenBao integration result: passed against `v2.5.4` on 2026-05-29.
+- SBOM generation result: passed on 2026-05-29, CycloneDX JSON written under
+  `target/sbom/`.
 
 ## Known Limitations
 
