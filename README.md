@@ -33,10 +33,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.3.0` release candidate. `0.3.0` builds on the
-published `0.2.0` crate with Transit, audit device helpers, safe exact lease
-lookup, renew, and revoke helpers, plugin catalog operations, and a
-loopback-only OpenBao dev bootstrap helper.
+This README documents the `0.4.0` development line. `0.4.0` builds on the
+published `0.3.0` crate with PKI, Kubernetes auth, TLS certificate auth, and
+service-startup ergonomics planned for this release.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -65,13 +64,14 @@ Implemented now:
 - Safe exact lease lookup, renew, and revoke helpers.
 - Plugin catalog list, type-list, register, read, delete, and backend reload
   helpers.
+- Environment-based client construction from common OpenBao/Vault variables.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
 Planned next:
 
-- `0.4.0`: PKI, Kubernetes auth, and TLS certificate auth.
+- `0.4.0`: PKI, Kubernetes auth, TLS certificate auth, and KV service config loading.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
@@ -109,7 +109,7 @@ release sequencing live in [release-notes](release-notes) and
 
 ```toml
 [dependencies]
-openbao = "0.3"
+openbao = "0.4"
 secrecy = "0.10.3"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
@@ -127,7 +127,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.3", features = ["approle", "token", "kv1", "kv2", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.4", features = ["approle", "token", "kv1", "kv2", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -135,7 +135,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.3", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.4", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 ## Features
@@ -168,6 +168,7 @@ openbao = { version = "0.3", default-features = false, features = ["kv2", "sys",
 | Connection timeout | Yes | 5-second connection timeout by default; caller overrides are bounded. |
 | User agent fingerprinting | Yes | Default user agent omits the exact crate version. |
 | Namespace header | Yes | `X-Vault-Namespace` support for namespace-aware deployments. |
+| Environment construction | Yes | Reads `OPENBAO_*`, `BAO_*`, and `VAULT_*` aliases with secure defaults. |
 | Raw JSON requests | Yes | Escape hatch for endpoints that are not typed yet. |
 
 ### Authentication
@@ -229,6 +230,22 @@ use secrecy::SecretString;
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
     let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+
+    let health = client.sys().health().await?;
+    println!("openbao version: {}", health.version);
+    Ok(())
+}
+```
+
+Create an authenticated client from environment variables:
+
+```rust,no_run
+use openbao::{Client, Result};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Reads OPENBAO_ADDR/BAO_ADDR/VAULT_ADDR plus token, namespace, and CA aliases.
+    let client = Client::from_env_with_token()?;
 
     let health = client.sys().health().await?;
     println!("openbao version: {}", health.version);
@@ -794,7 +811,7 @@ scripts/checks.sh
 Run the current release gate:
 
 ```bash
-scripts/release_0_3_gate.sh
+scripts/release_0_4_gate.sh
 ```
 
 Set `OPENBAO_SKIP_INTEGRATION=1` only when Podman is unavailable; release

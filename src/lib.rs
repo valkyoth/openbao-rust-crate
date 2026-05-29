@@ -8,10 +8,11 @@
 //! - OpenBao API URLs are assembled with structured URL path segments;
 //! - authentication state is represented in the type system.
 //!
-//! The public API covers AppRole login, direct token auth, token lifecycle
-//! helpers, KV v1/v2, Transit, system health/seal status, dev-only bootstrap,
-//! mount management, audit devices, safe exact lease helpers, plugin catalog
-//! operations, and raw JSON calls for advanced users.
+//! The public API covers environment-based client construction, AppRole login,
+//! direct token auth, token lifecycle helpers, KV v1/v2, Transit, system
+//! health/seal status, dev-only bootstrap, mount management, audit devices,
+//! safe exact lease helpers, plugin catalog operations, and raw JSON calls for
+//! advanced users.
 
 #![forbid(unsafe_code)]
 

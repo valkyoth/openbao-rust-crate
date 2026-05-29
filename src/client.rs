@@ -1,7 +1,7 @@
 //! OpenBao client construction and raw request helpers.
 
 use core::{fmt, marker::PhantomData, time::Duration};
-use std::net::IpAddr;
+use std::{env, fs, net::IpAddr};
 
 use reqwest::{
     Certificate, Method, StatusCode, Url,
@@ -21,6 +21,23 @@ use crate::{
 const MAX_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
 const MAX_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_CONNECT_TIMEOUT: Duration = Duration::from_secs(300);
+const ADDRESS_ENV_KEYS: &[&str] = &["OPENBAO_ADDR", "BAO_ADDR", "VAULT_ADDR"];
+const TOKEN_ENV_KEYS: &[&str] = &["OPENBAO_TOKEN", "BAO_TOKEN", "VAULT_TOKEN"];
+const NAMESPACE_ENV_KEYS: &[&str] = &["OPENBAO_NAMESPACE", "BAO_NAMESPACE", "VAULT_NAMESPACE"];
+const CA_CERT_ENV_KEYS: &[&str] = &["OPENBAO_CACERT", "BAO_CACERT", "VAULT_CACERT"];
+const ROOTS_ONLY_ENV_KEYS: &[&str] = &[
+    "OPENBAO_ONLY_ROOT_CERTIFICATES",
+    "OPENBAO_TLS_ROOTS_ONLY",
+    "BAO_ONLY_ROOT_CERTIFICATES",
+    "BAO_TLS_ROOTS_ONLY",
+    "VAULT_ONLY_ROOT_CERTIFICATES",
+    "VAULT_TLS_ROOTS_ONLY",
+];
+const LOCAL_HTTP_ENV_KEYS: &[&str] = &[
+    "OPENBAO_ALLOW_LOCALHOST_HTTP",
+    "BAO_ALLOW_LOCALHOST_HTTP",
+    "VAULT_ALLOW_LOCALHOST_HTTP",
+];
 
 /// Marker state for clients that do not yet have an authentication token.
 #[derive(Clone, Copy, Debug)]
@@ -94,6 +111,31 @@ impl OpenBaoConfig {
             root_certificates: Vec::new(),
             root_certificate_mode: RootCertificateMode::MergeWithSystem,
         })
+    }
+
+    /// Creates a client configuration from common OpenBao/Vault environment variables.
+    ///
+    /// Supported aliases:
+    ///
+    /// - address: `OPENBAO_ADDR`, `BAO_ADDR`, `VAULT_ADDR`;
+    /// - namespace: `OPENBAO_NAMESPACE`, `BAO_NAMESPACE`, `VAULT_NAMESPACE`;
+    /// - CA PEM file: `OPENBAO_CACERT`, `BAO_CACERT`, `VAULT_CACERT`;
+    /// - root-only trust: `OPENBAO_ONLY_ROOT_CERTIFICATES`,
+    ///   `OPENBAO_TLS_ROOTS_ONLY`, `BAO_ONLY_ROOT_CERTIFICATES`,
+    ///   `BAO_TLS_ROOTS_ONLY`, `VAULT_ONLY_ROOT_CERTIFICATES`,
+    ///   `VAULT_TLS_ROOTS_ONLY`;
+    /// - local HTTP opt-in: `OPENBAO_ALLOW_LOCALHOST_HTTP`,
+    ///   `BAO_ALLOW_LOCALHOST_HTTP`, `VAULT_ALLOW_LOCALHOST_HTTP`.
+    ///
+    /// Plain HTTP still requires an explicit local HTTP opt-in and a numeric
+    /// loopback host such as `127.0.0.1`.
+    pub fn from_env() -> Result<Self> {
+        openbao_config_from_env_lookup(|key| env::var(key).ok())
+    }
+
+    /// Returns the validated base URL.
+    pub fn base_url(&self) -> &Url {
+        &self.base_url
     }
 
     /// Allows plain HTTP only for numeric loopback IP development and tests.
@@ -276,6 +318,23 @@ impl Client<Unauthenticated> {
     /// Creates an unauthenticated client with secure defaults.
     pub fn new(base_url: impl AsRef<str>) -> Result<Self> {
         ClientBuilder::new(OpenBaoConfig::new(base_url)?).build()
+    }
+
+    /// Creates an unauthenticated client from common OpenBao/Vault environment variables.
+    ///
+    /// See [`OpenBaoConfig::from_env`] for supported configuration variables.
+    pub fn from_env() -> Result<Self> {
+        ClientBuilder::new(OpenBaoConfig::from_env()?).build()
+    }
+
+    /// Creates an authenticated client from common OpenBao/Vault environment variables.
+    ///
+    /// The token is read from `OPENBAO_TOKEN`, `BAO_TOKEN`, or `VAULT_TOKEN`,
+    /// in that order, and is stored as [`SecretString`].
+    pub fn from_env_with_token() -> Result<Client<Authenticated>> {
+        let client = Self::from_env()?;
+        let token = openbao_token_from_env_lookup(|key| env::var(key).ok())?;
+        Ok(client.with_token(token))
     }
 
     /// Creates an unauthenticated client from explicit configuration.
@@ -495,6 +554,91 @@ fn is_loopback_url(url: &Url) -> bool {
     }
 }
 
+fn openbao_config_from_env_lookup<F>(mut lookup: F) -> Result<OpenBaoConfig>
+where
+    F: FnMut(&str) -> Option<String>,
+{
+    let (_key, address) = first_env_value(&mut lookup, ADDRESS_ENV_KEYS).ok_or_else(|| {
+        Error::InvalidBaseUrl("missing OPENBAO_ADDR, BAO_ADDR, or VAULT_ADDR".into())
+    })?;
+    let mut config = OpenBaoConfig::new(address)?;
+
+    if env_bool(&mut lookup, LOCAL_HTTP_ENV_KEYS)? {
+        config = config.allow_localhost_http()?;
+    }
+
+    if let Some((_key, namespace)) = first_env_value(&mut lookup, NAMESPACE_ENV_KEYS) {
+        config = config.namespace(namespace)?;
+    }
+
+    let cert = match first_env_value(&mut lookup, CA_CERT_ENV_KEYS) {
+        Some((_key, path)) => {
+            let pem = fs::read(&path).map_err(|error| {
+                Error::InvalidTlsConfig(format!(
+                    "failed to read configured CA certificate: {error}"
+                ))
+            })?;
+            Some(Certificate::from_pem(&pem).map_err(|error| {
+                Error::InvalidTlsConfig(format!(
+                    "failed to parse configured CA certificate: {error}"
+                ))
+            })?)
+        }
+        None => None,
+    };
+
+    if env_bool(&mut lookup, ROOTS_ONLY_ENV_KEYS)? {
+        let cert = cert.ok_or_else(|| {
+            Error::InvalidTlsConfig(
+                "root-only trust requires OPENBAO_CACERT, BAO_CACERT, or VAULT_CACERT".into(),
+            )
+        })?;
+        config = config.only_root_certificates(vec![cert])?;
+    } else if let Some(cert) = cert {
+        config = config.add_root_certificate(cert);
+    }
+
+    config.validate()?;
+    Ok(config)
+}
+
+fn openbao_token_from_env_lookup<F>(mut lookup: F) -> Result<SecretString>
+where
+    F: FnMut(&str) -> Option<String>,
+{
+    first_env_value(&mut lookup, TOKEN_ENV_KEYS)
+        .map(|(_key, token)| SecretString::from(token))
+        .ok_or(Error::MissingToken)
+}
+
+fn first_env_value<F>(lookup: &mut F, keys: &[&'static str]) -> Option<(&'static str, String)>
+where
+    F: FnMut(&str) -> Option<String>,
+{
+    keys.iter().find_map(|key| {
+        lookup(key)
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty())
+            .map(|value| (*key, value))
+    })
+}
+
+fn env_bool<F>(lookup: &mut F, keys: &[&'static str]) -> Result<bool>
+where
+    F: FnMut(&str) -> Option<String>,
+{
+    let Some((key, value)) = first_env_value(lookup, keys) else {
+        return Ok(false);
+    };
+    match value.to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Ok(true),
+        "0" | "false" | "no" | "off" => Ok(false),
+        _ => Err(Error::InvalidParameter(format!(
+            "{key} must be one of 1, true, yes, on, 0, false, no, or off"
+        ))),
+    }
+}
+
 async fn read_json_response<T>(mut response: reqwest::Response) -> Result<T>
 where
     T: DeserializeOwned,
@@ -554,9 +698,16 @@ fn sensitive_header_value(value: &str) -> Result<HeaderValue> {
 mod tests {
     #![allow(clippy::panic)]
 
-    use secrecy::SecretString;
+    use std::collections::BTreeMap;
 
-    use super::{Client, OpenBaoConfig};
+    use secrecy::{ExposeSecret, SecretString};
+
+    use crate::Error;
+
+    use super::{
+        Client, OpenBaoConfig, env_bool, openbao_config_from_env_lookup,
+        openbao_token_from_env_lookup,
+    };
 
     #[test]
     fn rejects_http_by_default() {
@@ -637,5 +788,76 @@ mod tests {
         assert!(debug.contains("has_namespace"));
         assert!(debug.contains("true"));
         assert!(!debug.contains("finance"));
+    }
+
+    #[test]
+    fn env_config_prefers_openbao_address_and_supports_namespace() {
+        let env = env_map([
+            ("VAULT_ADDR", "https://vault.example.com"),
+            ("OPENBAO_ADDR", "https://bao.example.com"),
+            ("OPENBAO_NAMESPACE", "team/app"),
+        ]);
+        let config = openbao_config_from_env_lookup(|key| env.get(key).cloned())
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(config.base_url().as_str(), "https://bao.example.com/");
+        let debug = format!("{config:?}");
+        assert!(debug.contains("has_namespace"));
+        assert!(!debug.contains("team/app"));
+    }
+
+    #[test]
+    fn env_config_requires_address() {
+        let env = env_map([]);
+        let error = match openbao_config_from_env_lookup(|key| env.get(key).cloned()) {
+            Ok(_) => panic!("missing env address unexpectedly succeeded"),
+            Err(error) => error,
+        };
+        assert!(matches!(error, Error::InvalidBaseUrl(_)));
+    }
+
+    #[test]
+    fn env_config_requires_explicit_loopback_http_opt_in() {
+        let env = env_map([("OPENBAO_ADDR", "http://127.0.0.1:9940")]);
+        assert!(openbao_config_from_env_lookup(|key| env.get(key).cloned()).is_err());
+
+        let env = env_map([
+            ("OPENBAO_ADDR", "http://127.0.0.1:9940"),
+            ("OPENBAO_ALLOW_LOCALHOST_HTTP", "true"),
+        ]);
+        let config = openbao_config_from_env_lookup(|key| env.get(key).cloned())
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(config.base_url().as_str(), "http://127.0.0.1:9940/");
+    }
+
+    #[test]
+    fn env_config_rejects_invalid_boolean_values() {
+        let env = env_map([("OPENBAO_ALLOW_LOCALHOST_HTTP", "maybe")]);
+        let error = match env_bool(&mut |key| env.get(key).cloned(), super::LOCAL_HTTP_ENV_KEYS) {
+            Ok(_) => panic!("invalid boolean unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(matches!(error, Error::InvalidParameter(_)));
+    }
+
+    #[test]
+    fn env_token_is_secret_and_prefers_openbao_alias() {
+        let env = env_map([
+            ("VAULT_TOKEN", "vault-token"),
+            ("OPENBAO_TOKEN", "openbao-token"),
+        ]);
+        let token = openbao_token_from_env_lookup(|key| env.get(key).cloned())
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(token.expose_secret(), "openbao-token");
+        assert!(!format!("{token:?}").contains("openbao-token"));
+    }
+
+    fn env_map<const N: usize>(
+        pairs: [(&'static str, &'static str); N],
+    ) -> BTreeMap<String, String> {
+        pairs
+            .into_iter()
+            .map(|(key, value)| (key.to_owned(), value.to_owned()))
+            .collect()
     }
 }

@@ -22,10 +22,11 @@ Sources:
 - Typed error envelope.
 - Health and seal status.
 - OpenAPI discovery support through `/sys/internal/specs/openapi`.
+- Environment-based client construction from common `OPENBAO_*`, `BAO_*`, and
+  `VAULT_*` variables is implemented in `0.4.0`.
 - Planned downstream ergonomics from Mjolni/Pawalyze review:
-  env-based client construction, KV v2 service config loading,
-  byte-oriented Transit helpers, JWT/JWKS Transit helpers, idempotent admin
-  bootstrap, and ACL policy builders.
+  KV v2 service config loading, byte-oriented Transit helpers, JWT/JWKS
+  Transit helpers, idempotent admin bootstrap, and ACL policy builders.
 - Planned posture helpers:
   best-effort FIPS profile validation for crate-controlled choices and a
   future quantum-readiness profile once OpenBao exposes stable primitives.

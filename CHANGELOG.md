@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## 0.4.0 - Unreleased
+
+### Added
+
+- Environment-based client construction from `OPENBAO_*`, `BAO_*`, and
+  `VAULT_*` address, token, namespace, CA certificate, root-only trust, and
+  loopback HTTP opt-in variables.
+- `0.4.0` release-note scaffolding and release gate.
+
 ## 0.3.0 - 2026-05-28
 
 ### Added
