@@ -41,6 +41,7 @@ default = [
     "token",
     "kv1",
     "kv2",
+    "pki",
     "transit",
     "sys",
     "rustls-tls",
@@ -51,6 +52,7 @@ kubernetes-auth = []
 token = []
 kv1 = []
 kv2 = []
+pki = []
 transit = []
 sys = []
 # Default TLS backend. Keep this enabled unless a deployment has audited a

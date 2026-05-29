@@ -13,6 +13,9 @@ All notable changes to this project are documented here.
   secret-aware service account JWT handling.
 - TLS certificate auth login, auth method config, CA role write/read/list/delete,
   CRL write/read/list/delete, and mutual TLS client identity configuration.
+- PKI URL config, role write/read/list/delete, issue, sign, revoke,
+  certificate list, and certificate read helpers with secret-aware generated
+  private keys.
 - `0.4.0` release-note scaffolding and release gate.
 
 ## 0.3.0 - 2026-05-28

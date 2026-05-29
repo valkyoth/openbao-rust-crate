@@ -56,6 +56,8 @@ Implemented now:
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
   version delete, undelete, destroy, metadata, and backend config helpers.
 - KV v1 read, write, delete, and list helpers.
+- PKI URL config, role write/read/list/delete, issue, sign, revoke,
+  certificate list, and certificate read helpers.
 - Transit key create, read, list, delete, encrypt, decrypt, rewrap, data key,
   random, hash, HMAC, sign, and verify helpers.
 - System health, seal status, and loopback-only dev bootstrap helpers.
@@ -75,7 +77,7 @@ Implemented now:
 
 Planned next:
 
-- `0.4.0`: PKI and KV service config loading.
+- `0.4.0`: remaining PKI authority management and KV service config loading.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
@@ -131,7 +133,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.4", features = ["approle", "cert-auth", "kubernetes-auth", "token", "kv1", "kv2", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.4", features = ["approle", "cert-auth", "kubernetes-auth", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -152,6 +154,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | `token` | yes | Token lifecycle helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
+| `pki` | yes | PKI role, issue/sign, revoke, cert read/list, and URL config helpers. |
 | `transit` | yes | Transit cryptography helpers. |
 | `sys` | yes | System backend helpers. |
 | `rustls-tls` | yes | Rustls transport configuration. |
@@ -203,7 +206,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | KV v2 metadata/config | Yes | Backend and per-key metadata helpers. |
 | KV v1 | Yes | Read, write, delete, and list helpers. |
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, and verify. |
-| PKI | Planned | Planned for `0.4.0`. |
+| PKI | Partial | URL config, roles, issue, sign, revoke, certificate list, and certificate read are implemented. |
 | Database credentials | Planned | Planned for `0.5.0`. |
 | SSH and TOTP | Planned | Planned for `0.6.0`. |
 | Identity and remaining engines | Planned | Planned for `0.7.0`. |

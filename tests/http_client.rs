@@ -1766,3 +1766,156 @@ async fn cert_admin_roles_config_and_crls_use_documented_paths() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn pki_role_urls_issue_sign_revoke_and_cert_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..8 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/pki/config/urls HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(request.contains(
+                        r#""issuing_certificates":["https://issuer.example/v1/pki/ca"]"#
+                    ));
+                    "{}"
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/pki/roles/web HTTP/1.1"));
+                    assert!(request.contains(r#""allowed_domains":["example.com"]"#));
+                    "{}"
+                }
+                2 => {
+                    assert!(request.starts_with("LIST /v1/pki/roles HTTP/1.1"));
+                    r#"{"data":{"keys":["web"]}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/pki/issue/web HTTP/1.1"));
+                    assert!(request.contains(r#""common_name":"api.example.com""#));
+                    r#"{"data":{"certificate":"issued-cert","issuing_ca":"ca","ca_chain":["ca"],"private_key":"private-key","private_key_type":"rsa","serial_number":"01:02","expiration":1893456000}}"#
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/pki/sign/web HTTP/1.1"));
+                    assert!(request.contains(r#""csr":"-----BEGIN CERTIFICATE REQUEST-----""#));
+                    r#"{"data":{"certificate":"signed-cert","serial_number":"01:03"}}"#
+                }
+                5 => {
+                    assert!(request.starts_with("POST /v1/pki/revoke HTTP/1.1"));
+                    assert!(request.contains(r#""serial_number":"01:02""#));
+                    r#"{"data":{"revocation_time":1893456001}}"#
+                }
+                6 => {
+                    assert!(request.starts_with("LIST /v1/pki/certs HTTP/1.1"));
+                    r#"{"data":{"keys":["01:02"]}}"#
+                }
+                7 => {
+                    assert!(request.starts_with("GET /v1/pki/cert/01:02 HTTP/1.1"));
+                    r#"{"data":{"certificate":"issued-cert"}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    pki.write_urls(&openbao::secrets::pki::PkiUrlsConfig {
+        issuing_certificates: vec!["https://issuer.example/v1/pki/ca".to_owned()],
+        ..Default::default()
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    pki.write_role(
+        "web",
+        &openbao::secrets::pki::PkiRole {
+            allowed_domains: vec!["example.com".to_owned()],
+            allow_subdomains: Some(true),
+            key_type: Some("rsa".to_owned()),
+            key_bits: Some(3072),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    let roles = pki
+        .list_roles()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["web"]);
+
+    let issued = pki
+        .issue(
+            "web",
+            &openbao::secrets::pki::PkiIssueRequest {
+                common_name: "api.example.com".to_owned(),
+                ttl: Some("24h".to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issued.certificate, "issued-cert");
+    assert_eq!(
+        issued.private_key.as_ref().map(SecretString::expose_secret),
+        Some("private-key")
+    );
+
+    let signed = pki
+        .sign(
+            "web",
+            &openbao::secrets::pki::PkiSignRequest {
+                csr: "-----BEGIN CERTIFICATE REQUEST-----".to_owned(),
+                common_name: Some("api.example.com".to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(signed.serial_number.as_deref(), Some("01:03"));
+
+    let revocation = pki
+        .revoke(&openbao::secrets::pki::PkiRevokeRequest {
+            serial_number: "01:02".to_owned(),
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(revocation.revocation_time, Some(1893456001));
+
+    let certs = pki
+        .list_certificates()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(certs.keys, ["01:02"]);
+    let certificate = pki
+        .read_certificate("01:02")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(certificate.certificate, "issued-cert");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
