@@ -792,7 +792,8 @@ async fn sys_plugin_catalog_entry_lifecycle_uses_documented_paths() {
                 assert!(request.contains(r#""command":"example-plugin""#));
                 assert!(request.contains(r#""args":["--config=/secure/path"]"#));
                 assert!(request.contains(r#""env":["TOKEN=secret"]"#));
-                let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+                let response =
+                    "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
                 stream
                     .write_all(response.as_bytes())
                     .unwrap_or_else(|error| panic!("{error}"));
@@ -813,7 +814,8 @@ async fn sys_plugin_catalog_entry_lifecycle_uses_documented_paths() {
                 assert!(request.starts_with(
                     "DELETE /v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0 HTTP/1.1"
                 ));
-                let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+                let response =
+                    "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
                 stream
                     .write_all(response.as_bytes())
                     .unwrap_or_else(|error| panic!("{error}"));
