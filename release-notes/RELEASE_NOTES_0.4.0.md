@@ -25,11 +25,12 @@
   identity configuration.
 - PKI helpers cover URL and CRL config, root generation, intermediate
   generation, intermediate signing, signed intermediate install, role
-  write/read/list/delete, issue, sign, revoke, certificate list/read, CRL
-  rotation, and tidy.
+  write/read/list/delete, issue, sign, revoke, certificate list/read,
+  issuer/key list/read/delete, CRL rotation, and tidy.
 - KV v2 service config helpers cover typed data reads and bounded
   environment-style maps with `SecretString` values.
-- Planned remaining `0.4.0` modules: issuer/key lifecycle and ACME helpers.
+- Planned remaining `0.4.0` modules: PKI import/update/revoke issuer and ACME
+  helpers.
 - Default Cargo features: `approle`, `cert-auth`, `kubernetes-auth`, `token`,
   `kv1`, `kv2`, `pki`, `transit`, `sys`, `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
@@ -62,6 +63,8 @@
   from debug output.
 - PKI role lists, certificate lists, CA chains, URL/CRL config lists, and role
   list fields are bounded during deserialization.
+- PKI issuer/key list responses and issuer URL/usage/manual-chain fields are
+  bounded during deserialization.
 - KV v2 service config maps are bounded during deserialization and values are
   represented as `SecretString` with debug redaction.
 
@@ -78,7 +81,8 @@
 
 ## Known Limitations
 
-- Advanced PKI issuer/key lifecycle and ACME helpers are not complete yet.
+- Advanced PKI import/update/revoke issuer and ACME helpers are not complete
+  yet.
 - KV service config helpers intentionally accept flat string maps for the
   secret-aware `Kv2ServiceConfig` type; use typed structs for nested JSON.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots

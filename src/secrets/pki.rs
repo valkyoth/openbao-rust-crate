@@ -478,6 +478,80 @@ pub struct PkiCertificate {
     pub certificate: String,
 }
 
+/// PKI issuer list.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiIssuerList {
+    /// Issuer identifiers or names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+/// PKI issuer metadata returned by OpenBao.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiIssuerInfo {
+    /// Issuer identifier.
+    #[serde(default)]
+    pub issuer_id: Option<String>,
+    /// Issuer display name.
+    #[serde(default)]
+    pub issuer_name: Option<String>,
+    /// Backing key identifier.
+    #[serde(default)]
+    pub key_id: Option<String>,
+    /// Backing key display name.
+    #[serde(default)]
+    pub key_name: Option<String>,
+    /// Issuer certificate.
+    #[serde(default)]
+    pub certificate: Option<String>,
+    /// CA certificate chain.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    pub ca_chain: Vec<String>,
+    /// Manual chain references configured for this issuer.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    pub manual_chain: Vec<String>,
+    /// CRL distribution point URLs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    pub crl_distribution_points: Vec<String>,
+    /// Issuing certificate URLs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    pub issuing_certificates: Vec<String>,
+    /// OCSP server URLs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    pub ocsp_servers: Vec<String>,
+    /// Usage flags reported by OpenBao.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    pub usage: Vec<String>,
+    /// Leaf not-after behavior reported by OpenBao.
+    #[serde(default)]
+    pub leaf_not_after_behavior: Option<String>,
+}
+
+/// PKI key list.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiKeyList {
+    /// Key identifiers or names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+/// PKI key metadata returned by OpenBao.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiKeyInfo {
+    /// Key identifier.
+    #[serde(default)]
+    pub key_id: Option<String>,
+    /// Key display name.
+    #[serde(default)]
+    pub key_name: Option<String>,
+    /// Key type, such as `rsa` or `ec`.
+    #[serde(default)]
+    pub key_type: Option<String>,
+    /// Key size in bits, when OpenBao returns it.
+    #[serde(default)]
+    pub key_bits: Option<u64>,
+}
+
 impl Client<Authenticated> {
     /// Uses the PKI engine mounted at `mount`.
     pub fn pki(&self, mount: impl Into<String>) -> Result<Pki<'_>> {
@@ -677,6 +751,66 @@ impl Pki<'_> {
         .await
     }
 
+    /// Lists PKI issuers.
+    pub async fn list_issuers(&self) -> Result<PkiIssuerList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.enveloped(method, &self.path(&["issuers"])?, Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads PKI issuer metadata by issuer reference.
+    pub async fn read_issuer(&self, issuer_ref: &str) -> Result<PkiIssuerInfo> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["issuer", issuer_ref])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Deletes a PKI issuer by issuer reference.
+    pub async fn delete_issuer(&self, issuer_ref: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &self.path(&["issuer", issuer_ref])?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Lists PKI keys.
+    pub async fn list_keys(&self) -> Result<PkiKeyList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.enveloped(method, &self.path(&["keys"])?, Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads PKI key metadata by key reference.
+    pub async fn read_key(&self, key_ref: &str) -> Result<PkiKeyInfo> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["key", key_ref])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Deletes a PKI key by key reference.
+    pub async fn delete_key(&self, key_ref: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &self.path(&["key", key_ref])?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     async fn enveloped<T, B>(&self, method: Method, path: &str, request: Option<&B>) -> Result<T>
     where
         T: for<'de> Deserialize<'de>,
@@ -775,7 +909,10 @@ mod tests {
 
     use secrecy::{ExposeSecret, SecretString};
 
-    use super::{PkiAuthorityBundle, PkiCertificateBundle, PkiRole, PkiRoleList};
+    use super::{
+        PkiAuthorityBundle, PkiCertificateBundle, PkiIssuerInfo, PkiIssuerList, PkiKeyList,
+        PkiRole, PkiRoleList,
+    };
 
     #[test]
     fn pki_role_accepts_string_and_array_lists() {
@@ -828,5 +965,49 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn pki_issuer_info_accepts_string_and_array_lists() {
+        let issuer: PkiIssuerInfo = serde_json::from_str(
+            r#"{
+                "issuer_id":"issuer-1",
+                "manual_chain":"root,intermediate",
+                "usage":["issuing-certificates","crl-signing"],
+                "issuing_certificates":"https://bao.example/v1/pki/ca"
+            }"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(issuer.manual_chain, ["root", "intermediate"]);
+        assert_eq!(issuer.usage, ["issuing-certificates", "crl-signing"]);
+        assert_eq!(
+            issuer.issuing_certificates,
+            ["https://bao.example/v1/pki/ca"]
+        );
+    }
+
+    #[test]
+    fn pki_issuer_and_key_lists_are_bounded() {
+        let mut keys = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            keys.push(format!("item-{index}"));
+        }
+        let issuer_error =
+            match serde_json::from_value::<PkiIssuerList>(serde_json::json!({ "keys": keys })) {
+                Ok(_) => panic!("oversized PKI issuer list unexpectedly decoded"),
+                Err(error) => error,
+            };
+        assert!(issuer_error.to_string().contains("exceeds item limit"));
+
+        let mut keys = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            keys.push(format!("item-{index}"));
+        }
+        let key_error =
+            match serde_json::from_value::<PkiKeyList>(serde_json::json!({ "keys": keys })) {
+                Ok(_) => panic!("oversized PKI key list unexpectedly decoded"),
+                Err(error) => error,
+            };
+        assert!(key_error.to_string().contains("exceeds item limit"));
     }
 }

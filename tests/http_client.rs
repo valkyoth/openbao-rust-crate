@@ -2117,3 +2117,97 @@ async fn pki_authority_crl_and_tidy_paths_are_documented() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn pki_issuer_and_key_lifecycle_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..6 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("LIST /v1/pki/issuers HTTP/1.1"));
+                    r#"{"data":{"keys":["issuer-1"]}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/pki/issuer/issuer-1 HTTP/1.1"));
+                    r#"{"data":{"issuer_id":"issuer-1","issuer_name":"root-x1","key_id":"key-1","key_name":"root-key","certificate":"root-cert","ca_chain":["root-cert"],"manual_chain":["self"],"crl_distribution_points":["https://issuer.example/crl"],"issuing_certificates":["https://issuer.example/ca"],"ocsp_servers":["https://issuer.example/ocsp"],"usage":["issuing-certificates","crl-signing"],"leaf_not_after_behavior":"err"}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("DELETE /v1/pki/issuer/issuer-1 HTTP/1.1"));
+                    "{}"
+                }
+                3 => {
+                    assert!(request.starts_with("LIST /v1/pki/keys HTTP/1.1"));
+                    r#"{"data":{"keys":["key-1"]}}"#
+                }
+                4 => {
+                    assert!(request.starts_with("GET /v1/pki/key/key-1 HTTP/1.1"));
+                    r#"{"data":{"key_id":"key-1","key_name":"root-key","key_type":"rsa","key_bits":4096}}"#
+                }
+                5 => {
+                    assert!(request.starts_with("DELETE /v1/pki/key/key-1 HTTP/1.1"));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let issuers = pki
+        .list_issuers()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuers.keys, ["issuer-1"]);
+    let issuer = pki
+        .read_issuer("issuer-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer.issuer_name.as_deref(), Some("root-x1"));
+    assert_eq!(issuer.usage, ["issuing-certificates", "crl-signing"]);
+    pki.delete_issuer("issuer-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let keys = pki
+        .list_keys()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(keys.keys, ["key-1"]);
+    let key = pki
+        .read_key("key-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(key.key_type.as_deref(), Some("rsa"));
+    assert_eq!(key.key_bits, Some(4096));
+    pki.delete_key("key-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
