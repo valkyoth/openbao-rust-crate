@@ -27,9 +27,11 @@ Sources:
 - OpenAPI discovery support through `/sys/internal/specs/openapi`.
 - Environment-based client construction from common `OPENBAO_*`, `BAO_*`, and
   `VAULT_*` variables is implemented in `0.4.0`.
+- Implemented downstream ergonomics from Mjolni/Pawalyze review:
+  KV v2 service config loading into typed structs or bounded secret string maps.
 - Planned downstream ergonomics from Mjolni/Pawalyze review:
-  KV v2 service config loading, byte-oriented Transit helpers, JWT/JWKS
-  Transit helpers, idempotent admin bootstrap, and ACL policy builders.
+  byte-oriented Transit helpers, JWT/JWKS Transit helpers, idempotent admin
+  bootstrap, and ACL policy builders.
 - Planned posture helpers:
   best-effort FIPS profile validation for crate-controlled choices and a
   future quantum-readiness profile once OpenBao exposes stable primitives.
@@ -80,6 +82,8 @@ Support plan:
 - `0.2.0`: KV v1 and expanded KV v2 metadata/version operations; KV v1
   read/write/delete/list and KV v2 patch, config, metadata, undelete, destroy,
   and version reads are implemented.
+- `0.4.0`: KV v2 typed data reads and bounded service config maps with
+  `SecretString` values are implemented.
 - `0.3.0`: Transit key create/read/list/delete, encrypt, decrypt, rewrap,
   data key, random, hash, HMAC, sign, and verify are implemented.
 - `0.4.0`: PKI URL config, role write/read/list/delete, issue, sign, revoke,

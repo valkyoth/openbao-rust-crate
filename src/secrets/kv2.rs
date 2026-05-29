@@ -1,11 +1,13 @@
 //! KV version 2 secrets engine support.
 
+use core::fmt;
 use std::collections::BTreeMap;
 
 use reqwest::{
     Method, StatusCode,
     header::{CONTENT_TYPE, HeaderValue},
 };
+use secrecy::SecretString;
 use serde::{
     Deserialize, Deserializer, Serialize,
     de::{DeserializeOwned, IgnoredAny, MapAccess, Visitor},
@@ -56,6 +58,56 @@ pub struct Kv2Secret<T> {
     pub data: T,
     /// KV v2 metadata.
     pub metadata: Kv2Metadata,
+}
+
+/// Service configuration loaded from KV v2 as secret string values.
+#[derive(Clone, Default)]
+pub struct Kv2ServiceConfig {
+    /// Configuration key/value pairs.
+    pub values: BTreeMap<String, SecretString>,
+}
+
+impl Kv2ServiceConfig {
+    /// Returns a secret value by key.
+    pub fn get(&self, key: &str) -> Option<&SecretString> {
+        self.values.get(key)
+    }
+
+    /// Returns true when no configuration entries were loaded.
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
+    /// Returns the number of loaded configuration entries.
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    /// Consumes the wrapper and returns the secret value map.
+    pub fn into_inner(self) -> BTreeMap<String, SecretString> {
+        self.values
+    }
+}
+
+impl fmt::Debug for Kv2ServiceConfig {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Kv2ServiceConfig")
+            .field("keys", &self.values.keys().collect::<Vec<_>>())
+            .field("values", &"<redacted>")
+            .finish()
+    }
+}
+
+impl<'de> Deserialize<'de> for Kv2ServiceConfig {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(Self {
+            values: deserialize_bounded_secret_map(deserializer)?,
+        })
+    }
 }
 
 /// KV v2 version metadata.
@@ -189,6 +241,17 @@ impl Kv2<'_> {
         Ok(envelope.data)
     }
 
+    /// Reads only the user data from a KV v2 secret.
+    ///
+    /// This is a convenience for service configuration structs where callers
+    /// do not need KV version metadata.
+    pub async fn read_data<T>(&self, path: &str) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        Ok(self.read::<T>(path).await?.data)
+    }
+
     /// Reads a specific KV v2 secret version.
     pub async fn read_version<T>(&self, path: &str, version: u64) -> Result<Kv2Secret<T>>
     where
@@ -206,6 +269,32 @@ impl Kv2<'_> {
             )
             .await?;
         Ok(envelope.data)
+    }
+
+    /// Reads only the user data from a specific KV v2 secret version.
+    pub async fn read_data_version<T>(&self, path: &str, version: u64) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        Ok(self.read_version::<T>(path, version).await?.data)
+    }
+
+    /// Reads a KV v2 secret as a bounded service configuration map.
+    ///
+    /// Each value must be a JSON string and is loaded as [`SecretString`].
+    /// This is intended for environment-style service config, not arbitrary
+    /// nested JSON documents.
+    pub async fn read_service_config(&self, path: &str) -> Result<Kv2ServiceConfig> {
+        self.read_data(path).await
+    }
+
+    /// Reads a specific KV v2 secret version as a bounded service configuration map.
+    pub async fn read_service_config_version(
+        &self,
+        path: &str,
+        version: u64,
+    ) -> Result<Kv2ServiceConfig> {
+        self.read_data_version(path, version).await
     }
 
     /// Writes a KV v2 secret without check-and-set.
@@ -433,6 +522,48 @@ where
     )
 }
 
+fn deserialize_bounded_secret_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_map(BoundedSecretMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+struct BoundedSecretMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretMapVisitor<MAX> {
+    type Value = BTreeMap<String, SecretString>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "a map of at most {MAX} string service config values"
+        )
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, String>()? else {
+                return Ok(values);
+            };
+            values.insert(key, SecretString::from(value));
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "OpenBao service config map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedVersionMetadataMapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionMetadataMapVisitor<MAX> {
@@ -466,11 +597,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionMetadataMapVisitor<MA
 mod tests {
     #![allow(clippy::panic)]
 
-    use secrecy::SecretString;
+    use secrecy::{ExposeSecret, SecretString};
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::{Kv2KeyMetadata, Kv2List};
+    use super::{Kv2KeyMetadata, Kv2List, Kv2ServiceConfig};
 
     #[test]
     fn kv2_paths_are_validated() {
@@ -551,6 +682,37 @@ mod tests {
         value["versions"] = serde_json::Value::Object(versions);
         let error = match serde_json::from_value::<Kv2KeyMetadata>(value) {
             Ok(_) => panic!("oversized KV v2 versions unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn kv2_service_config_values_are_secret_and_redacted() {
+        let config: Kv2ServiceConfig =
+            serde_json::from_str(r#"{"DATABASE_URL":"postgres://secret","API_KEY":"key-value"}"#)
+                .unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(config.len(), 2);
+        assert_eq!(
+            config.get("API_KEY").map(SecretString::expose_secret),
+            Some("key-value")
+        );
+        let debug = format!("{config:?}");
+        assert!(debug.contains("API_KEY"));
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("key-value"));
+    }
+
+    #[test]
+    fn kv2_service_config_map_is_bounded() {
+        let mut values = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            values.insert(format!("KEY_{index}"), serde_json::json!("value"));
+        }
+        let value = serde_json::Value::Object(values);
+        let error = match serde_json::from_value::<Kv2ServiceConfig>(value) {
+            Ok(_) => panic!("oversized KV v2 service config unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

@@ -54,7 +54,8 @@ Implemented now:
 - Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
   helpers.
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
-  version delete, undelete, destroy, metadata, and backend config helpers.
+  version delete, undelete, destroy, metadata, backend config, typed data, and
+  secret-aware service config helpers.
 - KV v1 read, write, delete, and list helpers.
 - PKI URL config, role write/read/list/delete, issue, sign, revoke,
   certificate list, and certificate read helpers.
@@ -77,7 +78,7 @@ Implemented now:
 
 Planned next:
 
-- `0.4.0`: remaining PKI authority management and KV service config loading.
+- `0.4.0`: remaining PKI authority management.
 - `0.5.0`: database secrets, JWT/OIDC, and userpass.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
@@ -203,7 +204,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | KV v2 CAS write | Yes | Optional check-and-set version support. |
 | KV v2 patch | Yes | JSON merge patch content type. |
 | KV v2 list/delete versions | Yes | Metadata list, latest delete, soft delete, undelete, and destroy. |
-| KV v2 metadata/config | Yes | Backend and per-key metadata helpers. |
+| KV v2 metadata/config | Yes | Backend, per-key metadata, typed data, and secret-aware service config helpers. |
 | KV v1 | Yes | Read, write, delete, and list helpers. |
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, and verify. |
 | PKI | Partial | URL config, roles, issue, sign, revoke, certificate list, and certificate read are implemented. |
@@ -398,6 +399,35 @@ async fn main() -> Result<()> {
     )
     .await?;
 
+    Ok(())
+}
+```
+
+Load service configuration from KV v2:
+
+```rust,no_run
+use openbao::{Client, Result};
+use secrecy::SecretString;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct AppConfig {
+    database_url: SecretString,
+    listen_addr: String,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.with_token(token);
+    let kv = client.kv2("secret")?;
+
+    let typed = kv.read_data::<AppConfig>("services/api").await?;
+    let env_map = kv.read_service_config("services/api-env").await?;
+
+    println!("listen: {}", typed.listen_addr);
+    println!("loaded {} secret config keys", env_map.len());
+    let _database_url_is_not_logged = typed.database_url;
     Ok(())
 }
 ```
