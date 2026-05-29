@@ -16,7 +16,7 @@
 <br>
 
 <p align="center">
-  <img src="./.github/images/openbao_rust_crate.webp" alt="OpenBao Rust crate overview">
+  <img src="https://raw.githubusercontent.com/valkyoth/openbao-rust-crate/main/.github/images/openbao_rust_crate.webp" alt="OpenBao Rust crate overview">
 </p>
 
 # OpenBao Rust SDK
