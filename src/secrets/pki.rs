@@ -1,12 +1,13 @@
 //! PKI secrets engine support.
 
 use core::fmt;
+use std::collections::BTreeMap;
 
 use reqwest::{Method, StatusCode};
 use secrecy::SecretString;
 use serde::{
     Deserialize, Deserializer, Serialize,
-    de::{IgnoredAny, SeqAccess, Visitor},
+    de::{IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
 
 use crate::{
@@ -552,6 +553,90 @@ pub struct PkiKeyInfo {
     pub key_bits: Option<u64>,
 }
 
+/// PKI ACME server configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct PkiAcmeConfig {
+    /// Issuers allowed for explicit ACME issuer paths.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_issuers: Vec<String>,
+    /// Roles allowed for ACME issuance.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_roles: Vec<String>,
+    /// Whether role extended key usages are honored for ACME issuance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allow_role_ext_key_usage: Option<bool>,
+    /// Default ACME directory policy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_directory_policy: Option<String>,
+    /// Optional DNS resolver used for challenge lookups.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dns_resolver: Option<String>,
+    /// External account binding policy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub eab_policy: Option<String>,
+    /// Whether ACME is enabled for this mount.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+}
+
+/// ACME external account binding token.
+#[derive(Clone, Deserialize)]
+pub struct PkiAcmeEabToken {
+    /// Token creation time.
+    #[serde(default)]
+    pub created_on: Option<String>,
+    /// Key identifier for ACME EAB registration.
+    pub id: String,
+    /// EAB key type.
+    #[serde(default)]
+    pub key_type: Option<String>,
+    /// ACME directory this token is scoped to.
+    #[serde(default)]
+    pub acme_directory: Option<String>,
+    /// EAB HMAC key. Treat as secret material.
+    pub key: SecretString,
+}
+
+impl fmt::Debug for PkiAcmeEabToken {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PkiAcmeEabToken")
+            .field("created_on", &self.created_on)
+            .field("id", &self.id)
+            .field("key_type", &self.key_type)
+            .field("acme_directory", &self.acme_directory)
+            .field("key", &"<redacted>")
+            .finish()
+    }
+}
+
+/// Metadata for an unused ACME external account binding token.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiAcmeEabInfo {
+    /// Token creation time.
+    #[serde(default)]
+    pub created_on: Option<String>,
+    /// EAB key type.
+    #[serde(default)]
+    pub key_type: Option<String>,
+    /// ACME directory this token is scoped to.
+    #[serde(default)]
+    pub acme_directory: Option<String>,
+}
+
+/// List of unused ACME external account binding tokens.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiAcmeEabList {
+    /// EAB key identifiers.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Metadata keyed by EAB key identifier.
+    #[serde(default, deserialize_with = "deserialize_bounded_eab_info_map")]
+    pub key_info: BTreeMap<String, PkiAcmeEabInfo>,
+}
+
 impl Client<Authenticated> {
     /// Uses the PKI engine mounted at `mount`.
     pub fn pki(&self, mount: impl Into<String>) -> Result<Pki<'_>> {
@@ -811,6 +896,86 @@ impl Pki<'_> {
             .await
     }
 
+    /// Reads ACME configuration for this PKI mount.
+    pub async fn read_acme_config(&self) -> Result<PkiAcmeConfig> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["config", "acme"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Sets ACME configuration for this PKI mount.
+    pub async fn write_acme_config(&self, config: &PkiAcmeConfig) -> Result<PkiAcmeConfig> {
+        self.enveloped(Method::POST, &self.path(&["config", "acme"])?, Some(config))
+            .await
+    }
+
+    /// Generates an ACME EAB token for the default ACME directory.
+    pub async fn generate_acme_eab(&self) -> Result<PkiAcmeEabToken> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["acme", "new-eab"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Generates an ACME EAB token scoped to an issuer directory.
+    pub async fn generate_issuer_acme_eab(&self, issuer_ref: &str) -> Result<PkiAcmeEabToken> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "acme", "new-eab"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Generates an ACME EAB token scoped to a role directory.
+    pub async fn generate_role_acme_eab(&self, role: &str) -> Result<PkiAcmeEabToken> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["roles", role, "acme", "new-eab"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Generates an ACME EAB token scoped to an issuer and role directory.
+    pub async fn generate_issuer_role_acme_eab(
+        &self,
+        issuer_ref: &str,
+        role: &str,
+    ) -> Result<PkiAcmeEabToken> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "roles", role, "acme", "new-eab"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Lists unused ACME EAB tokens.
+    pub async fn list_acme_eab_tokens(&self) -> Result<PkiAcmeEabList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.enveloped(method, &self.path(&["eab"])?, Option::<&Empty>::None)
+            .await
+    }
+
+    /// Deletes an unused ACME EAB token.
+    pub async fn delete_acme_eab_token(&self, key_id: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &self.path(&["eab", key_id])?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     async fn enveloped<T, B>(&self, method: Method, path: &str, request: Option<&B>) -> Result<T>
     where
         T: for<'de> Deserialize<'de>,
@@ -903,6 +1068,48 @@ impl<'de, const MAX: usize> Visitor<'de> for StringOrListVisitor<MAX> {
     }
 }
 
+fn deserialize_bounded_eab_info_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, PkiAcmeEabInfo>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_map(BoundedEabInfoMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+struct BoundedEabInfoMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedEabInfoMapVisitor<MAX> {
+    type Value = BTreeMap<String, PkiAcmeEabInfo>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "a map of at most {MAX} ACME EAB metadata entries"
+        )
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, PkiAcmeEabInfo>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "OpenBao ACME EAB metadata exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
@@ -910,8 +1117,8 @@ mod tests {
     use secrecy::{ExposeSecret, SecretString};
 
     use super::{
-        PkiAuthorityBundle, PkiCertificateBundle, PkiIssuerInfo, PkiIssuerList, PkiKeyList,
-        PkiRole, PkiRoleList,
+        PkiAcmeConfig, PkiAcmeEabList, PkiAcmeEabToken, PkiAuthorityBundle, PkiCertificateBundle,
+        PkiIssuerInfo, PkiIssuerList, PkiKeyList, PkiRole, PkiRoleList,
     };
 
     #[test]
@@ -1009,5 +1216,57 @@ mod tests {
                 Err(error) => error,
             };
         assert!(key_error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn pki_acme_config_accepts_string_and_array_lists() {
+        let config: PkiAcmeConfig = serde_json::from_str(
+            r#"{
+                "allowed_issuers":"*",
+                "allowed_roles":["web","api"],
+                "enabled":true,
+                "eab_policy":"always-required"
+            }"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(config.allowed_issuers, ["*"]);
+        assert_eq!(config.allowed_roles, ["web", "api"]);
+        assert_eq!(config.enabled, Some(true));
+    }
+
+    #[test]
+    fn pki_acme_eab_token_redacts_key_debug() {
+        let token: PkiAcmeEabToken = serde_json::from_str(
+            r#"{"id":"eab-1","key_type":"hs","acme_directory":"acme/directory","key":"hmac-secret"}"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(token.key.expose_secret(), "hmac-secret");
+        let debug = format!("{token:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("hmac-secret"));
+    }
+
+    #[test]
+    fn pki_acme_eab_metadata_map_is_bounded() {
+        let mut keys = Vec::new();
+        let mut key_info = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            let key = format!("eab-{index}");
+            keys.push(key.clone());
+            key_info.insert(
+                key,
+                serde_json::json!({
+                    "created_on": "2026-05-29T00:00:00Z",
+                    "key_type": "hs",
+                    "acme_directory": "acme/directory"
+                }),
+            );
+        }
+        let value = serde_json::json!({ "keys": keys, "key_info": key_info });
+        let error = match serde_json::from_value::<PkiAcmeEabList>(value) {
+            Ok(_) => panic!("oversized PKI ACME EAB list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
     }
 }

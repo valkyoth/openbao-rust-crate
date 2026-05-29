@@ -2211,3 +2211,138 @@ async fn pki_issuer_and_key_lifecycle_paths_are_documented() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn pki_acme_config_and_eab_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..8 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/pki/config/acme HTTP/1.1"));
+                    r#"{"data":{"allowed_issuers":["*"],"allowed_roles":["web"],"default_directory_policy":"role:web","dns_resolver":"8.8.8.8:53","eab_policy":"always-required","enabled":true}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/pki/config/acme HTTP/1.1"));
+                    assert!(request.contains(r#""allowed_roles":["web"]"#));
+                    assert!(request.contains(r#""eab_policy":"always-required""#));
+                    r#"{"data":{"allowed_issuers":["*"],"allowed_roles":["web"],"default_directory_policy":"role:web","eab_policy":"always-required","enabled":true}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/pki/acme/new-eab HTTP/1.1"));
+                    r#"{"data":{"created_on":"2026-05-29T00:00:00Z","id":"eab-default","key_type":"hs","acme_directory":"acme/directory","key":"default-secret"}}"#
+                }
+                3 => {
+                    assert!(
+                        request.starts_with("POST /v1/pki/issuer/issuer-1/acme/new-eab HTTP/1.1")
+                    );
+                    r#"{"data":{"id":"eab-issuer","key_type":"hs","acme_directory":"issuer/issuer-1/acme/directory","key":"issuer-secret"}}"#
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/pki/roles/web/acme/new-eab HTTP/1.1"));
+                    r#"{"data":{"id":"eab-role","key_type":"hs","acme_directory":"roles/web/acme/directory","key":"role-secret"}}"#
+                }
+                5 => {
+                    assert!(request.starts_with(
+                        "POST /v1/pki/issuer/issuer-1/roles/web/acme/new-eab HTTP/1.1"
+                    ));
+                    r#"{"data":{"id":"eab-issuer-role","key_type":"hs","acme_directory":"issuer/issuer-1/roles/web/acme/directory","key":"issuer-role-secret"}}"#
+                }
+                6 => {
+                    assert!(request.starts_with("LIST /v1/pki/eab HTTP/1.1"));
+                    r#"{"data":{"keys":["eab-default"],"key_info":{"eab-default":{"created_on":"2026-05-29T00:00:00Z","key_type":"hs","acme_directory":"acme/directory"}}}}"#
+                }
+                7 => {
+                    assert!(request.starts_with("DELETE /v1/pki/eab/eab-default HTTP/1.1"));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let config = pki
+        .read_acme_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(config.allowed_roles, ["web"]);
+    assert_eq!(config.eab_policy.as_deref(), Some("always-required"));
+
+    let updated = pki
+        .write_acme_config(&openbao::secrets::pki::PkiAcmeConfig {
+            allowed_issuers: vec!["*".to_owned()],
+            allowed_roles: vec!["web".to_owned()],
+            default_directory_policy: Some("role:web".to_owned()),
+            eab_policy: Some("always-required".to_owned()),
+            enabled: Some(true),
+            ..Default::default()
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(updated.enabled, Some(true));
+
+    let default_eab = pki
+        .generate_acme_eab()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(default_eab.key.expose_secret(), "default-secret");
+    let issuer_eab = pki
+        .generate_issuer_acme_eab("issuer-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer_eab.id, "eab-issuer");
+    let role_eab = pki
+        .generate_role_acme_eab("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role_eab.id, "eab-role");
+    let issuer_role_eab = pki
+        .generate_issuer_role_acme_eab("issuer-1", "web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer_role_eab.id, "eab-issuer-role");
+
+    let eab_tokens = pki
+        .list_acme_eab_tokens()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(eab_tokens.keys, ["eab-default"]);
+    assert_eq!(
+        eab_tokens
+            .key_info
+            .get("eab-default")
+            .and_then(|info| info.key_type.as_deref()),
+        Some("hs")
+    );
+    pki.delete_acme_eab_token("eab-default")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
