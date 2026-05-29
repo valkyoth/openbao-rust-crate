@@ -75,6 +75,48 @@ async fn kv2_read_sends_documented_headers_and_path() {
 }
 
 #[tokio::test]
+async fn kv2_read_optional_maps_not_found_to_none() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let _bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let body = r#"{"errors":["not found"]}"#;
+        let response = format!(
+            "HTTP/1.1 404 Not Found\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let secret = client
+        .kv2("secret")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .read_optional::<SecretData>("app/missing")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(secret.is_none());
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn kv2_service_config_reads_data_without_metadata_and_redacts_values() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -327,20 +369,50 @@ async fn sys_enable_mount_sends_documented_path() {
         .unwrap_or_else(|error| panic!("{error}"))
         .with_token(SecretString::from("test-token"));
 
-    let mut options = std::collections::BTreeMap::new();
-    options.insert("version".to_owned(), "2".to_owned());
-    let request = openbao::sys::MountEnableRequest {
-        backend_type: "kv".to_owned(),
-        description: None,
-        config: None,
-        options,
-        local: None,
-        seal_wrap: None,
-        external_entropy_access: None,
-    };
+    let request = openbao::sys::MountEnableRequest::kv2();
     client
         .sys()
         .enable_mount("secret", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_enable_kv2_sends_versioned_kv_mount_request() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/sys/mounts/apps HTTP/1.1"));
+        assert!(request.contains(r#""type":"kv""#));
+        assert!(request.contains(r#""description":"application secrets""#));
+        assert!(request.contains(r#""options":{"version":"2"}"#));
+        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    client
+        .sys()
+        .enable_kv2("apps", Some("application secrets"))
         .await
         .unwrap_or_else(|error| panic!("{error}"));
 

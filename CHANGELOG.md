@@ -8,6 +8,16 @@ All notable changes to this project are documented here.
 
 - `Client::try_with_token` for immediate auth-token header validation before
   building an authenticated client.
+- Crate-root re-exports for public API dependency types, including
+  `SecretString`, `ExposeSecret`, `Method`, `StatusCode`, `Certificate`,
+  `Identity`, and `tls`.
+- `prelude` module for common application imports.
+- `Default` implementations and constructors for common admin request types.
+- `Sys::enable_kv2` and `MountEnableRequest::kv2` helpers to avoid the
+  stringly typed KV v2 mount setup footgun.
+- `Error::status`, `Error::is_not_found`, `Kv2::read_optional`, and
+  `Kv2::read_data_optional` helpers for common absent-secret branching.
+- Constructors for PKI issue and Transit encrypt/decrypt/rewrap requests.
 
 ### Fixed
 

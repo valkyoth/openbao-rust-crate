@@ -351,7 +351,7 @@ pub struct UserLockoutConfig {
 }
 
 /// Request for enabling a secrets engine.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct MountEnableRequest {
     /// Backend type, such as `kv`, `pki`, or `transit`.
     #[serde(rename = "type")]
@@ -376,8 +376,35 @@ pub struct MountEnableRequest {
     pub external_entropy_access: Option<bool>,
 }
 
+impl MountEnableRequest {
+    /// Creates a secrets-engine enable request for `backend_type`.
+    pub fn new(backend_type: impl Into<String>) -> Self {
+        Self {
+            backend_type: backend_type.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Creates a KV v2 secrets-engine enable request.
+    pub fn kv2() -> Self {
+        let mut options = BTreeMap::new();
+        options.insert("version".to_owned(), "2".to_owned());
+        Self {
+            backend_type: "kv".to_owned(),
+            options,
+            ..Self::default()
+        }
+    }
+
+    /// Sets a human-readable backend description.
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+}
+
 /// Request for enabling an auth method.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct AuthEnableRequest {
     /// Auth backend type, such as `approle`, `userpass`, or `kubernetes`.
     #[serde(rename = "type")]
@@ -391,6 +418,22 @@ pub struct AuthEnableRequest {
     /// Whether this auth method is local to the node.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub local: Option<bool>,
+}
+
+impl AuthEnableRequest {
+    /// Creates an auth-method enable request for `backend_type`.
+    pub fn new(backend_type: impl Into<String>) -> Self {
+        Self {
+            backend_type: backend_type.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Sets a human-readable auth-method description.
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
 }
 
 /// Response wrapping lookup metadata.
@@ -434,7 +477,7 @@ pub struct PolicyInfo {
 }
 
 /// ACL policy create/update request.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct PolicyWriteRequest {
     /// Policy document.
     pub policy: String,
@@ -450,6 +493,23 @@ pub struct PolicyWriteRequest {
     /// Whether check-and-set should be required by this update.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cas_required: Option<bool>,
+}
+
+impl PolicyWriteRequest {
+    /// Creates a policy write request from an ACL policy document.
+    pub fn new(policy: impl Into<String>) -> Self {
+        Self {
+            policy: policy.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Sets the policy lifetime duration.
+    #[must_use]
+    pub fn with_ttl(mut self, ttl: impl Into<String>) -> Self {
+        self.ttl = Some(ttl.into());
+        self
+    }
 }
 
 /// Capabilities returned for queried OpenBao paths.
@@ -527,7 +587,7 @@ pub struct AuditDevice {
 }
 
 /// Request for enabling an audit device.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct AuditEnableRequest {
     /// Audit device type, such as `file`, `socket`, or `syslog`.
     #[serde(rename = "type")]
@@ -541,6 +601,22 @@ pub struct AuditEnableRequest {
     /// Whether this audit device is local to the node.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub local: Option<bool>,
+}
+
+impl AuditEnableRequest {
+    /// Creates an audit-device enable request for `backend_type`.
+    pub fn new(backend_type: impl Into<String>) -> Self {
+        Self {
+            backend_type: backend_type.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Sets a human-readable audit-device description.
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
 }
 
 /// Audit hash response returned by `/sys/audit-hash/:path`.
@@ -1014,6 +1090,15 @@ impl Sys<'_, Authenticated> {
                 Some(request),
             )
             .await
+    }
+
+    /// Enables a KV v2 secrets engine at `mount_path`.
+    pub async fn enable_kv2(&self, mount_path: &str, description: Option<&str>) -> Result<Empty> {
+        let mut request = MountEnableRequest::kv2();
+        if let Some(description) = description {
+            request.description = Some(description.to_owned());
+        }
+        self.enable_mount(mount_path, &request).await
     }
 
     /// Disables a mounted secrets engine.
@@ -1896,9 +1981,9 @@ mod tests {
     use secrecy::SecretString;
 
     use super::{
-        LeaseDuration, PolicyList, sys_path, validate_capability_paths,
-        validate_dev_bootstrap_options, validate_lease_id, validate_sha256_hex,
-        validate_wrapping_ttl,
+        AuditEnableRequest, AuthEnableRequest, LeaseDuration, MountEnableRequest, PolicyList,
+        PolicyWriteRequest, sys_path, validate_capability_paths, validate_dev_bootstrap_options,
+        validate_lease_id, validate_sha256_hex, validate_wrapping_ttl,
     };
 
     #[test]
@@ -2082,6 +2167,37 @@ mod tests {
                 "sha256"
             )
             .is_err()
+        );
+    }
+
+    #[test]
+    fn request_constructors_fill_required_fields() {
+        assert_eq!(MountEnableRequest::new("pki").backend_type, "pki");
+        assert_eq!(MountEnableRequest::kv2().backend_type, "kv");
+        assert_eq!(
+            MountEnableRequest::kv2()
+                .options
+                .get("version")
+                .map(String::as_str),
+            Some("2")
+        );
+        assert_eq!(
+            AuthEnableRequest::new("kubernetes")
+                .with_description("cluster auth")
+                .description
+                .as_deref(),
+            Some("cluster auth")
+        );
+        assert_eq!(
+            AuditEnableRequest::new("file")
+                .with_description("audit log")
+                .description
+                .as_deref(),
+            Some("audit log")
+        );
+        assert_eq!(
+            PolicyWriteRequest::new("path \"secret/*\" { capabilities = [\"read\"] }").ttl,
+            None
         );
     }
 

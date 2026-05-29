@@ -2,8 +2,7 @@
 
 #![allow(clippy::print_stdout)]
 
-use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::{Client, Result, SecretString};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -21,7 +20,7 @@ async fn main() -> Result<()> {
                 "BAO_TOKEN must be set for this example: {error}"
             ))
         })?;
-    let client = Client::new("https://127.0.0.1:9940")?.with_token(token);
+    let client = Client::new("https://127.0.0.1:9940")?.try_with_token(token)?;
     let secret = client
         .kv2("secret")?
         .read::<DatabaseCredentials>("production/database")

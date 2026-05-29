@@ -54,4 +54,27 @@ pub use client::{
     RootCertificateMode, Unauthenticated,
 };
 pub use error::{Error, Result};
+pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
 pub use response::{Empty, ResponseEnvelope};
+pub use secrecy::{self, ExposeSecret, SecretString};
+
+/// Common imports for application code using the OpenBao SDK.
+pub mod prelude {
+    pub use crate::{
+        Authenticated, Certificate, Client, ClientBuilder, Empty, Error, ExposeSecret, HeaderMode,
+        Identity, Method, OpenBao, OpenBaoConfig, ResponseEnvelope, Result, SecretString,
+        StatusCode, Unauthenticated,
+    };
+
+    #[cfg(any(
+        feature = "approle",
+        feature = "cert-auth",
+        feature = "kubernetes-auth",
+        feature = "token"
+    ))]
+    pub use crate::auth;
+    #[cfg(any(feature = "kv1", feature = "kv2", feature = "pki", feature = "transit"))]
+    pub use crate::secrets;
+    #[cfg(feature = "sys")]
+    pub use crate::sys;
+}

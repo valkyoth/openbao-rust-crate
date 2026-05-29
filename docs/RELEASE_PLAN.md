@@ -31,8 +31,9 @@ reimplemented in applications:
   token aliases, namespace, and CA/root-only trust settings;
 - KV v2 service config loading into `BTreeMap<String, SecretString>` and typed
   structs, with optional fallback behavior for local development;
-- byte-oriented Transit helpers that base64 encode/decode internally for
-  encrypt, decrypt, HMAC, sign, verify, and envelope-key wrapping;
+- optional-feature byte-oriented Transit helpers that base64 encode/decode
+  internally for encrypt, decrypt, HMAC, sign, verify, and envelope-key
+  wrapping without adding the dependency to default builds;
 - Transit signing helpers for JWT/JWKS use cases, including safe extraction of
   raw signature bytes and asymmetric public key metadata;
 - idempotent admin bootstrap helpers for mounts, Transit keys, policies, KV

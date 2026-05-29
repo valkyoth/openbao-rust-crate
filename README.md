@@ -44,7 +44,7 @@ The crate is dual-licensed under MIT or Apache-2.0.
 Implemented now:
 
 - Async client with typestate authentication.
-- Direct token authentication with `secrecy::SecretString`.
+- Direct token authentication with re-exported `openbao::SecretString`.
 - AppRole login with secret-aware role ID, secret ID, token, and accessor
   handling.
 - Kubernetes auth login plus config and role administration helpers.
@@ -100,7 +100,7 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | Default TLS backend | Rustls |
 | TLS floor | TLS 1.3 by default; TLS 1.2 requires explicit opt-in |
 | Plain HTTP | Rejected by default; numeric loopback IPs only when explicitly enabled |
-| Token storage | `secrecy::SecretString` |
+| Token storage | `openbao::SecretString` (`secrecy::SecretString`) |
 | Unsafe policy | `unsafe_code = "forbid"` |
 | Path validation | Rejects traversal, query/fragment injection, empty segments, controls, and trailing periods |
 | Error posture | API error strings are bounded and sanitized before formatting |
@@ -134,16 +134,14 @@ Compatibility evidence for `0.4.0`:
 ```toml
 [dependencies]
 openbao = "0.4"
-secrecy = "0.10.3"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 ```
 
-Some advanced examples below name transport and JSON helper types directly:
+Some advanced examples below use JSON helper types directly:
 
 ```toml
 [dependencies]
-reqwest = { version = "0.13.4", default-features = false, features = ["rustls"] }
 serde_json = "1.0.150"
 ```
 
@@ -254,7 +252,7 @@ Create a client from an existing token:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -287,8 +285,8 @@ Configure a stricter client with a namespace and root-only trust store:
 
 ```rust,no_run
 use openbao::{Client, OpenBaoConfig, Result};
-use reqwest::Certificate;
-use secrecy::SecretString;
+use openbao::Certificate;
+use openbao::SecretString;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -316,7 +314,7 @@ Authenticate with AppRole:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -337,7 +335,7 @@ Write and read KV v2 data:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -376,7 +374,7 @@ Use KV v2 check-and-set, patch, and version operations:
 ```rust,no_run
 use openbao::secrets::kv2::{Kv2MetadataOptions, Kv2WriteOptions};
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -429,7 +427,7 @@ Load service configuration from KV v2:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -458,7 +456,7 @@ Use a KV v1 mount:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -491,7 +489,7 @@ Encrypt and decrypt through Transit:
 ```rust,no_run
 use openbao::secrets::transit::{TransitDecryptRequest, TransitEncryptRequest};
 use openbao::{Client, Result};
-use secrecy::{ExposeSecret, SecretString};
+use openbao::{ExposeSecret, SecretString};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -502,25 +500,14 @@ async fn main() -> Result<()> {
     let encrypted = transit
         .encrypt(
             "app-key",
-            &TransitEncryptRequest {
-                plaintext: SecretString::from("c2VjcmV0"),
-                associated_data: None,
-                context: None,
-                key_version: None,
-                nonce: None,
-            },
+            &TransitEncryptRequest::new(SecretString::from("c2VjcmV0")),
         )
         .await?;
 
     let decrypted = transit
         .decrypt(
             "app-key",
-            &TransitDecryptRequest {
-                ciphertext: encrypted.ciphertext,
-                associated_data: None,
-                context: None,
-                nonce: None,
-            },
+            &TransitDecryptRequest::new(encrypted.ciphertext),
         )
         .await?;
 
@@ -534,7 +521,7 @@ Create, inspect, renew, and revoke a child token:
 ```rust,no_run
 use openbao::auth::token::TokenCreateRequest;
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 use std::collections::BTreeMap;
 
 #[tokio::main]
@@ -564,13 +551,11 @@ async fn main() -> Result<()> {
 }
 ```
 
-Enable and tune a KV v2 mount:
+Enable a KV v2 mount:
 
 ```rust,no_run
-use openbao::sys::{LeaseDuration, MountConfig, MountEnableRequest};
 use openbao::{Client, Result};
-use secrecy::SecretString;
-use std::collections::BTreeMap;
+use openbao::SecretString;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -579,22 +564,7 @@ async fn main() -> Result<()> {
 
     client
         .sys()
-        .enable_mount(
-            "apps",
-            &MountEnableRequest {
-                backend_type: "kv".to_owned(),
-                description: Some("application secrets".to_owned()),
-                config: Some(MountConfig {
-                    default_lease_ttl: Some(LeaseDuration::Duration("30m".to_owned())),
-                    max_lease_ttl: Some(LeaseDuration::Duration("2h".to_owned())),
-                    ..MountConfig::default()
-                }),
-                options: BTreeMap::from([("version".to_owned(), "2".to_owned())]),
-                local: None,
-                seal_wrap: Some(true),
-                external_entropy_access: None,
-            },
-        )
+        .enable_kv2("apps", Some("application secrets"))
         .await?;
 
     let mounts = client.sys().list_mounts().await?;
@@ -607,7 +577,7 @@ Wrap and unwrap JSON data:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -640,9 +610,8 @@ async fn main() -> Result<()> {
 Write an ACL policy and check capabilities:
 
 ```rust,no_run
+use openbao::{Client, Result, SecretString};
 use openbao::sys::PolicyWriteRequest;
-use openbao::{Client, Result};
-use secrecy::SecretString;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -653,13 +622,7 @@ async fn main() -> Result<()> {
         .sys()
         .write_policy(
             "app-read",
-            &PolicyWriteRequest {
-                policy: r#"path "secret/data/app" { capabilities = ["read"] }"#.to_owned(),
-                expiration: None,
-                ttl: None,
-                cas: None,
-                cas_required: None,
-            },
+            &PolicyWriteRequest::new(r#"path "secret/data/app" { capabilities = ["read"] }"#),
         )
         .await?;
 
@@ -672,9 +635,8 @@ async fn main() -> Result<()> {
 Enable an audit device and calculate an audit hash:
 
 ```rust,no_run
+use openbao::{Client, Result, SecretString};
 use openbao::sys::AuditEnableRequest;
-use openbao::{Client, Result};
-use secrecy::SecretString;
 use std::collections::BTreeMap;
 
 #[tokio::main]
@@ -687,13 +649,11 @@ async fn main() -> Result<()> {
         .enable_audit_device(
             "file",
             &AuditEnableRequest {
-                backend_type: "file".to_owned(),
-                description: Some("local audit file".to_owned()),
                 options: BTreeMap::from([(
                     "file_path".to_owned(),
                     "/var/log/openbao/audit.log".to_owned(),
                 )]),
-                local: None,
+                ..AuditEnableRequest::new("file").with_description("local audit file")
             },
         )
         .await?;
@@ -712,7 +672,7 @@ Look up and renew one exact lease:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -735,7 +695,7 @@ Read and reload a plugin catalog entry:
 ```rust,no_run
 use openbao::sys::{PluginReloadRequest, PluginType};
 use openbao::{Client, Result};
-use secrecy::SecretString;
+use openbao::SecretString;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -767,8 +727,8 @@ Call an endpoint that is not typed yet:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use reqwest::Method;
-use secrecy::SecretString;
+use openbao::Method;
+use openbao::SecretString;
 use serde_json::Value;
 
 #[tokio::main]
@@ -823,7 +783,7 @@ numeric-loopback instance directly:
 
 ```rust,no_run
 use openbao::{Client, OpenBaoConfig, Result, sys::DevBootstrapOptions};
-use reqwest::Certificate;
+use openbao::Certificate;
 
 #[tokio::main]
 async fn main() -> Result<()> {

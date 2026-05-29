@@ -383,6 +383,16 @@ pub struct PkiIssueRequest {
     pub exclude_cn_from_sans: Option<bool>,
 }
 
+impl PkiIssueRequest {
+    /// Creates a certificate issue request for `common_name`.
+    pub fn new(common_name: impl Into<String>) -> Self {
+        Self {
+            common_name: common_name.into(),
+            ..Self::default()
+        }
+    }
+}
+
 /// Request for signing a caller-provided CSR.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct PkiSignRequest {

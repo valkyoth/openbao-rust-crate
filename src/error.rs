@@ -2,6 +2,8 @@
 
 use core::fmt;
 
+use reqwest::StatusCode;
+
 /// Result alias used by this crate.
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -87,6 +89,21 @@ impl fmt::Display for Error {
     }
 }
 
+impl Error {
+    /// HTTP status when the failure was an OpenBao API error.
+    pub fn status(&self) -> Option<StatusCode> {
+        match self {
+            Self::Api { status, .. } => Some(*status),
+            _ => None,
+        }
+    }
+
+    /// Returns true when OpenBao reported the requested path or value as absent.
+    pub fn is_not_found(&self) -> bool {
+        self.status() == Some(StatusCode::NOT_FOUND)
+    }
+}
+
 fn sanitize_api_error(error: &str) -> String {
     error
         .chars()
@@ -127,5 +144,17 @@ mod tests {
         assert!(!message.contains('\n'));
         assert!(!message.contains('\r'));
         assert!(message.len() < 600);
+    }
+
+    #[test]
+    fn api_error_helpers_expose_status() {
+        let error = Error::Api {
+            status: StatusCode::NOT_FOUND,
+            errors: Vec::new(),
+        };
+
+        assert_eq!(error.status(), Some(StatusCode::NOT_FOUND));
+        assert!(error.is_not_found());
+        assert!(!Error::MissingToken.is_not_found());
     }
 }

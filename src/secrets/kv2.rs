@@ -241,6 +241,18 @@ impl Kv2<'_> {
         Ok(envelope.data)
     }
 
+    /// Reads a KV v2 secret, returning `None` when OpenBao returns 404.
+    pub async fn read_optional<T>(&self, path: &str) -> Result<Option<Kv2Secret<T>>>
+    where
+        T: DeserializeOwned,
+    {
+        match self.read(path).await {
+            Ok(secret) => Ok(Some(secret)),
+            Err(error) if error.is_not_found() => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
     /// Reads only the user data from a KV v2 secret.
     ///
     /// This is a convenience for service configuration structs where callers
@@ -250,6 +262,14 @@ impl Kv2<'_> {
         T: DeserializeOwned,
     {
         Ok(self.read::<T>(path).await?.data)
+    }
+
+    /// Reads only user data from a KV v2 secret, returning `None` on 404.
+    pub async fn read_data_optional<T>(&self, path: &str) -> Result<Option<T>>
+    where
+        T: DeserializeOwned,
+    {
+        Ok(self.read_optional(path).await?.map(|secret| secret.data))
     }
 
     /// Reads a specific KV v2 secret version.

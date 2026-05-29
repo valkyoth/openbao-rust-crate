@@ -250,6 +250,19 @@ pub struct TransitEncryptRequest {
     pub nonce: Option<SecretString>,
 }
 
+impl TransitEncryptRequest {
+    /// Creates an encryption request from base64-encoded plaintext.
+    pub fn new(plaintext: SecretString) -> Self {
+        Self {
+            plaintext,
+            associated_data: None,
+            context: None,
+            key_version: None,
+            nonce: None,
+        }
+    }
+}
+
 /// Transit encryption response.
 #[derive(Clone, Deserialize)]
 pub struct TransitEncryptResponse {
@@ -283,6 +296,18 @@ pub struct TransitDecryptRequest {
     pub nonce: Option<SecretString>,
 }
 
+impl TransitDecryptRequest {
+    /// Creates a decryption request from an OpenBao ciphertext.
+    pub fn new(ciphertext: SecretString) -> Self {
+        Self {
+            ciphertext,
+            associated_data: None,
+            context: None,
+            nonce: None,
+        }
+    }
+}
+
 /// Transit decryption response.
 #[derive(Clone, Deserialize)]
 pub struct TransitDecryptResponse {
@@ -310,6 +335,18 @@ pub struct TransitRewrapRequest {
     pub key_version: Option<u64>,
     /// Base64-encoded nonce.
     pub nonce: Option<SecretString>,
+}
+
+impl TransitRewrapRequest {
+    /// Creates a rewrap request from an OpenBao ciphertext.
+    pub fn new(ciphertext: SecretString) -> Self {
+        Self {
+            ciphertext,
+            context: None,
+            key_version: None,
+            nonce: None,
+        }
+    }
 }
 
 /// Transit rewrap response.
