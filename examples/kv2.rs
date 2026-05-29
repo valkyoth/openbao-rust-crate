@@ -5,7 +5,7 @@
 use openbao::{Client, Result, SecretString};
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct DatabaseCredentials {
     username: String,
     password: SecretString,
@@ -26,7 +26,8 @@ async fn main() -> Result<()> {
         .read::<DatabaseCredentials>("production/database")
         .await?;
 
-    println!("username: {}", secret.data.username);
-    let _password_is_not_logged = secret.data.password;
+    let _username = secret.data.username;
+    let _password = secret.data.password;
+    println!("database credentials loaded");
     Ok(())
 }

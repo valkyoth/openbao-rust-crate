@@ -99,7 +99,7 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | HTTP transport | `reqwest` with redirects disabled |
 | Default TLS backend | Rustls |
 | TLS floor | TLS 1.3 by default; TLS 1.2 requires explicit opt-in |
-| Plain HTTP | Rejected by default; numeric loopback IPs only when explicitly enabled |
+| Plain HTTP | Rejected by default; sensitive requests still require HTTPS |
 | Token storage | `openbao::SecretString` (`secrecy::SecretString`) |
 | Unsafe policy | `unsafe_code = "forbid"` |
 | Path validation | Rejects traversal, query/fragment injection, empty segments, controls, and trailing periods |
@@ -363,8 +363,9 @@ async fn main() -> Result<()> {
         .read::<DatabaseCredentials>("production/database")
         .await?;
 
-    println!("username: {}", secret.data.username);
-    let _password_is_not_logged = secret.data.password;
+    let _username = secret.data.username;
+    let _password = secret.data.password;
+    println!("database credentials loaded");
     Ok(())
 }
 ```

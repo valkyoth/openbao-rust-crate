@@ -25,6 +25,9 @@ All notable changes to this project are documented here.
   avoiding accidental logging of secret-bearing response data.
 - Environment CA certificate read/parse errors no longer echo local filesystem
   paths or parser details.
+- Credential-bearing or request-body requests are refused over plain HTTP, even
+  when numeric loopback HTTP is enabled for non-sensitive development probes.
+- The KV v2 example no longer prints secret-derived response fields.
 - Security documentation now includes a hardened deployment profile for
   avoiding TLS 1.2/native TLS opt-downs and lowering response caps.
 

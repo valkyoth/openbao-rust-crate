@@ -1028,6 +1028,8 @@ impl Sys<'_, Unauthenticated> {
             config: self.client.config.clone(),
             http: self.client.http.clone(),
             token: None,
+            token_header: None,
+            token_header_error: None,
             _state: PhantomData,
         }
         .with_token(init_response.root_token.clone());

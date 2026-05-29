@@ -42,7 +42,9 @@ Please include:
   the explicit `native-tls-acknowledged` feature.
 - Token accessors are treated as secret material.
 - Namespace header values are treated as sensitive metadata.
-- Plain HTTP is allowed only by explicit numeric loopback IP opt-in. Hostnames such as `localhost` are rejected.
+- Plain HTTP is allowed only by explicit numeric loopback IP opt-in, and
+  credential-bearing or request-body requests still require HTTPS. Hostnames
+  such as `localhost` are rejected.
 - Response bodies must remain size-bounded, JSON content-type checked, and zeroized after decoding.
 - JSON request serialization buffers controlled by this crate must be zeroized
   after handoff to the HTTP stack.

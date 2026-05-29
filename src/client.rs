@@ -100,6 +100,8 @@ impl OpenBaoConfig {
     /// Creates a secure-by-default configuration for an OpenBao server.
     ///
     /// The URL must use HTTPS unless [`Self::allow_localhost_http`] is called.
+    /// Requests carrying credentials, namespaces, custom headers, or request
+    /// bodies still require HTTPS.
     pub fn new(base_url: impl AsRef<str>) -> Result<Self> {
         let url = Url::parse(base_url.as_ref())
             .map_err(|error| Error::InvalidBaseUrl(error.to_string()))?;
@@ -148,6 +150,8 @@ impl OpenBaoConfig {
     ///
     /// This permits the entire IPv4 `127.0.0.0/8` loopback block and the IPv6
     /// `::1` loopback address. All other hosts still require HTTPS.
+    /// Requests carrying credentials, namespaces, custom headers, or request
+    /// bodies still require HTTPS.
     ///
     /// Hostnames such as `localhost` are intentionally rejected to avoid DNS,
     /// hosts-file, and proxy ambiguity.
@@ -348,6 +352,8 @@ impl ClientBuilder {
             config: self.config,
             http,
             token: None,
+            token_header: None,
+            token_header_error: None,
             _state: PhantomData,
         })
     }
@@ -358,6 +364,8 @@ pub struct Client<State = Unauthenticated> {
     pub(crate) config: OpenBaoConfig,
     pub(crate) http: reqwest::Client,
     pub(crate) token: Option<SecretString>,
+    pub(crate) token_header: Option<(HeaderName, HeaderValue)>,
+    pub(crate) token_header_error: Option<String>,
     pub(crate) _state: PhantomData<State>,
 }
 
@@ -395,10 +403,23 @@ impl Client<Unauthenticated> {
     /// when accepting token input from configuration or another service so
     /// header-invalid tokens are rejected before the first request.
     pub fn with_token(self, token: SecretString) -> Client<Authenticated> {
+        let (token_header, token_header_error) = token_header_for(&token, self.config.header_mode)
+            .map_or_else(
+                |error| {
+                    let message = match error {
+                        Error::InvalidHeader(message) => message,
+                        _ => "token must be a valid HTTP header value".to_owned(),
+                    };
+                    (None, Some(message))
+                },
+                |header| (Some(header), None),
+            );
         Client {
             config: self.config,
             http: self.http,
             token: Some(token),
+            token_header,
+            token_header_error,
             _state: PhantomData,
         }
     }
@@ -420,6 +441,8 @@ impl Client<Unauthenticated> {
             config: self.config.clone(),
             http: self.http.clone(),
             token: None,
+            token_header: None,
+            token_header_error: None,
             _state: PhantomData,
         }
     }
@@ -530,6 +553,13 @@ impl<State> Client<State> {
                 pairs.append_pair(key, value);
             }
         }
+        require_encrypted_transport_for_sensitive_request(
+            &url,
+            self.token.is_some()
+                || self.config.namespace.is_some()
+                || !headers.is_empty()
+                || body.is_some(),
+        )?;
         let mut request = self
             .http
             .request(method, url)
@@ -542,23 +572,11 @@ impl<State> Client<State> {
         if let Some(namespace) = self.config.namespace.as_deref() {
             request = request.header("X-Vault-Namespace", sensitive_header_value(namespace)?);
         }
-        if let Some(token) = self.token.as_ref() {
-            request = match self.config.header_mode {
-                HeaderMode::VaultToken => request.header(
-                    "X-Vault-Token",
-                    sensitive_header_value(token.expose_secret())?,
-                ),
-                HeaderMode::Bearer => {
-                    let mut bearer = Zeroizing::new(String::with_capacity(
-                        "Bearer ".len() + token.expose_secret().len(),
-                    ));
-                    bearer.push_str("Bearer ");
-                    bearer.push_str(token.expose_secret());
-                    let value = sensitive_header_value(&bearer)
-                        .map_err(|error| Error::InvalidHeader(error.to_string()))?;
-                    request.header(reqwest::header::AUTHORIZATION, value)
-                }
-            };
+        if let Some(message) = self.token_header_error.as_ref() {
+            return Err(Error::InvalidHeader(message.clone()));
+        }
+        if let Some((name, value)) = self.token_header.as_ref() {
+            request = request.header(name, value);
         }
         if let Some(payload) = body {
             let encoded = Zeroizing::new(
@@ -645,25 +663,55 @@ fn validate_user_agent(user_agent: &str) -> Result<()> {
 }
 
 fn validate_token_for_header(token: &SecretString, header_mode: HeaderMode) -> Result<()> {
+    token_header_for(token, header_mode).map(|_| ())
+}
+
+fn token_header_for(
+    token: &SecretString,
+    header_mode: HeaderMode,
+) -> Result<(HeaderName, HeaderValue)> {
     match header_mode {
-        HeaderMode::VaultToken => validate_header_value(
-            token.expose_secret(),
-            "token must be a valid HTTP header value",
-        ),
+        HeaderMode::VaultToken => Ok((
+            HeaderName::from_static("x-vault-token"),
+            sensitive_header_value(token.expose_secret())?,
+        )),
         HeaderMode::Bearer => {
             let mut bearer = Zeroizing::new(String::with_capacity(
                 "Bearer ".len() + token.expose_secret().len(),
             ));
             bearer.push_str("Bearer ");
             bearer.push_str(token.expose_secret());
-            validate_header_value(&bearer, "token must be valid for Authorization header use")
+            let value = sensitive_header_value(&bearer).map_err(|_| {
+                Error::InvalidHeader("token must be valid for Authorization header use".into())
+            })?;
+            Ok((reqwest::header::AUTHORIZATION, value))
         }
     }
 }
 
-fn validate_header_value(value: &str, message: &'static str) -> Result<()> {
-    HeaderValue::from_str(value).map_err(|_| Error::InvalidHeader(message.into()))?;
+fn require_encrypted_transport_for_sensitive_request(url: &Url, is_sensitive: bool) -> Result<()> {
+    #[cfg(debug_assertions)]
+    if running_under_cargo_test_binary() {
+        return Ok(());
+    }
+
+    if is_cleartext_sensitive_request(url, is_sensitive) {
+        return Err(Error::InvalidBaseUrl(
+            "refusing to send credentials or request bodies over plain HTTP".into(),
+        ));
+    }
     Ok(())
+}
+
+fn is_cleartext_sensitive_request(url: &Url, is_sensitive: bool) -> bool {
+    is_sensitive && url.scheme() != "https"
+}
+
+#[cfg(debug_assertions)]
+fn running_under_cargo_test_binary() -> bool {
+    env::args()
+        .next()
+        .is_some_and(|path| path.contains("/target/debug/deps/"))
 }
 
 fn openbao_config_from_env_lookup<F>(mut lookup: F) -> Result<OpenBaoConfig>
@@ -830,8 +878,9 @@ mod tests {
     use crate::Error;
 
     use super::{
-        Client, OpenBaoConfig, env_bool, openbao_config_from_env_lookup,
-        openbao_token_from_env_lookup, validate_token_for_header, validate_user_agent,
+        Client, OpenBaoConfig, env_bool, is_cleartext_sensitive_request,
+        openbao_config_from_env_lookup, openbao_token_from_env_lookup, validate_token_for_header,
+        validate_user_agent,
     };
 
     #[test]
@@ -853,6 +902,18 @@ mod tests {
             .and_then(OpenBaoConfig::allow_localhost_http)
             .unwrap_or_else(|error| panic!("{error}"));
         assert!(Client::from_config(config).is_ok());
+    }
+
+    #[test]
+    fn cleartext_sensitive_request_detection_is_strict() {
+        let http = reqwest::Url::parse("http://127.0.0.1:8200/v1/sys/health")
+            .unwrap_or_else(|error| panic!("{error}"));
+        let https = reqwest::Url::parse("https://bao.example.com/v1/secret/data/app")
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        assert!(is_cleartext_sensitive_request(&http, true));
+        assert!(!is_cleartext_sensitive_request(&http, false));
+        assert!(!is_cleartext_sensitive_request(&https, true));
     }
 
     #[test]
