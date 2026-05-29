@@ -86,10 +86,10 @@ Support plan:
   `SecretString` values are implemented.
 - `0.3.0`: Transit key create/read/list/delete, encrypt, decrypt, rewrap,
   data key, random, hash, HMAC, sign, and verify are implemented.
-- `0.4.0`: PKI URL config, role write/read/list/delete, issue, sign, revoke,
-  certificate list, and certificate read are implemented. Remaining PKI
-  authority management includes issuer/key lifecycle, root/intermediate
-  generation/import, CRL rotation/tidy, and ACME.
+- `0.4.0`: PKI URL and CRL config, root/intermediate generation,
+  intermediate signing/install, role write/read/list/delete, issue, sign,
+  revoke, certificate list/read, CRL rotation, and tidy are implemented.
+  Remaining PKI work includes issuer/key lifecycle, import endpoints, and ACME.
 - `0.5.0`: database dynamic credentials.
 - `0.6.0`: SSH and TOTP.
 - `0.7.0`: Kubernetes, LDAP, RabbitMQ, cubbyhole, identity.

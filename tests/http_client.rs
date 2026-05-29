@@ -1969,3 +1969,151 @@ async fn pki_role_urls_issue_sign_revoke_and_cert_paths_are_documented() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn pki_authority_crl_and_tidy_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..7 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/pki/root/generate/internal HTTP/1.1"));
+                    assert!(request.contains(r#""common_name":"root.example.com""#));
+                    r#"{"data":{"certificate":"root-cert","serial_number":"10:01","expiration":1893456000}}"#
+                }
+                1 => {
+                    assert!(
+                        request.starts_with("POST /v1/pki/intermediate/generate/exported HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""common_name":"issuer.example.com""#));
+                    r#"{"data":{"csr":"intermediate-csr","private_key":"intermediate-key","private_key_type":"rsa"}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/pki/root/sign-intermediate HTTP/1.1"));
+                    assert!(request.contains(r#""csr":"intermediate-csr""#));
+                    r#"{"data":{"certificate":"signed-intermediate","serial_number":"10:02"}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/pki/intermediate/set-signed HTTP/1.1"));
+                    assert!(request.contains(r#""certificate":"signed-intermediate""#));
+                    "{}"
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/pki/config/crl HTTP/1.1"));
+                    assert!(request.contains(r#""expiry":"72h""#));
+                    "{}"
+                }
+                5 => {
+                    assert!(request.starts_with("POST /v1/pki/crl/rotate HTTP/1.1"));
+                    r#"{"data":{"success":true}}"#
+                }
+                6 => {
+                    assert!(request.starts_with("POST /v1/pki/tidy HTTP/1.1"));
+                    assert!(request.contains(r#""tidy_cert_store":true"#));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let root = pki
+        .generate_root(
+            openbao::secrets::pki::PkiKeyGenerationType::Internal,
+            &openbao::secrets::pki::PkiGenerateRootRequest {
+                common_name: "root.example.com".to_owned(),
+                key_type: Some("rsa".to_owned()),
+                key_bits: Some(4096),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(root.certificate.as_deref(), Some("root-cert"));
+
+    let intermediate = pki
+        .generate_intermediate(
+            openbao::secrets::pki::PkiKeyGenerationType::Exported,
+            &openbao::secrets::pki::PkiGenerateIntermediateRequest {
+                common_name: "issuer.example.com".to_owned(),
+                key_type: Some("rsa".to_owned()),
+                key_bits: Some(3072),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(intermediate.csr.as_deref(), Some("intermediate-csr"));
+    assert_eq!(
+        intermediate
+            .private_key
+            .as_ref()
+            .map(SecretString::expose_secret),
+        Some("intermediate-key")
+    );
+
+    let signed = pki
+        .sign_intermediate(&openbao::secrets::pki::PkiSignIntermediateRequest {
+            csr: "intermediate-csr".to_owned(),
+            common_name: Some("issuer.example.com".to_owned()),
+            permitted_dns_domains: vec!["example.com".to_owned()],
+            ..Default::default()
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(signed.certificate, "signed-intermediate");
+
+    pki.set_signed_intermediate(&openbao::secrets::pki::PkiSetSignedIntermediateRequest {
+        certificate: "signed-intermediate".to_owned(),
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    pki.write_crl_config(&openbao::secrets::pki::PkiCrlConfig {
+        expiry: Some("72h".to_owned()),
+        auto_rebuild: Some(true),
+        ..Default::default()
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    let rotation = pki
+        .rotate_crl()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(rotation.success);
+    pki.tidy(&openbao::secrets::pki::PkiTidyRequest {
+        tidy_cert_store: Some(true),
+        tidy_revoked_certs: Some(true),
+        safety_buffer: Some("72h".to_owned()),
+        ..Default::default()
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}

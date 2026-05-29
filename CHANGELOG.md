@@ -16,6 +16,8 @@ All notable changes to this project are documented here.
 - PKI URL config, role write/read/list/delete, issue, sign, revoke,
   certificate list, and certificate read helpers with secret-aware generated
   private keys.
+- PKI root generation, intermediate generation, intermediate signing, signed
+  intermediate install, CRL config, CRL rotation, and tidy helpers.
 - KV v2 typed data reads and bounded `Kv2ServiceConfig` loading with
   `SecretString` values for environment-style service configuration.
 - `0.4.0` release-note scaffolding and release gate.

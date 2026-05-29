@@ -23,11 +23,13 @@
 - TLS certificate auth helpers cover login, auth method config, CA role
   write/read/list/delete, CRL write/read/list/delete, and mutual TLS client
   identity configuration.
-- PKI helpers cover URL config, role write/read/list/delete, issue, sign,
-  revoke, certificate list, and certificate read.
+- PKI helpers cover URL and CRL config, root generation, intermediate
+  generation, intermediate signing, signed intermediate install, role
+  write/read/list/delete, issue, sign, revoke, certificate list/read, CRL
+  rotation, and tidy.
 - KV v2 service config helpers cover typed data reads and bounded
   environment-style maps with `SecretString` values.
-- Planned remaining `0.4.0` modules: broader PKI authority management.
+- Planned remaining `0.4.0` modules: issuer/key lifecycle and ACME helpers.
 - Default Cargo features: `approle`, `cert-auth`, `kubernetes-auth`, `token`,
   `kv1`, `kv2`, `pki`, `transit`, `sys`, `rustls-tls`.
 - Minimum supported Rust: 1.95.0.
@@ -58,8 +60,8 @@
   redacted from debug output as a boolean presence flag only.
 - PKI generated private keys are represented as `SecretString` and redacted
   from debug output.
-- PKI role lists, certificate lists, CA chains, URL config lists, and role list
-  fields are bounded during deserialization.
+- PKI role lists, certificate lists, CA chains, URL/CRL config lists, and role
+  list fields are bounded during deserialization.
 - KV v2 service config maps are bounded during deserialization and values are
   represented as `SecretString` with debug redaction.
 
@@ -76,8 +78,7 @@
 
 ## Known Limitations
 
-- Advanced PKI authority management is not complete yet, including issuer/key
-  lifecycle, root/intermediate generation/import, CRL rotation/tidy, and ACME.
+- Advanced PKI issuer/key lifecycle and ACME helpers are not complete yet.
 - KV service config helpers intentionally accept flat string maps for the
   secret-aware `Kv2ServiceConfig` type; use typed structs for nested JSON.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots

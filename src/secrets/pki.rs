@@ -131,6 +131,224 @@ pub struct PkiUrlsConfig {
     pub enable_templating: Option<bool>,
 }
 
+/// PKI authority key generation mode.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PkiKeyGenerationType {
+    /// Generate key material inside OpenBao and do not return it.
+    Internal,
+    /// Generate key material inside OpenBao and return the private key.
+    Exported,
+    /// Use an existing key reference when supported by OpenBao.
+    Existing,
+}
+
+impl PkiKeyGenerationType {
+    fn as_path_segment(self) -> &'static str {
+        match self {
+            Self::Internal => "internal",
+            Self::Exported => "exported",
+            Self::Existing => "existing",
+        }
+    }
+}
+
+/// Request for generating a root CA certificate.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiGenerateRootRequest {
+    /// Common name for the generated root.
+    pub common_name: String,
+    /// Issuer display name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_name: Option<String>,
+    /// Requested TTL such as `87600h`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ttl: Option<String>,
+    /// Certificate return format, such as `pem`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+    /// Private key return format for exported generation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub private_key_format: Option<String>,
+    /// Key type, such as `rsa` or `ec`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_type: Option<String>,
+    /// Key size in bits.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_bits: Option<u64>,
+    /// Existing key reference for `existing` generation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_ref: Option<String>,
+    /// Excludes the common name from SANs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exclude_cn_from_sans: Option<bool>,
+}
+
+/// Request for generating an intermediate CA CSR.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiGenerateIntermediateRequest {
+    /// Common name for the intermediate.
+    pub common_name: String,
+    /// Issuer display name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_name: Option<String>,
+    /// Certificate return format, such as `pem`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+    /// Private key return format for exported generation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub private_key_format: Option<String>,
+    /// Key type, such as `rsa` or `ec`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_type: Option<String>,
+    /// Key size in bits.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_bits: Option<u64>,
+    /// Existing key reference for `existing` generation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_ref: Option<String>,
+}
+
+/// Response from root or intermediate authority generation.
+#[derive(Clone, Deserialize)]
+pub struct PkiAuthorityBundle {
+    /// Generated certificate, when returned.
+    #[serde(default)]
+    pub certificate: Option<String>,
+    /// Generated CSR, when returned.
+    #[serde(default)]
+    pub csr: Option<String>,
+    /// Issuing CA certificate.
+    #[serde(default)]
+    pub issuing_ca: Option<String>,
+    /// CA certificate chain.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub ca_chain: Vec<String>,
+    /// Generated private key, when OpenBao returned one.
+    #[serde(default)]
+    pub private_key: Option<SecretString>,
+    /// Generated private key type, when returned.
+    #[serde(default)]
+    pub private_key_type: Option<String>,
+    /// Certificate serial number.
+    #[serde(default)]
+    pub serial_number: Option<String>,
+    /// Certificate expiration as Unix seconds.
+    #[serde(default)]
+    pub expiration: Option<u64>,
+}
+
+impl fmt::Debug for PkiAuthorityBundle {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PkiAuthorityBundle")
+            .field("certificate", &self.certificate)
+            .field("csr", &self.csr)
+            .field("issuing_ca", &self.issuing_ca)
+            .field("ca_chain", &self.ca_chain)
+            .field(
+                "private_key",
+                &self.private_key.as_ref().map(|_| "<redacted>"),
+            )
+            .field("private_key_type", &self.private_key_type)
+            .field("serial_number", &self.serial_number)
+            .field("expiration", &self.expiration)
+            .finish()
+    }
+}
+
+/// Request for signing an intermediate CA CSR with the root.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiSignIntermediateRequest {
+    /// PEM-format intermediate CSR.
+    pub csr: String,
+    /// Common name override.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub common_name: Option<String>,
+    /// Issuer reference that signs the CSR.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_ref: Option<String>,
+    /// Issuer display name for the generated issuer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_name: Option<String>,
+    /// Requested TTL such as `43800h`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ttl: Option<String>,
+    /// Certificate return format, such as `pem`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+    /// Uses subject and SAN values from the CSR where supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub use_csr_values: Option<bool>,
+    /// Maximum path length for issued CA certificates.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_path_length: Option<i64>,
+    /// Permitted DNS domains for the intermediate.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub permitted_dns_domains: Vec<String>,
+}
+
+/// Request for installing a signed intermediate certificate.
+#[derive(Clone, Debug, Serialize)]
+pub struct PkiSetSignedIntermediateRequest {
+    /// PEM-format signed intermediate certificate.
+    pub certificate: String,
+}
+
+/// PKI CRL configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct PkiCrlConfig {
+    /// CRL expiry duration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expiry: Option<String>,
+    /// Disables CRL generation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable: Option<bool>,
+    /// Disables OCSP responses.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ocsp_disable: Option<bool>,
+    /// Enables automatic CRL rebuild.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_rebuild: Option<bool>,
+    /// Grace period used before automatic CRL rebuild.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_rebuild_grace_period: Option<String>,
+    /// Enables delta CRL generation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_delta: Option<bool>,
+    /// Delta CRL rebuild interval.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delta_rebuild_interval: Option<String>,
+}
+
+/// PKI tidy request.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiTidyRequest {
+    /// Tidies stored certificates.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_cert_store: Option<bool>,
+    /// Tidies revoked certificate entries.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_revoked_certs: Option<bool>,
+    /// Tidies certificate revocation queue entries.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_revocation_queue: Option<bool>,
+    /// Safety buffer duration before deleting entries.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub safety_buffer: Option<String>,
+    /// Tidies ACME state where supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_acme: Option<bool>,
+}
+
+/// CRL rotation response.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiRotateCrlResponse {
+    /// Whether rotation succeeded.
+    #[serde(default)]
+    pub success: bool,
+}
+
 /// Request for issuing a certificate and private key.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct PkiIssueRequest {
@@ -272,6 +490,65 @@ impl Client<Authenticated> {
 }
 
 impl Pki<'_> {
+    /// Generates a root CA certificate.
+    pub async fn generate_root(
+        &self,
+        generation_type: PkiKeyGenerationType,
+        request: &PkiGenerateRootRequest,
+    ) -> Result<PkiAuthorityBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["root", "generate", generation_type.as_path_segment()])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Generates an intermediate CA CSR and key material.
+    pub async fn generate_intermediate(
+        &self,
+        generation_type: PkiKeyGenerationType,
+        request: &PkiGenerateIntermediateRequest,
+    ) -> Result<PkiAuthorityBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&[
+                "intermediate",
+                "generate",
+                generation_type.as_path_segment(),
+            ])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Signs an intermediate CA CSR with the mounted root.
+    pub async fn sign_intermediate(
+        &self,
+        request: &PkiSignIntermediateRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["root", "sign-intermediate"])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Installs a signed intermediate certificate.
+    pub async fn set_signed_intermediate(
+        &self,
+        request: &PkiSetSignedIntermediateRequest,
+    ) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["intermediate", "set-signed"])?,
+                Some(request),
+            )
+            .await
+    }
+
     /// Creates or replaces a PKI role.
     pub async fn write_role(&self, name: &str, role: &PkiRole) -> Result<Empty> {
         self.client
@@ -323,6 +600,40 @@ impl Pki<'_> {
     pub async fn write_urls(&self, config: &PkiUrlsConfig) -> Result<Empty> {
         self.client
             .request_json(Method::POST, &self.path(&["config", "urls"])?, Some(config))
+            .await
+    }
+
+    /// Reads PKI CRL configuration.
+    pub async fn read_crl_config(&self) -> Result<PkiCrlConfig> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["config", "crl"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Sets PKI CRL configuration.
+    pub async fn write_crl_config(&self, config: &PkiCrlConfig) -> Result<Empty> {
+        self.client
+            .request_json(Method::POST, &self.path(&["config", "crl"])?, Some(config))
+            .await
+    }
+
+    /// Rotates the CRL.
+    pub async fn rotate_crl(&self) -> Result<PkiRotateCrlResponse> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["crl", "rotate"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Starts PKI tidy with the requested options.
+    pub async fn tidy(&self, request: &PkiTidyRequest) -> Result<Empty> {
+        self.client
+            .request_json(Method::POST, &self.path(&["tidy"])?, Some(request))
             .await
     }
 
@@ -464,7 +775,7 @@ mod tests {
 
     use secrecy::{ExposeSecret, SecretString};
 
-    use super::{PkiCertificateBundle, PkiRole, PkiRoleList};
+    use super::{PkiAuthorityBundle, PkiCertificateBundle, PkiRole, PkiRoleList};
 
     #[test]
     fn pki_role_accepts_string_and_array_lists() {
@@ -489,6 +800,20 @@ mod tests {
         let debug = format!("{bundle:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("secret-key"));
+    }
+
+    #[test]
+    fn pki_authority_bundle_redacts_private_key_debug() {
+        let bundle: PkiAuthorityBundle =
+            serde_json::from_str(r#"{"csr":"csr","private_key":"authority-key"}"#)
+                .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            bundle.private_key.as_ref().map(SecretString::expose_secret),
+            Some("authority-key")
+        );
+        let debug = format!("{bundle:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("authority-key"));
     }
 
     #[test]
