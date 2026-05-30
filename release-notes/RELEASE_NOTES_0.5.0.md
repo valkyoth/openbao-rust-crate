@@ -70,15 +70,21 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_5_gate.sh`
-- Result: in progress for the 0.5.0 development line.
+- Result: local gate-equivalent checks passed on 2026-05-30; the initial
+  scripted run stopped at `cargo audit` because the sandbox could not create
+  the advisory database lock, and the audit step was rerun directly with the
+  same lock/update access used by CI.
 - Pentest report: required before tagging; local `PENTEST.md` must be reviewed,
   remediated where actionable, recorded here, and deleted before commit.
-- `cargo audit` result: pending final release gate.
-- `cargo deny check` result: pending final release gate.
-- CodeQL result: pending final release gate.
-- Podman OpenBao integration result: pending final release gate.
-- SBOM generation result: pending final release gate.
-- Reproducible package result: pending final release gate.
+- `cargo audit` result: passed locally on 2026-05-30.
+- `cargo deny check` result: passed locally on 2026-05-30; duplicate
+  transitive dependency warnings remain informational under the current policy.
+- CodeQL result: pending GitHub run for the final release candidate.
+- Podman OpenBao integration result: passed locally on 2026-05-30 against the
+  pinned OpenBao dev image on port 9940.
+- SBOM generation result: passed locally on 2026-05-30.
+- Reproducible package result: `cargo package --locked --allow-dirty` passed
+  locally on 2026-05-30.
 
 ## Known Limitations
 

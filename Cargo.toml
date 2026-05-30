@@ -80,7 +80,7 @@ native-tls = ["reqwest/native-tls"]
 native-tls-acknowledged = []
 
 [dependencies]
-base64-ng = { version = "1.0.3", default-features = false, features = ["alloc"], optional = true }
+base64-ng = { version = "1.0.4", default-features = false, features = ["alloc"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }

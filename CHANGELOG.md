@@ -43,6 +43,10 @@ All notable changes to this project are documented here.
 - Security documentation now includes a hardened deployment profile for
   avoiding TLS 1.2/native TLS opt-downs and lowering response caps.
 
+### Changed
+
+- Updated optional `base64-ng` Transit byte-helper dependency to `1.0.4`.
+
 ## 0.4.0 - 2026-05-29
 
 ### Added
