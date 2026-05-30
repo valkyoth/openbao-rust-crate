@@ -3,9 +3,9 @@
 ## Version
 
 - Version: 0.5.0
-- Release date: Unreleased
-- Git tag: `v0.5.0` planned
-- Git commit: tag target for `v0.5.0`
+- Release date: 2026-05-30
+- Git tag: `v0.5.0`
+- Git commit: see the `v0.5.0` tag target
 - License: MIT OR Apache-2.0
 
 ## Scope
@@ -24,8 +24,7 @@
   connection config, dynamic/static roles, credential reads, and rotations,
   plus typed Transit signing options for RSA signatures and JWS-style ECDSA
   marshaling.
-- Remaining `0.5.0` planned work: no functional scope remains before the next
-  pentest pass; continue with fixes only unless new findings arrive.
+- Remaining `0.5.0` planned work: no functional scope remains for this release.
 - Default Cargo features: `approle`, `cert-auth`, `jwt-auth`,
   `database`, `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`,
   `transit`, `sys`, `rustls-tls`.
@@ -90,7 +89,7 @@
 - Supply-chain review: `serde_core` and `zmij` crate owners were verified with
   `cargo owner --list` on 2026-05-30; both resolve to David Tolnay / serde-rs
   ownership.
-- CodeQL result: pending GitHub run for the final release candidate.
+- CodeQL result: passed in GitHub before tagging on 2026-05-30.
 - Podman OpenBao integration result: passed locally on 2026-05-30 against the
   pinned OpenBao dev image on port 9940.
 - SBOM generation result: passed locally on 2026-05-30.

@@ -33,9 +33,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.5.0` development line. `0.5.0` builds on the
-published `0.4.0` crate with Userpass auth, JWT auth, database secrets, and
-typed Transit signing/JWS ergonomics.
+This README documents the `0.5.0` release line. `0.5.0` builds on `0.4.0`
+with Userpass auth, JWT auth, database secrets, and typed Transit signing/JWS
+ergonomics.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 

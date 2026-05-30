@@ -124,7 +124,7 @@ Stop condition:
 - userpass create/update/delete/login;
 - byte-oriented Transit convenience helpers for envelope encryption and HMAC
   lookup-token patterns;
-- Transit signing/JWKS helpers for RSA and Ed25519 JWT signing workflows;
+- Transit signing/JWS helpers for RSA and ECDSA JWT signing workflows;
 - examples show short-lived database credentials.
 
 Publishable value:
