@@ -9,6 +9,8 @@ use serde::{
     Deserialize, Deserializer, Serialize,
     de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
 };
+#[cfg(feature = "transit-bytes")]
+use zeroize::Zeroizing;
 
 use crate::{
     Authenticated, Client, Error, Result,
@@ -261,6 +263,36 @@ impl TransitEncryptRequest {
             nonce: None,
         }
     }
+
+    /// Creates an encryption request from raw plaintext bytes.
+    ///
+    /// Requires the `transit-bytes` feature. The bytes are base64-encoded for
+    /// OpenBao before the request reaches the shared HTTP layer.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_plaintext_bytes(plaintext: &[u8]) -> Result<Self> {
+        Ok(Self::new(base64_encode_secret(plaintext)?))
+    }
+
+    /// Sets raw AEAD associated data.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_associated_data_bytes(mut self, associated_data: &[u8]) -> Result<Self> {
+        self.associated_data = Some(base64_encode_secret(associated_data)?);
+        Ok(self)
+    }
+
+    /// Sets raw derivation context bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_context_bytes(mut self, context: &[u8]) -> Result<Self> {
+        self.context = Some(base64_encode_secret(context)?);
+        Ok(self)
+    }
+
+    /// Sets raw nonce bytes for convergent encryption.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_nonce_bytes(mut self, nonce: &[u8]) -> Result<Self> {
+        self.nonce = Some(base64_encode_secret(nonce)?);
+        Ok(self)
+    }
 }
 
 /// Transit encryption response.
@@ -306,6 +338,27 @@ impl TransitDecryptRequest {
             nonce: None,
         }
     }
+
+    /// Sets raw AEAD associated data.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_associated_data_bytes(mut self, associated_data: &[u8]) -> Result<Self> {
+        self.associated_data = Some(base64_encode_secret(associated_data)?);
+        Ok(self)
+    }
+
+    /// Sets raw derivation context bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_context_bytes(mut self, context: &[u8]) -> Result<Self> {
+        self.context = Some(base64_encode_secret(context)?);
+        Ok(self)
+    }
+
+    /// Sets raw nonce bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_nonce_bytes(mut self, nonce: &[u8]) -> Result<Self> {
+        self.nonce = Some(base64_encode_secret(nonce)?);
+        Ok(self)
+    }
 }
 
 /// Transit decryption response.
@@ -321,6 +374,14 @@ impl fmt::Debug for TransitDecryptResponse {
             .debug_struct("TransitDecryptResponse")
             .field("plaintext", &"<redacted>")
             .finish()
+    }
+}
+
+impl TransitDecryptResponse {
+    /// Decodes OpenBao's base64 plaintext into zeroizing raw bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn plaintext_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
+        decode_base64_secret(&self.plaintext)
     }
 }
 
@@ -378,6 +439,29 @@ pub struct TransitDataKeyRequest {
     pub bits: Option<u64>,
 }
 
+impl TransitDataKeyRequest {
+    /// Sets raw AEAD associated data.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_associated_data_bytes(mut self, associated_data: &[u8]) -> Result<Self> {
+        self.associated_data = Some(base64_encode_secret(associated_data)?);
+        Ok(self)
+    }
+
+    /// Sets raw derivation context bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_context_bytes(mut self, context: &[u8]) -> Result<Self> {
+        self.context = Some(base64_encode_secret(context)?);
+        Ok(self)
+    }
+
+    /// Sets raw nonce bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_nonce_bytes(mut self, nonce: &[u8]) -> Result<Self> {
+        self.nonce = Some(base64_encode_secret(nonce)?);
+        Ok(self)
+    }
+}
+
 /// Transit data key response.
 #[derive(Clone, Deserialize)]
 pub struct TransitDataKeyResponse {
@@ -395,6 +479,17 @@ impl fmt::Debug for TransitDataKeyResponse {
             .field("plaintext", &self.plaintext.as_ref().map(|_| "<redacted>"))
             .field("ciphertext", &"<redacted>")
             .finish()
+    }
+}
+
+impl TransitDataKeyResponse {
+    /// Decodes the returned plaintext data key into zeroizing raw bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn plaintext_bytes(&self) -> Result<Option<Zeroizing<Vec<u8>>>> {
+        self.plaintext
+            .as_ref()
+            .map(decode_base64_secret)
+            .transpose()
     }
 }
 
@@ -422,6 +517,14 @@ impl fmt::Debug for TransitRandomResponse {
     }
 }
 
+impl TransitRandomResponse {
+    /// Decodes base64 random bytes returned with `TransitOutputFormat::Base64`.
+    #[cfg(feature = "transit-bytes")]
+    pub fn random_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
+        decode_base64_secret(&self.random_bytes)
+    }
+}
+
 /// Request for hashing data with Transit.
 #[derive(Clone, Debug)]
 pub struct TransitHashRequest {
@@ -429,6 +532,17 @@ pub struct TransitHashRequest {
     pub input: SecretString,
     /// Output encoding.
     pub format: Option<TransitOutputFormat>,
+}
+
+impl TransitHashRequest {
+    /// Creates a hash request from raw input bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_input_bytes(input: &[u8]) -> Result<Self> {
+        Ok(Self {
+            input: base64_encode_secret(input)?,
+            format: None,
+        })
+    }
 }
 
 /// Transit hash response.
@@ -454,6 +568,17 @@ pub struct TransitHmacRequest {
     pub input: SecretString,
     /// Key version to use.
     pub key_version: Option<u64>,
+}
+
+impl TransitHmacRequest {
+    /// Creates an HMAC request from raw input bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_input_bytes(input: &[u8]) -> Result<Self> {
+        Ok(Self {
+            input: base64_encode_secret(input)?,
+            key_version: None,
+        })
+    }
 }
 
 /// Transit HMAC response.
@@ -485,6 +610,27 @@ pub struct TransitSignRequest {
     pub prehashed: Option<bool>,
     /// OpenBao signature algorithm string, such as `pss` or `pkcs1v15`.
     pub signature_algorithm: Option<String>,
+}
+
+impl TransitSignRequest {
+    /// Creates a signing request from raw input bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_input_bytes(input: &[u8]) -> Result<Self> {
+        Ok(Self {
+            input: base64_encode_secret(input)?,
+            key_version: None,
+            context: None,
+            prehashed: None,
+            signature_algorithm: None,
+        })
+    }
+
+    /// Sets raw derivation context bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_context_bytes(mut self, context: &[u8]) -> Result<Self> {
+        self.context = Some(base64_encode_secret(context)?);
+        Ok(self)
+    }
 }
 
 /// Transit signing response.
@@ -525,6 +671,41 @@ pub struct TransitVerifyRequest {
     pub prehashed: Option<bool>,
     /// OpenBao signature algorithm string, such as `pss` or `pkcs1v15`.
     pub signature_algorithm: Option<String>,
+}
+
+impl TransitVerifyRequest {
+    /// Creates a verification request from raw input bytes and a signature.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_input_bytes_with_signature(input: &[u8], signature: SecretString) -> Result<Self> {
+        Ok(Self {
+            input: base64_encode_secret(input)?,
+            signature: Some(signature),
+            hmac: None,
+            context: None,
+            prehashed: None,
+            signature_algorithm: None,
+        })
+    }
+
+    /// Creates a verification request from raw input bytes and an HMAC.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_input_bytes_with_hmac(input: &[u8], hmac: SecretString) -> Result<Self> {
+        Ok(Self {
+            input: base64_encode_secret(input)?,
+            signature: None,
+            hmac: Some(hmac),
+            context: None,
+            prehashed: None,
+            signature_algorithm: None,
+        })
+    }
+
+    /// Sets raw derivation context bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn with_context_bytes(mut self, context: &[u8]) -> Result<Self> {
+        self.context = Some(base64_encode_secret(context)?);
+        Ok(self)
+    }
 }
 
 /// Transit verification response.
@@ -994,6 +1175,30 @@ fn validate_key_name(name: &str) -> Result<Vec<String>> {
     validate_mount_path(name)
 }
 
+#[cfg(feature = "transit-bytes")]
+fn base64_encode_secret(input: &[u8]) -> Result<SecretString> {
+    let encoded = base64_ng::STANDARD
+        .encode_secret(input)
+        .map_err(|_| Error::InvalidParameter("base64 input is too large".into()))?;
+    let exposed = encoded.try_into_exposed_string().map_err(|_| {
+        Error::Internal("base64-ng produced non-UTF-8 text for standard base64 output")
+    })?;
+    Ok(SecretString::from(
+        exposed.into_exposed_unprotected_string_caller_must_zeroize(),
+    ))
+}
+
+#[cfg(feature = "transit-bytes")]
+fn decode_base64_secret(input: &SecretString) -> Result<Zeroizing<Vec<u8>>> {
+    let decoded = base64_ng::STANDARD
+        .decode_secret(input.expose_secret().as_bytes())
+        .map_err(|_| Error::Decode("OpenBao response contained invalid base64".into()))?;
+    let exposed = decoded.into_exposed_vec();
+    Ok(Zeroizing::new(
+        exposed.into_exposed_unprotected_vec_caller_must_zeroize(),
+    ))
+}
+
 fn deserialize_bounded_u64_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, u64>, D::Error>
@@ -1034,11 +1239,14 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
 mod tests {
     #![allow(clippy::panic)]
 
-    use secrecy::SecretString;
+    use secrecy::{ExposeSecret, SecretString};
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::{TransitEncryptResponse, TransitKeyInfo, TransitKeyList};
+    use super::{
+        TransitDecryptResponse, TransitEncryptRequest, TransitEncryptResponse, TransitHashRequest,
+        TransitKeyInfo, TransitKeyList,
+    };
 
     #[test]
     fn transit_paths_are_validated() {
@@ -1106,5 +1314,31 @@ mod tests {
         let debug = format!("{response:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("secret-ciphertext"));
+    }
+
+    #[cfg(feature = "transit-bytes")]
+    #[test]
+    fn transit_byte_helpers_use_base64_ng_and_zeroizing_decode() {
+        let request = TransitEncryptRequest::from_plaintext_bytes(b"secret")
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_context_bytes(b"app")
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(request.plaintext.expose_secret(), "c2VjcmV0");
+        assert_eq!(
+            request.context.as_ref().map(SecretString::expose_secret),
+            Some("YXBw")
+        );
+
+        let hash = TransitHashRequest::from_input_bytes(b"payload")
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(hash.input.expose_secret(), "cGF5bG9hZA==");
+
+        let response = TransitDecryptResponse {
+            plaintext: SecretString::from("c2VjcmV0"),
+        };
+        let bytes = response
+            .plaintext_bytes()
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(&bytes[..], b"secret");
     }
 }

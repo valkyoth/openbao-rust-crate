@@ -6,6 +6,7 @@ rustc --version
 
 echo "checking current crates.io versions used by this crate"
 cargo search reqwest --limit 1
+cargo search base64-ng --limit 1
 cargo search secrecy --limit 1
 cargo search serde --limit 1
 cargo search serde_json --limit 1

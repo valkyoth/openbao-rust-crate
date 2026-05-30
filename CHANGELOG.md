@@ -18,6 +18,8 @@ All notable changes to this project are documented here.
 - `Error::status`, `Error::is_not_found`, `Kv2::read_optional`, and
   `Kv2::read_data_optional` helpers for common absent-secret branching.
 - Constructors for PKI issue and Transit encrypt/decrypt/rewrap requests.
+- Optional `transit-bytes` feature with raw-byte Transit helpers backed by
+  `base64-ng`.
 - Userpass auth login plus user create/read/list/delete, password update, and
   policy update helpers.
 - JWT auth login plus JWT/OIDC auth method config and role administration

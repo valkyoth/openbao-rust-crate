@@ -1122,6 +1122,81 @@ async fn transit_encrypt_and_decrypt_use_secret_payloads() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "transit-bytes")]
+#[tokio::test]
+async fn transit_byte_helpers_base64_encode_and_decode_payloads() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 4096];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = if index == 0 {
+                assert!(request.starts_with("POST /v1/transit/encrypt/app-key HTTP/1.1"));
+                assert!(request.contains(r#""plaintext":"c2VjcmV0""#));
+                assert!(request.contains(r#""context":"YXBw""#));
+                r#"{"data":{"ciphertext":"vault:v1:ciphertext","key_version":1}}"#
+            } else {
+                assert!(request.starts_with("POST /v1/transit/decrypt/app-key HTTP/1.1"));
+                assert!(request.contains(r#""ciphertext":"vault:v1:ciphertext""#));
+                assert!(request.contains(r#""context":"YXBw""#));
+                r#"{"data":{"plaintext":"c2VjcmV0"}}"#
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    let transit = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let encrypted = transit
+        .encrypt(
+            "app-key",
+            &openbao::secrets::transit::TransitEncryptRequest::from_plaintext_bytes(b"secret")
+                .and_then(|request| request.with_context_bytes(b"app"))
+                .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let decrypted = transit
+        .decrypt(
+            "app-key",
+            &openbao::secrets::transit::TransitDecryptRequest::new(encrypted.ciphertext)
+                .with_context_bytes(b"app")
+                .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let plaintext = decrypted
+        .plaintext_bytes()
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(&plaintext[..], b"secret");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[tokio::test]
 async fn transit_crypto_helpers_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));

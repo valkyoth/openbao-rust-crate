@@ -63,6 +63,7 @@ kv1 = []
 kv2 = []
 pki = []
 transit = []
+transit-bytes = ["dep:base64-ng"]
 sys = []
 # Legacy Transit SHA-1 support. Disabled by default so new builds cannot select
 # SHA-1 without an explicit Cargo feature review.
@@ -77,6 +78,7 @@ native-tls = ["reqwest/native-tls"]
 native-tls-acknowledged = []
 
 [dependencies]
+base64-ng = { version = "1.0.3", default-features = false, features = ["alloc"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }

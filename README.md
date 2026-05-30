@@ -179,6 +179,7 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | `kv2` | yes | KV v2 secrets engine helpers. |
 | `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, and tidy helpers. |
 | `transit` | yes | Transit cryptography helpers. |
+| `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
 | `sys` | yes | System backend helpers. |
 | `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `rustls-tls` | yes | Rustls transport configuration. |
@@ -231,7 +232,7 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | KV v2 list/delete versions | Yes | Metadata list, latest delete, soft delete, undelete, and destroy. |
 | KV v2 metadata/config | Yes | Backend, per-key metadata, typed data, and secret-aware service config helpers. |
 | KV v1 | Yes | Read, write, delete, and list helpers. |
-| Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, and verify. |
+| Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, and verify. Optional raw-byte helpers are available with `transit-bytes`. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | Database credentials | Planned | Planned for `0.5.0`. |
 | SSH and TOTP | Planned | Planned for `0.6.0`. |
@@ -559,6 +560,30 @@ async fn main() -> Result<()> {
         .await?;
 
     println!("plaintext length: {}", decrypted.plaintext.expose_secret().len());
+    Ok(())
+}
+```
+
+Encrypt and decrypt raw bytes with the optional `transit-bytes` feature:
+
+```rust,no_run
+use openbao::secrets::transit::{TransitDecryptRequest, TransitEncryptRequest};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let transit = client.transit("transit")?;
+
+    let request = TransitEncryptRequest::from_plaintext_bytes(b"secret")?;
+    let encrypted = transit.encrypt("app-key", &request).await?;
+    let decrypted = transit
+        .decrypt("app-key", &TransitDecryptRequest::new(encrypted.ciphertext))
+        .await?;
+
+    let plaintext = decrypted.plaintext_bytes()?;
+    println!("plaintext length: {}", plaintext.len());
     Ok(())
 }
 ```

@@ -90,6 +90,8 @@ Support plan:
   `SecretString` values are implemented.
 - `0.3.0`: Transit key create/read/list/delete, encrypt, decrypt, rewrap,
   data key, random, hash, HMAC, sign, and verify are implemented.
+- `0.5.0`: optional `transit-bytes` helpers encode raw request bytes and
+  decode base64 Transit response fields using `base64-ng`.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer
