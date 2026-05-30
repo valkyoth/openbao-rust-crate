@@ -1695,6 +1695,201 @@ async fn missing_json_content_type_is_rejected() {
 }
 
 #[tokio::test]
+async fn database_connection_role_and_credentials_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..12 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/database/config/postgres HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(request.contains(r#""plugin_name":"postgresql-database-plugin""#));
+                    assert!(request.contains(r#""password":"root-password""#));
+                    assert!(request.contains(r#""allowed_roles":["readonly"]"#));
+                    "{}"
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/database/config/postgres HTTP/1.1"));
+                    r#"{"data":{"allowed_roles":["readonly"],"connection_details":{"connection_url":"postgres://{{username}}:{{password}}@localhost/postgres","username":"openbao"},"plugin_name":"postgresql-database-plugin","plugin_version":"","root_credentials_rotate_statements":[]}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("LIST /v1/database/config HTTP/1.1"));
+                    r#"{"data":{"keys":["postgres"]}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/database/roles/readonly HTTP/1.1"));
+                    assert!(request.contains(r#""db_name":"postgres""#));
+                    assert!(request.contains(r#""creation_statements":["CREATE ROLE"#));
+                    "{}"
+                }
+                4 => {
+                    assert!(request.starts_with("GET /v1/database/roles/readonly HTTP/1.1"));
+                    r#"{"data":{"db_name":"postgres","creation_statements":["CREATE ROLE \"{{name}}\""],"default_ttl":3600,"max_ttl":"24h","revocation_statements":[],"rollback_statements":[],"renew_statements":[]}}"#
+                }
+                5 => {
+                    assert!(request.starts_with("LIST /v1/database/roles HTTP/1.1"));
+                    r#"{"data":{"keys":["readonly"]}}"#
+                }
+                6 => {
+                    assert!(request.starts_with("GET /v1/database/creds/readonly HTTP/1.1"));
+                    r#"{"lease_id":"database/creds/readonly/lease","lease_duration":3600,"renewable":true,"data":{"username":"v-root-1","password":"generated-password"}}"#
+                }
+                7 => {
+                    assert!(request.starts_with("POST /v1/database/static-roles/app HTTP/1.1"));
+                    assert!(request.contains(r#""db_name":"postgres""#));
+                    assert!(request.contains(r#""username":"app_user""#));
+                    assert!(request.contains(r#""rotation_period":"1h""#));
+                    "{}"
+                }
+                8 => {
+                    assert!(request.starts_with("LIST /v1/database/static-roles HTTP/1.1"));
+                    r#"{"data":{"keys":["app"]}}"#
+                }
+                9 => {
+                    assert!(request.starts_with("GET /v1/database/static-creds/app HTTP/1.1"));
+                    r#"{"data":{"username":"app_user","password":"static-password","last_openbao_rotation":"2026-05-30T00:00:00Z","rotation_period":3600,"ttl":300}}"#
+                }
+                10 => {
+                    assert!(request.starts_with("POST /v1/database/rotate-role/app HTTP/1.1"));
+                    "{}"
+                }
+                11 => {
+                    assert!(request.starts_with("POST /v1/database/rotate-root/postgres HTTP/1.1"));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let database = client
+        .database("database")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    database
+        .configure_connection(
+            "postgres",
+            &openbao::secrets::database::DatabaseConnectionConfig {
+                allowed_roles: vec!["readonly".to_owned()],
+                connection_url: Some(
+                    "postgres://{{username}}:{{password}}@localhost/postgres".to_owned(),
+                ),
+                username: Some("openbao".to_owned()),
+                password: Some(SecretString::from("root-password")),
+                ..openbao::secrets::database::DatabaseConnectionConfig::new(
+                    "postgresql-database-plugin",
+                )
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let connection = database
+        .read_connection("postgres")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(connection.plugin_name, "postgresql-database-plugin");
+    let connections = database
+        .list_connections()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(connections.keys, ["postgres"]);
+
+    database
+        .write_role(
+            "readonly",
+            &openbao::secrets::database::DatabaseRole::new("postgres")
+                .with_creation_statement("CREATE ROLE \"{{name}}\""),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let role = database
+        .read_role("readonly")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role.default_ttl.as_deref(), Some("3600"));
+    let roles = database
+        .list_roles()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["readonly"]);
+
+    let credentials = database
+        .credentials("readonly")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(credentials.username, "v-root-1");
+    assert_eq!(
+        credentials
+            .password
+            .as_ref()
+            .map(SecretString::expose_secret),
+        Some("generated-password")
+    );
+    assert_eq!(
+        credentials.lease_id.expose_secret(),
+        "database/creds/readonly/lease"
+    );
+
+    database
+        .write_static_role(
+            "app",
+            &openbao::secrets::database::DatabaseStaticRole {
+                rotation_period: Some("1h".to_owned()),
+                ..openbao::secrets::database::DatabaseStaticRole::new("postgres", "app_user")
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let static_roles = database
+        .list_static_roles()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(static_roles.keys, ["app"]);
+    let static_credentials = database
+        .static_credentials("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        static_credentials.password.expose_secret(),
+        "static-password"
+    );
+    database
+        .rotate_static_role("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    database
+        .rotate_root("postgres")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

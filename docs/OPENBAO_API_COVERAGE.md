@@ -10,6 +10,7 @@ Sources:
 - System backend: https://openbao.org/api-docs/system/
 - KV v2: https://openbao.org/api-docs/secret/kv/kv-v2/
 - AppRole: https://openbao.org/api-docs/auth/approle/
+- Database secrets engine: https://openbao.org/api-docs/secret/databases/
 - JWT/OIDC auth: https://openbao.org/api-docs/auth/jwt/
 - Kubernetes auth: https://openbao.org/api-docs/auth/kubernetes/
 - TLS certificate auth: https://openbao.org/api-docs/auth/cert/
@@ -98,7 +99,10 @@ Support plan:
   revocation, CA/key import, ACME config/EAB/directory URL helpers, CRL
   rotation, and tidy are implemented. Full ACME account/order/challenge client
   flows are intentionally left to dedicated ACME clients.
-- `0.5.0`: database dynamic credentials.
+- `0.5.0`: database connection config/list/read/delete/reset, root rotation,
+  dynamic role list/write/read/delete, dynamic credentials, static role
+  list/write/read/delete, static credentials, and static role rotation are
+  implemented.
 - `0.6.0`: SSH and TOTP.
 - `0.7.0`: Kubernetes, LDAP, RabbitMQ, cubbyhole, identity.
 

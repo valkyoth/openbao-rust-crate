@@ -46,7 +46,13 @@ mod response;
     feature = "token"
 ))]
 pub mod auth;
-#[cfg(any(feature = "kv1", feature = "kv2", feature = "pki", feature = "transit"))]
+#[cfg(any(
+    feature = "database",
+    feature = "kv1",
+    feature = "kv2",
+    feature = "pki",
+    feature = "transit"
+))]
 pub mod secrets;
 #[cfg(feature = "sys")]
 pub mod sys;
@@ -77,7 +83,13 @@ pub mod prelude {
         feature = "token"
     ))]
     pub use crate::auth;
-    #[cfg(any(feature = "kv1", feature = "kv2", feature = "pki", feature = "transit"))]
+    #[cfg(any(
+        feature = "database",
+        feature = "kv1",
+        feature = "kv2",
+        feature = "pki",
+        feature = "transit"
+    ))]
     pub use crate::secrets;
     #[cfg(feature = "sys")]
     pub use crate::sys;

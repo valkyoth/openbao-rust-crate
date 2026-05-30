@@ -20,12 +20,12 @@
   prelude exports, safer constructors/defaults for request types, KV v2
   optional-read ergonomics, `Sys::enable_kv2`, Userpass auth helpers, and
   JWT/OIDC config/role helpers with JWT login, and optional byte-oriented
-  Transit helpers backed by `base64-ng`.
-- Remaining `0.5.0` planned work: database secrets and Transit signing/JWKS
-  ergonomics.
+  Transit helpers backed by `base64-ng`, and database secrets helpers for
+  connection config, dynamic/static roles, credential reads, and rotations.
+- Remaining `0.5.0` planned work: Transit signing/JWKS ergonomics.
 - Default Cargo features: `approle`, `cert-auth`, `jwt-auth`,
-  `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`, `transit`,
-  `sys`, `rustls-tls`.
+  `database`, `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`,
+  `transit`, `sys`, `rustls-tls`.
 - Non-default Cargo features: `allow-sha1`, `native-tls`,
   `native-tls-acknowledged`, `transit-bytes`.
 - Minimum supported Rust: 1.90.0.
@@ -52,6 +52,11 @@
   `JwtConfig` debug output redacts the OIDC client secret.
 - Userpass and JWT/OIDC list responses and login metadata maps are bounded
   during deserialization.
+- Database connection passwords, generated credential passwords, generated
+  private keys, and lease IDs are handled as secret material and redacted from
+  debug output.
+- Database connection/role/static-role lists, statement lists, CA chains, and
+  connection detail maps are bounded during deserialization.
 - Optional Transit byte helpers use `base64-ng` secret buffer APIs to encode
   raw request bytes and return decoded response bytes in zeroizing buffers.
 - The KV v2 example avoids printing secret-derived response fields.
@@ -74,7 +79,7 @@
 - Browser-based OIDC callback/device helper flows are not implemented yet;
   the current JWT/OIDC surface covers config, roles, list/delete, and direct
   JWT login.
-- Database secrets and Transit signing/JWKS ergonomics remain planned for the
-  rest of the 0.5.0 line.
+- Transit signing/JWKS ergonomics remain planned for the rest of the 0.5.0
+  line.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots
   and root-only trust stores for private PKI.

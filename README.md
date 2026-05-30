@@ -34,8 +34,8 @@ use openbao::Client;
 ```
 
 This README documents the `0.5.0` development line. `0.5.0` builds on the
-published `0.4.0` crate with Userpass auth, JWT auth, and the remaining
-database and Transit ergonomics planned for the same release line.
+published `0.4.0` crate with Userpass auth, JWT auth, database secrets, and
+Transit ergonomics.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -59,6 +59,8 @@ Implemented now:
   version delete, undelete, destroy, metadata, backend config, typed data, and
   secret-aware service config helpers.
 - KV v1 read, write, delete, and list helpers.
+- Database connection config, dynamic roles, static roles, root/static
+  rotation, and credential helpers.
 - PKI URL and CRL config, root/intermediate generation, intermediate signing
   and install, role write/read/list/delete, issue, sign, revoke, certificate
   list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import,
@@ -82,8 +84,7 @@ Implemented now:
 
 Planned next:
 
-- `0.5.0`: database secrets, Transit byte helpers, and Transit signing/JWKS
-  ergonomics.
+- `0.5.0`: Transit signing/JWKS ergonomics.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
   RabbitMQ.
@@ -154,7 +155,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.5", features = ["approle", "cert-auth", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.5", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -171,6 +172,7 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | --- | --- | --- |
 | `approle` | yes | AppRole authentication helpers. |
 | `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
+| `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `userpass` | yes | Userpass login and user administration helpers. |
@@ -232,9 +234,9 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | KV v2 list/delete versions | Yes | Metadata list, latest delete, soft delete, undelete, and destroy. |
 | KV v2 metadata/config | Yes | Backend, per-key metadata, typed data, and secret-aware service config helpers. |
 | KV v1 | Yes | Read, write, delete, and list helpers. |
+| Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, and verify. Optional raw-byte helpers are available with `transit-bytes`. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
-| Database credentials | Planned | Planned for `0.5.0`. |
 | SSH and TOTP | Planned | Planned for `0.6.0`. |
 | Identity and remaining engines | Planned | Planned for `0.7.0`. |
 
@@ -496,6 +498,27 @@ async fn main() -> Result<()> {
     println!("listen: {}", typed.listen_addr);
     println!("loaded {} secret config keys", env_map.len());
     let _database_url_is_not_logged = typed.database_url;
+    Ok(())
+}
+```
+
+Read dynamic database credentials:
+
+```rust,no_run
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let database = client.database("database")?;
+
+    let credentials = database.credentials("readonly").await?;
+    let _password = credentials.password;
+    println!(
+        "database user {} leased for {} seconds",
+        credentials.username, credentials.lease_duration
+    );
     Ok(())
 }
 ```

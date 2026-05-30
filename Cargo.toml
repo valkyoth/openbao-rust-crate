@@ -42,6 +42,7 @@ include = [
 default = [
     "approle",
     "cert-auth",
+    "database",
     "jwt-auth",
     "kubernetes-auth",
     "userpass",
@@ -55,6 +56,7 @@ default = [
 ]
 approle = []
 cert-auth = []
+database = []
 jwt-auth = []
 kubernetes-auth = []
 userpass = []

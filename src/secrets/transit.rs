@@ -1239,14 +1239,15 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
 mod tests {
     #![allow(clippy::panic)]
 
-    use secrecy::{ExposeSecret, SecretString};
+    #[cfg(feature = "transit-bytes")]
+    use secrecy::ExposeSecret;
+    use secrecy::SecretString;
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::{
-        TransitDecryptResponse, TransitEncryptRequest, TransitEncryptResponse, TransitHashRequest,
-        TransitKeyInfo, TransitKeyList,
-    };
+    #[cfg(feature = "transit-bytes")]
+    use super::{TransitDecryptResponse, TransitEncryptRequest, TransitHashRequest};
+    use super::{TransitEncryptResponse, TransitKeyInfo, TransitKeyList};
 
     #[test]
     fn transit_paths_are_validated() {
