@@ -1,35 +1,54 @@
 #!/usr/bin/env sh
 set -eu
 
-test -f Cargo.toml
-test -f README.md
-test -f CHANGELOG.md
-test -f SECURITY.md
-test -f CONTRIBUTING.md
-test -f LICENSE-APACHE
-test -f LICENSE-MIT
-test -f deny.toml
-test -f rust-toolchain.toml
-test -f docs/RELEASE_PLAN.md
-test -f docs/OPENBAO_API_COVERAGE.md
-test -f release-notes/RELEASE_NOTES_0.1.0.md
-test -f release-notes/RELEASE_NOTES_0.2.0.md
-test -f release-notes/RELEASE_NOTES_0.3.0.md
-test -f release-notes/RELEASE_NOTES_0.4.0.md
-test -f .github/workflows/ci.yml
+check_file() {
+  if [ ! -f "$1" ]; then
+    echo "missing required release metadata file: $1" >&2
+    exit 1
+  fi
+}
 
-grep -q 'name = "openbao"' Cargo.toml
-grep -q 'version = "0.4.0"' Cargo.toml
-grep -q 'edition = "2024"' Cargo.toml
-grep -q 'rust-version = "1.90"' Cargo.toml
-grep -q 'license = "MIT OR Apache-2.0"' Cargo.toml
-grep -q 'unsafe_code = "forbid"' Cargo.toml
-grep -q '0.1.0 - Secure Core And KV v2' docs/RELEASE_PLAN.md
-grep -q '0.2.0 - Token, KV Completeness, And Mount Management' docs/RELEASE_PLAN.md
-grep -q '0.3.0 - Transit And Audit' docs/RELEASE_PLAN.md
-grep -q '0.4.0 - PKI, Kubernetes Auth, TLS Cert Auth' docs/RELEASE_PLAN.md
-grep -q '1.0.0 - First Stable Release' docs/RELEASE_PLAN.md
-grep -q 'Pentest report:' release-notes/RELEASE_NOTES_0.4.0.md
+check_grep() {
+  pattern="$1"
+  file="$2"
+  if ! grep -q "$pattern" "$file"; then
+    echo "missing required release metadata pattern in $file: $pattern" >&2
+    exit 1
+  fi
+}
+
+check_file Cargo.toml
+check_file README.md
+check_file CHANGELOG.md
+check_file SECURITY.md
+check_file CONTRIBUTING.md
+check_file LICENSE-APACHE
+check_file LICENSE-MIT
+check_file deny.toml
+check_file rust-toolchain.toml
+check_file docs/RELEASE_PLAN.md
+check_file docs/OPENBAO_API_COVERAGE.md
+check_file release-notes/RELEASE_NOTES_0.1.0.md
+check_file release-notes/RELEASE_NOTES_0.2.0.md
+check_file release-notes/RELEASE_NOTES_0.3.0.md
+check_file release-notes/RELEASE_NOTES_0.4.0.md
+check_file release-notes/RELEASE_NOTES_0.5.0.md
+check_file scripts/release_0_5_gate.sh
+check_file .github/workflows/ci.yml
+
+check_grep 'name = "openbao"' Cargo.toml
+check_grep 'version = "0.5.0"' Cargo.toml
+check_grep 'edition = "2024"' Cargo.toml
+check_grep 'rust-version = "1.90"' Cargo.toml
+check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
+check_grep 'unsafe_code = "forbid"' Cargo.toml
+check_grep '0.1.0 - Secure Core And KV v2' docs/RELEASE_PLAN.md
+check_grep '0.2.0 - Token, KV Completeness, And Mount Management' docs/RELEASE_PLAN.md
+check_grep '0.3.0 - Transit And Audit' docs/RELEASE_PLAN.md
+check_grep '0.4.0 - PKI, Kubernetes Auth, TLS Cert Auth' docs/RELEASE_PLAN.md
+check_grep '0.5.0 - Database, JWT/OIDC, Userpass' docs/RELEASE_PLAN.md
+check_grep '1.0.0 - First Stable Release' docs/RELEASE_PLAN.md
+check_grep 'Pentest report:' release-notes/RELEASE_NOTES_0.5.0.md
 
 if git grep -l "base64-ng contributors" -- ':!scripts/validate-release-metadata.sh' >/dev/null 2>&1; then
   echo "stale copied license metadata found" >&2
