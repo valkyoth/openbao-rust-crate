@@ -31,10 +31,10 @@ Sources:
 - Environment-based client construction from common `OPENBAO_*`, `BAO_*`, and
   `VAULT_*` variables is implemented in `0.4.0`.
 - Implemented downstream ergonomics from Mjolni/Pawalyze review:
-  KV v2 service config loading into typed structs or bounded secret string maps.
+  KV v2 service config loading into typed structs or bounded secret string maps,
+  byte-oriented Transit helpers, and JWS-oriented Transit sign/verify helpers.
 - Planned downstream ergonomics from Mjolni/Pawalyze review:
-  byte-oriented Transit helpers, JWT/JWKS Transit helpers, idempotent admin
-  bootstrap, and ACL policy builders.
+  idempotent admin bootstrap and ACL policy builders.
 - Planned posture helpers:
   best-effort FIPS profile validation for crate-controlled choices and a
   future quantum-readiness profile once OpenBao exposes stable primitives.
@@ -92,7 +92,9 @@ Support plan:
 - `0.3.0`: Transit key create/read/list/delete, encrypt, decrypt, rewrap,
   data key, random, hash, HMAC, sign, and verify are implemented.
 - `0.5.0`: optional `transit-bytes` helpers encode raw request bytes and
-  decode base64 Transit response fields using `base64-ng`.
+  decode base64 Transit response fields using `base64-ng`; typed RSA
+  signature options, JWS marshaling helpers, and RSA-PSS salt length helpers
+  are implemented for sign/verify.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer

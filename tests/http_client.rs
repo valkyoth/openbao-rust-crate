@@ -1228,7 +1228,10 @@ async fn transit_crypto_helpers_use_documented_paths() {
                         request.starts_with("POST /v1/transit/sign/signing-key/sha2-256 HTTP/1.1")
                     );
                     assert!(request.contains(r#""prehashed":true"#));
-                    r#"{"data":{"signature":"vault:v1:signature"}}"#
+                    assert!(request.contains(r#""signature_algorithm":"pss""#));
+                    assert!(request.contains(r#""marshaling_algorithm":"jws""#));
+                    assert!(request.contains(r#""salt_length":"hash""#));
+                    r#"{"data":{"signature":"vault:v1:signature","publickey":"derived-public-key"}}"#
                 }
                 _ => {
                     assert!(
@@ -1236,6 +1239,7 @@ async fn transit_crypto_helpers_use_documented_paths() {
                             .starts_with("POST /v1/transit/verify/signing-key/sha2-256 HTTP/1.1")
                     );
                     assert!(request.contains(r#""signature":"vault:v1:signature""#));
+                    assert!(request.contains(r#""marshaling_algorithm":"jws""#));
                     r#"{"data":{"valid":true}}"#
                 }
             };
@@ -1289,30 +1293,30 @@ async fn transit_crypto_helpers_use_documented_paths() {
         .sign(
             "signing-key",
             Some(openbao::secrets::transit::TransitHashAlgorithm::Sha2_256),
-            &openbao::secrets::transit::TransitSignRequest {
-                input: SecretString::from("cGF5bG9hZA=="),
-                key_version: None,
-                context: None,
-                prehashed: Some(true),
-                signature_algorithm: None,
-            },
+            &openbao::secrets::transit::TransitSignRequest::jws(SecretString::from("cGF5bG9hZA=="))
+                .with_prehashed(true)
+                .with_signature_algorithm(openbao::secrets::transit::TransitSignatureAlgorithm::Pss)
+                .with_salt_length(openbao::secrets::transit::TransitSaltLength::Hash),
         )
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(signature.signature.expose_secret(), "vault:v1:signature");
+    assert_eq!(
+        signature
+            .public_key
+            .as_ref()
+            .map(SecretString::expose_secret),
+        Some("derived-public-key")
+    );
 
     let verified = transit
         .verify(
             "signing-key",
             Some(openbao::secrets::transit::TransitHashAlgorithm::Sha2_256),
-            &openbao::secrets::transit::TransitVerifyRequest {
-                input: SecretString::from("cGF5bG9hZA=="),
-                signature: Some(signature.signature),
-                hmac: None,
-                context: None,
-                prehashed: None,
-                signature_algorithm: None,
-            },
+            &openbao::secrets::transit::TransitVerifyRequest::jws_with_signature(
+                SecretString::from("cGF5bG9hZA=="),
+                signature.signature,
+            ),
         )
         .await
         .unwrap_or_else(|error| panic!("{error}"));

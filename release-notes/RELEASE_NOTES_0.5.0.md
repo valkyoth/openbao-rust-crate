@@ -21,8 +21,11 @@
   optional-read ergonomics, `Sys::enable_kv2`, Userpass auth helpers, and
   JWT/OIDC config/role helpers with JWT login, and optional byte-oriented
   Transit helpers backed by `base64-ng`, and database secrets helpers for
-  connection config, dynamic/static roles, credential reads, and rotations.
-- Remaining `0.5.0` planned work: Transit signing/JWKS ergonomics.
+  connection config, dynamic/static roles, credential reads, and rotations,
+  plus typed Transit signing options for RSA signatures and JWS-style ECDSA
+  marshaling.
+- Remaining `0.5.0` planned work: no functional scope remains before the next
+  pentest pass; continue with fixes only unless new findings arrive.
 - Default Cargo features: `approle`, `cert-auth`, `jwt-auth`,
   `database`, `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`,
   `transit`, `sys`, `rustls-tls`.
@@ -59,6 +62,9 @@
   connection detail maps are bounded during deserialization.
 - Optional Transit byte helpers use `base64-ng` secret buffer APIs to encode
   raw request bytes and return decoded response bytes in zeroizing buffers.
+- Transit sign/verify requests now use typed helpers for RSA signature
+  algorithm selection, JWS marshaling, and RSA-PSS salt length instead of
+  requiring raw option strings.
 - The KV v2 example avoids printing secret-derived response fields.
 
 ## Security And Stability Gate
@@ -79,7 +85,8 @@
 - Browser-based OIDC callback/device helper flows are not implemented yet;
   the current JWT/OIDC surface covers config, roles, list/delete, and direct
   JWT login.
-- Transit signing/JWKS ergonomics remain planned for the rest of the 0.5.0
-  line.
+- Full JOSE/JWKS document construction remains out of scope to avoid adding a
+  JWT/JWK dependency; use the Transit JWS marshaling helpers with the
+  application JWT library.
 - Exact certificate/public-key pinning is not implemented; use custom CA roots
   and root-only trust stores for private PKI.

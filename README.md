@@ -35,7 +35,7 @@ use openbao::Client;
 
 This README documents the `0.5.0` development line. `0.5.0` builds on the
 published `0.4.0` crate with Userpass auth, JWT auth, database secrets, and
-Transit ergonomics.
+typed Transit signing/JWS ergonomics.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -66,7 +66,8 @@ Implemented now:
   list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import,
   ACME config/EAB/directory URL, CRL rotate, and tidy helpers.
 - Transit key create, read, list, delete, encrypt, decrypt, rewrap, data key,
-  random, hash, HMAC, sign, and verify helpers.
+  random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and
+  optional raw-byte helpers.
 - System health, seal status, and loopback-only dev bootstrap helpers.
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
@@ -84,7 +85,6 @@ Implemented now:
 
 Planned next:
 
-- `0.5.0`: Transit signing/JWKS ergonomics.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
   RabbitMQ.
@@ -235,7 +235,7 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | KV v2 metadata/config | Yes | Backend, per-key metadata, typed data, and secret-aware service config helpers. |
 | KV v1 | Yes | Read, write, delete, and list helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
-| Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, and verify. Optional raw-byte helpers are available with `transit-bytes`. |
+| Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and optional raw-byte helpers. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | SSH and TOTP | Planned | Planned for `0.6.0`. |
 | Identity and remaining engines | Planned | Planned for `0.7.0`. |
@@ -607,6 +607,42 @@ async fn main() -> Result<()> {
 
     let plaintext = decrypted.plaintext_bytes()?;
     println!("plaintext length: {}", plaintext.len());
+    Ok(())
+}
+```
+
+Sign data for JWS/JWT-style ECDSA workflows:
+
+```rust,no_run
+use openbao::secrets::transit::{
+    TransitHashAlgorithm, TransitSignRequest, TransitVerifyRequest,
+};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let transit = client.transit("transit")?;
+
+    let input = SecretString::from("ZXhhbXBsZS1wYXlsb2Fk");
+    let signed = transit
+        .sign(
+            "jwt-signing-key",
+            Some(TransitHashAlgorithm::Sha2_256),
+            &TransitSignRequest::jws(input.clone()),
+        )
+        .await?;
+
+    let verified = transit
+        .verify(
+            "jwt-signing-key",
+            Some(TransitHashAlgorithm::Sha2_256),
+            &TransitVerifyRequest::jws_with_signature(input, signed.signature),
+        )
+        .await?;
+
+    println!("signature valid: {}", verified.valid);
     Ok(())
 }
 ```

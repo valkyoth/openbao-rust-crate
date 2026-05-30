@@ -159,6 +159,52 @@ pub enum TransitOutputFormat {
     Base64,
 }
 
+/// RSA signature algorithm for Transit signing and verification.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub enum TransitSignatureAlgorithm {
+    /// RSA-PSS.
+    #[serde(rename = "pss")]
+    Pss,
+    /// RSASSA-PKCS1-v1_5.
+    #[serde(rename = "pkcs1v15")]
+    Pkcs1v15,
+}
+
+/// Signature marshaling format for Transit signing and verification.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub enum TransitMarshalingAlgorithm {
+    /// ASN.1 format, used by OpenSSL and X.509.
+    #[serde(rename = "asn1")]
+    Asn1,
+    /// JWS-compatible format for JWT/JWS workflows.
+    #[serde(rename = "jws")]
+    Jws,
+}
+
+/// RSA-PSS salt length selection.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransitSaltLength {
+    /// OpenBao/Golang default.
+    Auto,
+    /// Match the hash output length.
+    Hash,
+    /// Explicit salt length.
+    Value(u64),
+}
+
+impl Serialize for TransitSaltLength {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Self::Auto => serializer.serialize_str("auto"),
+            Self::Hash => serializer.serialize_str("hash"),
+            Self::Value(value) => serializer.serialize_u64(*value),
+        }
+    }
+}
+
 /// Request for creating a Transit key.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct TransitCreateKeyRequest {
@@ -608,21 +654,40 @@ pub struct TransitSignRequest {
     pub context: Option<SecretString>,
     /// Whether `input` is already hashed.
     pub prehashed: Option<bool>,
-    /// OpenBao signature algorithm string, such as `pss` or `pkcs1v15`.
-    pub signature_algorithm: Option<String>,
+    /// RSA signature algorithm.
+    pub signature_algorithm: Option<TransitSignatureAlgorithm>,
+    /// Signature marshaling algorithm.
+    pub marshaling_algorithm: Option<TransitMarshalingAlgorithm>,
+    /// RSA-PSS salt length.
+    pub salt_length: Option<TransitSaltLength>,
 }
 
 impl TransitSignRequest {
-    /// Creates a signing request from raw input bytes.
-    #[cfg(feature = "transit-bytes")]
-    pub fn from_input_bytes(input: &[u8]) -> Result<Self> {
-        Ok(Self {
-            input: base64_encode_secret(input)?,
+    /// Creates a signing request from base64-encoded input.
+    pub fn new(input: SecretString) -> Self {
+        Self {
+            input,
             key_version: None,
             context: None,
             prehashed: None,
             signature_algorithm: None,
-        })
+            marshaling_algorithm: None,
+            salt_length: None,
+        }
+    }
+
+    /// Creates a JWS-compatible signing request from base64-encoded input.
+    ///
+    /// OpenBao uses `marshaling_algorithm = "jws"` for ECDSA signatures used
+    /// in JWT/JWS workflows.
+    pub fn jws(input: SecretString) -> Self {
+        Self::new(input).with_marshaling_algorithm(TransitMarshalingAlgorithm::Jws)
+    }
+
+    /// Creates a signing request from raw input bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_input_bytes(input: &[u8]) -> Result<Self> {
+        Ok(Self::new(base64_encode_secret(input)?))
     }
 
     /// Sets raw derivation context bytes.
@@ -630,6 +695,48 @@ impl TransitSignRequest {
     pub fn with_context_bytes(mut self, context: &[u8]) -> Result<Self> {
         self.context = Some(base64_encode_secret(context)?);
         Ok(self)
+    }
+
+    /// Sets the key version.
+    #[must_use]
+    pub fn with_key_version(mut self, key_version: u64) -> Self {
+        self.key_version = Some(key_version);
+        self
+    }
+
+    /// Sets base64-encoded derivation context.
+    #[must_use]
+    pub fn with_context(mut self, context: SecretString) -> Self {
+        self.context = Some(context);
+        self
+    }
+
+    /// Marks the input as already hashed.
+    #[must_use]
+    pub fn with_prehashed(mut self, prehashed: bool) -> Self {
+        self.prehashed = Some(prehashed);
+        self
+    }
+
+    /// Sets the RSA signature algorithm.
+    #[must_use]
+    pub fn with_signature_algorithm(mut self, algorithm: TransitSignatureAlgorithm) -> Self {
+        self.signature_algorithm = Some(algorithm);
+        self
+    }
+
+    /// Sets the signature marshaling algorithm.
+    #[must_use]
+    pub fn with_marshaling_algorithm(mut self, algorithm: TransitMarshalingAlgorithm) -> Self {
+        self.marshaling_algorithm = Some(algorithm);
+        self
+    }
+
+    /// Sets the RSA-PSS salt length.
+    #[must_use]
+    pub fn with_salt_length(mut self, salt_length: TransitSaltLength) -> Self {
+        self.salt_length = Some(salt_length);
+        self
     }
 }
 
@@ -639,7 +746,7 @@ pub struct TransitSignResponse {
     /// Signature in OpenBao's encoded format.
     pub signature: SecretString,
     /// Derived public key, when returned by OpenBao.
-    #[serde(default)]
+    #[serde(default, alias = "publickey")]
     pub public_key: Option<SecretString>,
 }
 
@@ -669,35 +776,65 @@ pub struct TransitVerifyRequest {
     pub context: Option<SecretString>,
     /// Whether `input` is already hashed.
     pub prehashed: Option<bool>,
-    /// OpenBao signature algorithm string, such as `pss` or `pkcs1v15`.
-    pub signature_algorithm: Option<String>,
+    /// RSA signature algorithm.
+    pub signature_algorithm: Option<TransitSignatureAlgorithm>,
+    /// Signature marshaling algorithm.
+    pub marshaling_algorithm: Option<TransitMarshalingAlgorithm>,
+    /// RSA-PSS salt length.
+    pub salt_length: Option<TransitSaltLength>,
 }
 
 impl TransitVerifyRequest {
-    /// Creates a verification request from raw input bytes and a signature.
-    #[cfg(feature = "transit-bytes")]
-    pub fn from_input_bytes_with_signature(input: &[u8], signature: SecretString) -> Result<Self> {
-        Ok(Self {
-            input: base64_encode_secret(input)?,
-            signature: Some(signature),
+    /// Creates a verification request from base64-encoded input.
+    pub fn new(input: SecretString) -> Self {
+        Self {
+            input,
+            signature: None,
             hmac: None,
             context: None,
             prehashed: None,
             signature_algorithm: None,
-        })
+            marshaling_algorithm: None,
+            salt_length: None,
+        }
+    }
+
+    /// Creates a verification request from base64-encoded input and signature.
+    pub fn from_base64_input_with_signature(input: SecretString, signature: SecretString) -> Self {
+        Self::new(input).with_signature(signature)
+    }
+
+    /// Creates a verification request from base64-encoded input and HMAC.
+    pub fn from_base64_input_with_hmac(input: SecretString, hmac: SecretString) -> Self {
+        Self::new(input).with_hmac(hmac)
+    }
+
+    /// Creates a JWS-compatible verification request from base64-encoded input
+    /// and signature.
+    ///
+    /// OpenBao expects URL-safe Base64 input when verifying JWS-marshaled ECDSA
+    /// signatures.
+    pub fn jws_with_signature(input: SecretString, signature: SecretString) -> Self {
+        Self::from_base64_input_with_signature(input, signature)
+            .with_marshaling_algorithm(TransitMarshalingAlgorithm::Jws)
+    }
+
+    /// Creates a verification request from raw input bytes and a signature.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_input_bytes_with_signature(input: &[u8], signature: SecretString) -> Result<Self> {
+        Ok(Self::from_base64_input_with_signature(
+            base64_encode_secret(input)?,
+            signature,
+        ))
     }
 
     /// Creates a verification request from raw input bytes and an HMAC.
     #[cfg(feature = "transit-bytes")]
     pub fn from_input_bytes_with_hmac(input: &[u8], hmac: SecretString) -> Result<Self> {
-        Ok(Self {
-            input: base64_encode_secret(input)?,
-            signature: None,
-            hmac: Some(hmac),
-            context: None,
-            prehashed: None,
-            signature_algorithm: None,
-        })
+        Ok(Self::from_base64_input_with_hmac(
+            base64_encode_secret(input)?,
+            hmac,
+        ))
     }
 
     /// Sets raw derivation context bytes.
@@ -705,6 +842,55 @@ impl TransitVerifyRequest {
     pub fn with_context_bytes(mut self, context: &[u8]) -> Result<Self> {
         self.context = Some(base64_encode_secret(context)?);
         Ok(self)
+    }
+
+    /// Sets the signature to verify.
+    #[must_use]
+    pub fn with_signature(mut self, signature: SecretString) -> Self {
+        self.signature = Some(signature);
+        self
+    }
+
+    /// Sets the HMAC to verify.
+    #[must_use]
+    pub fn with_hmac(mut self, hmac: SecretString) -> Self {
+        self.hmac = Some(hmac);
+        self
+    }
+
+    /// Sets base64-encoded derivation context.
+    #[must_use]
+    pub fn with_context(mut self, context: SecretString) -> Self {
+        self.context = Some(context);
+        self
+    }
+
+    /// Marks the input as already hashed.
+    #[must_use]
+    pub fn with_prehashed(mut self, prehashed: bool) -> Self {
+        self.prehashed = Some(prehashed);
+        self
+    }
+
+    /// Sets the RSA signature algorithm.
+    #[must_use]
+    pub fn with_signature_algorithm(mut self, algorithm: TransitSignatureAlgorithm) -> Self {
+        self.signature_algorithm = Some(algorithm);
+        self
+    }
+
+    /// Sets the signature marshaling algorithm.
+    #[must_use]
+    pub fn with_marshaling_algorithm(mut self, algorithm: TransitMarshalingAlgorithm) -> Self {
+        self.marshaling_algorithm = Some(algorithm);
+        self
+    }
+
+    /// Sets the RSA-PSS salt length.
+    #[must_use]
+    pub fn with_salt_length(mut self, salt_length: TransitSaltLength) -> Self {
+        self.salt_length = Some(salt_length);
+        self
     }
 }
 
@@ -786,7 +972,11 @@ struct TransitSignPayload<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     prehashed: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    signature_algorithm: Option<&'a str>,
+    signature_algorithm: Option<TransitSignatureAlgorithm>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    marshaling_algorithm: Option<TransitMarshalingAlgorithm>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    salt_length: Option<TransitSaltLength>,
 }
 
 #[derive(Serialize)]
@@ -801,7 +991,11 @@ struct TransitVerifyPayload<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     prehashed: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    signature_algorithm: Option<&'a str>,
+    signature_algorithm: Option<TransitSignatureAlgorithm>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    marshaling_algorithm: Option<TransitMarshalingAlgorithm>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    salt_length: Option<TransitSaltLength>,
 }
 
 impl Client<Authenticated> {
@@ -1082,7 +1276,9 @@ impl Transit<'_> {
                 .as_ref()
                 .map(|secret| secret.expose_secret()),
             prehashed: request.prehashed,
-            signature_algorithm: request.signature_algorithm.as_deref(),
+            signature_algorithm: request.signature_algorithm,
+            marshaling_algorithm: request.marshaling_algorithm,
+            salt_length: request.salt_length,
         };
         self.enveloped(
             Method::POST,
@@ -1111,7 +1307,9 @@ impl Transit<'_> {
                 .as_ref()
                 .map(|secret| secret.expose_secret()),
             prehashed: request.prehashed,
-            signature_algorithm: request.signature_algorithm.as_deref(),
+            signature_algorithm: request.signature_algorithm,
+            marshaling_algorithm: request.marshaling_algorithm,
+            salt_length: request.salt_length,
         };
         self.enveloped(
             Method::POST,

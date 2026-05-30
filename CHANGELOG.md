@@ -17,6 +17,8 @@ All notable changes to this project are documented here.
   stringly typed KV v2 mount setup footgun.
 - Database secrets engine helpers for connection config, dynamic/static roles,
   credential reads, root rotation, and static role rotation.
+- Typed Transit RSA signature, JWS marshaling, and RSA-PSS salt-length options
+  with base64 input constructors for sign/verify workflows.
 - `Error::status`, `Error::is_not_found`, `Kv2::read_optional`, and
   `Kv2::read_data_optional` helpers for common absent-secret branching.
 - Constructors for PKI issue and Transit encrypt/decrypt/rewrap requests.
