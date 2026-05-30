@@ -48,19 +48,26 @@
   even when numeric loopback HTTP is enabled for non-sensitive development
   probes.
 - Sensitive request dispatch uses a separate HTTPS-only `reqwest::Client` path
-  outside test binaries.
+  outside explicit debug-only numeric-loopback mock tests; the previous
+  cargo-test-binary path detection was removed.
 - Userpass passwords are handled as `SecretString` and redacted from debug
   output.
 - JWT login values and OIDC client secrets are handled as `SecretString`;
   `JwtConfig` debug output redacts the OIDC client secret.
+- JWT role leeway fields use typed `JwtLeeway` values so disabling JWT time
+  validation requires an explicit `DisableTimeValidation` variant.
 - Userpass and JWT/OIDC list responses and login metadata maps are bounded
   during deserialization.
 - Database connection passwords, generated credential passwords, generated
   private keys, and lease IDs are handled as secret material and redacted from
   debug output.
+- Database connection URLs are treated as secret material because DSNs commonly
+  embed credentials.
 - Database connection/role/static-role lists, statement lists, CA chains, and
   connection detail maps are bounded during deserialization.
-- Optional Transit byte helpers use `base64-ng` secret buffer APIs to encode
+- OpenBao request paths are bounded before URL construction to avoid
+  disproportionate allocations from untrusted path inputs.
+- Optional Transit byte helpers use `base64-ng` 1.0.5 secret buffer APIs to encode
   raw request bytes and return decoded response bytes in zeroizing buffers.
 - Transit sign/verify requests now use typed helpers for RSA signature
   algorithm selection, JWS marshaling, and RSA-PSS salt length instead of
@@ -74,11 +81,15 @@
   scripted run stopped at `cargo audit` because the sandbox could not create
   the advisory database lock, and the audit step was rerun directly with the
   same lock/update access used by CI.
-- Pentest report: required before tagging; local `PENTEST.md` must be reviewed,
-  remediated where actionable, recorded here, and deleted before commit.
+- Pentest report: reviewed on 2026-05-30; actionable current-tree findings
+  were remediated, current tracked files were checked for dev TLS private-key
+  material, and local `PENTEST.md` was deleted before commit.
 - `cargo audit` result: passed locally on 2026-05-30.
 - `cargo deny check` result: passed locally on 2026-05-30; duplicate
   transitive dependency warnings remain informational under the current policy.
+- Supply-chain review: `serde_core` and `zmij` crate owners were verified with
+  `cargo owner --list` on 2026-05-30; both resolve to David Tolnay / serde-rs
+  ownership.
 - CodeQL result: pending GitHub run for the final release candidate.
 - Podman OpenBao integration result: passed locally on 2026-05-30 against the
   pinned OpenBao dev image on port 9940.

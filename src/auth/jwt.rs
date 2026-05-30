@@ -1,10 +1,11 @@
 //! JWT/OIDC authentication support.
 
+use core::fmt;
 use std::collections::BTreeMap;
 
 use reqwest::Method;
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Visitor};
 
 use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
@@ -104,6 +105,96 @@ impl core::fmt::Debug for JwtConfig {
     }
 }
 
+/// JWT validation leeway.
+///
+/// OpenBao accepts `-1` to disable a JWT time validation check. That behavior
+/// is represented only by the deliberately named
+/// [`Self::DisableTimeValidation`] variant so callers do not pass raw strings
+/// that silently weaken role validation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum JwtLeeway {
+    /// Leeway in seconds.
+    Seconds(u64),
+    /// Duration string accepted by OpenBao, such as `60s` or `5m`.
+    Duration(String),
+    /// Disable the associated JWT time validation check.
+    DisableTimeValidation,
+}
+
+impl JwtLeeway {
+    /// Creates a second-based JWT leeway.
+    pub fn seconds(seconds: u64) -> Self {
+        Self::Seconds(seconds)
+    }
+
+    /// Creates a duration-string JWT leeway.
+    pub fn duration(duration: impl Into<String>) -> Self {
+        Self::Duration(duration.into())
+    }
+}
+
+impl Serialize for JwtLeeway {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Seconds(seconds) => serializer.serialize_u64(*seconds),
+            Self::Duration(duration) => serializer.serialize_str(duration),
+            Self::DisableTimeValidation => serializer.serialize_str("-1"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for JwtLeeway {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(JwtLeewayVisitor)
+    }
+}
+
+struct JwtLeewayVisitor;
+
+impl<'de> Visitor<'de> for JwtLeewayVisitor {
+    type Value = JwtLeeway;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a JWT leeway duration, integer seconds, or explicit -1 disable value")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> core::result::Result<Self::Value, E> {
+        Ok(JwtLeeway::Seconds(value))
+    }
+
+    fn visit_i64<E>(self, value: i64) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        if value == -1 {
+            return Ok(JwtLeeway::DisableTimeValidation);
+        }
+        let seconds = u64::try_from(value)
+            .map_err(|_| E::custom("JWT leeway must be non-negative or exactly -1"))?;
+        Ok(JwtLeeway::Seconds(seconds))
+    }
+
+    fn visit_str<E>(self, value: &str) -> core::result::Result<Self::Value, E> {
+        if value == "-1" {
+            return Ok(JwtLeeway::DisableTimeValidation);
+        }
+        Ok(JwtLeeway::Duration(value.to_owned()))
+    }
+
+    fn visit_string<E>(self, value: String) -> core::result::Result<Self::Value, E> {
+        if value == "-1" {
+            return Ok(JwtLeeway::DisableTimeValidation);
+        }
+        Ok(JwtLeeway::Duration(value))
+    }
+}
+
 /// JWT/OIDC role configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct JwtRole {
@@ -143,15 +234,15 @@ pub struct JwtRole {
     )]
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub claim_mappings: BTreeMap<String, String>,
-    /// Clock skew leeway such as `60s` or `-1`.
+    /// Clock skew leeway.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub clock_skew_leeway: Option<String>,
-    /// Expiration leeway such as `150s` or `-1`.
+    pub clock_skew_leeway: Option<JwtLeeway>,
+    /// Expiration leeway.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub expiration_leeway: Option<String>,
-    /// Not-before leeway such as `150s` or `-1`.
+    pub expiration_leeway: Option<JwtLeeway>,
+    /// Not-before leeway.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub not_before_leeway: Option<String>,
+    pub not_before_leeway: Option<JwtLeeway>,
     /// OIDC callback URLs permitted for this role.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -505,7 +596,7 @@ mod tests {
 
     use secrecy::{ExposeSecret, SecretString};
 
-    use super::{JwtConfig, JwtLoginResponse, JwtRoleList};
+    use super::{JwtConfig, JwtLeeway, JwtLoginResponse, JwtRole, JwtRoleList};
 
     #[test]
     fn jwt_login_auth_deserializes_secret_token_fields() {
@@ -543,5 +634,26 @@ mod tests {
         let debug = format!("{config:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("client-secret"));
+    }
+
+    #[test]
+    fn jwt_leeway_requires_explicit_disable_variant() {
+        let role = JwtRole {
+            clock_skew_leeway: Some(JwtLeeway::seconds(60)),
+            expiration_leeway: Some(JwtLeeway::duration("150s")),
+            not_before_leeway: Some(JwtLeeway::DisableTimeValidation),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&role).unwrap_or_else(|error| panic!("{error}"));
+        assert!(json.contains(r#""clock_skew_leeway":60"#));
+        assert!(json.contains(r#""expiration_leeway":"150s""#));
+        assert!(json.contains(r#""not_before_leeway":"-1""#));
+
+        let decoded: JwtRole =
+            serde_json::from_str(r#"{"expiration_leeway":-1}"#).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            decoded.expiration_leeway,
+            Some(JwtLeeway::DisableTimeValidation)
+        );
     }
 }

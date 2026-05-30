@@ -39,13 +39,21 @@ All notable changes to this project are documented here.
   when numeric loopback HTTP is enabled for non-sensitive development probes.
 - Sensitive request dispatch now uses a separate HTTPS-only HTTP client path to
   make credential transport policy explicit.
+- Removed cargo-test-binary path detection from the local HTTP test bypass;
+  crate tests now require an explicit debug-only numeric-loopback opt-in.
+- OpenBao paths are bounded by byte length and segment count before request URL
+  construction.
+- Database connection URLs are handled as `SecretString` because DSNs commonly
+  embed credentials.
+- JWT role leeway fields now use typed `JwtLeeway` values, with JWT time-check
+  disabling represented only by the explicit `DisableTimeValidation` variant.
 - The KV v2 example no longer prints secret-derived response fields.
 - Security documentation now includes a hardened deployment profile for
   avoiding TLS 1.2/native TLS opt-downs and lowering response caps.
 
 ### Changed
 
-- Updated optional `base64-ng` Transit byte-helper dependency to `1.0.4`.
+- Updated optional `base64-ng` Transit byte-helper dependency to `1.0.5`.
 
 ## 0.4.0 - 2026-05-29
 

@@ -39,7 +39,11 @@ pub struct DatabaseConnectionConfig {
     /// Password policy used by generated credentials.
     pub password_policy: Option<String>,
     /// Database connection URL or plugin-specific URL field.
-    pub connection_url: Option<String>,
+    ///
+    /// This is secret-aware because database URLs commonly embed credentials.
+    /// Prefer separate `username` and `password` fields when the plugin
+    /// supports them.
+    pub connection_url: Option<SecretString>,
     /// Database username used by OpenBao to manage generated users.
     pub username: Option<String>,
     /// Database password used by OpenBao to manage generated users.
@@ -369,7 +373,10 @@ impl Database<'_> {
                 .map(String::as_str)
                 .collect(),
             password_policy: config.password_policy.as_deref(),
-            connection_url: config.connection_url.as_deref(),
+            connection_url: config
+                .connection_url
+                .as_ref()
+                .map(SecretString::expose_secret),
             username: config.username.as_deref(),
             password: config.password.as_ref().map(SecretString::expose_secret),
             disable_escaping: config.disable_escaping,
@@ -638,7 +645,7 @@ impl Serialize for DatabaseConnectionConfig {
             map.serialize_entry("password_policy", password_policy)?;
         }
         if let Some(connection_url) = self.connection_url.as_ref() {
-            map.serialize_entry("connection_url", connection_url)?;
+            map.serialize_entry("connection_url", connection_url.expose_secret())?;
         }
         if let Some(username) = self.username.as_ref() {
             map.serialize_entry("username", username)?;

@@ -94,6 +94,8 @@ pub struct OpenBaoConfig {
     root_certificates: Vec<Certificate>,
     root_certificate_mode: RootCertificateMode,
     client_identity: Option<Identity>,
+    #[cfg(debug_assertions)]
+    allow_sensitive_local_http_for_tests: bool,
 }
 
 impl OpenBaoConfig {
@@ -118,6 +120,8 @@ impl OpenBaoConfig {
             root_certificates: Vec::new(),
             root_certificate_mode: RootCertificateMode::MergeWithSystem,
             client_identity: None,
+            #[cfg(debug_assertions)]
+            allow_sensitive_local_http_for_tests: false,
         })
     }
 
@@ -158,6 +162,19 @@ impl OpenBaoConfig {
     pub fn allow_localhost_http(mut self) -> Result<Self> {
         self.http_policy = HttpPolicy::LocalhostHttpAllowed;
         self.validate()?;
+        Ok(self)
+    }
+
+    /// Allows credential-bearing HTTP requests only for numeric loopback test
+    /// servers in debug builds.
+    ///
+    /// This method exists solely for this crate's local HTTP mock tests. It is
+    /// unavailable in release builds and should not be used by applications.
+    #[cfg(debug_assertions)]
+    #[doc(hidden)]
+    pub fn allow_sensitive_local_http_for_tests(mut self) -> Result<Self> {
+        self = self.allow_localhost_http()?;
+        self.allow_sensitive_local_http_for_tests = true;
         Ok(self)
     }
 
@@ -603,6 +620,10 @@ impl<State> Client<State> {
         url: Url,
     ) -> Result<reqwest::Response> {
         self.http
+            // codeql[rust/cleartext-transmission]: this path is reached only
+            // for requests without auth tokens, namespaces, custom headers, or
+            // request bodies; sensitive OpenBao traffic uses the HTTPS-checked
+            // request path below.
             .request(method, url)
             .header(ACCEPT, "application/json")
             .header("X-Vault-Request", "true")
@@ -621,13 +642,14 @@ impl<State> Client<State> {
     where
         B: Serialize + ?Sized,
     {
-        require_encrypted_transport_for_sensitive_request(&url, true)?;
+        self.require_encrypted_transport_for_sensitive_request(&url, true)?;
         let http = self.http_for_sensitive_request();
 
-        // codeql[rust/cleartext-transmission]: sensitive requests are rejected
-        // above unless the URL is HTTPS, and this client is built with
-        // reqwest::ClientBuilder::https_only(true) outside test binaries.
         let mut request = http
+            // codeql[rust/cleartext-transmission]: the call above rejects
+            // cleartext sensitive requests before this builder is created.
+            // The only HTTP exception is an explicit debug-only numeric
+            // loopback mock-test opt-in on OpenBaoConfig.
             .request(method, url)
             .header(ACCEPT, "application/json")
             .header("X-Vault-Request", "true");
@@ -680,11 +702,29 @@ impl<State> Client<State> {
 
     fn http_for_sensitive_request(&self) -> &reqwest::Client {
         #[cfg(debug_assertions)]
-        if running_under_cargo_test_binary() {
+        if self.config.allow_sensitive_local_http_for_tests {
             return &self.http;
         }
 
         &self.sensitive_http
+    }
+
+    fn require_encrypted_transport_for_sensitive_request(
+        &self,
+        url: &Url,
+        is_sensitive: bool,
+    ) -> Result<()> {
+        #[cfg(debug_assertions)]
+        if self.config.allow_sensitive_local_http_for_tests && is_loopback_url(url) {
+            return Ok(());
+        }
+
+        if is_cleartext_sensitive_request(url, is_sensitive) {
+            return Err(Error::InvalidBaseUrl(
+                "refusing to send credentials or request bodies over plain HTTP".into(),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -746,29 +786,8 @@ fn token_header_for(
     }
 }
 
-fn require_encrypted_transport_for_sensitive_request(url: &Url, is_sensitive: bool) -> Result<()> {
-    #[cfg(debug_assertions)]
-    if running_under_cargo_test_binary() {
-        return Ok(());
-    }
-
-    if is_cleartext_sensitive_request(url, is_sensitive) {
-        return Err(Error::InvalidBaseUrl(
-            "refusing to send credentials or request bodies over plain HTTP".into(),
-        ));
-    }
-    Ok(())
-}
-
 fn is_cleartext_sensitive_request(url: &Url, is_sensitive: bool) -> bool {
     is_sensitive && url.scheme() != "https"
-}
-
-#[cfg(debug_assertions)]
-fn running_under_cargo_test_binary() -> bool {
-    env::args()
-        .next()
-        .is_some_and(|path| path.contains("/target/debug/deps/"))
 }
 
 fn openbao_config_from_env_lookup<F>(mut lookup: F) -> Result<OpenBaoConfig>

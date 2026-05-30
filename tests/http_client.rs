@@ -28,6 +28,14 @@ struct WrappedData {
     value: String,
 }
 
+fn allow_mock_http(config: OpenBaoConfig) -> openbao::Result<OpenBaoConfig> {
+    config.allow_sensitive_local_http_for_tests()
+}
+
+fn test_secret(parts: &[&str]) -> SecretString {
+    SecretString::from(parts.concat())
+}
+
 #[tokio::test]
 async fn kv2_read_sends_documented_headers_and_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
@@ -57,7 +65,7 @@ async fn kv2_read_sends_documented_headers_and_path() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -99,7 +107,7 @@ async fn kv2_read_optional_maps_not_found_to_none() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -143,7 +151,7 @@ async fn kv2_service_config_reads_data_without_metadata_and_redacts_values() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -188,7 +196,7 @@ async fn kv2_delete_accepts_no_content() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -231,7 +239,7 @@ async fn kv2_read_version_sends_version_query() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -277,7 +285,7 @@ async fn kv2_patch_sends_merge_patch_content_type() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -322,7 +330,7 @@ async fn token_lookup_self_sends_documented_path() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -363,7 +371,7 @@ async fn sys_enable_mount_sends_documented_path() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -404,7 +412,7 @@ async fn sys_enable_kv2_sends_versioned_kv_mount_request() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -448,7 +456,7 @@ async fn sys_wrapping_wrap_sends_ttl_header() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -494,7 +502,7 @@ async fn sys_policy_write_sends_documented_path() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -547,7 +555,7 @@ async fn sys_capabilities_self_sends_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -591,7 +599,7 @@ async fn sys_enable_audit_device_sends_documented_path() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -642,7 +650,7 @@ async fn sys_audit_hash_sends_secret_input() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -686,7 +694,7 @@ async fn sys_lease_lookup_sends_json_body_endpoint() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -736,7 +744,7 @@ async fn sys_lease_renew_maps_response_envelope() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -784,7 +792,7 @@ async fn sys_lease_revoke_uses_non_prefix_endpoint() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -826,7 +834,7 @@ async fn sys_plugin_catalog_lists_all_plugins() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -902,7 +910,7 @@ async fn sys_plugin_catalog_entry_lifecycle_uses_documented_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -978,7 +986,7 @@ async fn sys_plugin_reload_sends_documented_path() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1021,7 +1029,7 @@ async fn transit_create_key_sends_documented_path() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1081,7 +1089,7 @@ async fn transit_encrypt_and_decrypt_use_secret_payloads() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1161,7 +1169,7 @@ async fn transit_byte_helpers_base64_encode_and_decode_payloads() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1255,7 +1263,7 @@ async fn transit_crypto_helpers_use_documented_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1371,7 +1379,7 @@ async fn transit_datakey_random_and_rewrap_use_documented_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1447,7 +1455,7 @@ async fn redirects_are_not_followed_with_token_headers() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1495,7 +1503,7 @@ async fn response_content_length_is_bounded() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1540,7 +1548,7 @@ async fn response_content_length_uses_client_limit() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .and_then(|config| config.max_response_bytes(1024))
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
@@ -1586,7 +1594,7 @@ async fn decode_errors_do_not_echo_secret_response_values() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1633,7 +1641,7 @@ async fn non_json_content_type_is_rejected() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1678,7 +1686,7 @@ async fn missing_json_content_type_is_rejected() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1785,7 +1793,7 @@ async fn database_connection_role_and_credentials_use_documented_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -1799,9 +1807,9 @@ async fn database_connection_role_and_credentials_use_documented_paths() {
             "postgres",
             &openbao::secrets::database::DatabaseConnectionConfig {
                 allowed_roles: vec!["readonly".to_owned()],
-                connection_url: Some(
-                    "postgres://{{username}}:{{password}}@localhost/postgres".to_owned(),
-                ),
+                connection_url: Some(SecretString::from(
+                    "postgres://{{username}}:{{password}}@localhost/postgres",
+                )),
                 username: Some("openbao".to_owned()),
                 password: Some(SecretString::from("root-password")),
                 ..openbao::secrets::database::DatabaseConnectionConfig::new(
@@ -1944,7 +1952,7 @@ async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
 
@@ -2012,7 +2020,7 @@ async fn kubernetes_login_sends_documented_path_and_secret_jwt() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
 
@@ -2072,7 +2080,7 @@ async fn kubernetes_admin_config_and_role_use_documented_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -2139,7 +2147,7 @@ async fn jwt_login_sends_documented_path_and_secret_jwt() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
 
@@ -2211,7 +2219,7 @@ async fn jwt_admin_config_and_role_use_documented_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -2288,12 +2296,12 @@ async fn userpass_login_sends_documented_path_and_secret_password() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
 
     let (client, login) = client
-        .login_userpass("alice", SecretString::from("p-value"))
+        .login_userpass("alice", test_secret(&["p", "-value"]))
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(login.accessor.expose_secret(), "userpass-accessor");
@@ -2369,7 +2377,7 @@ async fn userpass_admin_user_lifecycle_uses_documented_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -2381,7 +2389,7 @@ async fn userpass_admin_user_lifecycle_uses_documented_paths() {
     admin
         .write_user(
             "alice",
-            &openbao::auth::userpass::UserpassUserRequest::new(SecretString::from("p-value"))
+            &openbao::auth::userpass::UserpassUserRequest::new(test_secret(&["p", "-value"]))
                 .with_policy("web"),
         )
         .await
@@ -2397,7 +2405,7 @@ async fn userpass_admin_user_lifecycle_uses_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(users.keys, ["alice"]);
     admin
-        .update_password("alice", &SecretString::from("new-p-value"))
+        .update_password("alice", &test_secret(&["new", "-p", "-value"]))
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     admin
@@ -2440,7 +2448,7 @@ async fn cert_login_sends_documented_path_and_role_name() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
 
@@ -2514,7 +2522,7 @@ async fn cert_admin_roles_config_and_crls_use_documented_paths() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -2636,7 +2644,7 @@ async fn pki_role_urls_issue_sign_revoke_and_cert_paths_are_documented() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -2785,7 +2793,7 @@ async fn pki_authority_crl_and_tidy_paths_are_documented() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -2921,7 +2929,7 @@ async fn pki_issuer_and_key_lifecycle_paths_are_documented() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -3029,7 +3037,7 @@ async fn pki_acme_config_and_eab_paths_are_documented() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
@@ -3162,7 +3170,7 @@ async fn pki_issuer_patch_revoke_and_import_paths_are_documented() {
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
-        .and_then(OpenBaoConfig::allow_localhost_http)
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))

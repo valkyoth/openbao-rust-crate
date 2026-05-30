@@ -43,8 +43,9 @@ Please include:
 - Token accessors are treated as secret material.
 - Namespace header values are treated as sensitive metadata.
 - Plain HTTP is allowed only by explicit numeric loopback IP opt-in, and
-  credential-bearing or request-body requests still require HTTPS. Hostnames
-  such as `localhost` are rejected.
+  credential-bearing or request-body requests still require HTTPS. This crate's
+  own HTTP mock tests use a separate explicit debug-only opt-in for numeric
+  loopback servers. Hostnames such as `localhost` are rejected.
 - Response bodies must remain size-bounded, JSON content-type checked, and zeroized after decoding.
 - JSON request serialization buffers controlled by this crate must be zeroized
   after handoff to the HTTP stack.

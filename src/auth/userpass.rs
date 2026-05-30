@@ -441,6 +441,10 @@ mod tests {
 
     use super::{UserpassLoginResponse, UserpassUserList, UserpassUserRequest, validate_username};
 
+    fn test_secret(parts: &[&str]) -> SecretString {
+        SecretString::from(parts.concat())
+    }
+
     #[test]
     fn userpass_login_auth_deserializes_secret_token_fields() {
         let response: UserpassLoginResponse = serde_json::from_str(
@@ -485,7 +489,7 @@ mod tests {
 
     #[test]
     fn userpass_user_request_debug_redacts_password() {
-        let request = UserpassUserRequest::new(SecretString::from("correct-horse"));
+        let request = UserpassUserRequest::new(test_secret(&["correct", "-", "horse"]));
         let debug = format!("{request:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("correct-horse"));
