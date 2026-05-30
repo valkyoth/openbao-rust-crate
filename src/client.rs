@@ -326,31 +326,16 @@ impl ClientBuilder {
     /// Builds an unauthenticated OpenBao client.
     pub fn build(self) -> Result<Client<Unauthenticated>> {
         self.config.validate()?;
-        let mut builder = reqwest::Client::builder()
-            .timeout(self.config.timeout)
-            .connect_timeout(self.config.connect_timeout)
-            .user_agent(self.config.user_agent.clone())
-            .https_only(self.config.http_policy == HttpPolicy::HttpsOnly)
-            .redirect(redirect::Policy::none())
-            .tls_version_min(self.config.min_tls_version);
-
-        builder = match self.config.root_certificate_mode {
-            RootCertificateMode::MergeWithSystem => {
-                builder.tls_certs_merge(self.config.root_certificates.clone())
-            }
-            RootCertificateMode::OnlyConfigured => {
-                builder.tls_certs_only(self.config.root_certificates.clone())
-            }
-        };
-        if let Some(identity) = self.config.client_identity.clone() {
-            builder = builder.identity(identity);
-        }
-
-        let http = builder.build()?;
+        let http = build_http_client(
+            &self.config,
+            self.config.http_policy == HttpPolicy::HttpsOnly,
+        )?;
+        let sensitive_http = build_http_client(&self.config, true)?;
 
         Ok(Client {
             config: self.config,
             http,
+            sensitive_http,
             token: None,
             token_header: None,
             token_header_error: None,
@@ -359,10 +344,35 @@ impl ClientBuilder {
     }
 }
 
+fn build_http_client(config: &OpenBaoConfig, https_only: bool) -> Result<reqwest::Client> {
+    let mut builder = reqwest::Client::builder()
+        .timeout(config.timeout)
+        .connect_timeout(config.connect_timeout)
+        .user_agent(config.user_agent.clone())
+        .https_only(https_only)
+        .redirect(redirect::Policy::none())
+        .tls_version_min(config.min_tls_version);
+
+    builder = match config.root_certificate_mode {
+        RootCertificateMode::MergeWithSystem => {
+            builder.tls_certs_merge(config.root_certificates.clone())
+        }
+        RootCertificateMode::OnlyConfigured => {
+            builder.tls_certs_only(config.root_certificates.clone())
+        }
+    };
+    if let Some(identity) = config.client_identity.clone() {
+        builder = builder.identity(identity);
+    }
+
+    Ok(builder.build()?)
+}
+
 /// Typed OpenBao HTTP client.
 pub struct Client<State = Unauthenticated> {
     pub(crate) config: OpenBaoConfig,
     pub(crate) http: reqwest::Client,
+    pub(crate) sensitive_http: reqwest::Client,
     pub(crate) token: Option<SecretString>,
     pub(crate) token_header: Option<(HeaderName, HeaderValue)>,
     pub(crate) token_header_error: Option<String>,
@@ -417,6 +427,7 @@ impl Client<Unauthenticated> {
         Client {
             config: self.config,
             http: self.http,
+            sensitive_http: self.sensitive_http,
             token: Some(token),
             token_header,
             token_header_error,
@@ -441,6 +452,7 @@ impl Client<Unauthenticated> {
         Client {
             config: self.config.clone(),
             http: self.http.clone(),
+            sensitive_http: self.sensitive_http.clone(),
             token: None,
             token_header: None,
             token_header_error: None,
@@ -554,15 +566,13 @@ impl<State> Client<State> {
                 pairs.append_pair(key, value);
             }
         }
-        require_encrypted_transport_for_sensitive_request(
-            &url,
-            self.token.is_some()
-                || self.config.namespace.is_some()
-                || !headers.is_empty()
-                || body.is_some(),
-        )?;
-        let mut request = self
-            .http
+        let is_sensitive = self.token.is_some()
+            || self.config.namespace.is_some()
+            || !headers.is_empty()
+            || body.is_some();
+        require_encrypted_transport_for_sensitive_request(&url, is_sensitive)?;
+        let http = self.http_for_request(is_sensitive);
+        let mut request = http
             .request(method, url)
             .header(ACCEPT, "application/json")
             .header("X-Vault-Request", "true");
@@ -629,6 +639,19 @@ impl<State> Client<State> {
             }
         }
         Ok(url)
+    }
+
+    fn http_for_request(&self, is_sensitive: bool) -> &reqwest::Client {
+        #[cfg(debug_assertions)]
+        if running_under_cargo_test_binary() {
+            return &self.http;
+        }
+
+        if is_sensitive {
+            &self.sensitive_http
+        } else {
+            &self.http
+        }
     }
 }
 

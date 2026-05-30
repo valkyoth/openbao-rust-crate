@@ -1027,6 +1027,7 @@ impl Sys<'_, Unauthenticated> {
         let client = Client {
             config: self.client.config.clone(),
             http: self.client.http.clone(),
+            sensitive_http: self.client.sensitive_http.clone(),
             token: None,
             token_header: None,
             token_header_error: None,
