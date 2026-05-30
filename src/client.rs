@@ -434,7 +434,8 @@ impl Client<Unauthenticated> {
     #[cfg(any(
         feature = "approle",
         feature = "cert-auth",
-        feature = "kubernetes-auth"
+        feature = "kubernetes-auth",
+        feature = "userpass"
     ))]
     pub(crate) fn clone_without_state(&self) -> Client<Unauthenticated> {
         Client {

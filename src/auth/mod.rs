@@ -8,3 +8,5 @@ pub mod cert;
 pub mod kubernetes;
 #[cfg(feature = "token")]
 pub mod token;
+#[cfg(feature = "userpass")]
+pub mod userpass;

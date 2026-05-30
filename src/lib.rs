@@ -41,6 +41,7 @@ mod response;
     feature = "approle",
     feature = "cert-auth",
     feature = "kubernetes-auth",
+    feature = "userpass",
     feature = "token"
 ))]
 pub mod auth;
@@ -70,6 +71,7 @@ pub mod prelude {
         feature = "approle",
         feature = "cert-auth",
         feature = "kubernetes-auth",
+        feature = "userpass",
         feature = "token"
     ))]
     pub use crate::auth;

@@ -33,9 +33,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.4.0` release line. `0.4.0` builds on the
-published `0.3.0` crate with environment-based client construction,
-Kubernetes auth, TLS certificate auth, PKI, and service-startup ergonomics.
+This README documents the `0.5.0` development line. `0.5.0` builds on the
+published `0.4.0` crate with Userpass auth and the remaining database,
+JWT/OIDC, and Transit ergonomics planned for the same release line.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -50,6 +50,8 @@ Implemented now:
 - Kubernetes auth login plus config and role administration helpers.
 - TLS certificate auth login, method config, CA role, and CRL administration
   helpers.
+- Userpass login plus user create/read/list/delete, password update, and
+  policy update helpers.
 - Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
   helpers.
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
@@ -79,7 +81,8 @@ Implemented now:
 
 Planned next:
 
-- `0.5.0`: database secrets, JWT/OIDC, and userpass.
+- `0.5.0`: database secrets, JWT/OIDC, Transit byte helpers, and Transit
+  signing/JWKS ergonomics.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
   RabbitMQ.
@@ -115,25 +118,26 @@ release sequencing live in [release-notes](release-notes) and
 ## Rust Version Support
 
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
-prefer the latest stable Rust; as of May 29, 2026, that is Rust `1.96.0`.
+prefer the latest stable Rust; as of May 30, 2026, that is Rust `1.96.0`.
 
-Compatibility evidence for `0.4.0`:
+The `0.5.0` release gate will refresh compatibility evidence across this
+range before tagging:
 
-| Rust | Local Evidence |
+| Rust | Required Evidence |
 | --- | --- |
-| `1.90.0` | Full test suite and clippy passed. |
-| `1.91.0` | `cargo check --all-features` passed. |
-| `1.92.0` | `cargo check --all-features` passed. |
-| `1.93.0` | `cargo check --all-features` passed. |
-| `1.94.0` | `cargo check --all-features` passed. |
-| `1.95.0` | `cargo check --all-features` passed. |
-| `1.96.0` | `cargo check --all-features` passed. |
+| `1.90.0` | Full test suite and clippy. |
+| `1.91.0` | `cargo check --all-features`. |
+| `1.92.0` | `cargo check --all-features`. |
+| `1.93.0` | `cargo check --all-features`. |
+| `1.94.0` | `cargo check --all-features`. |
+| `1.95.0` | `cargo check --all-features`. |
+| `1.96.0` | `cargo check --all-features`. |
 
 ## Install
 
 ```toml
 [dependencies]
-openbao = "0.4"
+openbao = "0.5"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 ```
@@ -149,7 +153,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.4", features = ["approle", "cert-auth", "kubernetes-auth", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.5", features = ["approle", "cert-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -157,7 +161,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.4", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.5", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 ## Features
@@ -167,6 +171,7 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | `approle` | yes | AppRole authentication helpers. |
 | `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
+| `userpass` | yes | Userpass login and user administration helpers. |
 | `token` | yes | Token lifecycle helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
@@ -211,7 +216,8 @@ openbao = { version = "0.4", default-features = false, features = ["kv2", "sys",
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
-| JWT/OIDC and userpass | Planned | Planned for `0.5.0`. |
+| Userpass auth | Yes | Login and user create/read/list/delete, password update, and policy update helpers. |
+| JWT/OIDC | Planned | Planned for `0.5.0`. |
 
 ### Secret Engines
 
@@ -323,6 +329,25 @@ async fn main() -> Result<()> {
     let secret_id = SecretString::from(std::env::var("APPROLE_SECRET_ID").unwrap_or_default());
 
     let (client, login) = client.login_approle(role_id, secret_id).await?;
+    let health = client.sys().health().await?;
+
+    let _token_accessor = login.accessor;
+    println!("openbao version: {}", health.version);
+    Ok(())
+}
+```
+
+Authenticate with Userpass:
+
+```rust,no_run
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let client = Client::new("https://bao.example.com:8200")?;
+    let password = SecretString::from(std::env::var("BAO_USERPASS_PASSWORD").unwrap_or_default());
+
+    let (client, login) = client.login_userpass("alice", password).await?;
     let health = client.sys().health().await?;
 
     let _token_accessor = login.accessor;

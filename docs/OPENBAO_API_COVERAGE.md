@@ -12,6 +12,7 @@ Sources:
 - AppRole: https://openbao.org/api-docs/auth/approle/
 - Kubernetes auth: https://openbao.org/api-docs/auth/kubernetes/
 - TLS certificate auth: https://openbao.org/api-docs/auth/cert/
+- Userpass auth: https://openbao.org/api-docs/auth/userpass/
 - Transit: https://openbao.org/api-docs/secret/transit/
 - PKI: https://openbao.org/api-docs/secret/pki/
 
@@ -57,7 +58,8 @@ Support plan:
   flows are implemented.
 - `0.4.0`: Kubernetes login/config/role helpers and TLS certificate
   login/config/role/CRL helpers are implemented.
-- `0.5.0`: JWT/OIDC and userpass.
+- `0.5.0`: userpass login and user administration are implemented; JWT/OIDC
+  remains planned for this release.
 - `0.8.0`: LDAP, RADIUS, and Kerberos.
 
 ## Secret Engines
