@@ -4,6 +4,8 @@
 pub mod approle;
 #[cfg(feature = "cert-auth")]
 pub mod cert;
+#[cfg(feature = "jwt-auth")]
+pub mod jwt;
 #[cfg(feature = "kubernetes-auth")]
 pub mod kubernetes;
 #[cfg(feature = "token")]

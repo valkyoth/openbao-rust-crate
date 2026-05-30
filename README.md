@@ -34,8 +34,8 @@ use openbao::Client;
 ```
 
 This README documents the `0.5.0` development line. `0.5.0` builds on the
-published `0.4.0` crate with Userpass auth and the remaining database,
-JWT/OIDC, and Transit ergonomics planned for the same release line.
+published `0.4.0` crate with Userpass auth, JWT auth, and the remaining
+database and Transit ergonomics planned for the same release line.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -50,6 +50,7 @@ Implemented now:
 - Kubernetes auth login plus config and role administration helpers.
 - TLS certificate auth login, method config, CA role, and CRL administration
   helpers.
+- JWT login plus JWT/OIDC auth method config and role administration helpers.
 - Userpass login plus user create/read/list/delete, password update, and
   policy update helpers.
 - Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
@@ -81,8 +82,8 @@ Implemented now:
 
 Planned next:
 
-- `0.5.0`: database secrets, JWT/OIDC, Transit byte helpers, and Transit
-  signing/JWKS ergonomics.
+- `0.5.0`: database secrets, Transit byte helpers, and Transit signing/JWKS
+  ergonomics.
 - `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
   RabbitMQ.
@@ -153,7 +154,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.5", features = ["approle", "cert-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.5", features = ["approle", "cert-auth", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -170,6 +171,7 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | --- | --- | --- |
 | `approle` | yes | AppRole authentication helpers. |
 | `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
+| `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `userpass` | yes | Userpass login and user administration helpers. |
 | `token` | yes | Token lifecycle helpers. |
@@ -216,8 +218,8 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
+| JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config and role administration helpers. Browser OIDC callback helpers are still planned. |
 | Userpass auth | Yes | Login and user create/read/list/delete, password update, and policy update helpers. |
-| JWT/OIDC | Planned | Planned for `0.5.0`. |
 
 ### Secret Engines
 
@@ -348,6 +350,25 @@ async fn main() -> Result<()> {
     let password = SecretString::from(std::env::var("BAO_USERPASS_PASSWORD").unwrap_or_default());
 
     let (client, login) = client.login_userpass("alice", password).await?;
+    let health = client.sys().health().await?;
+
+    let _token_accessor = login.accessor;
+    println!("openbao version: {}", health.version);
+    Ok(())
+}
+```
+
+Authenticate with JWT:
+
+```rust,no_run
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let client = Client::new("https://bao.example.com:8200")?;
+    let jwt = SecretString::from(std::env::var("SERVICE_JWT").unwrap_or_default());
+
+    let (client, login) = client.login_jwt(Some("web"), jwt).await?;
     let health = client.sys().health().await?;
 
     let _token_accessor = login.accessor;

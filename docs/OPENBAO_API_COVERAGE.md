@@ -1,6 +1,6 @@
 # OpenBao API Coverage Plan
 
-Checked against official OpenBao `2.5.x` documentation on 2026-05-29.
+Checked against official OpenBao `2.5.x` documentation on 2026-05-30.
 
 Sources:
 
@@ -10,6 +10,7 @@ Sources:
 - System backend: https://openbao.org/api-docs/system/
 - KV v2: https://openbao.org/api-docs/secret/kv/kv-v2/
 - AppRole: https://openbao.org/api-docs/auth/approle/
+- JWT/OIDC auth: https://openbao.org/api-docs/auth/jwt/
 - Kubernetes auth: https://openbao.org/api-docs/auth/kubernetes/
 - TLS certificate auth: https://openbao.org/api-docs/auth/cert/
 - Userpass auth: https://openbao.org/api-docs/auth/userpass/
@@ -58,8 +59,9 @@ Support plan:
   flows are implemented.
 - `0.4.0`: Kubernetes login/config/role helpers and TLS certificate
   login/config/role/CRL helpers are implemented.
-- `0.5.0`: userpass login and user administration are implemented; JWT/OIDC
-  remains planned for this release.
+- `0.5.0`: userpass login and user administration are implemented; JWT login
+  plus JWT/OIDC config and role administration helpers are implemented. Browser
+  OIDC callback helpers remain planned.
 - `0.8.0`: LDAP, RADIUS, and Kerberos.
 
 ## Secret Engines

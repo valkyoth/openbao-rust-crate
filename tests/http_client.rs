@@ -1837,6 +1837,156 @@ async fn kubernetes_admin_config_and_role_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn jwt_login_sends_documented_path_and_secret_jwt() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/auth/jwt/login HTTP/1.1"));
+        assert!(request.contains(r#""role":"web""#));
+        assert!(request.contains(r#""jwt":"signed-jwt""#));
+        let body = r#"{"auth":{"client_token":"jwt-token","accessor":"jwt-accessor","policies":["default"],"metadata":{"role":"web"},"lease_duration":3600,"renewable":true}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+    let (client, login) = client
+        .login_jwt(Some("web"), SecretString::from("signed-jwt"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(login.accessor.expose_secret(), "jwt-accessor");
+    assert_eq!(login.metadata.get("role").map(String::as_str), Some("web"));
+    assert_eq!(client.base_url().as_str(), format!("http://{addr}/"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn jwt_admin_config_and_role_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 4096];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/auth/jwt/config HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(request.contains(r#""jwks_url":"https://issuer.example/jwks.json""#));
+                    assert!(request.contains(r#""oidc_client_secret":"client-secret""#));
+                    "{}"
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/auth/jwt/config HTTP/1.1"));
+                    r#"{"data":{"jwks_url":"https://issuer.example/jwks.json","bound_issuer":"https://issuer.example"}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/auth/jwt/role/web HTTP/1.1"));
+                    assert!(request.contains(r#""role_type":"jwt""#));
+                    assert!(request.contains(r#""bound_audiences":["openbao"]"#));
+                    assert!(request.contains(r#""user_claim":"sub""#));
+                    assert!(request.contains(r#""token_policies":["web"]"#));
+                    "{}"
+                }
+                3 => {
+                    assert!(request.starts_with("LIST /v1/auth/jwt/role HTTP/1.1"));
+                    r#"{"data":{"keys":["web"]}}"#
+                }
+                4 => {
+                    assert!(request.starts_with("DELETE /v1/auth/jwt/role/web HTTP/1.1"));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(OpenBaoConfig::allow_localhost_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let admin = client.jwt_admin().unwrap_or_else(|error| panic!("{error}"));
+
+    admin
+        .configure(&openbao::auth::jwt::JwtConfig {
+            jwks_url: Some("https://issuer.example/jwks.json".to_owned()),
+            bound_issuer: Some("https://issuer.example".to_owned()),
+            oidc_client_secret: Some(SecretString::from("client-secret")),
+            ..Default::default()
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = admin
+        .read_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        config.bound_issuer.as_deref(),
+        Some("https://issuer.example")
+    );
+    admin
+        .write_role(
+            "web",
+            &openbao::auth::jwt::JwtRole {
+                role_type: Some("jwt".to_owned()),
+                bound_audiences: vec!["openbao".to_owned()],
+                token_policies: vec!["web".to_owned()],
+                ..openbao::auth::jwt::JwtRole::new("sub")
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let roles = admin
+        .list_roles()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["web"]);
+    admin
+        .delete_role("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn userpass_login_sends_documented_path_and_secret_password() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

@@ -20,6 +20,8 @@ All notable changes to this project are documented here.
 - Constructors for PKI issue and Transit encrypt/decrypt/rewrap requests.
 - Userpass auth login plus user create/read/list/delete, password update, and
   policy update helpers.
+- JWT auth login plus JWT/OIDC auth method config and role administration
+  helpers.
 
 ### Fixed
 
@@ -29,6 +31,8 @@ All notable changes to this project are documented here.
   paths or parser details.
 - Credential-bearing or request-body requests are refused over plain HTTP, even
   when numeric loopback HTTP is enabled for non-sensitive development probes.
+- Sensitive request dispatch now uses a separate HTTPS-only HTTP client path to
+  make credential transport policy explicit.
 - The KV v2 example no longer prints secret-derived response fields.
 - Security documentation now includes a hardened deployment profile for
   avoiding TLS 1.2/native TLS opt-downs and lowering response caps.

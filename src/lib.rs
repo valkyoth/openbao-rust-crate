@@ -40,6 +40,7 @@ mod response;
 #[cfg(any(
     feature = "approle",
     feature = "cert-auth",
+    feature = "jwt-auth",
     feature = "kubernetes-auth",
     feature = "userpass",
     feature = "token"
@@ -70,6 +71,7 @@ pub mod prelude {
     #[cfg(any(
         feature = "approle",
         feature = "cert-auth",
+        feature = "jwt-auth",
         feature = "kubernetes-auth",
         feature = "userpass",
         feature = "token"

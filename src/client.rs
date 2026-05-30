@@ -445,6 +445,7 @@ impl Client<Unauthenticated> {
     #[cfg(any(
         feature = "approle",
         feature = "cert-auth",
+        feature = "jwt-auth",
         feature = "kubernetes-auth",
         feature = "userpass"
     ))]
@@ -570,8 +571,62 @@ impl<State> Client<State> {
             || self.config.namespace.is_some()
             || !headers.is_empty()
             || body.is_some();
-        require_encrypted_transport_for_sensitive_request(&url, is_sensitive)?;
-        let http = self.http_for_request(is_sensitive);
+        let response = if is_sensitive {
+            self.send_sensitive_json_request(method, url, headers, body)
+                .await?
+        } else {
+            self.send_non_sensitive_json_request(method, url).await?
+        };
+        let status = response.status();
+        if !accepted_statuses.contains(&status) {
+            let error =
+                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
+                    .await
+                    .map(|envelope| envelope.errors)
+                    .unwrap_or_default();
+            return Err(Error::Api {
+                status,
+                errors: error,
+            });
+        }
+        if status == StatusCode::NO_CONTENT {
+            return serde_json::from_str("{}").map_err(|_| {
+                Error::Decode("OpenBao response did not match expected schema".into())
+            });
+        }
+        read_json_response(response, self.config.max_response_bytes).await
+    }
+
+    async fn send_non_sensitive_json_request(
+        &self,
+        method: Method,
+        url: Url,
+    ) -> Result<reqwest::Response> {
+        self.http
+            .request(method, url)
+            .header(ACCEPT, "application/json")
+            .header("X-Vault-Request", "true")
+            .send()
+            .await
+            .map_err(Error::from)
+    }
+
+    async fn send_sensitive_json_request<B>(
+        &self,
+        method: Method,
+        url: Url,
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+    ) -> Result<reqwest::Response>
+    where
+        B: Serialize + ?Sized,
+    {
+        require_encrypted_transport_for_sensitive_request(&url, true)?;
+        let http = self.http_for_sensitive_request();
+
+        // codeql[rust/cleartext-transmission]: sensitive requests are rejected
+        // above unless the URL is HTTPS, and this client is built with
+        // reqwest::ClientBuilder::https_only(true) outside test binaries.
         let mut request = http
             .request(method, url)
             .header(ACCEPT, "application/json")
@@ -605,25 +660,7 @@ impl<State> Client<State> {
             request = request.body(Vec::from(&encoded[..]));
         }
 
-        let response = request.send().await?;
-        let status = response.status();
-        if !accepted_statuses.contains(&status) {
-            let error =
-                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
-                    .await
-                    .map(|envelope| envelope.errors)
-                    .unwrap_or_default();
-            return Err(Error::Api {
-                status,
-                errors: error,
-            });
-        }
-        if status == StatusCode::NO_CONTENT {
-            return serde_json::from_str("{}").map_err(|_| {
-                Error::Decode("OpenBao response did not match expected schema".into())
-            });
-        }
-        read_json_response(response, self.config.max_response_bytes).await
+        request.send().await.map_err(Error::from)
     }
 
     pub(crate) fn url_for_path(&self, path: &str) -> Result<Url> {
@@ -641,17 +678,13 @@ impl<State> Client<State> {
         Ok(url)
     }
 
-    fn http_for_request(&self, is_sensitive: bool) -> &reqwest::Client {
+    fn http_for_sensitive_request(&self) -> &reqwest::Client {
         #[cfg(debug_assertions)]
         if running_under_cargo_test_binary() {
             return &self.http;
         }
 
-        if is_sensitive {
-            &self.sensitive_http
-        } else {
-            &self.http
-        }
+        &self.sensitive_http
     }
 }
 
