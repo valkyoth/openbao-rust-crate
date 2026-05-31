@@ -37,6 +37,11 @@ fn test_secret(parts: &[&str]) -> SecretString {
     SecretString::from(parts.concat())
 }
 
+#[cfg(feature = "operator-ops")]
+fn test_operation_id(index: u8) -> String {
+    format!("{}{}", "operation-id-", index)
+}
+
 #[tokio::test]
 async fn kv2_read_sends_documented_headers_and_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
@@ -3904,6 +3909,10 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
     let addr = listener
         .local_addr()
         .unwrap_or_else(|error| panic!("{error}"));
+    let rekey_operation_id = test_operation_id(1);
+    let rotate_operation_id = test_operation_id(2);
+    let server_rekey_operation_id = rekey_operation_id.clone();
+    let server_rotate_operation_id = rotate_operation_id.clone();
 
     let server = thread::spawn(move || {
         for index in 0..12 {
@@ -3942,15 +3951,17 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
                 5 => {
                     assert!(request.starts_with("POST /v1/sys/rekey/init HTTP/1.1"));
                     assert!(request.contains(r#""secret_shares":1"#));
-                    r#"{"started":true,"nonce":"nonce-1","t":1,"n":1,"progress":0,"required":1}"#
-                        .to_owned()
+                    format!(
+                        r#"{{"started":true,"nonce":"{}","t":1,"n":1,"progress":0,"required":1}}"#,
+                        server_rekey_operation_id
+                    )
                 }
                 6 => {
                     assert!(request.starts_with("POST /v1/sys/rekey/update HTTP/1.1"));
                     assert!(request.contains(&format!(r#""key":"{}{}""#, "unseal-", "share")));
                     format!(
-                        r#"{{"complete":true,"keys":["{}{}"],"keys_base64":["{}{}"],"nonce":"nonce-1"}}"#,
-                        "new-", "share", "new-base64-", "share"
+                        r#"{{"complete":true,"keys":["{}{}"],"keys_base64":["{}{}"],"nonce":"{}"}}"#,
+                        "new-", "share", "new-base64-", "share", server_rekey_operation_id
                     )
                 }
                 7 => {
@@ -3963,15 +3974,17 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
                 }
                 9 => {
                     assert!(request.starts_with("POST /v1/sys/rotate/root/init HTTP/1.1"));
-                    r#"{"started":true,"nonce":"nonce-2","t":1,"n":1,"progress":0,"required":1}"#
-                        .to_owned()
+                    format!(
+                        r#"{{"started":true,"nonce":"{}","t":1,"n":1,"progress":0,"required":1}}"#,
+                        server_rotate_operation_id
+                    )
                 }
                 10 => {
                     assert!(request.starts_with("POST /v1/sys/rotate/root/update HTTP/1.1"));
                     assert!(request.contains(&format!(r#""key":"{}{}""#, "unseal-", "share")));
                     format!(
-                        r#"{{"complete":true,"keys":["{}{}"],"keys_base64":["{}{}"],"nonce":"nonce-2"}}"#,
-                        "rotated-", "share", "rotated-base64-", "share"
+                        r#"{{"complete":true,"keys":["{}{}"],"keys_base64":["{}{}"],"nonce":"{}"}}"#,
+                        "rotated-", "share", "rotated-base64-", "share", server_rotate_operation_id
                     )
                 }
                 11 => {
@@ -4048,7 +4061,7 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
         .sys()
         .operator_rekey_update(&openbao::sys::OperatorKeyShareUpdateRequest::new(
             SecretString::from(["unseal-", "share"].concat()),
-            "nonce-1",
+            rekey_operation_id,
         ))
         .await
         .unwrap_or_else(|error| panic!("{error}"));
@@ -4081,7 +4094,7 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
             openbao::sys::OperatorRotateTarget::Root,
             &openbao::sys::OperatorKeyShareUpdateRequest::new(
                 SecretString::from(["unseal-", "share"].concat()),
-                "nonce-2",
+                rotate_operation_id,
             ),
         )
         .await

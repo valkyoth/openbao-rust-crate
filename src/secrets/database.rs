@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Visitor, ser::
 
 use crate::{
     Authenticated, Client, Error, Result,
-    path::{validate_mount_path, validate_secret_path},
+    path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ResponseEnvelope, deserialize_bounded_string_map_or_default,
         deserialize_bounded_string_vec,
@@ -589,7 +589,7 @@ impl Database<'_> {
     fn path(&self, tail: &[&str]) -> Result<String> {
         let mut segments = self.mount.clone();
         for segment in tail {
-            segments.extend(validate_secret_path(segment)?);
+            segments.extend(validate_endpoint_path(segment)?);
         }
         Ok(segments.join("/"))
     }

@@ -8,7 +8,7 @@ use core::fmt;
 
 use crate::{
     Error, Result,
-    path::{validate_mount_path, validate_secret_path},
+    path::{validate_endpoint_path, validate_mount_path},
 };
 
 const MAX_POLICY_RULES: usize = 128;
@@ -227,7 +227,7 @@ fn validate_policy_path(path: &str) -> Result<String> {
 }
 
 fn validate_literal_path(path: &str) -> Result<Vec<String>> {
-    validate_literal_segments(validate_secret_path(path)?)
+    validate_literal_segments(validate_endpoint_path(path)?)
 }
 
 fn validate_literal_mount_path(path: &str) -> Result<Vec<String>> {

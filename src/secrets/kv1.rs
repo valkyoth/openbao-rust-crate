@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
     Authenticated, Client, Result,
-    path::{validate_mount_path, validate_secret_path},
+    path::{validate_endpoint_path, validate_mount_path},
     response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
 };
 
@@ -78,7 +78,7 @@ impl Kv1<'_> {
 
     fn path(&self, path: &str) -> Result<String> {
         let mut segments = self.mount.clone();
-        segments.extend(validate_secret_path(path)?);
+        segments.extend(validate_endpoint_path(path)?);
         Ok(segments.join("/"))
     }
 }

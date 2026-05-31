@@ -15,7 +15,7 @@ use serde::{
 
 use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
-    path::{validate_mount_path, validate_secret_path},
+    path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
         deserialize_bounded_string_map, deserialize_bounded_string_vec,
@@ -2223,7 +2223,7 @@ where
                 "capability path must not be empty".into(),
             ));
         }
-        validated.push(validate_secret_path(path)?.join("/"));
+        validated.push(validate_endpoint_path(path)?.join("/"));
     }
     if validated.is_empty() {
         return Err(Error::InvalidPath(

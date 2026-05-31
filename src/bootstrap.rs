@@ -13,7 +13,7 @@ use subtle::ConstantTimeEq;
 use crate::{
     AclPolicyBuilder, Authenticated, Client, Error, Result,
     auth::token::{TokenAuth, TokenCreateRequest},
-    path::{validate_mount_path, validate_secret_path},
+    path::{validate_endpoint_path, validate_mount_path},
     secrets::transit::TransitCreateKeyRequest,
     sys::{MountEnableRequest, PolicyWriteRequest},
 };
@@ -242,7 +242,7 @@ impl AdminBootstrap {
         values: BTreeMap<String, SecretString>,
     ) -> Result<&mut Self> {
         let mount = validate_mount_path(mount.as_ref())?.join("/");
-        let path = validate_secret_path(path.as_ref())?.join("/");
+        let path = validate_endpoint_path(path.as_ref())?.join("/");
         self.push_operation(BootstrapOperation::Kv2SecretValues {
             mount,
             path,

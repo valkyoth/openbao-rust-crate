@@ -15,7 +15,7 @@ use serde::{
 
 use crate::{
     Authenticated, Client, Error, Result,
-    path::{validate_mount_path, validate_secret_path},
+    path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ResponseEnvelope, deserialize_bounded_string_vec,
         deserialize_optional_bounded_string_map,
@@ -448,7 +448,7 @@ impl Kv2<'_> {
             .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?;
         let mut query = Vec::new();
         if let Some(after) = after {
-            query.push(("after", validate_secret_path(after)?.join("/")));
+            query.push(("after", validate_endpoint_path(after)?.join("/")));
         }
         if let Some(limit) = limit {
             query.push(("limit", limit.to_string()));
@@ -536,21 +536,21 @@ impl Kv2<'_> {
     fn data_path(&self, path: &str) -> Result<String> {
         let mut segments = self.mount.clone();
         segments.push("data".to_owned());
-        segments.extend(validate_secret_path(path)?);
+        segments.extend(validate_endpoint_path(path)?);
         Ok(segments.join("/"))
     }
 
     fn version_path(&self, operation: &str, path: &str) -> Result<String> {
         let mut segments = self.mount.clone();
         segments.extend(validate_mount_path(operation)?);
-        segments.extend(validate_secret_path(path)?);
+        segments.extend(validate_endpoint_path(path)?);
         Ok(segments.join("/"))
     }
 
     fn metadata_path(&self, path: &str) -> Result<String> {
         let mut segments = self.mount.clone();
         segments.push("metadata".to_owned());
-        segments.extend(validate_secret_path(path)?);
+        segments.extend(validate_endpoint_path(path)?);
         Ok(segments.join("/"))
     }
 

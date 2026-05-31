@@ -7,7 +7,7 @@ pub(crate) fn validate_mount_path(value: &str) -> Result<Vec<String>> {
     validate_path(value, false)
 }
 
-pub(crate) fn validate_secret_path(value: &str) -> Result<Vec<String>> {
+pub(crate) fn validate_endpoint_path(value: &str) -> Result<Vec<String>> {
     validate_path(value, true)
 }
 
@@ -71,7 +71,7 @@ fn validate_path(value: &str, allow_empty: bool) -> Result<Vec<String>> {
 mod tests {
     #![allow(clippy::panic)]
 
-    use super::{MAX_PATH_BYTES, MAX_PATH_SEGMENTS, validate_mount_path, validate_secret_path};
+    use super::{MAX_PATH_BYTES, MAX_PATH_SEGMENTS, validate_endpoint_path, validate_mount_path};
 
     #[test]
     fn rejects_ambiguous_paths() {
@@ -80,12 +80,12 @@ mod tests {
         assert!(validate_mount_path("secret?x=1").is_err());
         assert!(validate_mount_path("secret.").is_err());
         assert!(validate_mount_path(&"a".repeat(MAX_PATH_BYTES + 1)).is_err());
-        assert!(validate_secret_path(&vec!["a"; MAX_PATH_SEGMENTS + 1].join("/")).is_err());
+        assert!(validate_endpoint_path(&vec!["a"; MAX_PATH_SEGMENTS + 1].join("/")).is_err());
     }
 
     #[test]
-    fn accepts_root_secret_path() {
-        let path = validate_secret_path("").unwrap_or_else(|error| panic!("{error}"));
+    fn accepts_root_endpoint_path() {
+        let path = validate_endpoint_path("").unwrap_or_else(|error| panic!("{error}"));
         assert!(path.is_empty());
     }
 }

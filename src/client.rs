@@ -14,7 +14,7 @@ use zeroize::Zeroizing;
 
 use crate::{
     Error, Result,
-    path::{validate_mount_path, validate_secret_path},
+    path::{validate_endpoint_path, validate_mount_path},
     response::ErrorEnvelope,
 };
 
@@ -701,7 +701,7 @@ impl<State> Client<State> {
             })?;
             segments.clear();
             segments.push("v1");
-            for segment in validate_secret_path(path)? {
+            for segment in validate_endpoint_path(path)? {
                 segments.push(&segment);
             }
         }

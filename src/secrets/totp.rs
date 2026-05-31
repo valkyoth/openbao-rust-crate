@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as DeErr
 
 use crate::{
     Authenticated, Client, Error, Result,
-    path::{validate_mount_path, validate_secret_path},
+    path::{validate_endpoint_path, validate_mount_path},
     response::{Empty, deserialize_bounded_string_vec},
 };
 
@@ -505,7 +505,7 @@ impl Totp<'_> {
     fn path(&self, operation: &str, name: &str) -> Result<String> {
         let mut segments = self.mount.clone();
         segments.extend(validate_mount_path(operation)?);
-        segments.extend(validate_secret_path(name)?);
+        segments.extend(validate_endpoint_path(name)?);
         Ok(segments.join("/"))
     }
 }
