@@ -3721,3 +3721,202 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
+async fn operator_ops_use_documented_paths_and_redact_material() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..12 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match index {
+                0 => {
+                    assert!(request.starts_with("POST /v1/sys/init HTTP/1.1"));
+                    assert!(request.contains(r#""secret_shares":1"#));
+                    format!(
+                        r#"{{"keys":["{}{}"],"keys_base64":["{}{}"],"root_token":"{}{}"}}"#,
+                        "unseal-", "share", "base64-", "share", "root-", "token"
+                    )
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/unseal HTTP/1.1"));
+                    assert!(request.contains(&format!(r#""key":"{}{}""#, "unseal-", "share")));
+                    r#"{"sealed":false,"n":1,"t":1,"progress":0,"version":"2.5.4"}"#.to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with("PUT /v1/sys/seal HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/sys/rotate/keyring HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                4 => {
+                    assert!(request.starts_with("GET /v1/sys/rekey/init HTTP/1.1"));
+                    r#"{"started":false}"#.to_owned()
+                }
+                5 => {
+                    assert!(request.starts_with("POST /v1/sys/rekey/init HTTP/1.1"));
+                    assert!(request.contains(r#""secret_shares":1"#));
+                    r#"{"started":true,"nonce":"nonce-1","t":1,"n":1,"progress":0,"required":1}"#
+                        .to_owned()
+                }
+                6 => {
+                    assert!(request.starts_with("POST /v1/sys/rekey/update HTTP/1.1"));
+                    assert!(request.contains(&format!(r#""key":"{}{}""#, "unseal-", "share")));
+                    format!(
+                        r#"{{"complete":true,"keys":["{}{}"],"keys_base64":["{}{}"],"nonce":"nonce-1"}}"#,
+                        "new-", "share", "new-base64-", "share"
+                    )
+                }
+                7 => {
+                    assert!(request.starts_with("DELETE /v1/sys/rekey/init HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                8 => {
+                    assert!(request.starts_with("GET /v1/sys/rotate/root/init HTTP/1.1"));
+                    r#"{"started":false}"#.to_owned()
+                }
+                9 => {
+                    assert!(request.starts_with("POST /v1/sys/rotate/root/init HTTP/1.1"));
+                    r#"{"started":true,"nonce":"nonce-2","t":1,"n":1,"progress":0,"required":1}"#
+                        .to_owned()
+                }
+                10 => {
+                    assert!(request.starts_with("POST /v1/sys/rotate/root/update HTTP/1.1"));
+                    assert!(request.contains(&format!(r#""key":"{}{}""#, "unseal-", "share")));
+                    format!(
+                        r#"{{"complete":true,"keys":["{}{}"],"keys_base64":["{}{}"],"nonce":"nonce-2"}}"#,
+                        "rotated-", "share", "rotated-base64-", "share"
+                    )
+                }
+                11 => {
+                    assert!(request.starts_with("DELETE /v1/sys/rotate/root/init HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let unauthenticated = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .and_then(Client::from_config)
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let init = unauthenticated
+        .sys()
+        .operator_init(&openbao::sys::OperatorInitRequest {
+            secret_shares: Some(1),
+            secret_threshold: Some(1),
+            ..Default::default()
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(init.keys.len(), 1);
+    assert!(!format!("{init:?}").contains(&["root-", "token"].concat()));
+
+    let unseal = unauthenticated
+        .sys()
+        .operator_unseal(&openbao::sys::OperatorUnsealRequest::new(
+            init.keys[0].clone(),
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(!unseal.sealed);
+
+    let authenticated = unauthenticated.with_token(SecretString::from(["root-", "token"].concat()));
+    authenticated
+        .sys()
+        .operator_seal()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    authenticated
+        .sys()
+        .operator_rotate_keyring()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let status = authenticated
+        .sys()
+        .operator_rekey_status()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(!status.started);
+
+    authenticated
+        .sys()
+        .operator_rekey_start(
+            &openbao::sys::OperatorKeySharesRequest::new(1, 1)
+                .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let rekey = authenticated
+        .sys()
+        .operator_rekey_update(&openbao::sys::OperatorKeyShareUpdateRequest::new(
+            SecretString::from(["unseal-", "share"].concat()),
+            "nonce-1",
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(rekey.complete);
+    assert!(!format!("{rekey:?}").contains(&["new-", "share"].concat()));
+    authenticated
+        .sys()
+        .operator_rekey_cancel()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let rotate_status = authenticated
+        .sys()
+        .operator_rotate_status(openbao::sys::OperatorRotateTarget::Root)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(!rotate_status.started);
+    authenticated
+        .sys()
+        .operator_rotate_start(
+            openbao::sys::OperatorRotateTarget::Root,
+            &openbao::sys::OperatorKeySharesRequest::new(1, 1)
+                .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let rotate = authenticated
+        .sys()
+        .operator_rotate_update(
+            openbao::sys::OperatorRotateTarget::Root,
+            &openbao::sys::OperatorKeyShareUpdateRequest::new(
+                SecretString::from(["unseal-", "share"].concat()),
+                "nonce-2",
+            ),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(rotate.complete);
+    authenticated
+        .sys()
+        .operator_rotate_cancel(openbao::sys::OperatorRotateTarget::Root)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}

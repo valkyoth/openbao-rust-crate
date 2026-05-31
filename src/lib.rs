@@ -32,6 +32,12 @@ compile_error!(
      Add feature \"native-tls-acknowledged\" to confirm you have audited this choice."
 );
 
+#[cfg(all(feature = "operator-ops", not(feature = "operator-ops-acknowledged")))]
+compile_error!(
+    "The operator-ops feature exposes production init, unseal, rekey, and rotate APIs that can return or mutate root, unseal, recovery, and encryption-key material. \
+     Add feature \"operator-ops-acknowledged\" to confirm you have audited this choice."
+);
+
 #[cfg(all(
     feature = "sys",
     feature = "kv2",

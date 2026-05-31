@@ -25,14 +25,16 @@
   CA signing, generated certificate/key issuance, and OTP verification;
   idempotent admin bootstrap builder for KV v2 mounts, Transit mounts, Transit
   keys, ACL policies, KV v2 string secret values, and explicit scoped
-  service-token issuance.
-- Remaining `0.6.0` planned work: production init/unseal/rekey/rotate APIs
-  behind an explicit feature with strong documentation warnings.
+  service-token issuance; explicitly gated production init, unseal, seal,
+  legacy rekey, key-share rotation, and keyring rotation APIs.
+- Remaining `0.6.0` planned work: no functional scope remains before the next
+  pentest pass; continue with fixes only unless new findings arrive.
 - Default Cargo features: `approle`, `cert-auth`, `database`, `jwt-auth`,
   `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`, `ssh`, `totp`,
   `transit`, `sys`, `rustls-tls`.
 - Non-default Cargo features: `allow-sha1`, `native-tls`,
-  `native-tls-acknowledged`, `transit-bytes`.
+  `native-tls-acknowledged`, `operator-ops`, `operator-ops-acknowledged`,
+  `transit-bytes`.
 - Minimum supported Rust: 1.90.0.
 - Rust compatibility evidence: release gate will refresh full test suite and
   clippy on 1.90.0 plus feature checks through the latest stable Rust before
@@ -52,6 +54,9 @@
   are represented with `SecretString` and redacted from debug output.
 - Admin bootstrap reports redact issued token material and bootstrap operation
   debug output avoids exposing KV v2 string secret values.
+- Production operator APIs are unavailable in default builds and require both
+  `operator-ops` and `operator-ops-acknowledged`; responses containing root,
+  unseal, recovery, or rekey material redact that material from debug output.
 
 ## Security And Stability Gate
 
@@ -67,7 +72,6 @@
 
 ## Known Limitations
 
-- Production init/unseal/rekey helpers are not implemented yet.
 - Raw unauthenticated SSH public-key reads and full SSH issuer import/update/delete
   are not implemented yet.
 - The ACL policy builder intentionally does not cover advanced ACL fields such

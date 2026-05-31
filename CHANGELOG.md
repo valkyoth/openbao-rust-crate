@@ -17,6 +17,9 @@ All notable changes to this project are documented here.
 - `AdminBootstrap` plan builder for idempotent KV v2 mounts, Transit mounts,
   Transit keys, ACL policies, KV v2 string secret values, and explicit scoped
   service-token issuance.
+- Explicitly gated `operator-ops` APIs for production init, unseal, seal,
+  legacy rekey, OpenBao key-share rotation, and keyring rotation. The feature
+  requires `operator-ops-acknowledged`.
 
 ## 0.5.0 - 2026-05-30
 

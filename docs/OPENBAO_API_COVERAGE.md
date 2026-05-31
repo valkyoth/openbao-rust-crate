@@ -132,8 +132,9 @@ Support plan:
 - `0.6.0`: idempotent admin bootstrap builder is implemented for KV v2 mounts,
   Transit mounts, Transit keys, ACL policies, KV v2 string secret values, and
   explicit scoped service-token issuance.
-- `0.6.0`: production init, unseal, rekey, rotate with strong safety
-  documentation.
+- `0.6.0`: production init, unseal, seal, legacy rekey, OpenBao key-share
+  rotation, and keyring rotation are implemented only behind explicit
+  `operator-ops` plus `operator-ops-acknowledged` feature gates.
 - `0.8.0`: metrics, quotas, namespaces, storage, diagnostic endpoints.
 
 ## OpenBao-Specific Notes

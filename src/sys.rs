@@ -103,6 +103,288 @@ pub struct UnsealStatus {
     pub cluster_id: Option<String>,
 }
 
+/// Production initialization request for `/sys/init`.
+///
+/// This type is available only with the explicit `operator-ops` feature. It can
+/// cause OpenBao to return root, unseal, or recovery material. Prefer an
+/// operator ceremony and external custody system over application automation.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct OperatorInitRequest {
+    /// Number of Shamir unseal key shares to create.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secret_shares: Option<u8>,
+    /// Number of shares required to unseal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secret_threshold: Option<u8>,
+    /// Base64-encoded PGP public keys for unseal share encryption.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub pgp_keys: Vec<String>,
+    /// Base64-encoded PGP public key for root token encryption.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub root_token_pgp_key: Option<String>,
+    /// Number of recovery shares for auto-unseal deployments.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery_shares: Option<u8>,
+    /// Number of recovery shares required for recovery operations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery_threshold: Option<u8>,
+    /// Base64-encoded PGP public keys for recovery share encryption.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub recovery_pgp_keys: Vec<String>,
+    /// Number of shares stored by the seal backend.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stored_shares: Option<u8>,
+}
+
+/// Production initialization response from `/sys/init`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct OperatorInitResponse {
+    /// Unseal key shares. Treat as highly sensitive operator material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub keys: Vec<SecretString>,
+    /// Base64-encoded unseal key shares. Treat as highly sensitive operator material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub keys_base64: Vec<SecretString>,
+    /// Initial root token. Treat as highly sensitive operator material.
+    pub root_token: SecretString,
+    /// Recovery key shares. Treat as highly sensitive operator material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub recovery_keys: Vec<SecretString>,
+    /// Base64-encoded recovery key shares. Treat as highly sensitive operator material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub recovery_keys_base64: Vec<SecretString>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for OperatorInitResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OperatorInitResponse")
+            .field("keys_count", &self.keys.len())
+            .field("keys_base64_count", &self.keys_base64.len())
+            .field("root_token", &"<redacted>")
+            .field("recovery_keys_count", &self.recovery_keys.len())
+            .field(
+                "recovery_keys_base64_count",
+                &self.recovery_keys_base64.len(),
+            )
+            .finish()
+    }
+}
+
+/// Production unseal request for `/sys/unseal`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone)]
+pub struct OperatorUnsealRequest {
+    /// Unseal or recovery key share.
+    pub key: SecretString,
+    /// Reset unseal progress.
+    pub reset: Option<bool>,
+    /// Seal migration flag.
+    pub migrate: Option<bool>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl OperatorUnsealRequest {
+    /// Creates an unseal request for one key share.
+    pub fn new(key: SecretString) -> Self {
+        Self {
+            key,
+            reset: None,
+            migrate: None,
+        }
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for OperatorUnsealRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OperatorUnsealRequest")
+            .field("key", &"<redacted>")
+            .field("reset", &self.reset)
+            .field("migrate", &self.migrate)
+            .finish()
+    }
+}
+
+/// Production rekey/rotation initialization request.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct OperatorKeySharesRequest {
+    /// Number of shares to create.
+    pub secret_shares: u8,
+    /// Number of shares required to reconstruct.
+    pub secret_threshold: u8,
+    /// Number of shares stored by a seal backend.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stored_shares: Option<u8>,
+    /// Base64-encoded PGP public keys for share encryption.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub pgp_keys: Vec<String>,
+    /// Whether PGP-encrypted shares should be backed up in storage.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backup: Option<bool>,
+    /// Whether new shares must be verified before finalizing.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub require_verification: Option<bool>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl OperatorKeySharesRequest {
+    /// Creates a validated key-share request.
+    pub fn new(secret_shares: u8, secret_threshold: u8) -> Result<Self> {
+        validate_key_share_options(secret_shares, secret_threshold)?;
+        Ok(Self {
+            secret_shares,
+            secret_threshold,
+            ..Self::default()
+        })
+    }
+}
+
+/// Rekey/rotation progress status.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct OperatorKeySharesStatus {
+    /// Whether an operation has started.
+    #[serde(default)]
+    pub started: bool,
+    /// Operation nonce.
+    #[serde(default)]
+    pub nonce: Option<String>,
+    /// Required threshold.
+    #[serde(default)]
+    pub t: Option<u64>,
+    /// New share count.
+    #[serde(default)]
+    pub n: Option<u64>,
+    /// Current progress count.
+    #[serde(default)]
+    pub progress: Option<u64>,
+    /// Required progress count.
+    #[serde(default)]
+    pub required: Option<u64>,
+    /// PGP fingerprints used for encrypted shares.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub pgp_fingerprints: Vec<String>,
+    /// Whether backup is enabled.
+    #[serde(default)]
+    pub backup: bool,
+    /// Whether verification is required.
+    #[serde(default)]
+    pub verification_required: bool,
+}
+
+/// Rekey/rotation update request containing one existing key share.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone)]
+pub struct OperatorKeyShareUpdateRequest {
+    /// Existing key share used to authorize progress.
+    pub key: SecretString,
+    /// Operation nonce.
+    pub nonce: String,
+}
+
+#[cfg(feature = "operator-ops")]
+impl OperatorKeyShareUpdateRequest {
+    /// Creates an update request.
+    pub fn new(key: SecretString, nonce: impl Into<String>) -> Self {
+        Self {
+            key,
+            nonce: nonce.into(),
+        }
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for OperatorKeyShareUpdateRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OperatorKeyShareUpdateRequest")
+            .field("key", &"<redacted>")
+            .field("nonce", &self.nonce)
+            .finish()
+    }
+}
+
+/// Rekey/rotation update response.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct OperatorKeyShareUpdateResponse {
+    /// Whether the operation completed.
+    #[serde(default)]
+    pub complete: bool,
+    /// Newly generated key shares. Treat as highly sensitive operator material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub keys: Vec<SecretString>,
+    /// Newly generated base64 key shares. Treat as highly sensitive operator material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub keys_base64: Vec<SecretString>,
+    /// Operation nonce.
+    #[serde(default)]
+    pub nonce: Option<String>,
+    /// PGP fingerprints used for encrypted shares.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub pgp_fingerprints: Vec<String>,
+    /// Whether backup is enabled.
+    #[serde(default)]
+    pub backup: bool,
+    /// Whether verification is required.
+    #[serde(default)]
+    pub verification_required: bool,
+    /// Verification nonce when verification is required.
+    #[serde(default)]
+    pub verification_nonce: Option<String>,
+    /// Current progress, when the operation has not completed.
+    #[serde(default)]
+    pub progress: Option<u64>,
+    /// Required progress, when the operation has not completed.
+    #[serde(default)]
+    pub required: Option<u64>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for OperatorKeyShareUpdateResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OperatorKeyShareUpdateResponse")
+            .field("complete", &self.complete)
+            .field("keys_count", &self.keys.len())
+            .field("keys_base64_count", &self.keys_base64.len())
+            .field("nonce", &self.nonce)
+            .field("pgp_fingerprints", &self.pgp_fingerprints)
+            .field("backup", &self.backup)
+            .field("verification_required", &self.verification_required)
+            .field("verification_nonce", &self.verification_nonce)
+            .field("progress", &self.progress)
+            .field("required", &self.required)
+            .finish()
+    }
+}
+
+/// Target for authenticated OpenBao v2.4+ key-share rotation endpoints.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OperatorRotateTarget {
+    /// Rotate root key / Shamir unseal key shares.
+    Root,
+    /// Rotate recovery key shares.
+    Recovery,
+}
+
+#[cfg(feature = "operator-ops")]
+impl OperatorRotateTarget {
+    fn path_segment(self) -> &'static str {
+        match self {
+            Self::Root => "root",
+            Self::Recovery => "recovery",
+        }
+    }
+}
+
 /// Options for [`Sys::bootstrap_dev`].
 ///
 /// The default is intentionally the smallest useful Shamir setup: one share
@@ -913,6 +1195,23 @@ struct UnsealPayload<'a> {
     key: &'a str,
 }
 
+#[cfg(feature = "operator-ops")]
+#[derive(Serialize)]
+struct OperatorUnsealPayload<'a> {
+    key: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reset: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    migrate: Option<bool>,
+}
+
+#[cfg(feature = "operator-ops")]
+#[derive(Serialize)]
+struct OperatorKeyShareUpdatePayload<'a> {
+    key: &'a str,
+    nonce: &'a str,
+}
+
 impl<State> Client<State> {
     /// Accesses system backend helpers.
     pub fn sys(&self) -> Sys<'_, State> {
@@ -960,6 +1259,47 @@ impl<State> Sys<'_, State> {
 }
 
 impl Sys<'_, Unauthenticated> {
+    /// Initializes a production OpenBao instance.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This can return root, unseal, or recovery material. Do not call this
+    /// from normal application startup.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_init(
+        &self,
+        request: &OperatorInitRequest,
+    ) -> Result<OperatorInitResponse> {
+        if let (Some(shares), Some(threshold)) = (request.secret_shares, request.secret_threshold) {
+            validate_key_share_options(shares, threshold)?;
+        }
+        if let (Some(shares), Some(threshold)) =
+            (request.recovery_shares, request.recovery_threshold)
+        {
+            validate_key_share_options(shares, threshold)?;
+        }
+        self.client
+            .request_json(Method::POST, "sys/init", Some(request))
+            .await
+    }
+
+    /// Submits one production unseal key share.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_unseal(&self, request: &OperatorUnsealRequest) -> Result<UnsealStatus> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/unseal",
+                Some(&OperatorUnsealPayload {
+                    key: request.key.expose_secret(),
+                    reset: request.reset,
+                    migrate: request.migrate,
+                }),
+            )
+            .await
+    }
+
     /// Initializes and unseals a fresh loopback OpenBao development instance.
     ///
     /// This helper is intentionally narrow:
@@ -1058,6 +1398,147 @@ impl Sys<'_, Unauthenticated> {
 }
 
 impl Sys<'_, Authenticated> {
+    /// Seals the active OpenBao node.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_seal(&self) -> Result<Empty> {
+        self.client
+            .request_json(Method::PUT, "sys/seal", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Rotates the barrier encryption keyring.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_keyring(&self) -> Result<Empty> {
+        self.client
+            .request_json(Method::POST, "sys/rotate/keyring", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads legacy rekey status from `/sys/rekey/init`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_status(&self) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_json(Method::GET, "sys/rekey/init", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Starts legacy rekey through `/sys/rekey/init`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_start(
+        &self,
+        request: &OperatorKeySharesRequest,
+    ) -> Result<OperatorKeySharesStatus> {
+        validate_key_share_options(request.secret_shares, request.secret_threshold)?;
+        self.client
+            .request_json(Method::POST, "sys/rekey/init", Some(request))
+            .await
+    }
+
+    /// Cancels legacy rekey through `/sys/rekey/init`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_cancel(&self) -> Result<Empty> {
+        self.client
+            .request_json(Method::DELETE, "sys/rekey/init", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Submits one key share to legacy rekey.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_update(
+        &self,
+        request: &OperatorKeyShareUpdateRequest,
+    ) -> Result<OperatorKeyShareUpdateResponse> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/rekey/update",
+                Some(&OperatorKeyShareUpdatePayload {
+                    key: request.key.expose_secret(),
+                    nonce: &request.nonce,
+                }),
+            )
+            .await
+    }
+
+    /// Reads OpenBao v2.4+ key-share rotation status.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_status(
+        &self,
+        target: OperatorRotateTarget,
+    ) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_json(
+                Method::GET,
+                &rotate_init_path(target),
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Starts OpenBao v2.4+ key-share rotation.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_start(
+        &self,
+        target: OperatorRotateTarget,
+        request: &OperatorKeySharesRequest,
+    ) -> Result<OperatorKeySharesStatus> {
+        validate_key_share_options(request.secret_shares, request.secret_threshold)?;
+        self.client
+            .request_json(Method::POST, &rotate_init_path(target), Some(request))
+            .await
+    }
+
+    /// Cancels OpenBao v2.4+ key-share rotation.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_cancel(&self, target: OperatorRotateTarget) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::DELETE,
+                &rotate_init_path(target),
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Submits one key share to OpenBao v2.4+ key-share rotation.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_update(
+        &self,
+        target: OperatorRotateTarget,
+        request: &OperatorKeyShareUpdateRequest,
+    ) -> Result<OperatorKeyShareUpdateResponse> {
+        self.client
+            .request_json(
+                Method::POST,
+                &rotate_update_path(target),
+                Some(&OperatorKeyShareUpdatePayload {
+                    key: request.key.expose_secret(),
+                    nonce: &request.nonce,
+                }),
+            )
+            .await
+    }
+
     /// Lists mounted secrets engines.
     pub async fn list_mounts(&self) -> Result<BTreeMap<String, MountInfo>> {
         let envelope: ResponseEnvelope<MountInfoMap> = self
@@ -1618,6 +2099,36 @@ fn validate_dev_bootstrap_options(secret_shares: u8, secret_threshold: u8) -> Re
     Ok(())
 }
 
+#[cfg(feature = "operator-ops")]
+fn validate_key_share_options(secret_shares: u8, secret_threshold: u8) -> Result<()> {
+    if secret_shares == 0 {
+        return Err(Error::InvalidParameter(
+            "secret_shares must be greater than zero".into(),
+        ));
+    }
+    if secret_threshold == 0 {
+        return Err(Error::InvalidParameter(
+            "secret_threshold must be greater than zero".into(),
+        ));
+    }
+    if secret_threshold > secret_shares {
+        return Err(Error::InvalidParameter(
+            "secret_threshold must be less than or equal to secret_shares".into(),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(feature = "operator-ops")]
+fn rotate_init_path(target: OperatorRotateTarget) -> String {
+    format!("sys/rotate/{}/init", target.path_segment())
+}
+
+#[cfg(feature = "operator-ops")]
+fn rotate_update_path(target: OperatorRotateTarget) -> String {
+    format!("sys/rotate/{}/update", target.path_segment())
+}
+
 fn require_loopback_dev_target<State>(client: &Client<State>) -> Result<()> {
     let url = client.base_url();
     let Some(host) = url.host_str() else {
@@ -1988,6 +2499,10 @@ mod tests {
         PolicyWriteRequest, sys_path, validate_capability_paths, validate_dev_bootstrap_options,
         validate_lease_id, validate_sha256_hex, validate_wrapping_ttl,
     };
+    #[cfg(feature = "operator-ops")]
+    use super::{
+        OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest,
+    };
 
     #[test]
     fn sys_paths_are_validated() {
@@ -2030,6 +2545,47 @@ mod tests {
         assert!(validate_dev_bootstrap_options(0, 0).is_err());
         assert!(validate_dev_bootstrap_options(1, 0).is_err());
         assert!(validate_dev_bootstrap_options(1, 2).is_err());
+    }
+
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn operator_key_share_options_are_validated() {
+        assert!(OperatorKeySharesRequest::new(1, 1).is_ok());
+        assert!(OperatorKeySharesRequest::new(0, 1).is_err());
+        assert!(OperatorKeySharesRequest::new(1, 0).is_err());
+        assert!(OperatorKeySharesRequest::new(1, 2).is_err());
+    }
+
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn operator_secret_debug_is_redacted() {
+        let init = OperatorInitResponse {
+            keys: vec![SecretString::from(["unseal-", "share"].concat())],
+            keys_base64: vec![SecretString::from(["base64-", "share"].concat())],
+            root_token: SecretString::from(["root-", "token"].concat()),
+            recovery_keys: vec![SecretString::from(["recovery-", "share"].concat())],
+            recovery_keys_base64: Vec::new(),
+        };
+        let init_debug = format!("{init:?}");
+        assert!(!init_debug.contains(&["root-", "token"].concat()));
+        assert!(!init_debug.contains(&["unseal-", "share"].concat()));
+        assert!(init_debug.contains("keys_count"));
+
+        let update = OperatorKeyShareUpdateResponse {
+            complete: true,
+            keys: vec![SecretString::from(["new-", "share"].concat())],
+            keys_base64: Vec::new(),
+            nonce: Some("nonce".to_owned()),
+            pgp_fingerprints: Vec::new(),
+            backup: false,
+            verification_required: false,
+            verification_nonce: None,
+            progress: None,
+            required: None,
+        };
+        let update_debug = format!("{update:?}");
+        assert!(!update_debug.contains(&["new-", "share"].concat()));
+        assert!(update_debug.contains("keys_count"));
     }
 
     #[test]

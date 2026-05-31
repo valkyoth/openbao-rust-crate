@@ -87,6 +87,8 @@ Implemented now:
 - Safe exact lease lookup, renew, and revoke helpers.
 - Plugin catalog list, type-list, register, read, delete, and backend reload
   helpers.
+- Explicitly gated production init, unseal, seal, rekey, key-share rotation,
+  and keyring rotation operator APIs.
 - Environment-based client construction from common OpenBao/Vault variables.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
@@ -94,7 +96,6 @@ Implemented now:
 
 Planned next:
 
-- `0.6.0`: explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
   RabbitMQ.
 - `0.8.0`: remaining auth methods and broader system backend automation.
@@ -198,6 +199,8 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
 | `native-tls-acknowledged` | no | Explicit acknowledgment for audited native TLS builds. |
+| `operator-ops` | no | Production init, unseal, seal, rekey, key-share rotate, and keyring rotate APIs. Requires `operator-ops-acknowledged`. |
+| `operator-ops-acknowledged` | no | Explicit acknowledgment for audited operator-operation builds. |
 
 ## Support Matrix
 
@@ -267,7 +270,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
-| Production init, unseal, rekey, rotate | Planned | Explicit safety documentation in `0.6.0`. |
+| Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
 | Quotas, metrics, namespaces | Planned | Planned in the `0.8.0` operations line. |
 
 ## Examples

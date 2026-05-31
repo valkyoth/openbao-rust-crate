@@ -77,6 +77,12 @@ by another service so invalid header values fail before the first request.
 Lower `OpenBaoConfig::max_response_bytes` for clients that only call
 small-response endpoints.
 
+The `operator-ops` feature exposes production init, unseal, seal, rekey, and
+rotation APIs. It is disabled by default and fails to compile unless
+`operator-ops-acknowledged` is enabled too. Do not enable it in normal
+application clients; reserve it for audited operator tooling with an external
+key ceremony and custody model.
+
 ## Dev Bootstrap Warning
 
 `Sys::bootstrap_dev` is for disposable local OpenBao development instances
