@@ -50,6 +50,7 @@ default = [
     "kv1",
     "kv2",
     "pki",
+    "ssh",
     "totp",
     "transit",
     "sys",
@@ -65,6 +66,7 @@ token = []
 kv1 = []
 kv2 = []
 pki = []
+ssh = []
 totp = []
 transit = []
 transit-bytes = ["dep:base64-ng"]

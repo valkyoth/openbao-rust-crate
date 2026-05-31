@@ -3356,3 +3356,197 @@ async fn totp_key_and_code_lifecycle_uses_documented_paths() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn ssh_role_otp_and_ca_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..10 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let (status, body) = match index {
+                0 => {
+                    assert!(request.starts_with("POST /v1/ssh/roles/otp-role HTTP/1.1"));
+                    assert!(request.contains(r#""key_type":"otp""#));
+                    assert!(request.contains(r#""default_user":"alice""#));
+                    ("204 No Content", "{}".to_owned())
+                }
+                1 => {
+                    assert!(
+                        request.starts_with("LIST /v1/ssh/roles?after=otp-role&limit=10 HTTP/1.1")
+                    );
+                    ("200 OK", r#"{"data":{"roles":["otp-role"]}}"#.to_owned())
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/ssh/lookup HTTP/1.1"));
+                    assert!(request.contains(r#""ip":"127.0.0.1""#));
+                    ("200 OK", r#"{"data":{"roles":["otp-role"]}}"#.to_owned())
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/ssh/creds/otp-role HTTP/1.1"));
+                    assert!(request.contains(r#""username":"alice""#));
+                    assert!(request.contains(r#""ip":"127.0.0.1""#));
+                    (
+                        "200 OK",
+                        format!(
+                            r#"{{"data":{{"ip":"127.0.0.1","key":"{}{}","key_type":"otp","port":22,"username":"alice"}}}}"#,
+                            "otp-", "secret"
+                        ),
+                    )
+                }
+                4 => {
+                    assert!(request.starts_with("GET /v1/ssh/config/issuers HTTP/1.1"));
+                    ("200 OK", r#"{"data":{"default":"issuer-1"}}"#.to_owned())
+                }
+                5 => {
+                    assert!(request.starts_with("POST /v1/ssh/config/issuers HTTP/1.1"));
+                    assert!(request.contains(r#""default":"issuer-2""#));
+                    ("200 OK", r#"{"data":{"default":"issuer-2"}}"#.to_owned())
+                }
+                6 => {
+                    assert!(request.starts_with("POST /v1/ssh/sign/ca-role HTTP/1.1"));
+                    assert!(request.contains(r#""public_key":"ssh-rsa AAAA test""#));
+                    (
+                        "200 OK",
+                        r#"{"data":{"issuer_id":"issuer-2","serial_number":"abc","signed_key":"ssh-rsa-cert-v01 cert\n"}}"#
+                            .to_owned(),
+                    )
+                }
+                7 => {
+                    assert!(request.starts_with("POST /v1/ssh/issue/ca-role HTTP/1.1"));
+                    assert!(request.contains(r#""key_type":"rsa""#));
+                    (
+                        "200 OK",
+                        format!(
+                            r#"{{"data":{{"issuer_id":"issuer-2","serial_number":"def","signed_key":"ssh-rsa-cert-v01 cert\n","private_key":"{}{}","private_key_type":"rsa"}}}}"#,
+                            "private-", "key"
+                        ),
+                    )
+                }
+                8 => {
+                    assert!(request.starts_with("POST /v1/ssh/verify HTTP/1.1"));
+                    assert!(request.contains(&format!(r#""otp":"{}{}""#, "otp-", "secret")));
+                    (
+                        "200 OK",
+                        r#"{"data":{"ip":"127.0.0.1","username":"alice"}}"#.to_owned(),
+                    )
+                }
+                9 => {
+                    assert!(request.starts_with("DELETE /v1/ssh/roles/otp-role HTTP/1.1"));
+                    ("204 No Content", "{}".to_owned())
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let ssh = client.ssh("ssh").unwrap_or_else(|error| panic!("{error}"));
+    let ip = "127.0.0.1"
+        .parse()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    ssh.write_role(
+        "otp-role",
+        &openbao::secrets::ssh::SshRoleRequest::otp("alice", "127.0.0.1/32"),
+    )
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    let roles = ssh
+        .list_roles_after(Some("otp-role"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.roles, ["otp-role"]);
+
+    let lookup = ssh
+        .lookup_roles_by_ip(ip)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(lookup.roles, ["otp-role"]);
+
+    let credentials = ssh
+        .credentials(
+            "otp-role",
+            &openbao::secrets::ssh::SshCredentialsRequest::new(ip).with_username("alice"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        credentials.key.expose_secret(),
+        &["otp-", "secret"].concat()
+    );
+
+    let issuer_config = ssh
+        .read_issuer_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer_config.default_issuer, "issuer-1");
+
+    let issuer_config = ssh
+        .write_issuer_config(&openbao::secrets::ssh::SshIssuerConfigRequest::new(
+            "issuer-2",
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer_config.default_issuer, "issuer-2");
+
+    let signed = ssh
+        .sign(
+            "ca-role",
+            &openbao::secrets::ssh::SshSignRequest::new("ssh-rsa AAAA test")
+                .with_valid_principals("alice"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(signed.issuer_id.as_deref(), Some("issuer-2"));
+
+    let issued = ssh
+        .issue(
+            "ca-role",
+            &openbao::secrets::ssh::SshIssueRequest::new(
+                openbao::secrets::ssh::SshIssueKeyType::Rsa,
+            ),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        issued.private_key.expose_secret(),
+        &["private-", "key"].concat()
+    );
+
+    let verified = ssh
+        .verify(&openbao::secrets::ssh::SshVerifyRequest::new(
+            credentials.key,
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(verified.username, "alice");
+
+    ssh.delete_role("otp-role")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}

@@ -11,8 +11,8 @@
 //! The public API covers environment-based client construction, AppRole login,
 //! direct token auth, token lifecycle helpers, KV v1/v2, Transit, system
 //! health/seal status, dev-only bootstrap, mount management, audit devices,
-//! safe exact lease helpers, plugin catalog operations, TOTP, and raw JSON
-//! calls for advanced users.
+//! safe exact lease helpers, plugin catalog operations, SSH, TOTP, and raw
+//! JSON calls for advanced users.
 //!
 //! Secret request payloads are serialized through a zeroizing intermediate
 //! buffer before handoff to `reqwest`. The HTTP stack still owns a normal body
@@ -52,6 +52,7 @@ pub mod auth;
     feature = "kv1",
     feature = "kv2",
     feature = "pki",
+    feature = "ssh",
     feature = "totp",
     feature = "transit"
 ))]
@@ -91,6 +92,7 @@ pub mod prelude {
         feature = "kv1",
         feature = "kv2",
         feature = "pki",
+        feature = "ssh",
         feature = "totp",
         feature = "transit"
     ))]

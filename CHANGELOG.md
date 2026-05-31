@@ -11,6 +11,9 @@ All notable changes to this project are documented here.
 - TOTP secrets engine helpers for key create/read/list/delete, code
   generation, and code validation with generated URLs, barcodes, and codes
   treated as secret material.
+- SSH secrets engine helpers for roles, zero-address roles, IP role lookup,
+  OTP credentials, default issuer config, CA signing, generated SSH
+  certificate/key issuance, and OTP verification.
 
 ## 0.5.0 - 2026-05-30
 

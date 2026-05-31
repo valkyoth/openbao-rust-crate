@@ -17,6 +17,7 @@ Sources:
 - Userpass auth: https://openbao.org/api-docs/auth/userpass/
 - Transit: https://openbao.org/api-docs/secret/transit/
 - PKI: https://openbao.org/api-docs/secret/pki/
+- SSH: https://openbao.org/api-docs/secret/ssh/
 - TOTP: https://openbao.org/api-docs/secret/totp/
 
 ## Foundation
@@ -109,7 +110,10 @@ Support plan:
   list/write/read/delete, static credentials, and static role rotation are
   implemented.
 - `0.6.0`: TOTP key create/read/list/delete, code generation, and code
-  validation are implemented. SSH remains planned.
+  validation are implemented. SSH role management, zero-address roles, IP role
+  lookup, OTP credential issue, default issuer config, CA sign/issue, and OTP
+  verification are implemented. Raw unauthenticated public-key reads and full
+  issuer import/update/delete remain planned.
 - `0.7.0`: Kubernetes, LDAP, RabbitMQ, cubbyhole, identity.
 
 ## System Backend

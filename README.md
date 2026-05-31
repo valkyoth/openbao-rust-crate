@@ -34,8 +34,8 @@ use openbao::Client;
 ```
 
 This README documents the `0.6.0` development line. `0.6.0` builds on `0.5.0`
-with TOTP helpers and ACL policy builder ergonomics for least-privilege service
-setup.
+with SSH/TOTP helpers and ACL policy builder ergonomics for least-privilege
+service setup.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -61,6 +61,8 @@ Implemented now:
 - KV v1 read, write, delete, and list helpers.
 - Database connection config, dynamic roles, static roles, root/static
   rotation, and credential helpers.
+- SSH role, zero-address role, IP lookup, OTP credential, default issuer config,
+  CA sign, generated certificate/key issue, and OTP verification helpers.
 - TOTP key create/read/list/delete, code generation, and code validation
   helpers.
 - PKI URL and CRL config, root/intermediate generation, intermediate signing
@@ -89,7 +91,7 @@ Implemented now:
 
 Planned next:
 
-- `0.6.0`: SSH and explicitly gated production init/unseal/rekey/rotate APIs.
+- `0.6.0`: explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
   RabbitMQ.
 - `0.8.0`: remaining auth methods and broader system backend automation.
@@ -159,7 +161,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.6", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.6", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -184,6 +186,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
 | `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, and tidy helpers. |
+| `ssh` | yes | SSH roles, OTP credentials, CA sign/issue, issuer config, and OTP verification helpers. |
 | `totp` | yes | TOTP key and code helpers. |
 | `transit` | yes | Transit cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
@@ -243,7 +246,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and optional raw-byte helpers. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
-| SSH | Planned | Planned for `0.6.0`. |
+| SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads and full issuer import/update/delete are not yet typed. |
 | Identity and remaining engines | Planned | Planned for `0.7.0`. |
 
 ### System Backend And Operations
@@ -552,6 +555,28 @@ async fn main() -> Result<()> {
         .await?;
 
     println!("TOTP code accepted: {}", validation.valid);
+    Ok(())
+}
+```
+
+Issue an SSH certificate and generated private key without logging the key:
+
+```rust,no_run
+use openbao::secrets::ssh::{SshIssueKeyType, SshIssueRequest};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let ssh = client.ssh("ssh")?;
+
+    let issued = ssh
+        .issue("user-cert", &SshIssueRequest::new(SshIssueKeyType::Ed25519))
+        .await?;
+
+    println!("SSH certificate length: {}", issued.signed_key.len());
+    let _private_key_is_not_logged = issued.private_key;
     Ok(())
 }
 ```
