@@ -28,6 +28,9 @@ cargo test --doc --all-features
 echo "checks: docs"
 cargo doc --no-deps --all-features
 
+echo "checks: package"
+cargo package --locked --allow-dirty
+
 echo "checks: dependency policy"
 cargo deny check
 

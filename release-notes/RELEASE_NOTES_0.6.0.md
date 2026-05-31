@@ -65,14 +65,19 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_6_gate.sh`
-- Result: pending.
+- Result: local pre-pentest gate passed on 2026-05-31.
 - Pentest report: pending.
-- `cargo audit` result: pending.
-- `cargo deny check` result: pending.
-- CodeQL result: pending.
-- Podman OpenBao integration result: pending.
-- SBOM generation result: pending.
-- Reproducible package result: pending.
+- `cargo audit` result: passed on 2026-05-31.
+- `cargo deny check` result: passed on 2026-05-31 with duplicate dependency
+  warnings only.
+- CodeQL result: pending in GitHub.
+- Podman OpenBao integration result: passed on 2026-05-31 against OpenBao
+  `v2.5.4` on the local `9940` dev endpoint.
+- SBOM generation result: passed on 2026-05-31; SBOM written to
+  `target/sbom/openbao.cdx.json`.
+- Reproducible package result: passed on 2026-05-31 with
+  `cargo package --locked --allow-dirty`; package verification is now part of
+  the release gate.
 
 ## Known Limitations
 
