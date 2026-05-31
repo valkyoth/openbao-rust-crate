@@ -616,6 +616,7 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionMetadataMapVisitor<MA
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+    #![allow(deprecated)]
 
     use secrecy::{ExposeSecret, SecretString};
 

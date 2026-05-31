@@ -1436,6 +1436,7 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+    #![allow(deprecated)]
 
     #[cfg(feature = "transit-bytes")]
     use secrecy::ExposeSecret;

@@ -19,6 +19,10 @@ use crate::{
     response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
 };
 
+const MAX_SSH_FIELD_BYTES: usize = 4096;
+const MAX_SSH_PUBLIC_KEY_BYTES: usize = 16 * 1024;
+const MIN_RSA_KEY_BITS: u16 = 3072;
+
 /// Handle for a mounted SSH secrets engine.
 #[derive(Debug)]
 pub struct Ssh<'a> {
@@ -163,6 +167,15 @@ impl SshRoleRequest {
         self.max_ttl = Some(max_ttl.into());
         self
     }
+
+    fn validate(&self) -> Result<()> {
+        validate_optional_ssh_field(self.default_user.as_deref(), "ssh default_user")?;
+        validate_optional_ssh_field(self.cidr_list.as_deref(), "ssh cidr_list")?;
+        validate_optional_ssh_field(self.allowed_users.as_deref(), "ssh allowed_users")?;
+        validate_optional_duration(self.ttl.as_deref(), "ssh role ttl")?;
+        validate_optional_duration(self.max_ttl.as_deref(), "ssh role max_ttl")?;
+        Ok(())
+    }
 }
 
 /// SSH role read response.
@@ -292,6 +305,13 @@ impl SshSignRequest {
         self.valid_principals = Some(principals.into());
         self
     }
+
+    fn validate(&self) -> Result<()> {
+        validate_ssh_public_key(&self.public_key)?;
+        validate_optional_duration(self.ttl.as_deref(), "ssh sign ttl")?;
+        validate_optional_ssh_field(self.valid_principals.as_deref(), "ssh valid_principals")?;
+        Ok(())
+    }
 }
 
 /// SSH CA sign response.
@@ -344,6 +364,20 @@ impl SshIssueRequest {
             key_type: Some(key_type),
             ..Self::default()
         }
+    }
+
+    /// Sets generated key bits after validating the selected key type.
+    pub fn with_key_bits(mut self, key_bits: u16) -> Result<Self> {
+        self.key_bits = Some(key_bits);
+        self.validate()?;
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_optional_duration(self.ttl.as_deref(), "ssh issue ttl")?;
+        validate_ssh_issue_key_bits(self.key_type, self.key_bits)?;
+        validate_optional_ssh_field(self.valid_principals.as_deref(), "ssh valid_principals")?;
+        Ok(())
     }
 }
 
@@ -668,6 +702,7 @@ impl Ssh<'_> {
 
     /// Creates or updates an SSH role.
     pub async fn write_role(&self, name: &str, request: &SshRoleRequest) -> Result<Empty> {
+        request.validate()?;
         self.client
             .request_json(Method::POST, &self.path(&["roles", name])?, Some(request))
             .await
@@ -912,6 +947,7 @@ impl Ssh<'_> {
 
     /// Signs an SSH public key with a role.
     pub async fn sign(&self, role: &str, request: &SshSignRequest) -> Result<SshSignResponse> {
+        request.validate()?;
         let envelope: ResponseEnvelope<SshSignResponse> = self
             .client
             .request_json(Method::POST, &self.path(&["sign", role])?, Some(request))
@@ -921,6 +957,7 @@ impl Ssh<'_> {
 
     /// Issues a generated SSH private key and certificate with a role.
     pub async fn issue(&self, role: &str, request: &SshIssueRequest) -> Result<SshIssueResponse> {
+        request.validate()?;
         let envelope: ResponseEnvelope<SshIssueResponse> = self
             .client
             .request_json(Method::POST, &self.path(&["issue", role])?, Some(request))
@@ -946,6 +983,94 @@ impl Ssh<'_> {
             segments.extend(validate_secret_path(segment)?);
         }
         Ok(segments.join("/"))
+    }
+}
+
+fn validate_ssh_public_key(public_key: &str) -> Result<()> {
+    let trimmed = public_key.trim();
+    if trimmed.is_empty() {
+        return Err(Error::InvalidParameter(
+            "SSH public key must not be empty".into(),
+        ));
+    }
+    if trimmed.len() > MAX_SSH_PUBLIC_KEY_BYTES {
+        return Err(Error::InvalidParameter(
+            "SSH public key exceeds maximum allowed length".into(),
+        ));
+    }
+    if trimmed.as_bytes().iter().any(u8::is_ascii_control) {
+        return Err(Error::InvalidParameter(
+            "SSH public key must not contain control characters".into(),
+        ));
+    }
+    const ALLOWED_PREFIXES: &[&str] = &[
+        "ssh-rsa ",
+        "rsa-sha2-256 ",
+        "rsa-sha2-512 ",
+        "ssh-ed25519 ",
+        "sk-ssh-ed25519@openssh.com ",
+        "ecdsa-sha2-nistp256 ",
+        "ecdsa-sha2-nistp384 ",
+        "ecdsa-sha2-nistp521 ",
+    ];
+    if !ALLOWED_PREFIXES
+        .iter()
+        .any(|prefix| trimmed.starts_with(prefix))
+    {
+        return Err(Error::InvalidParameter(
+            "SSH public key must use an approved algorithm prefix".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_optional_ssh_field(value: Option<&str>, field: &'static str) -> Result<()> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    if value.is_empty() {
+        return Err(Error::InvalidParameter(format!(
+            "{field} must not be empty"
+        )));
+    }
+    if value.len() > MAX_SSH_FIELD_BYTES {
+        return Err(Error::InvalidParameter(format!(
+            "{field} exceeds maximum allowed length"
+        )));
+    }
+    if value.as_bytes().iter().any(u8::is_ascii_control) {
+        return Err(Error::InvalidParameter(format!(
+            "{field} must not contain control characters"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_optional_duration(value: Option<&str>, field: &'static str) -> Result<()> {
+    if let Some(value) = value {
+        crate::validation::validate_duration_parameter(value, field)?;
+    }
+    Ok(())
+}
+
+fn validate_ssh_issue_key_bits(
+    key_type: Option<SshIssueKeyType>,
+    key_bits: Option<u16>,
+) -> Result<()> {
+    let Some(key_bits) = key_bits else {
+        return Ok(());
+    };
+    match key_type.unwrap_or(SshIssueKeyType::Rsa) {
+        SshIssueKeyType::Rsa if key_bits < MIN_RSA_KEY_BITS => Err(Error::InvalidParameter(
+            "SSH RSA key_bits must be at least 3072".into(),
+        )),
+        SshIssueKeyType::Ec if !matches!(key_bits, 256 | 384 | 521) => Err(
+            Error::InvalidParameter("SSH EC key_bits must be 256, 384, or 521".into()),
+        ),
+        SshIssueKeyType::Ed25519 => Err(Error::InvalidParameter(
+            "SSH Ed25519 key_bits must be omitted".into(),
+        )),
+        _ => Ok(()),
     }
 }
 
@@ -991,6 +1116,7 @@ impl<'de, const MAX: usize> Visitor<'de> for SshIssuerInfoMapVisitor<MAX> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+    #![allow(deprecated)]
 
     use std::net::{IpAddr, Ipv4Addr};
 
@@ -999,8 +1125,8 @@ mod tests {
     use crate::{Client, OpenBaoConfig};
 
     use super::{
-        SshCaSubmitRequest, SshCredentials, SshIssueResponse, SshIssuerList, SshRoleList,
-        SshVerifyRequest,
+        SshCaSubmitRequest, SshCredentials, SshIssueKeyType, SshIssueRequest, SshIssueResponse,
+        SshIssuerList, SshRoleList, SshRoleRequest, SshSignRequest, SshVerifyRequest,
     };
 
     #[test]
@@ -1037,6 +1163,38 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn ssh_request_inputs_are_validated() {
+        let role = SshRoleRequest::otp("alice", "127.0.0.1/32").with_ttl("30m");
+        assert!(role.validate().is_ok());
+
+        let role = SshRoleRequest::otp("alice", "127.0.0.1/32").with_ttl("forever");
+        assert!(role.validate().is_err());
+
+        let role = SshRoleRequest::otp("alice", "127.0.0.1/32\nbad");
+        assert!(role.validate().is_err());
+
+        let sign = SshSignRequest::new("ssh-rsa AAAA test").with_valid_principals("alice,bob");
+        assert!(sign.validate().is_ok());
+
+        let sign = SshSignRequest::new("ssh-dss AAAA weak");
+        assert!(sign.validate().is_err());
+
+        let sign = SshSignRequest::new("ssh-rsa AAAA\nbad");
+        assert!(sign.validate().is_err());
+
+        assert!(
+            SshIssueRequest::new(SshIssueKeyType::Rsa)
+                .with_key_bits(2048)
+                .is_err()
+        );
+        assert!(
+            SshIssueRequest::new(SshIssueKeyType::Rsa)
+                .with_key_bits(3072)
+                .is_ok()
+        );
     }
 
     #[test]

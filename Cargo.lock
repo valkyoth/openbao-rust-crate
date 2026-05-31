@@ -702,6 +702,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "subtle",
  "tokio",
  "zeroize",
 ]

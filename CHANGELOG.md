@@ -15,6 +15,9 @@ All notable changes to this project are documented here.
   OTP credentials, default issuer config, issuer list/submit/read/update/delete,
   authenticated CA public-key metadata, CA signing, generated SSH
   certificate/key issuance, and OTP verification.
+- Validating `TokenCreateRequest` duration builders for token TTL,
+  explicit-max-TTL, and period fields.
+- `SshIssueRequest::with_key_bits` for validating generated SSH key strength.
 - `AdminBootstrap` plan builder for idempotent KV v2 mounts, Transit mounts,
   Transit keys, ACL policies, KV v2 string secret values, and explicit scoped
   service-token issuance.
@@ -26,6 +29,19 @@ All notable changes to this project are documented here.
 
 - SSH role listing now accepts OpenBao's documented `keys` response field as
   well as the `roles` field used by IP lookup and zero-address endpoints.
+- SSH role/sign/issue requests now reject malformed durations, control
+  characters in principal/CIDR fields, unsupported SSH public-key prefixes, and
+  weak generated RSA key sizes before sending requests.
+- `AdminBootstrap` compares existing and desired KV v2 secret values with
+  constant-time equality, bounds the number of planned operations, and treats
+  duplicate-create races for mounts and Transit keys as unchanged state.
+- Dev-state TLS private-key patterns are explicitly ignored in addition to the
+  ignored dev-state directory.
+
+### Changed
+
+- `Client::with_token` is formally deprecated; use `Client::try_with_token` so
+  invalid token header values fail at construction time.
 
 ## 0.5.0 - 2026-05-30
 

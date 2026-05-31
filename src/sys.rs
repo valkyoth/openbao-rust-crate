@@ -600,7 +600,7 @@ impl Visitor<'_> for LeaseDurationVisitor {
     where
         E: DeError,
     {
-        validate_duration_string(value, true)
+        crate::validation::validate_duration_string(value, true)
             .then(|| LeaseDuration::Duration(value.to_owned()))
             .ok_or_else(|| E::custom("invalid duration string"))
     }
@@ -609,7 +609,7 @@ impl Visitor<'_> for LeaseDurationVisitor {
     where
         E: DeError,
     {
-        validate_duration_string(&value, true)
+        crate::validation::validate_duration_string(&value, true)
             .then_some(LeaseDuration::Duration(value))
             .ok_or_else(|| E::custom("invalid duration string"))
     }
@@ -1373,7 +1373,7 @@ impl Sys<'_, Unauthenticated> {
             token_header_error: None,
             _state: PhantomData,
         }
-        .with_token(init_response.root_token.clone());
+        .try_with_token(init_response.root_token.clone())?;
 
         Ok(DevBootstrap {
             client,
@@ -2162,60 +2162,12 @@ fn sys_path(prefix: &str, mount_path: &str, suffix: Option<&str>) -> Result<Stri
 }
 
 fn validate_wrapping_ttl(ttl: &str) -> Result<()> {
-    if validate_duration_string(ttl, false) {
+    if crate::validation::validate_duration_string(ttl, false) {
         return Ok(());
     }
     Err(Error::InvalidHeader(
         "wrapping TTL must be a positive duration such as 30s, 5m, or 1h".into(),
     ))
-}
-
-const MAX_DURATION_COMPONENT: u64 = 8_760_000;
-
-fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
-    if value.is_empty() {
-        return false;
-    }
-
-    let bytes = value.as_bytes();
-    let mut index = 0;
-    let mut last_unit_order = None;
-    while index < bytes.len() {
-        let digit_start = index;
-        while index < bytes.len() && bytes[index].is_ascii_digit() {
-            index += 1;
-        }
-        if digit_start == index {
-            return false;
-        }
-        let Ok(component) = core::str::from_utf8(&bytes[digit_start..index])
-            .unwrap_or("")
-            .parse::<u64>()
-        else {
-            return false;
-        };
-        if component > MAX_DURATION_COMPONENT {
-            return false;
-        }
-        if !allow_zero && component == 0 {
-            return false;
-        }
-        if index >= bytes.len() {
-            return false;
-        }
-        let unit_order = match bytes[index] {
-            b'h' => 0,
-            b'm' => 1,
-            b's' => 2,
-            _ => return false,
-        };
-        if last_unit_order.is_some_and(|previous| unit_order <= previous) {
-            return false;
-        }
-        last_unit_order = Some(unit_order);
-        index += 1;
-    }
-    true
 }
 
 fn validate_capability_paths<I, P>(paths: I) -> Result<Vec<String>>

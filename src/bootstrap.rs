@@ -7,7 +7,9 @@
 use core::fmt;
 use std::collections::BTreeMap;
 
+use reqwest::StatusCode;
 use secrecy::{ExposeSecret, SecretString};
+use subtle::ConstantTimeEq;
 
 use crate::{
     AclPolicyBuilder, Authenticated, Client, Error, Result,
@@ -16,6 +18,8 @@ use crate::{
     secrets::transit::TransitCreateKeyRequest,
     sys::{MountEnableRequest, PolicyWriteRequest},
 };
+
+const MAX_BOOTSTRAP_OPERATIONS: usize = 512;
 
 /// Builder for a small, idempotent OpenBao admin bootstrap plan.
 #[derive(Clone, Debug, Default)]
@@ -171,11 +175,10 @@ impl AdminBootstrap {
         description: Option<&str>,
     ) -> Result<&mut Self> {
         let path = validate_mount_path(path.as_ref())?.join("/");
-        self.operations.push(BootstrapOperation::Kv2Mount {
+        self.push_operation(BootstrapOperation::Kv2Mount {
             path,
             description: description.map(str::to_owned),
-        });
-        Ok(self)
+        })
     }
 
     /// Ensures a Transit mount exists at `path`.
@@ -185,11 +188,10 @@ impl AdminBootstrap {
         description: Option<&str>,
     ) -> Result<&mut Self> {
         let path = validate_mount_path(path.as_ref())?.join("/");
-        self.operations.push(BootstrapOperation::TransitMount {
+        self.push_operation(BootstrapOperation::TransitMount {
             path,
             description: description.map(str::to_owned),
-        });
-        Ok(self)
+        })
     }
 
     /// Ensures a Transit key exists.
@@ -201,12 +203,11 @@ impl AdminBootstrap {
     ) -> Result<&mut Self> {
         let mount = validate_mount_path(mount.as_ref())?.join("/");
         let name = validate_mount_path(name.as_ref())?.join("/");
-        self.operations.push(BootstrapOperation::TransitKey {
+        self.push_operation(BootstrapOperation::TransitKey {
             mount,
             name,
             request,
-        });
-        Ok(self)
+        })
     }
 
     /// Ensures an ACL policy exists and matches the builder output.
@@ -225,11 +226,10 @@ impl AdminBootstrap {
         policy: impl Into<String>,
     ) -> Result<&mut Self> {
         let name = validate_mount_path(name.as_ref())?.join("/");
-        self.operations.push(BootstrapOperation::Policy {
+        self.push_operation(BootstrapOperation::Policy {
             name,
             policy: policy.into(),
-        });
-        Ok(self)
+        })
     }
 
     /// Ensures a KV v2 secret contains the provided string values.
@@ -244,12 +244,11 @@ impl AdminBootstrap {
     ) -> Result<&mut Self> {
         let mount = validate_mount_path(mount.as_ref())?.join("/");
         let path = validate_secret_path(path.as_ref())?.join("/");
-        self.operations.push(BootstrapOperation::Kv2SecretValues {
+        self.push_operation(BootstrapOperation::Kv2SecretValues {
             mount,
             path,
             values,
-        });
-        Ok(self)
+        })
     }
 
     /// Issues a scoped service token at the end of the plan.
@@ -263,8 +262,16 @@ impl AdminBootstrap {
         request: TokenCreateRequest,
     ) -> Result<&mut Self> {
         let name = validate_mount_path(name.as_ref())?.join("/");
-        self.operations
-            .push(BootstrapOperation::ServiceToken { name, request });
+        self.push_operation(BootstrapOperation::ServiceToken { name, request })
+    }
+
+    fn push_operation(&mut self, operation: BootstrapOperation) -> Result<&mut Self> {
+        if self.operations.len() >= MAX_BOOTSTRAP_OPERATIONS {
+            return Err(Error::InvalidParameter(
+                "bootstrap plan exceeds maximum allowed operation count".into(),
+            ));
+        }
+        self.operations.push(operation);
         Ok(self)
     }
 
@@ -299,8 +306,13 @@ impl AdminBootstrap {
                     let status = match client.transit(mount)?.read_key(name).await {
                         Ok(_) => BootstrapStepStatus::Unchanged,
                         Err(error) if error.is_not_found() => {
-                            client.transit(mount)?.create_key(name, request).await?;
-                            BootstrapStepStatus::Created
+                            match client.transit(mount)?.create_key(name, request).await {
+                                Ok(_) => BootstrapStepStatus::Created,
+                                Err(error) if is_already_exists_error(&error) => {
+                                    BootstrapStepStatus::Unchanged
+                                }
+                                Err(error) => return Err(error),
+                            }
                         }
                         Err(error) => return Err(error),
                     };
@@ -346,8 +358,9 @@ impl AdminBootstrap {
                     };
                     let needs_patch = current.as_ref().is_none_or(|config| {
                         values.iter().any(|(key, value)| {
-                            config.get(key).map(SecretString::expose_secret)
-                                != Some(value.expose_secret())
+                            config.get(key).is_none_or(|current| {
+                                !secret_values_equal(current.expose_secret(), value.expose_secret())
+                            })
                         })
                     });
                     let status = if needs_patch {
@@ -428,11 +441,32 @@ where
             Ok(BootstrapStepStatus::Unchanged)
         }
         Err(error) if error.is_not_found() => {
-            client.sys().enable_mount(path, &request()).await?;
-            Ok(BootstrapStepStatus::Created)
+            match client.sys().enable_mount(path, &request()).await {
+                Ok(_) => Ok(BootstrapStepStatus::Created),
+                Err(error) if is_already_exists_error(&error) => Ok(BootstrapStepStatus::Unchanged),
+                Err(error) => Err(error),
+            }
         }
         Err(error) => Err(error),
     }
+}
+
+fn is_already_exists_error(error: &Error) -> bool {
+    matches!(
+        error,
+        Error::Api { status, errors }
+            if *status == StatusCode::BAD_REQUEST
+                && errors.iter().any(|message| {
+                    let message = message.to_ascii_lowercase();
+                    message.contains("already in use")
+                        || message.contains("already exists")
+                        || message.contains("existing key")
+                })
+    )
+}
+
+fn secret_values_equal(current: &str, desired: &str) -> bool {
+    current.as_bytes().ct_eq(desired.as_bytes()).into()
 }
 
 fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<String, &str> {
@@ -445,17 +479,22 @@ fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<Str
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+    #![allow(deprecated)]
 
     use std::collections::BTreeMap;
 
     use secrecy::SecretString;
 
     use crate::{
-        AclCapability, AclPolicyBuilder, Authenticated, Client, OpenBaoConfig,
+        AclCapability, AclPolicyBuilder, Authenticated, Client, Error, OpenBaoConfig,
         auth::token::TokenCreateRequest,
-        bootstrap::{AdminBootstrap, BootstrapStepStatus},
+        bootstrap::{
+            AdminBootstrap, BootstrapStepStatus, MAX_BOOTSTRAP_OPERATIONS, is_already_exists_error,
+            secret_values_equal,
+        },
         secrets::transit::TransitCreateKeyRequest,
     };
+    use reqwest::StatusCode;
 
     #[test]
     fn bootstrap_validates_paths_when_building_plan() {
@@ -514,5 +553,44 @@ mod tests {
     fn bootstrap_statuses_are_stable_values() {
         assert_eq!(BootstrapStepStatus::Created, BootstrapStepStatus::Created);
         assert_ne!(BootstrapStepStatus::Created, BootstrapStepStatus::Unchanged);
+    }
+
+    #[test]
+    fn bootstrap_plan_operation_count_is_bounded() {
+        let mut bootstrap = AdminBootstrap::new();
+        for index in 0..MAX_BOOTSTRAP_OPERATIONS {
+            bootstrap
+                .ensure_policy_document(
+                    format!("policy-{index}"),
+                    "path \"secret/data/app\" { capabilities = [\"read\"] }",
+                )
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+        assert!(
+            bootstrap
+                .ensure_policy_document(
+                    "one-too-many",
+                    "path \"secret/data/app\" { capabilities = [\"read\"] }",
+                )
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn bootstrap_secret_comparison_and_race_errors_are_handled() {
+        assert!(secret_values_equal("same-secret", "same-secret"));
+        assert!(!secret_values_equal("same-secret", "other-secret"));
+
+        let duplicate = Error::Api {
+            status: StatusCode::BAD_REQUEST,
+            errors: vec!["path is already in use".to_owned()],
+        };
+        assert!(is_already_exists_error(&duplicate));
+
+        let unrelated = Error::Api {
+            status: StatusCode::BAD_REQUEST,
+            errors: vec!["permission denied".to_owned()],
+        };
+        assert!(!is_already_exists_error(&unrelated));
     }
 }

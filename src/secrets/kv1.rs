@@ -86,6 +86,7 @@ impl Kv1<'_> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+    #![allow(deprecated)]
 
     use secrecy::SecretString;
 

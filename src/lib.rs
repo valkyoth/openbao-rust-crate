@@ -50,6 +50,7 @@ mod error;
 mod path;
 pub mod policy;
 mod response;
+mod validation;
 
 #[cfg(any(
     feature = "approle",

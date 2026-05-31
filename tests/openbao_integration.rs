@@ -6,6 +6,7 @@
 
 #![cfg(all(feature = "kv1", feature = "kv2", feature = "sys", feature = "token"))]
 #![allow(clippy::panic)]
+#![allow(deprecated)]
 
 use std::{
     collections::BTreeMap,

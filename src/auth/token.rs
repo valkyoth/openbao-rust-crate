@@ -58,6 +58,51 @@ pub struct TokenCreateRequest {
     pub token_type: Option<String>,
 }
 
+impl TokenCreateRequest {
+    /// Sets the requested token TTL after validating OpenBao duration syntax.
+    pub fn with_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "token ttl")?;
+        self.ttl = Some(ttl);
+        Ok(self)
+    }
+
+    /// Sets the requested explicit maximum TTL after validating duration syntax.
+    pub fn with_explicit_max_ttl(mut self, explicit_max_ttl: impl Into<String>) -> Result<Self> {
+        let explicit_max_ttl = explicit_max_ttl.into();
+        crate::validation::validate_duration_parameter(
+            &explicit_max_ttl,
+            "token explicit_max_ttl",
+        )?;
+        self.explicit_max_ttl = Some(explicit_max_ttl);
+        Ok(self)
+    }
+
+    /// Sets the requested periodic token period after validating duration syntax.
+    pub fn with_period(mut self, period: impl Into<String>) -> Result<Self> {
+        let period = period.into();
+        crate::validation::validate_duration_parameter(&period, "token period")?;
+        self.period = Some(period);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(ttl) = &self.ttl {
+            crate::validation::validate_duration_parameter(ttl, "token ttl")?;
+        }
+        if let Some(explicit_max_ttl) = &self.explicit_max_ttl {
+            crate::validation::validate_duration_parameter(
+                explicit_max_ttl,
+                "token explicit_max_ttl",
+            )?;
+        }
+        if let Some(period) = &self.period {
+            crate::validation::validate_duration_parameter(period, "token period")?;
+        }
+        Ok(())
+    }
+}
+
 /// Result of creating or renewing a token.
 #[derive(Debug, Deserialize)]
 pub struct TokenAuth {
@@ -203,6 +248,7 @@ impl Token<'_> {
         role_name: Option<&str>,
         request: &TokenCreateRequest,
     ) -> Result<TokenAuth> {
+        request.validate()?;
         let path = match role_name {
             Some(role_name) => {
                 let role_name = crate::path::validate_mount_path(role_name)?.join("/");
@@ -329,7 +375,7 @@ mod tests {
 
     use crate::response::ResponseEnvelope;
 
-    use super::{TokenAccessorList, TokenInfo};
+    use super::{TokenAccessorList, TokenCreateRequest, TokenInfo};
 
     #[test]
     fn token_ttl_rejects_negative_values() {
@@ -340,6 +386,19 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("invalid value"));
+    }
+
+    #[test]
+    fn token_create_duration_fields_are_validated() {
+        assert!(TokenCreateRequest::default().with_ttl("30m").is_ok());
+        assert!(TokenCreateRequest::default().with_ttl("never").is_err());
+        assert!(TokenCreateRequest::default().with_ttl("1h\r\nbad").is_err());
+        assert!(
+            TokenCreateRequest::default()
+                .with_explicit_max_ttl("1h")
+                .is_ok()
+        );
+        assert!(TokenCreateRequest::default().with_period("60s").is_ok());
     }
 
     #[test]

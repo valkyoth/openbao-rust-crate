@@ -3,5 +3,7 @@
 /.env.*
 !/deploy/podman/openbao.dev.env.example
 /deploy/podman/dev-state/
+/deploy/podman/dev-state/tls/*.key
+/deploy/podman/dev-state/tls/*.pem
 /deploy/podman/openbao.dev.env
 PENTEST.md

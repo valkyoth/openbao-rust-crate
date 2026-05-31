@@ -429,7 +429,15 @@ impl Client<Unauthenticated> {
     /// This preserves the pre-0.5 infallible API. Prefer [`Self::try_with_token`]
     /// when accepting token input from configuration or another service so
     /// header-invalid tokens are rejected before the first request.
+    #[deprecated(
+        since = "0.6.0",
+        note = "use try_with_token to catch invalid token values at construction; with_token defers header validation errors to the first request"
+    )]
     pub fn with_token(self, token: SecretString) -> Client<Authenticated> {
+        self.with_token_deferred_validation(token)
+    }
+
+    fn with_token_deferred_validation(self, token: SecretString) -> Client<Authenticated> {
         let (token_header, token_header_error) = token_header_for(&token, self.config.header_mode)
             .map_or_else(
                 |error| {
@@ -456,7 +464,7 @@ impl Client<Unauthenticated> {
     /// the token can be represented safely in the configured auth header.
     pub fn try_with_token(self, token: SecretString) -> Result<Client<Authenticated>> {
         validate_token_for_header(&token, self.config.header_mode)?;
-        Ok(self.with_token(token))
+        Ok(self.with_token_deferred_validation(token))
     }
 
     #[cfg(any(
@@ -946,6 +954,7 @@ fn sensitive_header_value(value: &str) -> Result<HeaderValue> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+    #![allow(deprecated)]
 
     use std::collections::BTreeMap;
 

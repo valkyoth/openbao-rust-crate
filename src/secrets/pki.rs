@@ -1346,6 +1346,7 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedEabInfoMapVisitor<MAX> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+    #![allow(deprecated)]
 
     use crate::{Client, OpenBaoConfig};
 

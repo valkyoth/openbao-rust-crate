@@ -56,17 +56,30 @@
   from debug output.
 - SSH role listing accepts OpenBao's documented `keys` response field, while
   preserving support for the `roles` shape used by lookup-style endpoints.
+- SSH role, sign, and issue requests now validate duration strings, reject
+  control characters in principal/CIDR fields, reject unsupported SSH public-key
+  prefixes, and reject weak generated RSA key sizes before request dispatch.
 - Admin bootstrap reports redact issued token material and bootstrap operation
   debug output avoids exposing KV v2 string secret values.
+- Admin bootstrap compares existing and desired KV v2 secret values with
+  constant-time equality, bounds plans to 512 operations, and treats duplicate
+  mount/Transit-key creation races as unchanged state.
 - Production operator APIs are unavailable in default builds and require both
   `operator-ops` and `operator-ops-acknowledged`; responses containing root,
   unseal, recovery, or rekey material redact that material from debug output.
+- `Client::with_token` is deprecated in favor of `Client::try_with_token` so
+  invalid token header values can fail at client construction.
+- Token create TTL, explicit-max-TTL, and period fields are validated before
+  token creation requests are sent.
+- Dev-state TLS private-key patterns are explicitly ignored. The current
+  working tree has no tracked `deploy/podman/dev-state` key material.
 
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_6_gate.sh`
 - Result: local pre-pentest gate passed on 2026-05-31.
-- Pentest report: pending.
+- Pentest report: local `PENTEST.md` reviewed on 2026-05-31; actionable local
+  findings fixed and the report was deleted before commit.
 - `cargo audit` result: passed on 2026-05-31.
 - `cargo deny check` result: passed on 2026-05-31 with duplicate dependency
   warnings only.

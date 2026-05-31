@@ -1,6 +1,7 @@
 //! HTTP behavior tests for the OpenBao client.
 
 #![allow(clippy::panic)]
+#![allow(deprecated)]
 
 use std::{
     io::{Read, Write},
