@@ -34,11 +34,8 @@ Sources:
   `VAULT_*` variables is implemented in `0.4.0`.
 - Implemented downstream ergonomics from Mjolni/Pawalyze review:
   KV v2 service config loading into typed structs or bounded secret string maps,
-  byte-oriented Transit helpers, and JWS-oriented Transit sign/verify helpers.
-- Implemented downstream ergonomics from Mjolni/Pawalyze review:
-  ACL policy builders.
-- Planned downstream ergonomics from Mjolni/Pawalyze review:
-  idempotent admin bootstrap.
+  byte-oriented Transit helpers, JWS-oriented Transit sign/verify helpers, ACL
+  policy builders, and idempotent admin bootstrap for common service setup.
 - Planned posture helpers:
   best-effort FIPS profile validation for crate-controlled choices and a
   future quantum-readiness profile once OpenBao exposes stable primitives.
@@ -132,6 +129,9 @@ Support plan:
   lookup/renew/revoke, plugin catalog list/type-list/register/read/delete,
   mounted plugin backend reload, init status, and loopback-only dev bootstrap
   are implemented.
+- `0.6.0`: idempotent admin bootstrap builder is implemented for KV v2 mounts,
+  Transit mounts, Transit keys, ACL policies, KV v2 string secret values, and
+  explicit scoped service-token issuance.
 - `0.6.0`: production init, unseal, rekey, rotate with strong safety
   documentation.
 - `0.8.0`: metrics, quotas, namespaces, storage, diagnostic endpoints.

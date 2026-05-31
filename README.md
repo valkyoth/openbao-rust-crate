@@ -78,6 +78,9 @@ Implemented now:
 - ACL policy list, read, write, delete, and prefix list helpers.
 - Bounded ACL policy builder helpers for common KV v2 and Transit
   least-privilege rules.
+- Idempotent admin bootstrap plan builder for KV v2 mounts, Transit mounts,
+  Transit keys, ACL policies, KV v2 string secret values, and explicit scoped
+  service-token issuance.
 - Capability checks for the caller token, an explicit token, or a token
   accessor.
 - Audit device list, enable, disable, and hash helpers.
@@ -260,6 +263,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
 | Policies and capabilities | Yes | ACL policy read/write/list/delete, bounded policy builder helpers, and self/token/accessor capability checks. |
+| Admin bootstrap | Yes | Idempotent plan builder for mounts, Transit keys, ACL policies, KV v2 string values, and explicit token issuance. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
@@ -818,6 +822,48 @@ async fn main() -> Result<()> {
 
     let capabilities = client.sys().capabilities_self(["secret/data/app"]).await?;
     let _for_path = capabilities.by_path.get("secret/data/app");
+    Ok(())
+}
+```
+
+Run a small idempotent service bootstrap:
+
+```rust,no_run
+use openbao::auth::token::TokenCreateRequest;
+use openbao::bootstrap::AdminBootstrap;
+use openbao::secrets::transit::TransitCreateKeyRequest;
+use openbao::{AclPolicyBuilder, Client, Result, SecretString};
+use std::collections::BTreeMap;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+
+    let mut policy = AclPolicyBuilder::new();
+    policy.allow_kv2_read_prefix("secret", "app")?;
+
+    let mut values = BTreeMap::new();
+    values.insert("API_KEY".to_owned(), SecretString::from(std::env::var("APP_API_KEY").unwrap_or_default()));
+
+    let mut bootstrap = AdminBootstrap::new();
+    let report = bootstrap
+        .ensure_kv2_mount("secret", Some("application secrets"))?
+        .ensure_transit_mount("transit", Some("application crypto"))?
+        .ensure_policy("app-read", &policy)?
+        .ensure_transit_key("transit", "app-key", TransitCreateKeyRequest::default())?
+        .ensure_kv2_secret_values("secret", "app/config", values)?
+        .issue_service_token("app", TokenCreateRequest {
+            policies: vec!["app-read".to_owned()],
+            no_default_policy: Some(true),
+            ttl: Some("1h".to_owned()),
+            ..TokenCreateRequest::default()
+        })?
+        .run(&client)
+        .await?;
+
+    println!("bootstrap steps: {}", report.steps.len());
+    let _issued_token_is_not_logged = report.issued_tokens;
     Ok(())
 }
 ```

@@ -22,10 +22,12 @@
   for common KV v2 and Transit least-privilege rules; TOTP key
   create/read/list/delete, code generation, and code validation; SSH roles,
   zero-address roles, IP role lookup, OTP credentials, default issuer config,
-  CA signing, generated certificate/key issuance, and OTP verification.
-- Remaining `0.6.0` planned work: idempotent admin bootstrap builder and
-  production init/unseal/rekey/rotate APIs behind an explicit feature with
-  strong documentation warnings.
+  CA signing, generated certificate/key issuance, and OTP verification;
+  idempotent admin bootstrap builder for KV v2 mounts, Transit mounts, Transit
+  keys, ACL policies, KV v2 string secret values, and explicit scoped
+  service-token issuance.
+- Remaining `0.6.0` planned work: production init/unseal/rekey/rotate APIs
+  behind an explicit feature with strong documentation warnings.
 - Default Cargo features: `approle`, `cert-auth`, `database`, `jwt-auth`,
   `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`, `ssh`, `totp`,
   `transit`, `sys`, `rustls-tls`.
@@ -48,6 +50,8 @@
   root keys are represented with `SecretString` and redacted from debug output.
 - SSH OTP credentials, OTP verification requests, and generated private keys
   are represented with `SecretString` and redacted from debug output.
+- Admin bootstrap reports redact issued token material and bootstrap operation
+  debug output avoids exposing KV v2 string secret values.
 
 ## Security And Stability Gate
 

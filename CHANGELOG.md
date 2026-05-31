@@ -14,6 +14,9 @@ All notable changes to this project are documented here.
 - SSH secrets engine helpers for roles, zero-address roles, IP role lookup,
   OTP credentials, default issuer config, CA signing, generated SSH
   certificate/key issuance, and OTP verification.
+- `AdminBootstrap` plan builder for idempotent KV v2 mounts, Transit mounts,
+  Transit keys, ACL policies, KV v2 string secret values, and explicit scoped
+  service-token issuance.
 
 ## 0.5.0 - 2026-05-30
 

@@ -32,6 +32,13 @@ compile_error!(
      Add feature \"native-tls-acknowledged\" to confirm you have audited this choice."
 );
 
+#[cfg(all(
+    feature = "sys",
+    feature = "kv2",
+    feature = "transit",
+    feature = "token"
+))]
+pub mod bootstrap;
 mod client;
 mod error;
 mod path;
@@ -77,6 +84,14 @@ pub mod prelude {
         Error, ExposeSecret, HeaderMode, Identity, Method, OpenBao, OpenBaoConfig,
         ResponseEnvelope, Result, SecretString, StatusCode, Unauthenticated,
     };
+
+    #[cfg(all(
+        feature = "sys",
+        feature = "kv2",
+        feature = "transit",
+        feature = "token"
+    ))]
+    pub use crate::bootstrap;
 
     #[cfg(any(
         feature = "approle",

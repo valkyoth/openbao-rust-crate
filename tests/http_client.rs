@@ -3550,3 +3550,174 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..10 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let (status, body) = match index {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/mounts/secret HTTP/1.1"));
+                    (
+                        "404 Not Found",
+                        r#"{"errors":["missing mount"]}"#.to_owned(),
+                    )
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/mounts/secret HTTP/1.1"));
+                    assert!(request.contains(r#""type":"kv""#));
+                    assert!(request.contains(r#""version":"2""#));
+                    ("204 No Content", "{}".to_owned())
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/sys/mounts/transit HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"type":"transit","description":"existing transit","config":{},"options":null}}"#
+                            .to_owned(),
+                    )
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/sys/policy/app-read HTTP/1.1"));
+                    (
+                        "404 Not Found",
+                        r#"{"errors":["missing policy"]}"#.to_owned(),
+                    )
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/sys/policy/app-read HTTP/1.1"));
+                    assert!(request.contains("secret/data/app"));
+                    ("204 No Content", "{}".to_owned())
+                }
+                5 => {
+                    assert!(request.starts_with("GET /v1/transit/keys/app-key HTTP/1.1"));
+                    ("404 Not Found", r#"{"errors":["missing key"]}"#.to_owned())
+                }
+                6 => {
+                    assert!(request.starts_with("POST /v1/transit/keys/app-key HTTP/1.1"));
+                    ("204 No Content", "{}".to_owned())
+                }
+                7 => {
+                    assert!(request.starts_with("GET /v1/secret/data/app/config HTTP/1.1"));
+                    (
+                        "404 Not Found",
+                        r#"{"errors":["missing secret"]}"#.to_owned(),
+                    )
+                }
+                8 => {
+                    assert!(request.starts_with("PATCH /v1/secret/data/app/config HTTP/1.1"));
+                    assert!(request.contains("application/merge-patch+json"));
+                    assert!(
+                        request.contains(&format!(r#""API_KEY":"{}{}""#, "runtime-", "secret"))
+                    );
+                    (
+                        "200 OK",
+                        r#"{"data":{"created_time":"now","version":1}}"#.to_owned(),
+                    )
+                }
+                9 => {
+                    assert!(request.starts_with("POST /v1/auth/token/create HTTP/1.1"));
+                    assert!(request.contains(r#""policies":["app-read"]"#));
+                    assert!(request.contains(r#""no_default_policy":true"#));
+                    (
+                        "200 OK",
+                        format!(
+                            r#"{{"auth":{{"client_token":"{}{}","accessor":"{}{}","policies":["app-read"],"token_policies":["app-read"],"lease_duration":3600,"renewable":true}}}}"#,
+                            "token-", "secret", "accessor-", "secret"
+                        ),
+                    )
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+
+    let mut policy = openbao::AclPolicyBuilder::new();
+    policy
+        .allow_kv2_read_prefix("secret", "app")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let mut secret_values = std::collections::BTreeMap::new();
+    secret_values.insert(
+        "API_KEY".to_owned(),
+        SecretString::from(["runtime-", "secret"].concat()),
+    );
+
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_kv2_mount("secret", Some("application secrets"))
+        .and_then(|builder| builder.ensure_transit_mount("transit", None))
+        .and_then(|builder| builder.ensure_policy("app-read", &policy))
+        .and_then(|builder| {
+            builder.ensure_transit_key(
+                "transit",
+                "app-key",
+                openbao::secrets::transit::TransitCreateKeyRequest::default(),
+            )
+        })
+        .and_then(|builder| builder.ensure_kv2_secret_values("secret", "app/config", secret_values))
+        .and_then(|builder| {
+            builder.issue_service_token(
+                "app",
+                openbao::auth::token::TokenCreateRequest {
+                    policies: vec!["app-read".to_owned()],
+                    no_default_policy: Some(true),
+                    ttl: Some("1h".to_owned()),
+                    ..Default::default()
+                },
+            )
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let report = bootstrap
+        .run(&client)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(report.steps.len(), 6);
+    assert_eq!(report.issued_tokens.len(), 1);
+    assert_eq!(
+        report.issued_tokens[0].auth.client_token.expose_secret(),
+        &["token-", "secret"].concat()
+    );
+    assert_eq!(
+        report.steps[0].status,
+        openbao::bootstrap::BootstrapStepStatus::Created
+    );
+    assert_eq!(
+        report.steps[1].status,
+        openbao::bootstrap::BootstrapStepStatus::Unchanged
+    );
+    assert_eq!(
+        report.steps[5].status,
+        openbao::bootstrap::BootstrapStepStatus::Issued
+    );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}

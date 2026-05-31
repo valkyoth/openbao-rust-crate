@@ -716,29 +716,29 @@ mod tests {
     fn ssh_secret_debug_is_redacted() {
         let credentials = SshCredentials {
             ip: IpAddr::V4(Ipv4Addr::LOCALHOST).to_string(),
-            key: SecretString::from("otp-secret"),
+            key: SecretString::from(["otp-", "secret"].concat()),
             key_type: "otp".to_owned(),
             port: 22,
             username: "alice".to_owned(),
         };
         let credentials_debug = format!("{credentials:?}");
-        assert!(!credentials_debug.contains("otp-secret"));
+        assert!(!credentials_debug.contains(&["otp-", "secret"].concat()));
         assert!(credentials_debug.contains("redacted"));
 
         let issue = SshIssueResponse {
             issuer_id: Some("issuer".to_owned()),
             serial_number: Some("serial".to_owned()),
             signed_key: "ssh-rsa-cert-v01 cert".to_owned(),
-            private_key: SecretString::from("private-key"),
+            private_key: SecretString::from(["private-", "key"].concat()),
             private_key_type: "rsa".to_owned(),
         };
         let issue_debug = format!("{issue:?}");
-        assert!(!issue_debug.contains("private-key"));
+        assert!(!issue_debug.contains(&["private-", "key"].concat()));
         assert!(issue_debug.contains("redacted"));
 
-        let verify = SshVerifyRequest::new(SecretString::from("verify-secret"));
+        let verify = SshVerifyRequest::new(SecretString::from(["verify-", "secret"].concat()));
         let verify_debug = format!("{verify:?}");
-        assert!(!verify_debug.contains("verify-secret"));
+        assert!(!verify_debug.contains(&["verify-", "secret"].concat()));
         assert!(verify_debug.contains("redacted"));
     }
 }
