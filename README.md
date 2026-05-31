@@ -33,7 +33,7 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.6.0` development line. `0.6.0` builds on `0.5.0`
+This README documents the `0.6.0` release line. `0.6.0` builds on `0.5.0`
 with SSH/TOTP helpers and ACL policy builder ergonomics for least-privilege
 service setup.
 
@@ -133,8 +133,8 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of May 31, 2026, that is Rust `1.96.0`.
 
-The `0.6.0` release gate will refresh compatibility evidence across this
-range before tagging:
+The `0.6.0` release gate tracks compatibility evidence across this supported
+range:
 
 | Rust | Required Evidence |
 | --- | --- |

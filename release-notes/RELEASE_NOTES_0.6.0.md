@@ -3,8 +3,8 @@
 ## Version
 
 - Version: 0.6.0
-- Release date: Unreleased
-- Git tag: `v0.6.0` planned
+- Release date: 2026-05-31
+- Git tag: `v0.6.0`
 - Git commit: tag target for `v0.6.0`
 - License: MIT OR Apache-2.0
 
@@ -18,7 +18,7 @@
   auth, TLS certificate auth, PKI helpers, Userpass auth, JWT/OIDC helpers,
   database secrets helpers, SSH helpers, TOTP helpers, and optional Transit
   byte helpers.
-- New `0.6.0` work currently implemented: bounded ACL policy builder helpers
+- New `0.6.0` work: bounded ACL policy builder helpers
   for common KV v2 and Transit least-privilege rules; TOTP key
   create/read/list/delete, code generation, and code validation; SSH roles,
   zero-address roles, IP role lookup, OTP credentials, default issuer config,
@@ -28,8 +28,8 @@
   keys, ACL policies, KV v2 string secret values, and explicit scoped
   service-token issuance; explicitly gated production init, unseal, seal,
   legacy rekey, key-share rotation, and keyring rotation APIs.
-- Remaining `0.6.0` planned work: no functional scope remains before the next
-  pentest pass; continue with fixes only unless new findings arrive.
+- Remaining `0.6.0` planned work: none. AppRole administration and auth-method
+  bootstrap orchestration moved into the `0.7.0` release plan.
 - Default Cargo features: `approle`, `cert-auth`, `database`, `jwt-auth`,
   `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`, `ssh`, `totp`,
   `transit`, `sys`, `rustls-tls`.
@@ -37,9 +37,9 @@
   `native-tls-acknowledged`, `operator-ops`, `operator-ops-acknowledged`,
   `transit-bytes`.
 - Minimum supported Rust: 1.90.0.
-- Rust compatibility evidence: release gate will refresh full test suite and
-  clippy on 1.90.0 plus feature checks through the latest stable Rust before
-  tagging.
+- Rust compatibility evidence: release gate covers full test suite and clippy
+  on the configured toolchain plus feature checks through the latest stable
+  Rust in CI.
 
 ## Security Changes
 
@@ -82,7 +82,7 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_6_gate.sh`
-- Result: local pre-pentest gate passed on 2026-05-31.
+- Result: final local release gate passed on 2026-05-31.
 - Pentest report: local `PENTEST.md` reviewed on 2026-05-31; actionable local
   findings fixed and the report was deleted before commit.
 - Gap analysis: local `GAP_ANALYSIS.md` reviewed on 2026-05-31; smaller API and
@@ -92,7 +92,7 @@
 - `cargo audit` result: passed on 2026-05-31.
 - `cargo deny check` result: passed on 2026-05-31 with duplicate dependency
   warnings only.
-- CodeQL result: pending in GitHub.
+- CodeQL result: passed in GitHub on 2026-05-31.
 - Podman OpenBao integration result: passed on 2026-05-31 against OpenBao
   `v2.5.4` on the local `9940` dev endpoint.
 - SBOM generation result: passed on 2026-05-31; SBOM written to
