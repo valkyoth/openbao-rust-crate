@@ -8,6 +8,11 @@ use std::{
     net::TcpListener,
     thread,
 };
+#[cfg(feature = "operator-ops")]
+use std::{
+    sync::atomic::{AtomicU64, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use openbao::{Client, Error, OpenBaoConfig, sys::DevBootstrapOptions};
 use secrecy::{ExposeSecret, SecretString};
@@ -38,8 +43,14 @@ fn test_secret(parts: &[&str]) -> SecretString {
 }
 
 #[cfg(feature = "operator-ops")]
-fn test_operation_id(index: u8) -> String {
-    format!("{}{}", "operation-id-", index)
+fn test_operation_id() -> String {
+    static NEXT_TEST_OPERATION_ID: AtomicU64 = AtomicU64::new(0);
+    let sequence = NEXT_TEST_OPERATION_ID.fetch_add(1, Ordering::Relaxed);
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    format!("{timestamp:x}{sequence:x}")
 }
 
 #[tokio::test]
@@ -3909,8 +3920,8 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
     let addr = listener
         .local_addr()
         .unwrap_or_else(|error| panic!("{error}"));
-    let rekey_operation_id = test_operation_id(1);
-    let rotate_operation_id = test_operation_id(2);
+    let rekey_operation_id = test_operation_id();
+    let rotate_operation_id = test_operation_id();
     let server_rekey_operation_id = rekey_operation_id.clone();
     let server_rotate_operation_id = rotate_operation_id.clone();
 
