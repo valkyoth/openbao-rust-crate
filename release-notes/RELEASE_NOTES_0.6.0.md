@@ -22,6 +22,7 @@
   for common KV v2 and Transit least-privilege rules; TOTP key
   create/read/list/delete, code generation, and code validation; SSH roles,
   zero-address roles, IP role lookup, OTP credentials, default issuer config,
+  issuer list/submit/read/update/delete, authenticated CA public-key metadata,
   CA signing, generated certificate/key issuance, and OTP verification;
   idempotent admin bootstrap builder for KV v2 mounts, Transit mounts, Transit
   keys, ACL policies, KV v2 string secret values, and explicit scoped
@@ -50,8 +51,11 @@
   intentionally need OpenBao wildcards.
 - TOTP generated codes, OTP URLs, QR barcodes, imported OTP URLs, and imported
   root keys are represented with `SecretString` and redacted from debug output.
-- SSH OTP credentials, OTP verification requests, and generated private keys
-  are represented with `SecretString` and redacted from debug output.
+- SSH OTP credentials, OTP verification requests, generated private keys, and
+  submitted CA private keys are represented with `SecretString` and redacted
+  from debug output.
+- SSH role listing accepts OpenBao's documented `keys` response field, while
+  preserving support for the `roles` shape used by lookup-style endpoints.
 - Admin bootstrap reports redact issued token material and bootstrap operation
   debug output avoids exposing KV v2 string secret values.
 - Production operator APIs are unavailable in default builds and require both
@@ -72,8 +76,9 @@
 
 ## Known Limitations
 
-- Raw unauthenticated SSH public-key reads and full SSH issuer import/update/delete
-  are not implemented yet.
+- Raw unauthenticated SSH public-key reads are intentionally not implemented;
+  callers that need raw text/plain public-key endpoints should use an external
+  HTTP client and treat the result as public key material.
 - The ACL policy builder intentionally does not cover advanced ACL fields such
   as required parameters, allowed parameters, denied parameters, or wrapping
   TTL constraints. Use `sys::PolicyWriteRequest` directly for advanced policy

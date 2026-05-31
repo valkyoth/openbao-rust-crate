@@ -136,7 +136,7 @@ Publishable value:
 
 Stop condition:
 
-- SSH CA/sign/OTP helpers;
+- SSH issuer, CA/sign, and OTP helpers;
 - TOTP key/code/validate helpers;
 - idempotent admin bootstrap builder for mounts, Transit keys, ACL policies,
   KV secret patching, and scoped service-token creation;

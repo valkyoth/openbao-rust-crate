@@ -2500,9 +2500,7 @@ mod tests {
         validate_lease_id, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
-    use super::{
-        OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest,
-    };
+    use super::{OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest};
 
     #[test]
     fn sys_paths_are_validated() {

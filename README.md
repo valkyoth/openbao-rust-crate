@@ -61,8 +61,9 @@ Implemented now:
 - KV v1 read, write, delete, and list helpers.
 - Database connection config, dynamic roles, static roles, root/static
   rotation, and credential helpers.
-- SSH role, zero-address role, IP lookup, OTP credential, default issuer config,
-  CA sign, generated certificate/key issue, and OTP verification helpers.
+- SSH role, zero-address role, IP lookup, OTP credential, issuer config,
+  issuer list/submit/read/update/delete, CA public-key metadata, CA sign,
+  generated certificate/key issue, and OTP verification helpers.
 - TOTP key create/read/list/delete, code generation, and code validation
   helpers.
 - PKI URL and CRL config, root/intermediate generation, intermediate signing
@@ -190,7 +191,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
 | `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, and tidy helpers. |
-| `ssh` | yes | SSH roles, OTP credentials, CA sign/issue, issuer config, and OTP verification helpers. |
+| `ssh` | yes | SSH roles, OTP credentials, issuer management, CA sign/issue, issuer config, and OTP verification helpers. |
 | `totp` | yes | TOTP key and code helpers. |
 | `transit` | yes | Transit cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
@@ -252,7 +253,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and optional raw-byte helpers. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
-| SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads and full issuer import/update/delete are not yet typed. |
+| SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
 | Identity and remaining engines | Planned | Planned for `0.7.0`. |
 
 ### System Backend And Operations

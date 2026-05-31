@@ -12,7 +12,8 @@ All notable changes to this project are documented here.
   generation, and code validation with generated URLs, barcodes, and codes
   treated as secret material.
 - SSH secrets engine helpers for roles, zero-address roles, IP role lookup,
-  OTP credentials, default issuer config, CA signing, generated SSH
+  OTP credentials, default issuer config, issuer list/submit/read/update/delete,
+  authenticated CA public-key metadata, CA signing, generated SSH
   certificate/key issuance, and OTP verification.
 - `AdminBootstrap` plan builder for idempotent KV v2 mounts, Transit mounts,
   Transit keys, ACL policies, KV v2 string secret values, and explicit scoped
@@ -20,6 +21,11 @@ All notable changes to this project are documented here.
 - Explicitly gated `operator-ops` APIs for production init, unseal, seal,
   legacy rekey, OpenBao key-share rotation, and keyring rotation. The feature
   requires `operator-ops-acknowledged`.
+
+### Fixed
+
+- SSH role listing now accepts OpenBao's documented `keys` response field as
+  well as the `roles` field used by IP lookup and zero-address endpoints.
 
 ## 0.5.0 - 2026-05-30
 

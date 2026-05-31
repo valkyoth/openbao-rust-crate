@@ -108,9 +108,10 @@ Support plan:
   implemented.
 - `0.6.0`: TOTP key create/read/list/delete, code generation, and code
   validation are implemented. SSH role management, zero-address roles, IP role
-  lookup, OTP credential issue, default issuer config, CA sign/issue, and OTP
-  verification are implemented. Raw unauthenticated public-key reads and full
-  issuer import/update/delete remain planned.
+  lookup, OTP credential issue, default issuer config, issuer
+  list/submit/read/update/delete, authenticated CA public-key metadata, CA
+  sign/issue, and OTP verification are implemented. Raw unauthenticated
+  text/plain SSH public-key reads are intentionally not typed.
 - `0.7.0`: Kubernetes, LDAP, RabbitMQ, cubbyhole, identity.
 
 ## System Backend

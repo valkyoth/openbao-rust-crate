@@ -3365,7 +3365,7 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for index in 0..10 {
+        for index in 0..18 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let mut buffer = [0_u8; 8192];
             let bytes = stream
@@ -3383,7 +3383,7 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
                     assert!(
                         request.starts_with("LIST /v1/ssh/roles?after=otp-role&limit=10 HTTP/1.1")
                     );
-                    ("200 OK", r#"{"data":{"roles":["otp-role"]}}"#.to_owned())
+                    ("200 OK", r#"{"data":{"keys":["otp-role"]}}"#.to_owned())
                 }
                 2 => {
                     assert!(request.starts_with("POST /v1/ssh/lookup HTTP/1.1"));
@@ -3412,6 +3412,66 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
                     ("200 OK", r#"{"data":{"default":"issuer-2"}}"#.to_owned())
                 }
                 6 => {
+                    assert!(request.starts_with("POST /v1/ssh/config/ca HTTP/1.1"));
+                    assert!(request.contains(&format!(
+                        r#""private_key":"{}{}""#,
+                        "ssh-ca-private-", "key"
+                    )));
+                    assert!(request.contains(r#""public_key":"ssh-rsa AAAA ca""#));
+                    (
+                        "200 OK",
+                        r#"{"data":{"issuer_id":"issuer-1","issuer_name":"default","public_key":"ssh-rsa AAAA ca\n"}}"#
+                            .to_owned(),
+                    )
+                }
+                7 => {
+                    assert!(
+                        request
+                            .starts_with("LIST /v1/ssh/issuers?after=issuer-1&limit=10 HTTP/1.1")
+                    );
+                    (
+                        "200 OK",
+                        r#"{"data":{"keys":["issuer-1"],"key_info":{"issuer-1":{"issuer_name":"default","is_default":true,"public_key":"ssh-rsa AAAA ca\n"}}}}"#
+                            .to_owned(),
+                    )
+                }
+                8 => {
+                    assert!(request.starts_with("POST /v1/ssh/issuers/import/imported HTTP/1.1"));
+                    assert!(request.contains(r#""generate_signing_key":true"#));
+                    assert!(request.contains(r#""key_type":"rsa""#));
+                    assert!(request.contains(r#""set_default":true"#));
+                    (
+                        "200 OK",
+                        r#"{"data":{"issuer_id":"issuer-2","issuer_name":"imported","public_key":"ssh-rsa AAAA imported\n"}}"#
+                            .to_owned(),
+                    )
+                }
+                9 => {
+                    assert!(request.starts_with("GET /v1/ssh/issuer/default HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"issuer_id":"issuer-2","issuer_name":"imported","public_key":"ssh-rsa AAAA imported\n"}}"#
+                            .to_owned(),
+                    )
+                }
+                10 => {
+                    assert!(request.starts_with("PATCH /v1/ssh/issuer/default HTTP/1.1"));
+                    assert!(request.contains(r#""issuer_name":"renamed""#));
+                    (
+                        "200 OK",
+                        r#"{"data":{"issuer_id":"issuer-2","issuer_name":"renamed","public_key":"ssh-rsa AAAA imported\n"}}"#
+                            .to_owned(),
+                    )
+                }
+                11 => {
+                    assert!(request.starts_with("GET /v1/ssh/config/ca HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"issuer_id":"issuer-2","issuer_name":"renamed","public_key":"ssh-rsa AAAA imported\n"}}"#
+                            .to_owned(),
+                    )
+                }
+                12 => {
                     assert!(request.starts_with("POST /v1/ssh/sign/ca-role HTTP/1.1"));
                     assert!(request.contains(r#""public_key":"ssh-rsa AAAA test""#));
                     (
@@ -3420,7 +3480,7 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
                             .to_owned(),
                     )
                 }
-                7 => {
+                13 => {
                     assert!(request.starts_with("POST /v1/ssh/issue/ca-role HTTP/1.1"));
                     assert!(request.contains(r#""key_type":"rsa""#));
                     (
@@ -3431,7 +3491,7 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
                         ),
                     )
                 }
-                8 => {
+                14 => {
                     assert!(request.starts_with("POST /v1/ssh/verify HTTP/1.1"));
                     assert!(request.contains(&format!(r#""otp":"{}{}""#, "otp-", "secret")));
                     (
@@ -3439,7 +3499,15 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
                         r#"{"data":{"ip":"127.0.0.1","username":"alice"}}"#.to_owned(),
                     )
                 }
-                9 => {
+                15 => {
+                    assert!(request.starts_with("DELETE /v1/ssh/issuer/renamed HTTP/1.1"));
+                    ("204 No Content", "{}".to_owned())
+                }
+                16 => {
+                    assert!(request.starts_with("DELETE /v1/ssh/config/ca HTTP/1.1"));
+                    ("204 No Content", "{}".to_owned())
+                }
+                17 => {
                     assert!(request.starts_with("DELETE /v1/ssh/roles/otp-role HTTP/1.1"));
                     ("204 No Content", "{}".to_owned())
                 }
@@ -3512,6 +3580,60 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(issuer_config.default_issuer, "issuer-2");
 
+    let default_issuer = ssh
+        .submit_default_ca(&openbao::secrets::ssh::SshCaSubmitRequest::from_key_pair(
+            test_secret(&["ssh-ca-private-", "key"]),
+            "ssh-rsa AAAA ca",
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(default_issuer.issuer_id.as_deref(), Some("issuer-1"));
+
+    let issuers = ssh
+        .list_issuers_after(Some("issuer-1"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuers.keys, ["issuer-1"]);
+    assert_eq!(
+        issuers
+            .key_info
+            .get("issuer-1")
+            .and_then(|issuer| issuer.issuer_name.as_deref()),
+        Some("default")
+    );
+
+    let generated_issuer = ssh
+        .submit_issuer(
+            Some("imported"),
+            &openbao::secrets::ssh::SshCaSubmitRequest::generate()
+                .with_key_type("rsa")
+                .with_set_default(true),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(generated_issuer.issuer_id.as_deref(), Some("issuer-2"));
+
+    let issuer = ssh
+        .read_issuer("default")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer.issuer_name.as_deref(), Some("imported"));
+
+    let issuer = ssh
+        .update_issuer(
+            "default",
+            &openbao::secrets::ssh::SshIssuerUpdateRequest::new("renamed"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer.issuer_name.as_deref(), Some("renamed"));
+
+    let ca_public_key = ssh
+        .read_ca_public_key()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(ca_public_key.issuer_name.as_deref(), Some("renamed"));
+
     let signed = ssh
         .sign(
             "ca-role",
@@ -3543,6 +3665,14 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(verified.username, "alice");
+
+    ssh.delete_issuer("renamed")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    ssh.delete_ca_information()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
 
     ssh.delete_role("otp-role")
         .await

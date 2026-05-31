@@ -8,7 +8,10 @@ use std::{collections::BTreeMap, net::IpAddr};
 
 use reqwest::{Method, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize, Deserializer, Serialize,
+    de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
+};
 
 use crate::{
     Authenticated, Client, Error, Result,
@@ -59,7 +62,11 @@ pub enum SshIssueKeyType {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SshRoleList {
     /// Role names.
-    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(
+        default,
+        alias = "keys",
+        deserialize_with = "deserialize_bounded_string_vec"
+    )]
     pub roles: Vec<String>,
 }
 
@@ -395,6 +402,160 @@ impl SshIssuerConfigRequest {
     }
 }
 
+/// SSH issuer list response.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct SshIssuerList {
+    /// Issuer identifiers.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Issuer metadata keyed by issuer identifier.
+    #[serde(default, deserialize_with = "deserialize_bounded_issuer_info_map")]
+    pub key_info: BTreeMap<String, SshIssuerInfo>,
+}
+
+/// SSH issuer metadata.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct SshIssuerInfo {
+    /// Issuer ID.
+    #[serde(default)]
+    pub issuer_id: Option<String>,
+    /// Operator-assigned issuer name.
+    #[serde(default)]
+    pub issuer_name: Option<String>,
+    /// Whether this issuer is the mount default.
+    #[serde(default)]
+    pub is_default: Option<bool>,
+    /// SSH CA public key.
+    pub public_key: String,
+}
+
+/// SSH CA submission request.
+#[derive(Clone)]
+pub struct SshCaSubmitRequest {
+    /// Private key part of the SSH CA key pair. Treat as secret material.
+    pub private_key: Option<SecretString>,
+    /// Public key part of the SSH CA key pair.
+    pub public_key: Option<String>,
+    /// Whether OpenBao should generate the signing key pair internally.
+    pub generate_signing_key: Option<bool>,
+    /// Desired generated key type.
+    pub key_type: Option<String>,
+    /// Desired generated key bits.
+    pub key_bits: Option<u16>,
+    /// Whether a submitted named issuer should become the default issuer.
+    pub set_default: Option<bool>,
+}
+
+impl SshCaSubmitRequest {
+    /// Creates a request for OpenBao-generated SSH CA key material.
+    #[must_use]
+    pub fn generate() -> Self {
+        Self {
+            private_key: None,
+            public_key: None,
+            generate_signing_key: Some(true),
+            key_type: None,
+            key_bits: None,
+            set_default: None,
+        }
+    }
+
+    /// Creates a request from caller-provided SSH CA key material.
+    pub fn from_key_pair(private_key: SecretString, public_key: impl Into<String>) -> Self {
+        Self {
+            private_key: Some(private_key),
+            public_key: Some(public_key.into()),
+            generate_signing_key: Some(false),
+            key_type: None,
+            key_bits: None,
+            set_default: None,
+        }
+    }
+
+    /// Sets the generated key type.
+    #[must_use]
+    pub fn with_key_type(mut self, key_type: impl Into<String>) -> Self {
+        self.key_type = Some(key_type.into());
+        self
+    }
+
+    /// Sets the generated key bits.
+    #[must_use]
+    pub fn with_key_bits(mut self, key_bits: u16) -> Self {
+        self.key_bits = Some(key_bits);
+        self
+    }
+
+    /// Sets whether a named issuer should become the default issuer.
+    #[must_use]
+    pub fn with_set_default(mut self, set_default: bool) -> Self {
+        self.set_default = Some(set_default);
+        self
+    }
+
+    fn payload(&self) -> SshCaSubmitPayload<'_> {
+        SshCaSubmitPayload {
+            private_key: self.private_key.as_ref().map(SecretString::expose_secret),
+            public_key: self.public_key.as_deref(),
+            generate_signing_key: self.generate_signing_key,
+            key_type: self.key_type.as_deref(),
+            key_bits: self.key_bits,
+            set_default: self.set_default,
+        }
+    }
+}
+
+impl fmt::Debug for SshCaSubmitRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SshCaSubmitRequest")
+            .field(
+                "private_key",
+                &self.private_key.as_ref().map(|_| "<redacted>"),
+            )
+            .field("public_key", &self.public_key)
+            .field("generate_signing_key", &self.generate_signing_key)
+            .field("key_type", &self.key_type)
+            .field("key_bits", &self.key_bits)
+            .field("set_default", &self.set_default)
+            .finish()
+    }
+}
+
+#[derive(Serialize)]
+struct SshCaSubmitPayload<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    private_key: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    public_key: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    generate_signing_key: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    key_type: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    key_bits: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    set_default: Option<bool>,
+}
+
+/// SSH issuer update request.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct SshIssuerUpdateRequest {
+    /// New operator-assigned issuer name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_name: Option<String>,
+}
+
+impl SshIssuerUpdateRequest {
+    /// Creates an issuer-name update request.
+    #[must_use]
+    pub fn new(issuer_name: impl Into<String>) -> Self {
+        Self {
+            issuer_name: Some(issuer_name.into()),
+        }
+    }
+}
+
 /// SSH CA public-key information.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SshPublicKeyInfo {
@@ -617,6 +778,101 @@ impl Ssh<'_> {
         Ok(envelope.data)
     }
 
+    /// Lists SSH issuers.
+    pub async fn list_issuers(&self) -> Result<SshIssuerList> {
+        self.list_issuers_after(None, None).await
+    }
+
+    /// Lists SSH issuers with optional OpenBao pagination parameters.
+    pub async fn list_issuers_after(
+        &self,
+        after: Option<&str>,
+        limit: Option<u64>,
+    ) -> Result<SshIssuerList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let mut query = Vec::new();
+        if let Some(after) = after {
+            query.push(("after", validate_mount_path(after)?.join("/")));
+        }
+        if let Some(limit) = limit {
+            query.push(("limit", limit.to_string()));
+        }
+        let envelope: ResponseEnvelope<SshIssuerList> = self
+            .client
+            .request_json_query_accepting(
+                method,
+                &self.path(&["issuers"])?,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Submits CA information and assigns it to the default issuer reference.
+    pub async fn submit_default_ca(&self, request: &SshCaSubmitRequest) -> Result<SshIssuerInfo> {
+        let payload = request.payload();
+        let envelope: ResponseEnvelope<SshIssuerInfo> = self
+            .client
+            .request_json(Method::POST, &self.path(&["config", "ca"])?, Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Submits CA information as a new issuer, optionally with an explicit name.
+    pub async fn submit_issuer(
+        &self,
+        issuer_name: Option<&str>,
+        request: &SshCaSubmitRequest,
+    ) -> Result<SshIssuerInfo> {
+        let payload = request.payload();
+        let path = if let Some(issuer_name) = issuer_name {
+            self.path(&["issuers", "import", issuer_name])?
+        } else {
+            self.path(&["issuers", "import"])?
+        };
+        let envelope: ResponseEnvelope<SshIssuerInfo> = self
+            .client
+            .request_json(Method::POST, &path, Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads SSH issuer metadata by issuer ID, name, or `default`.
+    pub async fn read_issuer(&self, issuer_ref: &str) -> Result<SshIssuerInfo> {
+        let envelope: ResponseEnvelope<SshIssuerInfo> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["issuer", issuer_ref])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Updates SSH issuer metadata by issuer ID, name, or `default`.
+    ///
+    /// OpenBao supports both `POST` and `PATCH`; this helper uses `PATCH`
+    /// because the request represents a partial metadata update.
+    pub async fn update_issuer(
+        &self,
+        issuer_ref: &str,
+        request: &SshIssuerUpdateRequest,
+    ) -> Result<SshIssuerInfo> {
+        let envelope: ResponseEnvelope<SshIssuerInfo> = self
+            .client
+            .request_json(
+                Method::PATCH,
+                &self.path(&["issuer", issuer_ref])?,
+                Some(request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Reads the authenticated default CA public key metadata.
     pub async fn read_ca_public_key(&self) -> Result<SshPublicKeyInfo> {
         let envelope: ResponseEnvelope<SshPublicKeyInfo> = self
@@ -628,6 +884,30 @@ impl Ssh<'_> {
             )
             .await?;
         Ok(envelope.data)
+    }
+
+    /// Deletes all SSH CA information in the mount, including the default issuer.
+    pub async fn delete_ca_information(&self) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &self.path(&["config", "ca"])?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Deletes an SSH issuer by issuer ID, name, or `default`.
+    pub async fn delete_issuer(&self, issuer_ref: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &self.path(&["issuer", issuer_ref])?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
     }
 
     /// Signs an SSH public key with a role.
@@ -669,6 +949,45 @@ impl Ssh<'_> {
     }
 }
 
+fn deserialize_bounded_issuer_info_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, SshIssuerInfo>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_map(SshIssuerInfoMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+struct SshIssuerInfoMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for SshIssuerInfoMapVisitor<MAX> {
+    type Value = BTreeMap<String, SshIssuerInfo>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} SSH issuer records")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, SshIssuerInfo>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao SSH issuer map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
@@ -679,7 +998,10 @@ mod tests {
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::{SshCredentials, SshIssueResponse, SshRoleList, SshVerifyRequest};
+    use super::{
+        SshCaSubmitRequest, SshCredentials, SshIssueResponse, SshIssuerList, SshRoleList,
+        SshVerifyRequest,
+    };
 
     #[test]
     fn ssh_paths_are_validated() {
@@ -700,6 +1022,11 @@ mod tests {
 
     #[test]
     fn ssh_role_lists_are_bounded() {
+        let keys = serde_json::json!({ "keys": ["role-a"] });
+        let list: SshRoleList =
+            serde_json::from_value(keys).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(list.roles, ["role-a"]);
+
         let mut roles = Vec::new();
         for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
             roles.push(format!("role-{index}"));
@@ -707,6 +1034,23 @@ mod tests {
         let value = serde_json::json!({ "roles": roles });
         let error = match serde_json::from_value::<SshRoleList>(value) {
             Ok(_) => panic!("oversized SSH role list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn ssh_issuer_lists_are_bounded() {
+        let mut key_info = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            key_info.insert(
+                format!("issuer-{index}"),
+                serde_json::json!({ "public_key": "ssh-rsa AAAA" }),
+            );
+        }
+        let value = serde_json::json!({ "keys": ["issuer-0"], "key_info": key_info });
+        let error = match serde_json::from_value::<SshIssuerList>(value) {
+            Ok(_) => panic!("oversized SSH issuer map unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
@@ -740,5 +1084,13 @@ mod tests {
         let verify_debug = format!("{verify:?}");
         assert!(!verify_debug.contains(&["verify-", "secret"].concat()));
         assert!(verify_debug.contains("redacted"));
+
+        let submit = SshCaSubmitRequest::from_key_pair(
+            SecretString::from(["ssh-ca-private-", "key"].concat()),
+            "ssh-rsa AAAA",
+        );
+        let submit_debug = format!("{submit:?}");
+        assert!(!submit_debug.contains(&["ssh-ca-private-", "key"].concat()));
+        assert!(submit_debug.contains("redacted"));
     }
 }
