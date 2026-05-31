@@ -35,6 +35,7 @@ compile_error!(
 mod client;
 mod error;
 mod path;
+pub mod policy;
 mod response;
 
 #[cfg(any(
@@ -62,6 +63,7 @@ pub use client::{
     RootCertificateMode, Unauthenticated,
 };
 pub use error::{Error, Result};
+pub use policy::{AclCapability, AclPolicyBuilder};
 pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
 pub use response::{Empty, ResponseEnvelope};
 pub use secrecy::{self, ExposeSecret, SecretString};
@@ -69,9 +71,9 @@ pub use secrecy::{self, ExposeSecret, SecretString};
 /// Common imports for application code using the OpenBao SDK.
 pub mod prelude {
     pub use crate::{
-        Authenticated, Certificate, Client, ClientBuilder, Empty, Error, ExposeSecret, HeaderMode,
-        Identity, Method, OpenBao, OpenBaoConfig, ResponseEnvelope, Result, SecretString,
-        StatusCode, Unauthenticated,
+        AclCapability, AclPolicyBuilder, Authenticated, Certificate, Client, ClientBuilder, Empty,
+        Error, ExposeSecret, HeaderMode, Identity, Method, OpenBao, OpenBaoConfig,
+        ResponseEnvelope, Result, SecretString, StatusCode, Unauthenticated,
     };
 
     #[cfg(any(

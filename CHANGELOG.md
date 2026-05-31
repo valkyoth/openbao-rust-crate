@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## 0.6.0 - Unreleased
+
+### Added
+
+- Bounded ACL policy builder helpers for common KV v2 and Transit
+  least-privilege rules.
+
 ## 0.5.0 - 2026-05-30
 
 ### Added

@@ -33,9 +33,8 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.5.0` release line. `0.5.0` builds on `0.4.0`
-with Userpass auth, JWT auth, database secrets, and typed Transit signing/JWS
-ergonomics.
+This README documents the `0.6.0` development line. `0.6.0` builds on `0.5.0`
+with ACL policy builder ergonomics for least-privilege service setup.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -72,6 +71,8 @@ Implemented now:
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
 - ACL policy list, read, write, delete, and prefix list helpers.
+- Bounded ACL policy builder helpers for common KV v2 and Transit
+  least-privilege rules.
 - Capability checks for the caller token, an explicit token, or a token
   accessor.
 - Audit device list, enable, disable, and hash helpers.
@@ -120,9 +121,9 @@ release sequencing live in [release-notes](release-notes) and
 ## Rust Version Support
 
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
-prefer the latest stable Rust; as of May 30, 2026, that is Rust `1.96.0`.
+prefer the latest stable Rust; as of May 31, 2026, that is Rust `1.96.0`.
 
-The `0.5.0` release gate will refresh compatibility evidence across this
+The `0.6.0` release gate will refresh compatibility evidence across this
 range before tagging:
 
 | Rust | Required Evidence |
@@ -139,7 +140,7 @@ range before tagging:
 
 ```toml
 [dependencies]
-openbao = "0.5"
+openbao = "0.6"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 ```
@@ -155,7 +156,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.5", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.6", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -250,7 +251,7 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
-| Policies and capabilities | Yes | ACL policy helpers plus self/token/accessor capability checks. |
+| Policies and capabilities | Yes | ACL policy read/write/list/delete, bounded policy builder helpers, and self/token/accessor capability checks. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
@@ -741,20 +742,21 @@ async fn main() -> Result<()> {
 Write an ACL policy and check capabilities:
 
 ```rust,no_run
-use openbao::{Client, Result, SecretString};
-use openbao::sys::PolicyWriteRequest;
+use openbao::{AclPolicyBuilder, Client, Result, SecretString};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
     let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
+    let mut policy = AclPolicyBuilder::new();
+    let request = policy
+        .allow_kv2_read_prefix("secret", "app")?
+        .build_write_request()?;
+
     client
         .sys()
-        .write_policy(
-            "app-read",
-            &PolicyWriteRequest::new(r#"path "secret/data/app" { capabilities = ["read"] }"#),
-        )
+        .write_policy("app-read", &request)
         .await?;
 
     let capabilities = client.sys().capabilities_self(["secret/data/app"]).await?;
@@ -967,7 +969,7 @@ scripts/checks.sh
 Run the current release gate:
 
 ```bash
-scripts/release_0_5_gate.sh
+scripts/release_0_6_gate.sh
 ```
 
 Set `OPENBAO_SKIP_INTEGRATION=1` only when Podman is unavailable; release
