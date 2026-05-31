@@ -34,7 +34,8 @@ use openbao::Client;
 ```
 
 This README documents the `0.6.0` development line. `0.6.0` builds on `0.5.0`
-with ACL policy builder ergonomics for least-privilege service setup.
+with TOTP helpers and ACL policy builder ergonomics for least-privilege service
+setup.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -60,6 +61,8 @@ Implemented now:
 - KV v1 read, write, delete, and list helpers.
 - Database connection config, dynamic roles, static roles, root/static
   rotation, and credential helpers.
+- TOTP key create/read/list/delete, code generation, and code validation
+  helpers.
 - PKI URL and CRL config, root/intermediate generation, intermediate signing
   and install, role write/read/list/delete, issue, sign, revoke, certificate
   list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import,
@@ -86,7 +89,7 @@ Implemented now:
 
 Planned next:
 
-- `0.6.0`: SSH, TOTP, and explicitly gated production init/unseal/rekey/rotate APIs.
+- `0.6.0`: SSH and explicitly gated production init/unseal/rekey/rotate APIs.
 - `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
   RabbitMQ.
 - `0.8.0`: remaining auth methods and broader system backend automation.
@@ -156,7 +159,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.6", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.6", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -164,7 +167,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.5", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.6", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 ## Features
@@ -181,6 +184,7 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
 | `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, and tidy helpers. |
+| `totp` | yes | TOTP key and code helpers. |
 | `transit` | yes | Transit cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
 | `sys` | yes | System backend helpers. |
@@ -238,7 +242,8 @@ openbao = { version = "0.5", default-features = false, features = ["kv2", "sys",
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and optional raw-byte helpers. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
-| SSH and TOTP | Planned | Planned for `0.6.0`. |
+| TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
+| SSH | Planned | Planned for `0.6.0`. |
 | Identity and remaining engines | Planned | Planned for `0.7.0`. |
 
 ### System Backend And Operations
@@ -520,6 +525,33 @@ async fn main() -> Result<()> {
         "database user {} leased for {} seconds",
         credentials.username, credentials.lease_duration
     );
+    Ok(())
+}
+```
+
+Create and validate a TOTP code without logging the generated code:
+
+```rust,no_run
+use openbao::secrets::totp::{TotpKeyCreateRequest, TotpValidateRequest};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let totp = client.totp("totp")?;
+
+    let created = totp
+        .create_key("alice", &TotpKeyCreateRequest::generated("Example", "alice"))
+        .await?;
+    println!("TOTP bootstrap URL available: {}", created.url.is_some());
+
+    let code = totp.generate_code("alice").await?;
+    let validation = totp
+        .validate_code("alice", &TotpValidateRequest::new(code.code))
+        .await?;
+
+    println!("TOTP code accepted: {}", validation.valid);
     Ok(())
 }
 ```

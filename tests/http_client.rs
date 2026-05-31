@@ -3233,3 +3233,126 @@ async fn pki_issuer_patch_revoke_and_import_paths_are_documented() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
+
+#[tokio::test]
+async fn totp_key_and_code_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..6 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let (status, body) = match index {
+                0 => {
+                    assert!(request.starts_with("POST /v1/totp/keys/app HTTP/1.1"));
+                    assert!(request.contains(r#""url":"otpauth://totp/app?value=imported""#));
+                    (
+                        "200 OK",
+                        r#"{"data":{"barcode":"png-data","url":"otpauth://totp/app?value=generated"}}"#
+                            .to_owned(),
+                    )
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/totp/keys/app HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"account_name":"app","algorithm":"SHA256","digits":6,"issuer":"OpenBao","period":30}}"#
+                            .to_owned(),
+                    )
+                }
+                2 => {
+                    assert!(request.starts_with("LIST /v1/totp/keys?after=app&limit=10 HTTP/1.1"));
+                    ("200 OK", r#"{"data":{"keys":["app"]}}"#.to_owned())
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/totp/code/app HTTP/1.1"));
+                    (
+                        "200 OK",
+                        format!(r#"{{"data":{{"code":"{}{}"}}}}"#, "123", "456"),
+                    )
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/totp/code/app HTTP/1.1"));
+                    assert!(request.contains(&format!(r#""code":"{}{}""#, "654", "321")));
+                    ("200 OK", r#"{"data":{"valid":true}}"#.to_owned())
+                }
+                5 => {
+                    assert!(request.starts_with("DELETE /v1/totp/keys/app HTTP/1.1"));
+                    ("204 No Content", "{}".to_owned())
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let totp = client
+        .totp("totp")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let created = totp
+        .create_key(
+            "app",
+            &openbao::secrets::totp::TotpKeyCreateRequest::from_url(test_secret(&[
+                "otpauth://totp/app?",
+                "value=imported",
+            ])),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(created.barcode.is_some());
+    assert!(created.url.is_some());
+
+    let info = totp
+        .read_key("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(info.account_name.as_deref(), Some("app"));
+
+    let keys = totp
+        .list_keys_after(Some("app"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(keys.keys, ["app"]);
+
+    let generated = totp
+        .generate_code("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(generated.code.expose_secret(), &["123", "456"].concat());
+
+    let validated = totp
+        .validate_code(
+            "app",
+            &openbao::secrets::totp::TotpValidateRequest::new(test_secret(&["654", "321"])),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(validated.valid);
+
+    totp.delete_key("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}

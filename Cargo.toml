@@ -50,6 +50,7 @@ default = [
     "kv1",
     "kv2",
     "pki",
+    "totp",
     "transit",
     "sys",
     "rustls-tls",
@@ -64,6 +65,7 @@ token = []
 kv1 = []
 kv2 = []
 pki = []
+totp = []
 transit = []
 transit-bytes = ["dep:base64-ng"]
 sys = []

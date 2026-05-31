@@ -8,6 +8,9 @@ All notable changes to this project are documented here.
 
 - Bounded ACL policy builder helpers for common KV v2 and Transit
   least-privilege rules.
+- TOTP secrets engine helpers for key create/read/list/delete, code
+  generation, and code validation with generated URLs, barcodes, and codes
+  treated as secret material.
 
 ## 0.5.0 - 2026-05-30
 

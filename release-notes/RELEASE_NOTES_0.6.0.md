@@ -16,14 +16,15 @@
   wrapping, ACL policies, capabilities, audit devices, exact lease helpers,
   plugin catalog helpers, environment-based client construction, Kubernetes
   auth, TLS certificate auth, PKI helpers, Userpass auth, JWT/OIDC helpers,
-  database secrets helpers, and optional Transit byte helpers.
+  database secrets helpers, TOTP helpers, and optional Transit byte helpers.
 - New `0.6.0` work currently implemented: bounded ACL policy builder helpers
-  for common KV v2 and Transit least-privilege rules.
-- Remaining `0.6.0` planned work: SSH helpers, TOTP helpers, idempotent admin
-  bootstrap builder, and production init/unseal/rekey/rotate APIs behind an
-  explicit feature with strong documentation warnings.
+  for common KV v2 and Transit least-privilege rules; TOTP key
+  create/read/list/delete, code generation, and code validation.
+- Remaining `0.6.0` planned work: SSH helpers, idempotent admin bootstrap
+  builder, and production init/unseal/rekey/rotate APIs behind an explicit
+  feature with strong documentation warnings.
 - Default Cargo features: `approle`, `cert-auth`, `database`, `jwt-auth`,
-  `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`, `transit`,
+  `kubernetes-auth`, `userpass`, `token`, `kv1`, `kv2`, `pki`, `totp`, `transit`,
   `sys`, `rustls-tls`.
 - Non-default Cargo features: `allow-sha1`, `native-tls`,
   `native-tls-acknowledged`, `transit-bytes`.
@@ -40,6 +41,8 @@
 - Helper-generated KV v2 and Transit ACL paths require literal mount, prefix,
   and key inputs; callers can still use explicit raw policy paths when they
   intentionally need OpenBao wildcards.
+- TOTP generated codes, OTP URLs, QR barcodes, imported OTP URLs, and imported
+  root keys are represented with `SecretString` and redacted from debug output.
 
 ## Security And Stability Gate
 
@@ -55,7 +58,7 @@
 
 ## Known Limitations
 
-- SSH, TOTP, and production init/unseal/rekey helpers are not implemented yet.
+- SSH and production init/unseal/rekey helpers are not implemented yet.
 - The ACL policy builder intentionally does not cover advanced ACL fields such
   as required parameters, allowed parameters, denied parameters, or wrapping
   TTL constraints. Use `sys::PolicyWriteRequest` directly for advanced policy

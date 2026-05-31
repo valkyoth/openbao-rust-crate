@@ -17,6 +17,7 @@ Sources:
 - Userpass auth: https://openbao.org/api-docs/auth/userpass/
 - Transit: https://openbao.org/api-docs/secret/transit/
 - PKI: https://openbao.org/api-docs/secret/pki/
+- TOTP: https://openbao.org/api-docs/secret/totp/
 
 ## Foundation
 
@@ -33,8 +34,10 @@ Sources:
 - Implemented downstream ergonomics from Mjolni/Pawalyze review:
   KV v2 service config loading into typed structs or bounded secret string maps,
   byte-oriented Transit helpers, and JWS-oriented Transit sign/verify helpers.
+- Implemented downstream ergonomics from Mjolni/Pawalyze review:
+  ACL policy builders.
 - Planned downstream ergonomics from Mjolni/Pawalyze review:
-  idempotent admin bootstrap and ACL policy builders.
+  idempotent admin bootstrap.
 - Planned posture helpers:
   best-effort FIPS profile validation for crate-controlled choices and a
   future quantum-readiness profile once OpenBao exposes stable primitives.
@@ -105,7 +108,8 @@ Support plan:
   dynamic role list/write/read/delete, dynamic credentials, static role
   list/write/read/delete, static credentials, and static role rotation are
   implemented.
-- `0.6.0`: SSH and TOTP.
+- `0.6.0`: TOTP key create/read/list/delete, code generation, and code
+  validation are implemented. SSH remains planned.
 - `0.7.0`: Kubernetes, LDAP, RabbitMQ, cubbyhole, identity.
 
 ## System Backend
