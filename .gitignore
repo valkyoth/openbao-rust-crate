@@ -7,3 +7,4 @@
 /deploy/podman/dev-state/tls/*.pem
 /deploy/podman/openbao.dev.env
 PENTEST.md
+GAP_ANALYSIS.md

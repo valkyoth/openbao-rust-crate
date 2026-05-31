@@ -59,6 +59,24 @@ pub struct TokenCreateRequest {
 }
 
 impl TokenCreateRequest {
+    /// Sets the policies attached to the created token.
+    #[must_use]
+    pub fn with_policies<I, P>(mut self, policies: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<String>,
+    {
+        self.policies = policies.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// Omits OpenBao's default policy from the created token.
+    #[must_use]
+    pub fn without_default_policy(mut self) -> Self {
+        self.no_default_policy = Some(true);
+        self
+    }
+
     /// Sets the requested token TTL after validating OpenBao duration syntax.
     pub fn with_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
         let ttl = ttl.into();
@@ -313,6 +331,7 @@ impl Token<'_> {
 
     /// Renews the caller's token.
     pub async fn renew_self(&self, increment: Option<&str>) -> Result<TokenAuth> {
+        validate_renew_increment(increment)?;
         let payload = RenewPayload {
             token: None,
             increment,
@@ -326,6 +345,7 @@ impl Token<'_> {
 
     /// Renews a token value.
     pub async fn renew(&self, token: &SecretString, increment: Option<&str>) -> Result<TokenAuth> {
+        validate_renew_increment(increment)?;
         let payload = RenewPayload {
             token: Some(token.expose_secret()),
             increment,
@@ -369,13 +389,20 @@ impl Token<'_> {
     }
 }
 
+fn validate_renew_increment(increment: Option<&str>) -> Result<()> {
+    if let Some(increment) = increment {
+        crate::validation::validate_duration_parameter(increment, "token renewal increment")?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
 
     use crate::response::ResponseEnvelope;
 
-    use super::{TokenAccessorList, TokenCreateRequest, TokenInfo};
+    use super::{TokenAccessorList, TokenCreateRequest, TokenInfo, validate_renew_increment};
 
     #[test]
     fn token_ttl_rejects_negative_values() {
@@ -390,7 +417,13 @@ mod tests {
 
     #[test]
     fn token_create_duration_fields_are_validated() {
-        assert!(TokenCreateRequest::default().with_ttl("30m").is_ok());
+        let request = TokenCreateRequest::default()
+            .with_policies(["app-read", "infra-common"])
+            .without_default_policy()
+            .with_ttl("30m")
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(request.policies, ["app-read", "infra-common"]);
+        assert_eq!(request.no_default_policy, Some(true));
         assert!(TokenCreateRequest::default().with_ttl("never").is_err());
         assert!(TokenCreateRequest::default().with_ttl("1h\r\nbad").is_err());
         assert!(
@@ -399,6 +432,8 @@ mod tests {
                 .is_ok()
         );
         assert!(TokenCreateRequest::default().with_period("60s").is_ok());
+        assert!(validate_renew_increment(Some("30m")).is_ok());
+        assert!(validate_renew_increment(Some("1 hour")).is_err());
     }
 
     #[test]

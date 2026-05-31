@@ -14,7 +14,7 @@ use serde::{
 };
 
 use crate::{
-    Authenticated, Client, Result,
+    Authenticated, Client, Error, Result,
     path::{validate_mount_path, validate_secret_path},
     response::{
         Empty, ResponseEnvelope, deserialize_bounded_string_vec,
@@ -71,6 +71,13 @@ impl Kv2ServiceConfig {
     /// Returns a secret value by key.
     pub fn get(&self, key: &str) -> Option<&SecretString> {
         self.values.get(key)
+    }
+
+    /// Returns a required secret value or a descriptive error.
+    pub fn required(&self, key: &str) -> Result<&SecretString> {
+        self.values.get(key).ok_or_else(|| {
+            Error::InvalidParameter(format!("required config key `{key}` is missing"))
+        })
     }
 
     /// Returns true when no configuration entries were loaded.
@@ -427,11 +434,34 @@ impl Kv2<'_> {
 
     /// Lists keys below a KV v2 metadata path.
     pub async fn list(&self, path: &str) -> Result<Kv2List> {
+        self.list_after(path, None, None).await
+    }
+
+    /// Lists keys below a KV v2 metadata path with optional pagination.
+    pub async fn list_after(
+        &self,
+        path: &str,
+        after: Option<&str>,
+        limit: Option<u64>,
+    ) -> Result<Kv2List> {
         let method = Method::from_bytes(b"LIST")
             .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?;
+        let mut query = Vec::new();
+        if let Some(after) = after {
+            query.push(("after", validate_secret_path(after)?.join("/")));
+        }
+        if let Some(limit) = limit {
+            query.push(("limit", limit.to_string()));
+        }
         let envelope: ResponseEnvelope<Kv2List> = self
             .client
-            .request_json(method, &self.metadata_path(path)?, Option::<&Empty>::None)
+            .request_json_query_accepting(
+                method,
+                &self.metadata_path(path)?,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -719,6 +749,14 @@ mod tests {
             config.get("API_KEY").map(SecretString::expose_secret),
             Some("key-value")
         );
+        assert_eq!(
+            config
+                .required("API_KEY")
+                .map(SecretString::expose_secret)
+                .unwrap_or_else(|error| panic!("{error}")),
+            "key-value"
+        );
+        assert!(config.required("MISSING").is_err());
         let debug = format!("{config:?}");
         assert!(debug.contains("API_KEY"));
         assert!(debug.contains("<redacted>"));

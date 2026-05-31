@@ -46,7 +46,7 @@ Implemented now:
 - Async client with typestate authentication.
 - Direct token authentication with re-exported `openbao::SecretString`.
 - AppRole login with secret-aware role ID, secret ID, token, and accessor
-  handling.
+  handling. AppRole role and SecretID administration is planned for `0.7.0`.
 - Kubernetes auth login plus config and role administration helpers.
 - TLS certificate auth login, method config, CA role, and CRL administration
   helpers.
@@ -231,7 +231,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | Direct token auth | Yes | Tokens are accepted as `SecretString`. |
 | `X-Vault-Token` | Yes | Default documented OpenBao-compatible token header. |
 | Bearer auth | Yes | Optional `Authorization: Bearer` header mode. |
-| AppRole login | Yes | Role ID and secret ID are secret-aware; returned token is wrapped. |
+| AppRole login | Yes | Role ID and secret ID are secret-aware; returned token is wrapped. Role and SecretID administration is planned for `0.7.0`. |
 | Token accessor handling | Yes | Accessors are treated as secret material. |
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
@@ -728,15 +728,17 @@ async fn main() -> Result<()> {
 
     let child = client
         .token()
-        .create(&TokenCreateRequest {
-            policies: vec!["default".to_owned()],
-            meta: BTreeMap::from([("owner".to_owned(), "example".to_owned())]),
-            display_name: Some("example-child".to_owned()),
-            ttl: Some("30m".to_owned()),
-            explicit_max_ttl: Some("1h".to_owned()),
-            renewable: Some(true),
-            ..TokenCreateRequest::default()
-        })
+        .create(
+            &TokenCreateRequest {
+                meta: BTreeMap::from([("owner".to_owned(), "example".to_owned())]),
+                display_name: Some("example-child".to_owned()),
+                renewable: Some(true),
+                ..TokenCreateRequest::default()
+            }
+            .with_policies(["default"])
+            .with_ttl("30m")?
+            .with_explicit_max_ttl("1h")?,
+        )
         .await?;
 
     let info = client.token().lookup(&child.client_token).await?;
@@ -857,12 +859,13 @@ async fn main() -> Result<()> {
         .ensure_policy("app-read", &policy)?
         .ensure_transit_key("transit", "app-key", TransitCreateKeyRequest::default())?
         .ensure_kv2_secret_values("secret", "app/config", values)?
-        .issue_service_token("app", TokenCreateRequest {
-            policies: vec!["app-read".to_owned()],
-            no_default_policy: Some(true),
-            ttl: Some("1h".to_owned()),
-            ..TokenCreateRequest::default()
-        })?
+        .issue_service_token(
+            "app",
+            TokenCreateRequest::default()
+                .with_policies(["app-read"])
+                .without_default_policy()
+                .with_ttl("1h")?,
+        )?
         .run(&client)
         .await?;
 

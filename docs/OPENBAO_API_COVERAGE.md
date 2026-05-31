@@ -33,9 +33,10 @@ Sources:
 - Environment-based client construction from common `OPENBAO_*`, `BAO_*`, and
   `VAULT_*` variables is implemented in `0.4.0`.
 - Implemented downstream ergonomics from Mjolni/Pawalyze review:
-  KV v2 service config loading into typed structs or bounded secret string maps,
-  byte-oriented Transit helpers, JWS-oriented Transit sign/verify helpers, ACL
-  policy builders, and idempotent admin bootstrap for common service setup.
+  KV v2 service config loading into typed structs or bounded secret string maps
+  with required-key accessors, byte-oriented Transit helpers, JWS-oriented
+  Transit sign/verify helpers, ACL policy builders, and idempotent admin
+  bootstrap for common service setup.
 - Planned posture helpers:
   best-effort FIPS profile validation for crate-controlled choices and a
   future quantum-readiness profile once OpenBao exposes stable primitives.
@@ -64,6 +65,8 @@ Support plan:
 - `0.5.0`: userpass login and user administration are implemented; JWT login
   plus JWT/OIDC config and role administration helpers are implemented. Browser
   OIDC callback helpers remain planned.
+- `0.7.0`: AppRole role and SecretID administration, plus admin bootstrap
+  orchestration for auth method setup.
 - `0.8.0`: LDAP, RADIUS, and Kerberos.
 
 ## Secret Engines

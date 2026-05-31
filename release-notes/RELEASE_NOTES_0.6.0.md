@@ -71,6 +71,11 @@
   invalid token header values can fail at client construction.
 - Token create TTL, explicit-max-TTL, and period fields are validated before
   token creation requests are sent.
+- Token renewal increments are validated before request dispatch.
+- Token creation has policy/default-policy builder helpers, KV v2 service
+  configs can require keys by name, KV v2 list supports pagination, common API
+  status checks have `Error` inspectors, and mount/auth enable requests have
+  lease-TTL builders.
 - Dev-state TLS private-key patterns are explicitly ignored. The current
   working tree has no tracked `deploy/podman/dev-state` key material.
 
@@ -80,6 +85,10 @@
 - Result: local pre-pentest gate passed on 2026-05-31.
 - Pentest report: local `PENTEST.md` reviewed on 2026-05-31; actionable local
   findings fixed and the report was deleted before commit.
+- Gap analysis: local `GAP_ANALYSIS.md` reviewed on 2026-05-31; smaller API and
+  documentation gaps fixed, and AppRole admin plus auth-method bootstrap work
+  moved into the `0.7.0` release plan. The local report was deleted before
+  commit.
 - `cargo audit` result: passed on 2026-05-31.
 - `cargo deny check` result: passed on 2026-05-31 with duplicate dependency
   warnings only.

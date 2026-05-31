@@ -155,6 +155,9 @@ Publishable value:
 
 Stop condition:
 
+- AppRole admin role and SecretID lifecycle helpers;
+- admin bootstrap support for auth method enablement and AppRole role/SecretID
+  provisioning;
 - cubbyhole;
 - identity entities/groups/aliases;
 - Kubernetes secrets engine;

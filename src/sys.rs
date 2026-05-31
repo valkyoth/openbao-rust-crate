@@ -683,6 +683,26 @@ impl MountEnableRequest {
         self.description = Some(description.into());
         self
     }
+
+    /// Sets the backend default lease TTL after validating duration syntax.
+    pub fn with_default_lease_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "mount default_lease_ttl")?;
+        self.config
+            .get_or_insert_with(MountConfig::default)
+            .default_lease_ttl = Some(LeaseDuration::Duration(ttl));
+        Ok(self)
+    }
+
+    /// Sets the backend maximum lease TTL after validating duration syntax.
+    pub fn with_max_lease_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "mount max_lease_ttl")?;
+        self.config
+            .get_or_insert_with(MountConfig::default)
+            .max_lease_ttl = Some(LeaseDuration::Duration(ttl));
+        Ok(self)
+    }
 }
 
 /// Request for enabling an auth method.
@@ -715,6 +735,26 @@ impl AuthEnableRequest {
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
+    }
+
+    /// Sets the auth method default lease TTL after validating duration syntax.
+    pub fn with_default_lease_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "auth default_lease_ttl")?;
+        self.config
+            .get_or_insert_with(MountConfig::default)
+            .default_lease_ttl = Some(LeaseDuration::Duration(ttl));
+        Ok(self)
+    }
+
+    /// Sets the auth method maximum lease TTL after validating duration syntax.
+    pub fn with_max_lease_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "auth max_lease_ttl")?;
+        self.config
+            .get_or_insert_with(MountConfig::default)
+            .max_lease_ttl = Some(LeaseDuration::Duration(ttl));
+        Ok(self)
     }
 }
 
@@ -2690,6 +2730,19 @@ mod tests {
                 .map(String::as_str),
             Some("2")
         );
+        let mount = MountEnableRequest::kv2()
+            .with_default_lease_ttl("1h")
+            .and_then(|request| request.with_max_lease_ttl("24h"))
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(matches!(
+            mount.config.as_ref().and_then(|config| config.default_lease_ttl.as_ref()),
+            Some(LeaseDuration::Duration(ttl)) if ttl == "1h"
+        ));
+        assert!(
+            MountEnableRequest::kv2()
+                .with_default_lease_ttl("never")
+                .is_err()
+        );
         assert_eq!(
             AuthEnableRequest::new("kubernetes")
                 .with_description("cluster auth")
@@ -2697,6 +2750,14 @@ mod tests {
                 .as_deref(),
             Some("cluster auth")
         );
+        let auth = AuthEnableRequest::new("approle")
+            .with_default_lease_ttl("30m")
+            .and_then(|request| request.with_max_lease_ttl("2h"))
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(matches!(
+            auth.config.as_ref().and_then(|config| config.max_lease_ttl.as_ref()),
+            Some(LeaseDuration::Duration(ttl)) if ttl == "2h"
+        ));
         assert_eq!(
             AuditEnableRequest::new("file")
                 .with_description("audit log")

@@ -1,6 +1,6 @@
 //! System policy and capability example.
 
-use openbao::{Client, Result, SecretString, sys::PolicyWriteRequest};
+use openbao::{AclPolicyBuilder, Client, Result, SecretString};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -18,14 +18,13 @@ async fn main() -> Result<()> {
         .enable_kv2("example-secret", Some("example KV v2 mount"))
         .await?;
 
+    let mut policy = AclPolicyBuilder::new();
+    policy.allow_kv2_read_prefix("example-secret", "app")?;
     client
         .sys()
         .write_policy(
             "example-app-read",
-            &PolicyWriteRequest::new(
-                r#"path "example-secret/data/app" { capabilities = ["read"] }"#,
-            )
-            .with_ttl("1h"),
+            &policy.build_write_request()?.with_ttl("1h"),
         )
         .await?;
 

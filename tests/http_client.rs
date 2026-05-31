@@ -214,6 +214,50 @@ async fn kv2_delete_accepts_no_content() {
 }
 
 #[tokio::test]
+async fn kv2_list_sends_pagination_query() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("LIST /v1/secret/metadata/app?after=config&limit=10 HTTP/1.1"));
+        let body = r#"{"data":{"keys":["config"]}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let keys = client
+        .kv2("secret")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .list_after("app", Some("config"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(keys.keys, ["config"]);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn kv2_read_version_sends_version_query() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

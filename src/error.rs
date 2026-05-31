@@ -102,6 +102,40 @@ impl Error {
     pub fn is_not_found(&self) -> bool {
         self.status() == Some(StatusCode::NOT_FOUND)
     }
+
+    /// Returns true when OpenBao rejected the caller's token or policy.
+    pub fn is_forbidden(&self) -> bool {
+        self.status() == Some(StatusCode::FORBIDDEN)
+    }
+
+    /// Returns true when OpenBao reported a malformed or invalid request.
+    pub fn is_bad_request(&self) -> bool {
+        self.status() == Some(StatusCode::BAD_REQUEST)
+    }
+
+    /// Returns true when OpenBao is sealed or temporarily unavailable.
+    pub fn is_sealed(&self) -> bool {
+        self.status() == Some(StatusCode::SERVICE_UNAVAILABLE)
+    }
+
+    /// Returns true when a create operation lost an idempotent creation race.
+    ///
+    /// OpenBao sometimes reports duplicate mounts and keys as HTTP 400 with
+    /// textual `already exists`/`already in use` messages rather than HTTP 409.
+    pub fn is_conflict(&self) -> bool {
+        match self {
+            Self::Api { status, .. } if *status == StatusCode::CONFLICT => true,
+            Self::Api { status, errors } if *status == StatusCode::BAD_REQUEST => {
+                errors.iter().any(|message| {
+                    let message = message.to_ascii_lowercase();
+                    message.contains("already in use")
+                        || message.contains("already exists")
+                        || message.contains("existing key")
+                })
+            }
+            _ => false,
+        }
+    }
 }
 
 fn sanitize_api_error(error: &str) -> String {
@@ -156,5 +190,32 @@ mod tests {
         assert_eq!(error.status(), Some(StatusCode::NOT_FOUND));
         assert!(error.is_not_found());
         assert!(!Error::MissingToken.is_not_found());
+    }
+
+    #[test]
+    fn api_error_helpers_cover_common_statuses() {
+        let forbidden = Error::Api {
+            status: StatusCode::FORBIDDEN,
+            errors: Vec::new(),
+        };
+        assert!(forbidden.is_forbidden());
+
+        let sealed = Error::Api {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            errors: Vec::new(),
+        };
+        assert!(sealed.is_sealed());
+
+        let bad_request = Error::Api {
+            status: StatusCode::BAD_REQUEST,
+            errors: Vec::new(),
+        };
+        assert!(bad_request.is_bad_request());
+
+        let duplicate = Error::Api {
+            status: StatusCode::BAD_REQUEST,
+            errors: vec!["path is already in use".to_owned()],
+        };
+        assert!(duplicate.is_conflict());
     }
 }

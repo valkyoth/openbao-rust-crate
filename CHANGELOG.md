@@ -18,6 +18,9 @@ All notable changes to this project are documented here.
 - Validating `TokenCreateRequest` duration builders for token TTL,
   explicit-max-TTL, and period fields.
 - `SshIssueRequest::with_key_bits` for validating generated SSH key strength.
+- `TokenCreateRequest::with_policies` and `without_default_policy` helpers.
+- `Kv2ServiceConfig::required`, KV v2 paginated list helpers, common OpenBao
+  error inspectors, and mount/auth lease-TTL builder helpers.
 - `AdminBootstrap` plan builder for idempotent KV v2 mounts, Transit mounts,
   Transit keys, ACL policies, KV v2 string secret values, and explicit scoped
   service-token issuance.
@@ -37,6 +40,14 @@ All notable changes to this project are documented here.
   duplicate-create races for mounts and Transit keys as unchanged state.
 - Dev-state TLS private-key patterns are explicitly ignored in addition to the
   ignored dev-state directory.
+- Token renew increments are validated before request dispatch.
+
+### Documentation
+
+- Added examples for AppRole login, environment-based client construction, and
+  admin bootstrap; updated the sys admin example to use `AclPolicyBuilder`.
+- Added AppRole admin and auth-method bootstrap orchestration to the `0.7.0`
+  release plan.
 
 ### Changed
 

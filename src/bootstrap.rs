@@ -7,7 +7,6 @@
 use core::fmt;
 use std::collections::BTreeMap;
 
-use reqwest::StatusCode;
 use secrecy::{ExposeSecret, SecretString};
 use subtle::ConstantTimeEq;
 
@@ -452,17 +451,7 @@ where
 }
 
 fn is_already_exists_error(error: &Error) -> bool {
-    matches!(
-        error,
-        Error::Api { status, errors }
-            if *status == StatusCode::BAD_REQUEST
-                && errors.iter().any(|message| {
-                    let message = message.to_ascii_lowercase();
-                    message.contains("already in use")
-                        || message.contains("already exists")
-                        || message.contains("existing key")
-                })
-    )
+    error.is_conflict()
 }
 
 fn secret_values_equal(current: &str, desired: &str) -> bool {
