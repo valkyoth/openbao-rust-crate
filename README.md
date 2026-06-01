@@ -57,7 +57,7 @@ Implemented now:
   helpers.
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
   version delete, undelete, destroy, metadata, backend config, typed data, and
-  secret-aware service config helpers.
+  secret-aware service config read/write helpers.
 - KV v1 read, write, delete, and list helpers.
 - Cubbyhole read, optional read, write, delete, and list helpers for
   token-scoped handoff data.
@@ -101,6 +101,9 @@ Implemented now:
 - Explicitly gated production init, unseal, seal, rekey, key-share rotation,
   and keyring rotation operator APIs.
 - Environment-based client construction from common OpenBao/Vault variables.
+- Shared authenticated client and Rust `Duration` to OpenBao duration string
+  helpers for async application ergonomics.
+- Bootstrap report lookup helpers for issued credentials and changed steps.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Typed custom plugin wrapper pattern documentation for application-specific
   OpenBao plugin APIs.
@@ -532,11 +535,24 @@ async fn main() -> Result<()> {
 
     let typed = kv.read_data::<AppConfig>("services/api").await?;
     let env_map = kv.read_service_config("services/api-env").await?;
+    kv.write_service_config("services/api-env-copy", &env_map).await?;
 
     println!("listen: {}", typed.listen_addr);
     println!("loaded {} secret config keys", env_map.len());
     let _database_url_is_not_logged = typed.database_url;
     Ok(())
+}
+```
+
+Share an authenticated client across async tasks:
+
+```rust,no_run
+use openbao::{Client, Result, SecretString, SharedClient};
+
+fn worker_client(token: SecretString) -> Result<SharedClient> {
+    Ok(Client::new("https://bao.example.com:8200")?
+        .try_with_token(token)?
+        .into_shared())
 }
 ```
 

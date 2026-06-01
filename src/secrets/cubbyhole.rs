@@ -70,6 +70,18 @@ impl Cubbyhole<'_> {
         }
     }
 
+    /// Reads a Cubbyhole secret as a bounded service configuration map.
+    ///
+    /// Each value must be a JSON string and is loaded as
+    /// [`SecretString`](crate::SecretString).
+    #[cfg(feature = "kv2")]
+    pub async fn read_service_config(
+        &self,
+        path: &str,
+    ) -> Result<crate::secrets::kv2::Kv2ServiceConfig> {
+        self.read(path).await
+    }
+
     /// Writes a Cubbyhole secret scoped to the authenticated token.
     pub async fn write<T>(&self, path: &str, data: T) -> Result<Empty>
     where

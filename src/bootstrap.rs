@@ -88,6 +88,41 @@ pub struct BootstrapReport {
     pub issued_approle_secret_ids: Vec<BootstrapIssuedAppRoleSecretId>,
 }
 
+impl BootstrapReport {
+    /// Returns the issued token with the given bootstrap name.
+    #[must_use]
+    pub fn issued_token(&self, name: &str) -> Option<&BootstrapIssuedToken> {
+        self.issued_tokens.iter().find(|token| token.name == name)
+    }
+
+    /// Returns the issued AppRole SecretID with the given bootstrap name.
+    #[cfg(feature = "approle")]
+    #[must_use]
+    pub fn issued_approle_secret_id(&self, name: &str) -> Option<&BootstrapIssuedAppRoleSecretId> {
+        self.issued_approle_secret_ids
+            .iter()
+            .find(|secret_id| secret_id.name == name)
+    }
+
+    /// Returns true when every convergence step found existing matching state.
+    ///
+    /// Credential issuance steps are not idempotent and therefore make this
+    /// return `false`.
+    #[must_use]
+    pub fn is_converged(&self) -> bool {
+        self.steps
+            .iter()
+            .all(|step| step.status == BootstrapStepStatus::Unchanged)
+    }
+
+    /// Returns steps that created, updated, or issued state.
+    pub fn changed_steps(&self) -> impl Iterator<Item = &BootstrapStepReport> {
+        self.steps
+            .iter()
+            .filter(|step| step.status != BootstrapStepStatus::Unchanged)
+    }
+}
+
 /// Per-operation bootstrap status.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BootstrapStepStatus {
@@ -888,5 +923,45 @@ mod tests {
             errors: vec!["permission denied".to_owned()],
         };
         assert!(!is_already_exists_error(&unrelated));
+    }
+
+    #[test]
+    fn bootstrap_report_helpers_find_issued_and_changed_steps() {
+        let report = crate::bootstrap::BootstrapReport {
+            steps: vec![
+                crate::bootstrap::BootstrapStepReport {
+                    target_type: "policy",
+                    target: "app".to_owned(),
+                    status: BootstrapStepStatus::Unchanged,
+                },
+                crate::bootstrap::BootstrapStepReport {
+                    target_type: "token",
+                    target: "app".to_owned(),
+                    status: BootstrapStepStatus::Issued,
+                },
+            ],
+            issued_tokens: vec![crate::bootstrap::BootstrapIssuedToken {
+                name: "app".to_owned(),
+                auth: crate::auth::token::TokenAuth {
+                    client_token: SecretString::from("token"),
+                    accessor: SecretString::from("accessor"),
+                    policies: Vec::new(),
+                    token_policies: Vec::new(),
+                    metadata: BTreeMap::new(),
+                    lease_duration: 3600,
+                    renewable: true,
+                    entity_id: None,
+                    token_type: None,
+                    orphan: false,
+                },
+            }],
+            #[cfg(feature = "approle")]
+            issued_approle_secret_ids: Vec::new(),
+        };
+
+        assert!(report.issued_token("app").is_some());
+        assert!(report.issued_token("missing").is_none());
+        assert!(!report.is_converged());
+        assert_eq!(report.changed_steps().count(), 1);
     }
 }

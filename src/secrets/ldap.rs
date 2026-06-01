@@ -194,6 +194,14 @@ impl LdapStaticRole {
         Ok(self)
     }
 
+    /// Sets the static role rotation period from a Rust duration.
+    pub fn with_rotation_period_duration(
+        self,
+        rotation_period: std::time::Duration,
+    ) -> Result<Self> {
+        self.with_rotation_period(crate::duration_to_bao_string(rotation_period))
+    }
+
     fn validate(&self) -> Result<()> {
         if let Some(value) = &self.rotation_period {
             validate_duration_or_seconds(value, "LDAP static role rotation_period", false)?;

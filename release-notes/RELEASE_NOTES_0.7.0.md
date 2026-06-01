@@ -31,6 +31,10 @@
   and group-alias lifecycle helpers, plus LDAP config, root rotation, static
   roles/credentials, dynamic roles/credentials, and library check-out/check-in
   helpers, plus typed custom plugin wrapper pattern documentation.
+- Ergonomic additions include `duration_to_bao_string`, common duration-based
+  TTL builder overloads, `SharedClient`/`Client::into_shared`, bootstrap report
+  lookup helpers, KV v2 service config write helpers, a Cubbyhole service
+  config read helper, and broader concrete-type prelude exports.
 - Remaining `0.7.0` planned work: none.
 - Minimum supported Rust: 1.90.0.
 
@@ -89,3 +93,7 @@
 - Custom plugin APIs are intentionally not modeled as a generic trait because
   plugin schemas are deployment-specific. Use the documented wrapper pattern
   for typed local APIs.
+- Bootstrap dry-run preview, broader bootstrap coverage for LDAP/RabbitMQ/
+  Kubernetes secrets/Identity state, typed capability wrappers, shared key-list
+  traits, and optional RFC3339 timestamp parsing remain planned for later
+  release lines.

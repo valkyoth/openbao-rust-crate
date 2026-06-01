@@ -51,6 +51,9 @@ pub struct Authenticated;
 /// Backwards-friendly public name for the OpenBao client.
 pub type OpenBao<State = Unauthenticated> = Client<State>;
 
+/// Authenticated client wrapped in [`std::sync::Arc`] for sharing across tasks.
+pub type SharedClient = std::sync::Arc<Client<Authenticated>>;
+
 /// Policy for non-TLS HTTP base URLs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HttpPolicy {
@@ -725,6 +728,15 @@ impl<State> Client<State> {
             ));
         }
         Ok(())
+    }
+}
+
+impl Client<Authenticated> {
+    /// Wraps this authenticated client in an [`std::sync::Arc`] for sharing
+    /// across async tasks without cloning token material.
+    #[must_use]
+    pub fn into_shared(self) -> SharedClient {
+        std::sync::Arc::new(self)
     }
 }
 

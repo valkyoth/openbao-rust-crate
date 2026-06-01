@@ -47,6 +47,7 @@ compile_error!(
 ))]
 pub mod bootstrap;
 mod client;
+pub mod duration;
 mod error;
 mod path;
 pub mod policy;
@@ -82,8 +83,9 @@ pub mod sys;
 
 pub use client::{
     Authenticated, Client, ClientBuilder, HeaderMode, HttpPolicy, OpenBao, OpenBaoConfig,
-    RootCertificateMode, Unauthenticated,
+    RootCertificateMode, SharedClient, Unauthenticated,
 };
+pub use duration::duration_to_bao_string;
 pub use error::{Error, Result};
 pub use policy::{AclCapability, AclPolicyBuilder};
 pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
@@ -95,16 +97,28 @@ pub mod prelude {
     pub use crate::{
         AclCapability, AclPolicyBuilder, Authenticated, Certificate, Client, ClientBuilder, Empty,
         Error, ExposeSecret, HeaderMode, Identity, Method, OpenBao, OpenBaoConfig,
-        ResponseEnvelope, Result, SecretString, StatusCode, Unauthenticated,
+        ResponseEnvelope, Result, SecretString, SharedClient, StatusCode, Unauthenticated,
+        duration_to_bao_string,
     };
 
     #[cfg(all(
         feature = "sys",
         feature = "kv2",
         feature = "transit",
+        feature = "token",
+        feature = "approle"
+    ))]
+    pub use crate::bootstrap::BootstrapIssuedAppRoleSecretId;
+    #[cfg(all(
+        feature = "sys",
+        feature = "kv2",
+        feature = "transit",
         feature = "token"
     ))]
-    pub use crate::bootstrap;
+    pub use crate::bootstrap::{
+        AdminBootstrap, BootstrapIssuedToken, BootstrapReport, BootstrapStepReport,
+        BootstrapStepStatus,
+    };
 
     #[cfg(any(
         feature = "approle",
@@ -115,6 +129,25 @@ pub mod prelude {
         feature = "token"
     ))]
     pub use crate::auth;
+    #[cfg(feature = "approle")]
+    pub use crate::auth::approle::{
+        AppRole, AppRoleAdmin, AppRoleRoleId, AppRoleRoleList, AppRoleRoleRequest, AppRoleSecretId,
+        AppRoleSecretIdInfo, AppRoleSecretIdRequest, LoginMetadata,
+    };
+    #[cfg(feature = "cert-auth")]
+    pub use crate::auth::cert::{CertAuth, CertAuthAdmin, CertLoginMetadata, CertRole};
+    #[cfg(feature = "jwt-auth")]
+    pub use crate::auth::jwt::{JwtAuth, JwtAuthAdmin, JwtLoginMetadata, JwtRole};
+    #[cfg(feature = "kubernetes-auth")]
+    pub use crate::auth::kubernetes::{
+        KubernetesAuth, KubernetesAuthAdmin, KubernetesLoginMetadata, KubernetesRole,
+    };
+    #[cfg(feature = "token")]
+    pub use crate::auth::token::{Token, TokenAuth, TokenCreateRequest, TokenInfo};
+    #[cfg(feature = "userpass")]
+    pub use crate::auth::userpass::{
+        UserpassAuth, UserpassAuthAdmin, UserpassLoginMetadata, UserpassUserRequest,
+    };
     #[cfg(any(
         feature = "cubbyhole",
         feature = "database",
@@ -130,6 +163,45 @@ pub mod prelude {
         feature = "transit"
     ))]
     pub use crate::secrets;
+    #[cfg(feature = "cubbyhole")]
+    pub use crate::secrets::cubbyhole::{Cubbyhole, CubbyholeList};
+    #[cfg(feature = "database")]
+    pub use crate::secrets::database::{
+        Database, DatabaseConnectionConfig, DatabaseCredentials, DatabaseRole,
+    };
+    #[cfg(feature = "identity")]
+    pub use crate::secrets::identity::{
+        IdentityAliasInfo, IdentityEntityInfo, IdentityEntityRequest, IdentityGroupInfo,
+        IdentityGroupRequest,
+    };
+    #[cfg(feature = "kubernetes")]
+    pub use crate::secrets::kubernetes::{
+        KubernetesCredentials, KubernetesCredentialsRequest, KubernetesSecrets,
+        KubernetesSecretsConfig, KubernetesSecretsRole,
+    };
+    #[cfg(feature = "kv1")]
+    pub use crate::secrets::kv1::{Kv1, Kv1List};
+    #[cfg(feature = "kv2")]
+    pub use crate::secrets::kv2::{
+        Kv2, Kv2Config, Kv2List, Kv2Metadata, Kv2Secret, Kv2ServiceConfig, Kv2WriteOptions,
+        Kv2WriteResponse,
+    };
+    #[cfg(feature = "ldap")]
+    pub use crate::secrets::ldap::{Ldap, LdapConfig, LdapDynamicRole, LdapStaticRole};
+    #[cfg(feature = "pki")]
+    pub use crate::secrets::pki::{Pki, PkiIssueRequest, PkiRole};
+    #[cfg(feature = "rabbitmq")]
+    pub use crate::secrets::rabbitmq::{
+        RabbitMq, RabbitMqConnectionConfig, RabbitMqCredentials, RabbitMqRole,
+    };
+    #[cfg(feature = "ssh")]
+    pub use crate::secrets::ssh::{Ssh, SshRoleInfo, SshRoleRequest};
+    #[cfg(feature = "totp")]
+    pub use crate::secrets::totp::{Totp, TotpKeyCreateRequest, TotpKeyInfo};
+    #[cfg(feature = "transit")]
+    pub use crate::secrets::transit::{
+        Transit, TransitCreateKeyRequest, TransitKeyInfo, TransitKeyType,
+    };
     #[cfg(feature = "sys")]
-    pub use crate::sys;
+    pub use crate::sys::{Health, Sys};
 }

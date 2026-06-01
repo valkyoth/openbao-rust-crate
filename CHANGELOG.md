@@ -25,6 +25,15 @@ All notable changes to this project are documented here.
   check-out, check-in, and managed check-in.
 - Typed custom plugin wrapper pattern documentation for plugin-specific APIs
   built on `Client::request_json`.
+- `duration_to_bao_string`, `SharedClient`, and `Client::into_shared` helpers
+  for common Rust application patterns.
+- Bootstrap report lookup helpers for issued tokens, issued AppRole SecretIDs,
+  convergence checks, and changed-step iteration.
+- KV v2 service config write helpers and Cubbyhole service config read helper.
+- Duration overloads for common Token, AppRole, Kubernetes secrets, and LDAP
+  TTL/period builders.
+- Prelude exports for commonly used concrete auth, secrets, sys, and bootstrap
+  types.
 
 ### Security
 

@@ -169,12 +169,22 @@ impl KubernetesSecretsRole {
         Ok(self)
     }
 
+    /// Sets `token_default_ttl` from a Rust duration.
+    pub fn with_token_default_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
+        self.with_token_default_ttl(crate::duration_to_bao_string(ttl))
+    }
+
     /// Sets `token_max_ttl` after validating OpenBao duration syntax.
     pub fn with_token_max_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
         let ttl = ttl.into();
         validate_duration_or_seconds(&ttl, "kubernetes secrets token_max_ttl", true)?;
         self.token_max_ttl = Some(ttl);
         Ok(self)
+    }
+
+    /// Sets `token_max_ttl` from a Rust duration.
+    pub fn with_token_max_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
+        self.with_token_max_ttl(crate::duration_to_bao_string(ttl))
     }
 
     fn validate(&self) -> Result<()> {
@@ -247,6 +257,11 @@ impl KubernetesCredentialsRequest {
         validate_duration_or_seconds(&ttl, "kubernetes secrets credential ttl", false)?;
         self.ttl = Some(ttl);
         Ok(self)
+    }
+
+    /// Sets the requested generated token TTL from a Rust duration.
+    pub fn with_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
+        self.with_ttl(crate::duration_to_bao_string(ttl))
     }
 }
 

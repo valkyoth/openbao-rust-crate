@@ -183,6 +183,14 @@ Stop condition:
   Ed25519, ChaCha20/XChaCha20, plaintext backup/exportable keys, convergent
   encryption, weak RSA sizes, and non-HSM/KMS seal assumptions, and produce a
   machine-readable report of what the crate could and could not verify.
+- Bootstrap dry-run preview support for read-only change planning before
+  applying state.
+- Bootstrap convergence helpers for LDAP, RabbitMQ, Kubernetes secrets, and
+  Identity resources where OpenBao exposes stable read/write APIs.
+- Typed capability wrappers over `sys/capabilities-self`, including helpers
+  such as `can_read` and `can_write`.
+- Shared key-list trait or type for structurally identical list responses.
+- Optional timestamp parsing helpers behind a lightweight `time` feature.
 
 Publishable value:
 

@@ -7,10 +7,11 @@ use reqwest::{
     Method, StatusCode,
     header::{CONTENT_TYPE, HeaderValue},
 };
-use secrecy::SecretString;
+use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize,
     de::{DeserializeOwned, IgnoredAny, MapAccess, Visitor},
+    ser::SerializeMap,
 };
 
 use crate::{
@@ -114,6 +115,19 @@ impl<'de> Deserialize<'de> for Kv2ServiceConfig {
         Ok(Self {
             values: deserialize_bounded_secret_map(deserializer)?,
         })
+    }
+}
+
+impl Serialize for Kv2ServiceConfig {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(self.values.len()))?;
+        for (key, value) in &self.values {
+            map.serialize_entry(key, value.expose_secret())?;
+        }
+        map.end()
     }
 }
 
@@ -322,6 +336,25 @@ impl Kv2<'_> {
         version: u64,
     ) -> Result<Kv2ServiceConfig> {
         self.read_data_version(path, version).await
+    }
+
+    /// Writes a bounded service configuration map to a KV v2 secret.
+    pub async fn write_service_config(
+        &self,
+        path: &str,
+        config: &Kv2ServiceConfig,
+    ) -> Result<Kv2WriteResponse> {
+        self.write(path, config).await
+    }
+
+    /// Writes a bounded service configuration map with optional check-and-set.
+    pub async fn write_service_config_with_options(
+        &self,
+        path: &str,
+        config: &Kv2ServiceConfig,
+        options: Option<Kv2WriteOptions>,
+    ) -> Result<Kv2WriteResponse> {
+        self.write_with_options(path, config, options).await
     }
 
     /// Writes a KV v2 secret without check-and-set.
