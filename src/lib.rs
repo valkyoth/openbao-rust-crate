@@ -9,7 +9,7 @@
 //! - authentication state is represented in the type system.
 //!
 //! The public API covers environment-based client construction, AppRole login,
-//! direct token auth, token lifecycle helpers, Cubbyhole, KV v1/v2,
+//! direct token auth, token lifecycle helpers, Cubbyhole, Identity, KV v1/v2,
 //! Kubernetes secrets, RabbitMQ secrets, Transit, system
 //! health/seal status, dev-only bootstrap, mount management, audit devices,
 //! safe exact lease helpers, plugin catalog operations, SSH, TOTP, and raw
@@ -65,6 +65,7 @@ pub mod auth;
 #[cfg(any(
     feature = "cubbyhole",
     feature = "database",
+    feature = "identity",
     feature = "kv1",
     feature = "kv2",
     feature = "kubernetes",
@@ -116,6 +117,7 @@ pub mod prelude {
     #[cfg(any(
         feature = "cubbyhole",
         feature = "database",
+        feature = "identity",
         feature = "kv1",
         feature = "kv2",
         feature = "kubernetes",

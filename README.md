@@ -67,6 +67,7 @@ Implemented now:
   create/read/list/delete, and dynamic credential helpers.
 - Database connection config, dynamic roles, static roles, root/static
   rotation, and credential helpers.
+- Identity entity, group, entity-alias, and group-alias lifecycle helpers.
 - SSH role, zero-address role, IP lookup, OTP credential, issuer config,
   issuer list/submit/read/update/delete, CA public-key metadata, CA sign,
   generated certificate/key issue, and OTP verification helpers.
@@ -104,7 +105,7 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.7.0`: identity; LDAP secrets; typed custom plugin API
+- Remaining `0.7.0`: LDAP secrets; typed custom plugin API
   pattern documentation.
 - `0.8.0`: remaining auth methods and broader system backend automation.
 
@@ -192,6 +193,7 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
 | `cubbyhole` | yes | Token-scoped Cubbyhole read/write/delete/list helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
+| `identity` | yes | Identity entity, group, entity-alias, and group-alias helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
@@ -262,12 +264,13 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
+| Identity | Yes | Entity, group, entity-alias, and group-alias lifecycle helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and optional raw-byte helpers. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
-| Identity and remaining engines | Planned | Identity and LDAP secrets remain planned for `0.7.0`. |
+| Remaining engines | Planned | LDAP secrets remains planned for `0.7.0`. |
 
 ### System Backend And Operations
 

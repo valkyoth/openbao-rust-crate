@@ -2228,6 +2228,260 @@ async fn rabbitmq_config_role_and_credentials_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn identity_entity_group_and_alias_lifecycle_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..18 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/identity/entity HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(request.contains(r#""name":"app-service""#));
+                    assert!(request.contains(r#""policies":["app-read"]"#));
+                    r#"{"data":{"id":"entity-id-1","name":"app-service"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/identity/entity/id/entity-id-1 HTTP/1.1"));
+                    r#"{"data":{"id":"entity-id-1","name":"app-service","metadata":{"team":"platform"},"policies":["app-read"],"direct_group_ids":["group-id-1"],"inherited_group_ids":[],"disabled":false}}"#
+                }
+                2 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/entity/name/app-service HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""disabled":false"#));
+                    r#"{"data":{"id":"entity-id-1","name":"app-service"}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("LIST /v1/identity/entity/name HTTP/1.1"));
+                    r#"{"data":{"keys":["app-service"]}}"#
+                }
+                4 => {
+                    assert!(request.starts_with("LIST /v1/identity/entity/id HTTP/1.1"));
+                    r#"{"data":{"keys":["entity-id-1"]}}"#
+                }
+                5 => {
+                    assert!(request.starts_with("POST /v1/identity/group HTTP/1.1"));
+                    assert!(request.contains(r#""name":"app-group""#));
+                    assert!(request.contains(r#""type":"internal""#));
+                    assert!(request.contains(r#""member_entity_ids":["entity-id-1"]"#));
+                    r#"{"data":{"id":"group-id-1","name":"app-group"}}"#
+                }
+                6 => {
+                    assert!(request.starts_with("GET /v1/identity/group/id/group-id-1 HTTP/1.1"));
+                    r#"{"data":{"id":"group-id-1","name":"app-group","type":"internal","policies":["app-read"],"member_entity_ids":["entity-id-1"],"member_group_ids":[],"parent_group_ids":[],"metadata":{"team":"platform"}}}"#
+                }
+                7 => {
+                    assert!(request.starts_with("POST /v1/identity/group/name/app-group HTTP/1.1"));
+                    r#"{"data":{"id":"group-id-1","name":"app-group"}}"#
+                }
+                8 => {
+                    assert!(request.starts_with("LIST /v1/identity/group/name HTTP/1.1"));
+                    r#"{"data":{"keys":["app-group"]}}"#
+                }
+                9 => {
+                    assert!(request.starts_with("POST /v1/identity/entity-alias HTTP/1.1"));
+                    assert!(request.contains(r#""name":"app-service""#));
+                    assert!(request.contains(r#""canonical_id":"entity-id-1""#));
+                    assert!(request.contains(r#""mount_accessor":"auth_userpass_accessor""#));
+                    r#"{"data":{"id":"entity-alias-id-1"}}"#
+                }
+                10 => {
+                    assert!(request.starts_with(
+                        "GET /v1/identity/entity-alias/id/entity-alias-id-1 HTTP/1.1"
+                    ));
+                    r#"{"data":{"id":"entity-alias-id-1","name":"app-service","canonical_id":"entity-id-1","mount_accessor":"auth_userpass_accessor","mount_path":"auth/userpass/","mount_type":"userpass","custom_metadata":{"team":"platform"}}}"#
+                }
+                11 => {
+                    assert!(request.starts_with("LIST /v1/identity/entity-alias/id HTTP/1.1"));
+                    r#"{"data":{"keys":["entity-alias-id-1"]}}"#
+                }
+                12 => {
+                    assert!(request.starts_with("POST /v1/identity/group-alias HTTP/1.1"));
+                    assert!(request.contains(r#""name":"app-group""#));
+                    assert!(request.contains(r#""canonical_id":"group-id-1""#));
+                    r#"{"data":{"id":"group-alias-id-1"}}"#
+                }
+                13 => {
+                    assert!(
+                        request.starts_with(
+                            "GET /v1/identity/group-alias/id/group-alias-id-1 HTTP/1.1"
+                        )
+                    );
+                    r#"{"data":{"id":"group-alias-id-1","name":"app-group","canonical_id":"group-id-1","mount_accessor":"auth_userpass_accessor","mount_path":"auth/userpass/","mount_type":"userpass"}}"#
+                }
+                14 => {
+                    assert!(request.starts_with("LIST /v1/identity/group-alias/id HTTP/1.1"));
+                    r#"{"data":{"keys":["group-alias-id-1"]}}"#
+                }
+                15 => {
+                    assert!(request.starts_with(
+                        "DELETE /v1/identity/entity-alias/id/entity-alias-id-1 HTTP/1.1"
+                    ));
+                    "{}"
+                }
+                16 => {
+                    assert!(request.starts_with(
+                        "DELETE /v1/identity/group-alias/id/group-alias-id-1 HTTP/1.1"
+                    ));
+                    "{}"
+                }
+                17 => {
+                    assert!(request.starts_with("POST /v1/identity/entity/batch-delete HTTP/1.1"));
+                    assert!(request.contains(r#""entity_ids":["entity-id-1"]"#));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["root-", "token"]));
+    let identity = client.identity().unwrap_or_else(|error| panic!("{error}"));
+
+    let entity = identity
+        .write_entity(
+            &openbao::secrets::identity::IdentityEntityRequest::named("app-service")
+                .with_policy("app-read")
+                .with_metadata("team", "platform"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(entity.id, "entity-id-1");
+    let entity_info = identity
+        .read_entity_by_id("entity-id-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(entity_info.name.as_deref(), Some("app-service"));
+    identity
+        .write_entity_by_name(
+            "app-service",
+            &openbao::secrets::identity::IdentityEntityRequest {
+                disabled: Some(false),
+                ..openbao::secrets::identity::IdentityEntityRequest::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let entity_names = identity
+        .list_entity_names()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(entity_names.keys, ["app-service"]);
+    let entity_ids = identity
+        .list_entity_ids()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(entity_ids.keys, ["entity-id-1"]);
+
+    let group = identity
+        .write_group(
+            &openbao::secrets::identity::IdentityGroupRequest::internal("app-group")
+                .with_policy("app-read")
+                .with_member_entity_id("entity-id-1")
+                .with_metadata("team", "platform"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(group.id, "group-id-1");
+    let group_info = identity
+        .read_group_by_id("group-id-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(group_info.member_entity_ids, ["entity-id-1"]);
+    identity
+        .write_group_by_name(
+            "app-group",
+            &openbao::secrets::identity::IdentityGroupRequest::internal("app-group"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let group_names = identity
+        .list_group_names()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(group_names.keys, ["app-group"]);
+
+    let entity_alias = identity
+        .write_entity_alias(
+            &openbao::secrets::identity::IdentityEntityAliasRequest::new(
+                "app-service",
+                "entity-id-1",
+                "auth_userpass_accessor",
+            )
+            .with_custom_metadata("team", "platform"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(entity_alias.id, "entity-alias-id-1");
+    let alias_info = identity
+        .read_entity_alias_by_id("entity-alias-id-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(alias_info.canonical_id.as_deref(), Some("entity-id-1"));
+    let entity_aliases = identity
+        .list_entity_alias_ids()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(entity_aliases.keys, ["entity-alias-id-1"]);
+
+    let group_alias = identity
+        .write_group_alias(&openbao::secrets::identity::IdentityGroupAliasRequest::new(
+            "app-group",
+            "group-id-1",
+            "auth_userpass_accessor",
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(group_alias.id, "group-alias-id-1");
+    let group_alias_info = identity
+        .read_group_alias_by_id("group-alias-id-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(group_alias_info.canonical_id.as_deref(), Some("group-id-1"));
+    let group_aliases = identity
+        .list_group_alias_ids()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(group_aliases.keys, ["group-alias-id-1"]);
+
+    identity
+        .delete_entity_alias_by_id("entity-alias-id-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    identity
+        .delete_group_alias_by_id("group-alias-id-1")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    identity
+        .batch_delete_entities(
+            &openbao::secrets::identity::IdentityEntityBatchDeleteRequest::new(["entity-id-1"]),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

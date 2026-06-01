@@ -44,6 +44,7 @@ default = [
     "cert-auth",
     "cubbyhole",
     "database",
+    "identity",
     "jwt-auth",
     "kubernetes-auth",
     "userpass",
@@ -63,6 +64,7 @@ approle = []
 cert-auth = []
 cubbyhole = []
 database = []
+identity = []
 jwt-auth = []
 kubernetes-auth = []
 userpass = []

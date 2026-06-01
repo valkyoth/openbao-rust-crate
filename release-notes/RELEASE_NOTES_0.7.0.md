@@ -27,9 +27,10 @@
   Cubbyhole read/write/delete/list helpers, plus Kubernetes secrets engine
   config, role, role-list, role-delete, and service account credential helpers,
   plus RabbitMQ connection config, lease config, role, role-list, role-delete,
-  and generated credential helpers.
-- Remaining `0.7.0` planned work: identity; LDAP secrets engine; typed custom
-  plugin API pattern documentation.
+  and generated credential helpers, plus identity entity, group, entity-alias,
+  and group-alias lifecycle helpers.
+- Remaining `0.7.0` planned work: LDAP secrets engine; typed custom plugin API
+  pattern documentation.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -48,6 +49,8 @@
   secret-aware and redacted from debug output.
 - RabbitMQ connection URIs, administrator passwords, generated passwords, and
   lease IDs are secret-aware and redacted from debug output.
+- Identity returned lists and metadata maps are bounded during deserialization,
+  and request collection sizes are validated before dispatch.
 
 ## Security And Stability Gate
 
