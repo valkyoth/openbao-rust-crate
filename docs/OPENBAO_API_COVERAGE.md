@@ -7,6 +7,8 @@ RabbitMQ secrets engine coverage was refreshed against official `2.5.x`
 documentation on 2026-06-01.
 Identity entity, group, and alias coverage was refreshed against official
 `2.5.x` documentation on 2026-06-01.
+LDAP secrets engine coverage was refreshed against official `2.5.x`
+documentation on 2026-06-01.
 
 Sources:
 
@@ -30,6 +32,7 @@ Sources:
 - Identity group: https://openbao.org/api-docs/secret/identity/group/
 - Identity entity alias: https://openbao.org/api-docs/secret/identity/entity-alias/
 - Identity group alias: https://openbao.org/api-docs/secret/identity/group-alias/
+- LDAP secrets engine: https://openbao.org/api-docs/secret/ldap/
 
 ## Foundation
 
@@ -132,7 +135,8 @@ Support plan:
   implemented. RabbitMQ connection config, lease config, role
   write/read/list/delete, and generated credential helpers are implemented.
   Identity entity, group, entity-alias, and group-alias lifecycle helpers are
-  implemented. LDAP remains planned for this line.
+  implemented. LDAP config, root rotation, static roles/credentials, dynamic
+  roles/credentials, and library check-out/check-in helpers are implemented.
 
 ## System Backend
 

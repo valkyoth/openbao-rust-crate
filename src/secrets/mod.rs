@@ -12,6 +12,8 @@ pub mod kubernetes;
 pub mod kv1;
 #[cfg(feature = "kv2")]
 pub mod kv2;
+#[cfg(feature = "ldap")]
+pub mod ldap;
 #[cfg(feature = "pki")]
 pub mod pki;
 #[cfg(feature = "rabbitmq")]

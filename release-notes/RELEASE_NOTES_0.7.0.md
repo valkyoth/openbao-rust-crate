@@ -28,9 +28,11 @@
   config, role, role-list, role-delete, and service account credential helpers,
   plus RabbitMQ connection config, lease config, role, role-list, role-delete,
   and generated credential helpers, plus identity entity, group, entity-alias,
-  and group-alias lifecycle helpers.
-- Remaining `0.7.0` planned work: LDAP secrets engine; typed custom plugin API
-  pattern documentation.
+  and group-alias lifecycle helpers, plus LDAP config, root rotation, static
+  roles/credentials, dynamic roles/credentials, and library check-out/check-in
+  helpers.
+- Remaining `0.7.0` planned work: typed custom plugin API pattern
+  documentation.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -51,6 +53,9 @@
   lease IDs are secret-aware and redacted from debug output.
 - Identity returned lists and metadata maps are bounded during deserialization,
   and request collection sizes are validated before dispatch.
+- LDAP bind passwords, client TLS private keys, static passwords, dynamic
+  passwords, library checkout passwords, and lease IDs are secret-aware and
+  redacted from debug output.
 
 ## Security And Stability Gate
 

@@ -2482,6 +2482,291 @@ async fn identity_entity_group_and_alias_lifecycle_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let bindpass = ["bind", "-", "password"].concat();
+        let static_password = ["static", "-", "password"].concat();
+        let dynamic_password = ["dynamic", "-", "password"].concat();
+        let checkout_password = ["checkout", "-", "password"].concat();
+
+        for step in 0..18 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/ldap/config HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(
+                        request.contains(r#""binddn":"cn=openbao,ou=Users,dc=example,dc=com""#)
+                    );
+                    assert!(request.contains(&format!(r#""bindpass":"{bindpass}""#)));
+                    assert!(request.contains(r#""url":"ldaps://ldap.example.com:636""#));
+                    "{}".to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/ldap/config HTTP/1.1"));
+                    format!(
+                        r#"{{"data":{{"binddn":"cn=openbao,ou=Users,dc=example,dc=com","bindpass":"{bindpass}","url":"ldaps://ldap.example.com:636","schema":"openldap","connection_timeout":30,"request_timeout":"90s"}}}}"#
+                    )
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/ldap/rotate-root HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/ldap/static-role/app HTTP/1.1"));
+                    assert!(request.contains(r#""username":"app-user""#));
+                    assert!(request.contains(r#""rotation_period":"24h""#));
+                    "{}".to_owned()
+                }
+                4 => {
+                    assert!(request.starts_with("GET /v1/ldap/static-role/app HTTP/1.1"));
+                    r#"{"data":{"username":"app-user","dn":"uid=app-user,ou=Users,dc=example,dc=com","rotation_period":86400,"last_vault_rotation":"2026-06-01T00:00:00Z"}}"#
+                        .to_owned()
+                }
+                5 => {
+                    assert!(request.starts_with("LIST /v1/ldap/static-role HTTP/1.1"));
+                    r#"{"data":{"keys":["app"]}}"#.to_owned()
+                }
+                6 => {
+                    assert!(request.starts_with("GET /v1/ldap/static-cred/app HTTP/1.1"));
+                    format!(
+                        r#"{{"data":{{"username":"app-user","dn":"uid=app-user,ou=Users,dc=example,dc=com","password":"{static_password}","rotation_period":86400,"ttl":300}}}}"#
+                    )
+                }
+                7 => {
+                    assert!(request.starts_with("POST /v1/ldap/rotate-role/app HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                8 => {
+                    assert!(request.starts_with("POST /v1/ldap/role/dynamic HTTP/1.1"));
+                    assert!(request.contains(
+                        r#""creation_ldif":"dn: cn={{.Username}},ou=Users,dc=example,dc=com""#
+                    ));
+                    assert!(request.contains(r#""default_ttl":"1h""#));
+                    "{}".to_owned()
+                }
+                9 => {
+                    assert!(request.starts_with("GET /v1/ldap/role/dynamic HTTP/1.1"));
+                    r#"{"data":{"creation_ldif":"dn: cn={{.Username}},ou=Users,dc=example,dc=com","deletion_ldif":"dn: cn={{.Username}},ou=Users,dc=example,dc=com","rollback_ldif":"dn: cn={{.Username}},ou=Users,dc=example,dc=com","default_ttl":3600,"max_ttl":"24h"}}"#
+                        .to_owned()
+                }
+                10 => {
+                    assert!(request.starts_with("GET /v1/ldap/creds/dynamic HTTP/1.1"));
+                    format!(
+                        r#"{{"lease_id":"ldap/creds/dynamic/lease","lease_duration":3600,"renewable":true,"data":{{"username":"v-token-dynamic","password":"{dynamic_password}","distinguished_names":["cn=v-token-dynamic,ou=Users,dc=example,dc=com"]}}}}"#
+                    )
+                }
+                11 => {
+                    assert!(request.starts_with("POST /v1/ldap/library/accounts HTTP/1.1"));
+                    assert!(request.contains(
+                        r#""service_account_names":["svc-a@example.com","svc-b@example.com"]"#
+                    ));
+                    "{}".to_owned()
+                }
+                12 => {
+                    assert!(request.starts_with("GET /v1/ldap/library/accounts HTTP/1.1"));
+                    r#"{"data":{"service_account_names":["svc-a@example.com","svc-b@example.com"],"ttl":"10h","max_ttl":"20h","disable_check_in_enforcement":false}}"#
+                        .to_owned()
+                }
+                13 => {
+                    assert!(request.starts_with("LIST /v1/ldap/library HTTP/1.1"));
+                    r#"{"data":{"keys":["accounts"]}}"#.to_owned()
+                }
+                14 => {
+                    assert!(request.starts_with("GET /v1/ldap/library/accounts/status HTTP/1.1"));
+                    r#"{"data":{"service_account_names":{"svc-a@example.com":{"checked_out":false},"svc-b@example.com":{"checked_out":true,"borrower_entity_id":"entity-id-1"}}}}"#
+                        .to_owned()
+                }
+                15 => {
+                    assert!(
+                        request.starts_with("POST /v1/ldap/library/accounts/check-out HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""ttl":"1h""#));
+                    format!(
+                        r#"{{"lease_id":"ldap/library/accounts/check-out/lease","lease_duration":3600,"renewable":true,"data":{{"service_account_name":"svc-a@example.com","password":"{checkout_password}"}}}}"#
+                    )
+                }
+                16 => {
+                    assert!(
+                        request.starts_with("POST /v1/ldap/library/accounts/check-in HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""service_account_names":["svc-a@example.com"]"#));
+                    r#"{"data":{"check_ins":["svc-a@example.com"]}}"#.to_owned()
+                }
+                17 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/ldap/library/manage/accounts/check-in HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""service_account_names":["svc-b@example.com"]"#));
+                    r#"{"data":{"check_ins":["svc-b@example.com"]}}"#.to_owned()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["root-", "token"]));
+    let ldap = client.ldap().unwrap_or_else(|error| panic!("{error}"));
+
+    ldap.write_config(
+        &openbao::secrets::ldap::LdapConfig::new(
+            "cn=openbao,ou=Users,dc=example,dc=com",
+            test_secret(&["bind", "-", "password"]),
+        )
+        .with_url("ldaps://ldap.example.com:636")
+        .with_schema("openldap"),
+    )
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    let config = ldap
+        .read_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(config.schema.as_deref(), Some("openldap"));
+    ldap.rotate_root()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    ldap.write_static_role(
+        "app",
+        &openbao::secrets::ldap::LdapStaticRole {
+            dn: Some("uid=app-user,ou=Users,dc=example,dc=com".to_owned()),
+            ..openbao::secrets::ldap::LdapStaticRole::new("app-user")
+                .with_rotation_period("24h")
+                .unwrap_or_else(|error| panic!("{error}"))
+        },
+    )
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    let static_role = ldap
+        .read_static_role("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(static_role.username, "app-user");
+    let static_roles = ldap
+        .list_static_roles()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(static_roles.keys, ["app"]);
+    let static_creds = ldap
+        .static_credentials("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        static_creds.password.expose_secret(),
+        test_secret(&["static", "-", "password"]).expose_secret()
+    );
+    ldap.rotate_static_role("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    ldap.write_dynamic_role(
+        "dynamic",
+        &openbao::secrets::ldap::LdapDynamicRole::new(
+            "dn: cn={{.Username}},ou=Users,dc=example,dc=com",
+            "dn: cn={{.Username}},ou=Users,dc=example,dc=com",
+        )
+        .with_default_ttl("1h")
+        .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    let dynamic_role = ldap
+        .read_dynamic_role("dynamic")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(dynamic_role.default_ttl.as_deref(), Some("3600"));
+    let dynamic_creds = ldap
+        .dynamic_credentials("dynamic")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        dynamic_creds.password.expose_secret(),
+        test_secret(&["dynamic", "-", "password"]).expose_secret()
+    );
+
+    ldap.write_library_set(
+        "accounts",
+        &openbao::secrets::ldap::LdapLibrarySet::new(["svc-a@example.com", "svc-b@example.com"])
+            .with_ttl("10h")
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    let library = ldap
+        .read_library_set("accounts")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(library.service_account_names.len(), 2);
+    let libraries = ldap
+        .list_library_sets()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(libraries.keys, ["accounts"]);
+    let status = ldap
+        .library_status("accounts")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(
+        status
+            .service_account_names
+            .contains_key("svc-a@example.com")
+    );
+
+    let checkout = ldap
+        .check_out(
+            "accounts",
+            &openbao::secrets::ldap::LdapCheckOutRequest::new()
+                .with_ttl("1h")
+                .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        checkout.password.expose_secret(),
+        test_secret(&["checkout", "-", "password"]).expose_secret()
+    );
+    let check_in = ldap
+        .check_in(
+            "accounts",
+            &openbao::secrets::ldap::LdapCheckInRequest::new(["svc-a@example.com"]),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(check_in.check_ins, ["svc-a@example.com"]);
+    let force_check_in = ldap
+        .force_check_in(
+            "accounts",
+            &openbao::secrets::ldap::LdapCheckInRequest::new(["svc-b@example.com"]),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(force_check_in.check_ins, ["svc-b@example.com"]);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

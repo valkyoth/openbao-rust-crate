@@ -68,6 +68,8 @@ Implemented now:
 - Database connection config, dynamic roles, static roles, root/static
   rotation, and credential helpers.
 - Identity entity, group, entity-alias, and group-alias lifecycle helpers.
+- LDAP secrets engine config, static role, dynamic role, credential, library
+  checkout, and check-in helpers.
 - SSH role, zero-address role, IP lookup, OTP credential, issuer config,
   issuer list/submit/read/update/delete, CA public-key metadata, CA sign,
   generated certificate/key issue, and OTP verification helpers.
@@ -105,8 +107,7 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.7.0`: LDAP secrets; typed custom plugin API
-  pattern documentation.
+- Remaining `0.7.0`: typed custom plugin API pattern documentation.
 - `0.8.0`: remaining auth methods and broader system backend automation.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
@@ -197,6 +198,7 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
+| `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
 | `rabbitmq` | yes | RabbitMQ secrets engine connection, lease, role, and credential helpers. |
 | `userpass` | yes | Userpass login and user administration helpers. |
 | `token` | yes | Token lifecycle helpers. |
@@ -265,12 +267,13 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
 | Identity | Yes | Entity, group, entity-alias, and group-alias lifecycle helpers. |
+| LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and optional raw-byte helpers. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
-| Remaining engines | Planned | LDAP secrets remains planned for `0.7.0`. |
+| Custom plugin patterns | Planned | Typed custom plugin API pattern documentation remains planned for `0.7.0`. |
 
 ### System Backend And Operations
 

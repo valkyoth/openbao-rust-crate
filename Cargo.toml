@@ -52,6 +52,7 @@ default = [
     "kv1",
     "kv2",
     "kubernetes",
+    "ldap",
     "pki",
     "rabbitmq",
     "ssh",
@@ -72,6 +73,7 @@ token = []
 kv1 = []
 kv2 = []
 kubernetes = []
+ldap = []
 pki = []
 rabbitmq = []
 ssh = []
