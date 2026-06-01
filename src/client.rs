@@ -616,7 +616,8 @@ impl<State> Client<State> {
         url: Url,
     ) -> Result<reqwest::Response> {
         self.http
-            .request(method, url) // codeql[rust/cleartext-transmission]: non-sensitive OpenBao request path; no auth token, namespace, custom headers, or body.
+            // codeql[rust/cleartext-transmission]: non-sensitive OpenBao request path; no auth token, namespace, custom headers, or body.
+            .request(method, url)
             .header(ACCEPT, "application/json")
             .header("X-Vault-Request", "true")
             .send()
@@ -638,7 +639,8 @@ impl<State> Client<State> {
         let http = self.http_for_sensitive_request();
 
         let mut request = http
-            .request(method, url) // codeql[rust/cleartext-transmission]: require_encrypted_transport_for_sensitive_request rejects cleartext before this request is built.
+            // codeql[rust/cleartext-transmission]: require_encrypted_transport_for_sensitive_request rejects cleartext before this request is built.
+            .request(method, url)
             .header(ACCEPT, "application/json")
             .header("X-Vault-Request", "true");
         for (name, value) in headers {

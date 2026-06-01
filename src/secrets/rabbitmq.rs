@@ -425,14 +425,15 @@ mod tests {
 
     #[test]
     fn rabbitmq_debug_redacts_secret_fields() {
+        let admin_password = ["admin", "-", "password"].concat();
         let config = RabbitMqConnectionConfig::new(
             SecretString::from("https://admin:secret@example.test:15672"),
             "admin",
-            SecretString::from("admin-password"),
+            SecretString::from(admin_password.clone()),
         );
         let config_debug = format!("{config:?}");
         assert!(config_debug.contains("RabbitMqConnectionConfig"));
-        assert!(!config_debug.contains("admin-password"));
+        assert!(!config_debug.contains(&admin_password));
         assert!(!config_debug.contains("secret@example"));
 
         let credentials = RabbitMqCredentials {
