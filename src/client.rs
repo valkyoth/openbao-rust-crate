@@ -624,7 +624,11 @@ impl<State> Client<State> {
             HeaderValue::from_static("true"),
         );
 
-        self.http.execute(request).await.map_err(Error::from)
+        self.http
+            // codeql[rust/cleartext-logging]: reqwest can attach the URL to transport errors; http_error_without_url strips it before the error is loggable.
+            .execute(request)
+            .await
+            .map_err(crate::error::http_error_without_url)
     }
 
     async fn send_sensitive_json_request<B>(
@@ -680,7 +684,11 @@ impl<State> Client<State> {
             *request.body_mut() = Some(Vec::from(&encoded[..]).into());
         }
 
-        http.execute(request).await.map_err(Error::from)
+        http
+            // codeql[rust/cleartext-logging]: reqwest can attach the URL to transport errors; http_error_without_url strips it before the error is loggable.
+            .execute(request)
+            .await
+            .map_err(crate::error::http_error_without_url)
     }
 
     pub(crate) fn url_for_path(&self, path: &str) -> Result<Url> {

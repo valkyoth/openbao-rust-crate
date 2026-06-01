@@ -163,8 +163,12 @@ impl std::error::Error for Error {
 
 impl From<reqwest::Error> for Error {
     fn from(error: reqwest::Error) -> Self {
-        Self::Http(error)
+        http_error_without_url(error)
     }
+}
+
+pub(crate) fn http_error_without_url(error: reqwest::Error) -> Error {
+    Error::Http(error.without_url())
 }
 
 #[cfg(test)]

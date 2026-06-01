@@ -142,6 +142,48 @@ async fn kv2_read_sends_documented_headers_and_path() {
 }
 
 #[tokio::test]
+async fn transport_errors_do_not_display_request_url() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/secret/data/app/config HTTP/1.1"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let result = client
+        .kv2("secret")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .read::<SecretData>("app/config")
+        .await;
+    let error = match result {
+        Ok(_) => panic!("server unexpectedly returned a response"),
+        Err(error) => error,
+    };
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+
+    if let Error::Http(source) = &error {
+        assert!(source.url().is_none());
+    } else {
+        panic!("expected transport error, got {error:?}");
+    }
+    let message = error.to_string();
+    assert!(!message.contains(&addr.to_string()));
+    assert!(!message.contains("/v1/secret/data/app/config"));
+}
+
+#[tokio::test]
 async fn kv2_read_optional_maps_not_found_to_none() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
