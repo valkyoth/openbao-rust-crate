@@ -3,7 +3,7 @@
 ## Version
 
 - Version: 0.7.0
-- Release date: Unreleased
+- Release date: 2026-06-01
 - Git tag: `v0.7.0` planned
 - Git commit: tag target for `v0.7.0`
 - License: MIT OR Apache-2.0
@@ -82,14 +82,17 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_7_gate.sh`
-- Result: pending.
-- Pentest report: pending.
-- `cargo audit` result: pending.
-- `cargo deny check` result: pending.
-- CodeQL result: pending.
-- Podman OpenBao integration result: pending.
-- SBOM generation result: pending.
-- Reproducible package result: pending.
+- Result: passed on 2026-06-01.
+- Pentest report: reviewed before release; actionable findings resolved or
+  recorded for later release lines.
+- `cargo audit` result: passed.
+- `cargo deny check` result: passed with duplicate dependency warnings only.
+- CodeQL result: passed on GitHub before tagging.
+- Podman OpenBao integration result: passed against OpenBao on
+  `https://127.0.0.1:9940`.
+- SBOM generation result: passed; CycloneDX JSON written to
+  `target/sbom/openbao.cdx.json`.
+- Reproducible package result: `cargo package --locked --allow-dirty` passed.
 
 ## Known Limitations
 

@@ -1121,7 +1121,7 @@ scripts/checks.sh
 Run the current release gate:
 
 ```bash
-scripts/release_0_6_gate.sh
+scripts/release_0_7_gate.sh
 ```
 
 Set `OPENBAO_SKIP_INTEGRATION=1` only when Podman is unavailable; release
