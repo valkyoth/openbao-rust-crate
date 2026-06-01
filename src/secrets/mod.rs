@@ -1,5 +1,7 @@
 //! Secret engine handles.
 
+#[cfg(feature = "cubbyhole")]
+pub mod cubbyhole;
 #[cfg(feature = "database")]
 pub mod database;
 #[cfg(feature = "kv1")]

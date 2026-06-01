@@ -118,7 +118,8 @@ Support plan:
   list/submit/read/update/delete, authenticated CA public-key metadata, CA
   sign/issue, and OTP verification are implemented. Raw unauthenticated
   text/plain SSH public-key reads are intentionally not typed.
-- `0.7.0`: Kubernetes, LDAP, RabbitMQ, cubbyhole, identity.
+- `0.7.0`: Cubbyhole read/write/delete/list is implemented. Kubernetes, LDAP,
+  RabbitMQ, and identity remain planned for this line.
 
 ## System Backend
 

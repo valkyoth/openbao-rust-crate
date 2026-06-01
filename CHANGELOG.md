@@ -12,6 +12,8 @@ All notable changes to this project are documented here.
   SecretID tidy.
 - Admin bootstrap support for auth method enablement, AppRole role
   convergence, and explicit AppRole SecretID issuance.
+- Cubbyhole secrets engine read, optional read, write, delete, and list
+  helpers.
 
 ## 0.6.0 - 2026-05-31
 

@@ -59,6 +59,8 @@ Implemented now:
   version delete, undelete, destroy, metadata, backend config, typed data, and
   secret-aware service config helpers.
 - KV v1 read, write, delete, and list helpers.
+- Cubbyhole read, optional read, write, delete, and list helpers for
+  token-scoped handoff data.
 - Database connection config, dynamic roles, static roles, root/static
   rotation, and credential helpers.
 - SSH role, zero-address role, IP lookup, OTP credential, issuer config,
@@ -98,8 +100,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.7.0`: cubbyhole; identity; Kubernetes secrets; LDAP secrets;
-  RabbitMQ; typed custom plugin API pattern documentation.
+- Remaining `0.7.0`: identity; Kubernetes secrets; LDAP secrets; RabbitMQ;
+  typed custom plugin API pattern documentation.
 - `0.8.0`: remaining auth methods and broader system backend automation.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
@@ -167,7 +169,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.7", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.7", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -184,6 +186,7 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | --- | --- | --- |
 | `approle` | yes | AppRole login, role, RoleID, and SecretID helpers. |
 | `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
+| `cubbyhole` | yes | Token-scoped Cubbyhole read/write/delete/list helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
@@ -250,12 +253,13 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | KV v2 list/delete versions | Yes | Metadata list, latest delete, soft delete, undelete, and destroy. |
 | KV v2 metadata/config | Yes | Backend, per-key metadata, typed data, and secret-aware service config helpers. |
 | KV v1 | Yes | Read, write, delete, and list helpers. |
+| Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete, encrypt, decrypt, rewrap, data key, random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and optional raw-byte helpers. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
-| Identity and remaining engines | Planned | Identity, cubbyhole, Kubernetes secrets, LDAP secrets, and RabbitMQ remain planned for `0.7.0`. |
+| Identity and remaining engines | Planned | Identity, Kubernetes secrets, LDAP secrets, and RabbitMQ remain planned for `0.7.0`. |
 
 ### System Backend And Operations
 

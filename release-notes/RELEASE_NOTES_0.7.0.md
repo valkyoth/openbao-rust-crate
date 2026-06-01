@@ -23,10 +23,11 @@
   administration helpers for role create/read/list/delete, RoleID read/update,
   SecretID generate/list/lookup, SecretID destroy by value or accessor, custom
   SecretID assignment, SecretID tidy, plus admin bootstrap support for auth
-  method enablement, AppRole role convergence, and explicit SecretID issuance.
-- Remaining `0.7.0` planned work: cubbyhole; identity; Kubernetes secrets
-  engine; LDAP secrets engine; RabbitMQ secrets engine; typed custom plugin API
-  pattern documentation.
+  method enablement, AppRole role convergence, explicit SecretID issuance, and
+  Cubbyhole read/write/delete/list helpers.
+- Remaining `0.7.0` planned work: identity; Kubernetes secrets engine; LDAP
+  secrets engine; RabbitMQ secrets engine; typed custom plugin API pattern
+  documentation.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -39,6 +40,8 @@
 - AppRole duration builder helpers validate TTL strings before request
   dispatch.
 - Admin bootstrap reports redact issued AppRole SecretID material.
+- Cubbyhole list responses use bounded key deserialization, and Cubbyhole paths
+  use the same structured validation as other secret engines.
 
 ## Security And Stability Gate
 

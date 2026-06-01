@@ -42,6 +42,7 @@ include = [
 default = [
     "approle",
     "cert-auth",
+    "cubbyhole",
     "database",
     "jwt-auth",
     "kubernetes-auth",
@@ -58,6 +59,7 @@ default = [
 ]
 approle = []
 cert-auth = []
+cubbyhole = []
 database = []
 jwt-auth = []
 kubernetes-auth = []

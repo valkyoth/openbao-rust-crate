@@ -142,6 +142,91 @@ async fn kv2_read_optional_maps_not_found_to_none() {
 }
 
 #[tokio::test]
+async fn cubbyhole_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 4096];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let (status, body) = match index {
+                0 => {
+                    assert!(request.starts_with("POST /v1/cubbyhole/handoff HTTP/1.1"));
+                    assert!(request.contains(r#""value":"ok""#));
+                    ("204 No Content", "{}")
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/cubbyhole/handoff HTTP/1.1"));
+                    ("200 OK", r#"{"data":{"value":"ok"}}"#)
+                }
+                2 => {
+                    assert!(request.starts_with("LIST /v1/cubbyhole HTTP/1.1"));
+                    ("200 OK", r#"{"data":{"keys":["handoff"]}}"#)
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/cubbyhole/missing HTTP/1.1"));
+                    ("404 Not Found", r#"{"errors":["missing"]}"#)
+                }
+                4 => {
+                    assert!(request.starts_with("DELETE /v1/cubbyhole/handoff HTTP/1.1"));
+                    ("204 No Content", "{}")
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["test-", "token"]));
+    let cubbyhole = client.cubbyhole().unwrap_or_else(|error| panic!("{error}"));
+
+    cubbyhole
+        .write("handoff", WrappedData { value: "ok".into() })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let secret = cubbyhole
+        .read::<SecretData>("handoff")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(secret.value, "ok");
+    let keys = cubbyhole
+        .list("")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(keys.keys, ["handoff"]);
+    let missing = cubbyhole
+        .read_optional::<SecretData>("missing")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(missing.is_none());
+    cubbyhole
+        .delete("handoff")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn kv2_service_config_reads_data_without_metadata_and_redacts_values() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

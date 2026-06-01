@@ -9,7 +9,7 @@
 //! - authentication state is represented in the type system.
 //!
 //! The public API covers environment-based client construction, AppRole login,
-//! direct token auth, token lifecycle helpers, KV v1/v2, Transit, system
+//! direct token auth, token lifecycle helpers, Cubbyhole, KV v1/v2, Transit, system
 //! health/seal status, dev-only bootstrap, mount management, audit devices,
 //! safe exact lease helpers, plugin catalog operations, SSH, TOTP, and raw
 //! JSON calls for advanced users.
@@ -62,6 +62,7 @@ mod validation;
 ))]
 pub mod auth;
 #[cfg(any(
+    feature = "cubbyhole",
     feature = "database",
     feature = "kv1",
     feature = "kv2",
@@ -110,6 +111,7 @@ pub mod prelude {
     ))]
     pub use crate::auth;
     #[cfg(any(
+        feature = "cubbyhole",
         feature = "database",
         feature = "kv1",
         feature = "kv2",

@@ -158,7 +158,7 @@ Stop condition:
 - AppRole admin role and SecretID lifecycle helpers;
 - admin bootstrap support for auth method enablement and AppRole role/SecretID
   provisioning;
-- cubbyhole;
+- Cubbyhole read/write/delete/list helpers;
 - identity entities/groups/aliases;
 - Kubernetes secrets engine;
 - LDAP secrets engine;
