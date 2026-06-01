@@ -9,7 +9,8 @@
 //! - authentication state is represented in the type system.
 //!
 //! The public API covers environment-based client construction, AppRole login,
-//! direct token auth, token lifecycle helpers, Cubbyhole, KV v1/v2, Transit, system
+//! direct token auth, token lifecycle helpers, Cubbyhole, KV v1/v2,
+//! Kubernetes secrets, Transit, system
 //! health/seal status, dev-only bootstrap, mount management, audit devices,
 //! safe exact lease helpers, plugin catalog operations, SSH, TOTP, and raw
 //! JSON calls for advanced users.
@@ -66,6 +67,7 @@ pub mod auth;
     feature = "database",
     feature = "kv1",
     feature = "kv2",
+    feature = "kubernetes",
     feature = "pki",
     feature = "ssh",
     feature = "totp",
@@ -115,6 +117,7 @@ pub mod prelude {
         feature = "database",
         feature = "kv1",
         feature = "kv2",
+        feature = "kubernetes",
         feature = "pki",
         feature = "ssh",
         feature = "totp",

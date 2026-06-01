@@ -50,6 +50,7 @@ default = [
     "token",
     "kv1",
     "kv2",
+    "kubernetes",
     "pki",
     "ssh",
     "totp",
@@ -67,6 +68,7 @@ userpass = []
 token = []
 kv1 = []
 kv2 = []
+kubernetes = []
 pki = []
 ssh = []
 totp = []

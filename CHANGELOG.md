@@ -14,6 +14,8 @@ All notable changes to this project are documented here.
   convergence, and explicit AppRole SecretID issuance.
 - Cubbyhole secrets engine read, optional read, write, delete, and list
   helpers.
+- Kubernetes secrets engine configuration, role management, role listing, and
+  service account credential generation helpers.
 
 ## 0.6.0 - 2026-05-31
 

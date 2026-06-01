@@ -159,8 +159,8 @@ Stop condition:
 - admin bootstrap support for auth method enablement and AppRole role/SecretID
   provisioning;
 - Cubbyhole read/write/delete/list helpers;
+- Kubernetes secrets engine config, role, list, delete, and credential helpers;
 - identity entities/groups/aliases;
-- Kubernetes secrets engine;
 - LDAP secrets engine;
 - RabbitMQ secrets engine;
 - typed custom plugin API pattern documented.

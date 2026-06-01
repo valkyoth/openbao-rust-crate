@@ -4,6 +4,8 @@
 pub mod cubbyhole;
 #[cfg(feature = "database")]
 pub mod database;
+#[cfg(feature = "kubernetes")]
+pub mod kubernetes;
 #[cfg(feature = "kv1")]
 pub mod kv1;
 #[cfg(feature = "kv2")]

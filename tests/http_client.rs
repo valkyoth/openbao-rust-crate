@@ -42,6 +42,47 @@ fn test_secret(parts: &[&str]) -> SecretString {
     SecretString::from(parts.concat())
 }
 
+fn read_http_request(stream: &mut impl Read) -> String {
+    let mut request = Vec::new();
+    let mut buffer = [0_u8; 4096];
+    loop {
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        if bytes == 0 {
+            break;
+        }
+        request.extend_from_slice(&buffer[..bytes]);
+        if http_request_is_complete(&request) {
+            break;
+        }
+    }
+    String::from_utf8(request).unwrap_or_else(|error| {
+        let bytes = error.into_bytes();
+        String::from_utf8_lossy(&bytes).into_owned()
+    })
+}
+
+fn http_request_is_complete(request: &[u8]) -> bool {
+    let Some(header_end) = request.windows(4).position(|window| window == b"\r\n\r\n") else {
+        return false;
+    };
+    let body_start = header_end + 4;
+    let headers = String::from_utf8_lossy(&request[..header_end]);
+    let content_length = headers
+        .lines()
+        .find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            if name.eq_ignore_ascii_case("content-length") {
+                value.trim().parse::<usize>().ok()
+            } else {
+                None
+            }
+        })
+        .unwrap_or(0);
+    request.len() >= body_start + content_length
+}
+
 #[cfg(feature = "operator-ops")]
 fn test_operation_id() -> String {
     static NEXT_TEST_OPERATION_ID: AtomicU64 = AtomicU64::new(0);
@@ -2265,6 +2306,163 @@ async fn kubernetes_admin_config_and_role_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn kubernetes_secrets_config_role_and_creds_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..8 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let (status, body) = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/kubernetes/config HTTP/1.1"));
+                    assert!(request.contains(r#""service_account_jwt":"manager-jwt""#));
+                    ("204 No Content", "{}".to_owned())
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/kubernetes/config HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"kubernetes_host":"https://kubernetes.default.svc","kubernetes_ca_cert":"pem","disable_local_ca_jwt":true}}"#
+                            .to_owned(),
+                    )
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/kubernetes/roles/web HTTP/1.1"));
+                    assert!(request.contains(r#""allowed_kubernetes_namespaces":["prod"]"#));
+                    assert!(request.contains(r#""service_account_name":"default""#));
+                    assert!(request.contains(r#""token_default_ttl":"30m""#));
+                    ("204 No Content", "{}".to_owned())
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/kubernetes/roles/web HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"name":"web","allowed_kubernetes_namespaces":["prod"],"service_account_name":"default","token_default_ttl":1800,"token_max_ttl":"24h"}}"#
+                            .to_owned(),
+                    )
+                }
+                4 => {
+                    assert!(
+                        request.starts_with("LIST /v1/kubernetes/roles?after=w&limit=10 HTTP/1.1")
+                    );
+                    ("200 OK", r#"{"data":{"keys":["web"]}}"#.to_owned())
+                }
+                5 => {
+                    assert!(request.starts_with("POST /v1/kubernetes/creds/web HTTP/1.1"));
+                    assert!(request.contains(r#""kubernetes_namespace":"prod""#));
+                    assert!(request.contains(r#""ttl":"15m""#));
+                    (
+                        "200 OK",
+                        format!(
+                            r#"{{"lease_id":"{}","lease_duration":900,"renewable":false,"data":{{"service_account_name":"default","service_account_namespace":"prod","service_account_token":"{}{}"}}}}"#,
+                            "kubernetes/creds/web/lease", "service-", "account-token"
+                        ),
+                    )
+                }
+                6 => {
+                    assert!(request.starts_with("DELETE /v1/kubernetes/roles/web HTTP/1.1"));
+                    ("204 No Content", "{}".to_owned())
+                }
+                7 => {
+                    assert!(request.starts_with("DELETE /v1/kubernetes/config HTTP/1.1"));
+                    ("204 No Content", "{}".to_owned())
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["root-", "token"]));
+    let kubernetes = client
+        .kubernetes_secrets()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    kubernetes
+        .write_config(&openbao::secrets::kubernetes::KubernetesSecretsConfig {
+            kubernetes_host: Some("https://kubernetes.default.svc".to_owned()),
+            service_account_jwt: Some(test_secret(&["manager-", "jwt"])),
+            disable_local_ca_jwt: Some(true),
+            ..Default::default()
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = kubernetes
+        .read_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        config.kubernetes_host.as_deref(),
+        Some("https://kubernetes.default.svc")
+    );
+    assert!(!format!("{config:?}").contains("manager-jwt"));
+
+    let role = openbao::secrets::kubernetes::KubernetesSecretsRole::for_service_account("default")
+        .with_allowed_namespace("prod")
+        .with_token_default_ttl("30m")
+        .unwrap_or_else(|error| panic!("{error}"));
+    kubernetes
+        .write_role("web", &role)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let role = kubernetes
+        .read_role("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role.name.as_deref(), Some("web"));
+    assert_eq!(role.token_default_ttl.as_deref(), Some("1800"));
+    let roles = kubernetes
+        .list_roles_after(Some("w"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["web"]);
+
+    let request = openbao::secrets::kubernetes::KubernetesCredentialsRequest::new()
+        .with_namespace("prod")
+        .with_ttl("15m")
+        .unwrap_or_else(|error| panic!("{error}"));
+    let credentials = kubernetes
+        .credentials("web", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(credentials.service_account_namespace, "prod");
+    assert_eq!(
+        credentials.service_account_token.expose_secret(),
+        &["service-", "account-token"].concat()
+    );
+    let debug = format!("{credentials:?}");
+    assert!(!debug.contains(&["service-", "account-token"].concat()));
+    assert!(!debug.contains("kubernetes/creds/web/lease"));
+
+    kubernetes
+        .delete_role("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    kubernetes
+        .delete_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn jwt_login_sends_documented_path_and_secret_jwt() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -3123,124 +3321,95 @@ async fn approle_admin_role_and_secret_id_lifecycle_use_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for index in 0..14 {
+        let mut requests = Vec::new();
+        for _ in 0..14 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
-            let mut buffer = [0_u8; 8192];
-            let bytes = stream
-                .read(&mut buffer)
-                .unwrap_or_else(|error| panic!("{error}"));
-            let request = String::from_utf8_lossy(&buffer[..bytes]);
-            let body = match index {
-                0 => {
-                    assert!(request.starts_with("LIST /v1/auth/approle/role HTTP/1.1"));
-                    r#"{"data":{"keys":["web"]}}"#.to_owned()
-                }
-                1 => {
-                    assert!(request.starts_with("POST /v1/auth/approle/role/web HTTP/1.1"));
-                    assert!(request.contains(r#""token_policies":["web"]"#));
-                    assert!(request.contains(r#""token_ttl":"10m""#));
-                    "{}".to_owned()
-                }
-                2 => {
-                    assert!(request.starts_with("GET /v1/auth/approle/role/web HTTP/1.1"));
-                    r#"{"data":{"token_ttl":600,"token_policies":["web"],"bind_secret_id":true}}"#
-                        .to_owned()
-                }
-                3 => {
-                    assert!(request.starts_with("GET /v1/auth/approle/role/web/role-id HTTP/1.1"));
-                    format!(r#"{{"data":{{"role_id":"{}{}"}}}}"#, "role-", "id")
-                }
-                4 => {
-                    assert!(request.starts_with("POST /v1/auth/approle/role/web/role-id HTTP/1.1"));
-                    assert!(request.contains(&format!(r#""role_id":"{}{}""#, "custom-", "role")));
-                    format!(r#"{{"data":{{"role_id":"{}{}"}}}}"#, "custom-", "role")
-                }
-                5 => {
-                    assert!(
-                        request.starts_with("POST /v1/auth/approle/role/web/secret-id HTTP/1.1")
-                    );
-                    assert!(request.contains(r#""metadata":"{\"env\":\"dev\"}""#));
-                    format!(
-                        r#"{{"data":{{"secret_id":"{}{}","secret_id_accessor":"{}{}","secret_id_ttl":600,"secret_id_num_uses":1}}}}"#,
-                        "secret-", "id", "accessor-", "id"
-                    )
-                }
-                6 => {
-                    assert!(
-                        request.starts_with("LIST /v1/auth/approle/role/web/secret-id HTTP/1.1")
-                    );
-                    format!(r#"{{"data":{{"keys":["{}{}"]}}}}"#, "accessor-", "id")
-                }
-                7 => {
-                    assert!(
-                        request.starts_with(
-                            "POST /v1/auth/approle/role/web/secret-id/lookup HTTP/1.1"
-                        )
-                    );
-                    assert!(request.contains(&format!(r#""secret_id":"{}{}""#, "secret-", "id")));
+            let request = read_http_request(&mut stream);
+            let (status, body) = if request.starts_with("LIST /v1/auth/approle/role HTTP/1.1") {
+                ("200 OK", r#"{"data":{"keys":["web"]}}"#.to_owned())
+            } else if request.starts_with("POST /v1/auth/approle/role/web/role-id HTTP/1.1") {
+                (
+                    "200 OK",
+                    format!(r#"{{"data":{{"role_id":"{}{}"}}}}"#, "custom-", "role"),
+                )
+            } else if request.starts_with("GET /v1/auth/approle/role/web/role-id HTTP/1.1") {
+                (
+                    "200 OK",
+                    format!(r#"{{"data":{{"role_id":"{}{}"}}}}"#, "role-", "id"),
+                )
+            } else if request
+                .starts_with("POST /v1/auth/approle/role/web/secret-id/lookup HTTP/1.1")
+            {
+                (
+                    "200 OK",
                     format!(
                         r#"{{"data":{{"cidr_list":[],"metadata":{{"env":"dev"}},"secret_id_accessor":"{}{}","secret_id_num_uses":1,"secret_id_ttl":600,"token_bound_cidrs":[]}}}}"#,
                         "accessor-", "id"
-                    )
-                }
-                8 => {
-                    assert!(
-                        request.starts_with(
-                            "POST /v1/auth/approle/role/web/secret-id/destroy HTTP/1.1"
-                        )
-                    );
-                    assert!(request.contains(&format!(r#""secret_id":"{}{}""#, "secret-", "id")));
-                    "{}".to_owned()
-                }
-                9 => {
-                    assert!(request.starts_with(
-                        "POST /v1/auth/approle/role/web/secret-id-accessor/lookup HTTP/1.1"
-                    ));
-                    assert!(request.contains(&format!(
-                        r#""secret_id_accessor":"{}{}""#,
-                        "accessor-", "id"
-                    )));
+                    ),
+                )
+            } else if request
+                .starts_with("POST /v1/auth/approle/role/web/secret-id/destroy HTTP/1.1")
+            {
+                ("200 OK", "{}".to_owned())
+            } else if request.starts_with("LIST /v1/auth/approle/role/web/secret-id HTTP/1.1") {
+                (
+                    "200 OK",
+                    format!(r#"{{"data":{{"keys":["{}{}"]}}}}"#, "accessor-", "id"),
+                )
+            } else if request
+                .starts_with("POST /v1/auth/approle/role/web/secret-id-accessor/lookup HTTP/1.1")
+            {
+                (
+                    "200 OK",
                     format!(
                         r#"{{"data":{{"metadata":{{}},"secret_id_accessor":"{}{}","secret_id_num_uses":1,"secret_id_ttl":600}}}}"#,
                         "accessor-", "id"
-                    )
-                }
-                10 => {
-                    assert!(request.starts_with(
-                        "POST /v1/auth/approle/role/web/secret-id-accessor/destroy HTTP/1.1"
-                    ));
-                    assert!(request.contains(&format!(
-                        r#""secret_id_accessor":"{}{}""#,
-                        "accessor-", "id"
-                    )));
-                    "{}".to_owned()
-                }
-                11 => {
-                    assert!(
-                        request.starts_with(
-                            "POST /v1/auth/approle/role/web/custom-secret-id HTTP/1.1"
-                        )
-                    );
-                    assert!(
-                        request.contains(&format!(r#""secret_id":"{}{}""#, "custom-", "secret"))
-                    );
+                    ),
+                )
+            } else if request
+                .starts_with("POST /v1/auth/approle/role/web/secret-id-accessor/destroy HTTP/1.1")
+            {
+                ("200 OK", "{}".to_owned())
+            } else if request
+                .starts_with("POST /v1/auth/approle/role/web/custom-secret-id HTTP/1.1")
+            {
+                (
+                    "200 OK",
                     format!(
                         r#"{{"data":{{"secret_id":"{}{}","secret_id_accessor":"{}{}","secret_id_ttl":0,"secret_id_num_uses":0}}}}"#,
                         "custom-", "secret", "custom-", "accessor"
-                    )
-                }
-                12 => {
-                    assert!(request.starts_with("POST /v1/auth/approle/tidy/secret-id HTTP/1.1"));
-                    r#"{"warnings":["tidy started"]}"#.to_owned()
-                }
-                13 => {
-                    assert!(request.starts_with("DELETE /v1/auth/approle/role/web HTTP/1.1"));
-                    "{}".to_owned()
-                }
-                _ => unreachable!(),
+                    ),
+                )
+            } else if request.starts_with("POST /v1/auth/approle/tidy/secret-id HTTP/1.1") {
+                ("200 OK", r#"{"warnings":["tidy started"]}"#.to_owned())
+            } else if request.starts_with("DELETE /v1/auth/approle/role/web HTTP/1.1") {
+                ("200 OK", "{}".to_owned())
+            } else if request.starts_with("POST /v1/auth/approle/role/web/secret-id HTTP/1.1") {
+                (
+                    "200 OK",
+                    format!(
+                        r#"{{"data":{{"secret_id":"{}{}","secret_id_accessor":"{}{}","secret_id_ttl":600,"secret_id_num_uses":1}}}}"#,
+                        "secret-", "id", "accessor-", "id"
+                    ),
+                )
+            } else if request.starts_with("POST /v1/auth/approle/role/web HTTP/1.1") {
+                ("200 OK", "{}".to_owned())
+            } else if request.starts_with("GET /v1/auth/approle/role/web HTTP/1.1") {
+                (
+                    "200 OK",
+                    r#"{"data":{"token_ttl":600,"token_policies":["web"],"bind_secret_id":true}}"#
+                        .to_owned(),
+                )
+            } else {
+                let summary = request.lines().next().unwrap_or("unknown request");
+                (
+                    "500 Internal Server Error",
+                    format!(r#"{{"errors":["unexpected request: {summary}"]}}"#),
+                )
             };
+            requests.push(request);
             let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
                 body.len(),
                 body
             );
@@ -3248,6 +3417,7 @@ async fn approle_admin_role_and_secret_id_lifecycle_use_documented_paths() {
                 .write_all(response.as_bytes())
                 .unwrap_or_else(|error| panic!("{error}"));
         }
+        requests
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
@@ -3361,7 +3531,36 @@ async fn approle_admin_role_and_secret_id_lifecycle_use_documented_paths() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
 
-    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+    let requests = server.join().unwrap_or_else(|error| panic!("{error:?}"));
+    assert_eq!(requests.len(), 14);
+    assert!(requests.iter().any(|request| {
+        request.starts_with("POST /v1/auth/approle/role/web HTTP/1.1")
+            && request.contains(r#""token_policies":["web"]"#)
+            && request.contains(r#""token_ttl":"10m""#)
+    }));
+    assert!(requests.iter().any(|request| {
+        request.starts_with("POST /v1/auth/approle/role/web/role-id HTTP/1.1")
+            && request.contains(&format!(r#""role_id":"{}{}""#, "custom-", "role"))
+    }));
+    assert!(requests.iter().any(|request| {
+        request.starts_with("POST /v1/auth/approle/role/web/secret-id HTTP/1.1")
+            && request.contains(r#""metadata":"{\"env\":\"dev\"}""#)
+    }));
+    assert!(requests.iter().any(|request| {
+        request.starts_with("POST /v1/auth/approle/role/web/secret-id/lookup HTTP/1.1")
+            && request.contains(&format!(r#""secret_id":"{}{}""#, "secret-", "id"))
+    }));
+    assert!(requests.iter().any(|request| {
+        request.starts_with("POST /v1/auth/approle/role/web/secret-id-accessor/lookup HTTP/1.1")
+            && request.contains(&format!(
+                r#""secret_id_accessor":"{}{}""#,
+                "accessor-", "id"
+            ))
+    }));
+    assert!(requests.iter().any(|request| {
+        request.starts_with("POST /v1/auth/approle/role/web/custom-secret-id HTTP/1.1")
+            && request.contains(&format!(r#""secret_id":"{}{}""#, "custom-", "secret"))
+    }));
 }
 
 #[tokio::test]
