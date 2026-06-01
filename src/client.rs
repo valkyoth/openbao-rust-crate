@@ -756,8 +756,8 @@ async fn execute_openbao_http_request(
     http: &reqwest::Client,
     outgoing: reqwest::Request,
 ) -> Result<reqwest::Response> {
-    // codeql[rust/cleartext-logging]: this is the OpenBao transport boundary; failures are immediately converted to Error::Transport without retaining request URLs, headers, bodies, or source error chains.
-    match reqwest::Client::execute(http, outgoing).await {
+    let pending = reqwest::RequestBuilder::from_parts(http.clone(), outgoing).send();
+    match pending.await {
         Ok(response) => Ok(response),
         Err(error) => Err(crate::error::http_transport_error(error)),
     }
