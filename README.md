@@ -33,9 +33,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.6.0` release line. `0.6.0` builds on `0.5.0`
-with SSH/TOTP helpers and ACL policy builder ergonomics for least-privilege
-service setup.
+This README documents the `0.7.0` development line. `0.7.0` builds on
+`0.6.0` with AppRole administration and the remaining identity/plugin-style
+engine coverage planned for the release.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -45,8 +45,8 @@ Implemented now:
 
 - Async client with typestate authentication.
 - Direct token authentication with re-exported `openbao::SecretString`.
-- AppRole login with secret-aware role ID, secret ID, token, and accessor
-  handling. AppRole role and SecretID administration is planned for `0.7.0`.
+- AppRole login plus role and SecretID administration, with role IDs,
+  SecretIDs, accessors, and returned tokens treated as secret material.
 - Kubernetes auth login plus config and role administration helpers.
 - TLS certificate auth login, method config, CA role, and CRL administration
   helpers.
@@ -97,8 +97,9 @@ Implemented now:
 
 Planned next:
 
-- `0.7.0`: cubbyhole, identity, Kubernetes secrets, LDAP secrets, and
-  RabbitMQ.
+- Remaining `0.7.0`: admin bootstrap support for auth method enablement and
+  AppRole role/SecretID provisioning; cubbyhole; identity; Kubernetes secrets;
+  LDAP secrets; RabbitMQ; typed custom plugin API pattern documentation.
 - `0.8.0`: remaining auth methods and broader system backend automation.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
@@ -131,9 +132,9 @@ release sequencing live in [release-notes](release-notes) and
 ## Rust Version Support
 
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
-prefer the latest stable Rust; as of May 31, 2026, that is Rust `1.96.0`.
+prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.6.0` release gate tracks compatibility evidence across this supported
+The `0.7.0` development line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -150,7 +151,7 @@ range:
 
 ```toml
 [dependencies]
-openbao = "0.6"
+openbao = "0.7"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 ```
@@ -166,7 +167,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.6", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.7", features = ["approle", "cert-auth", "database", "jwt-auth", "kubernetes-auth", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -174,14 +175,14 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.6", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.7", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 ## Features
 
 | Feature | Default | Purpose |
 | --- | --- | --- |
-| `approle` | yes | AppRole authentication helpers. |
+| `approle` | yes | AppRole login, role, RoleID, and SecretID helpers. |
 | `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
@@ -231,7 +232,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | Direct token auth | Yes | Tokens are accepted as `SecretString`. |
 | `X-Vault-Token` | Yes | Default documented OpenBao-compatible token header. |
 | Bearer auth | Yes | Optional `Authorization: Bearer` header mode. |
-| AppRole login | Yes | Role ID and secret ID are secret-aware; returned token is wrapped. Role and SecretID administration is planned for `0.7.0`. |
+| AppRole login/admin | Yes | Role ID, SecretID, accessors, and returned tokens are secret-aware; role and SecretID lifecycle helpers are typed. |
 | Token accessor handling | Yes | Accessors are treated as secret material. |
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
@@ -254,7 +255,7 @@ openbao = { version = "0.6", default-features = false, features = ["kv2", "sys",
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
-| Identity and remaining engines | Planned | Planned for `0.7.0`. |
+| Identity and remaining engines | Planned | Identity, cubbyhole, Kubernetes secrets, LDAP secrets, and RabbitMQ remain planned for `0.7.0`. |
 
 ### System Backend And Operations
 

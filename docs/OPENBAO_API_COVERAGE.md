@@ -1,6 +1,8 @@
 # OpenBao API Coverage Plan
 
 Checked against official OpenBao `2.5.x` documentation on 2026-05-30.
+AppRole administration was refreshed against the same documentation set on
+2026-06-01.
 
 Sources:
 
@@ -65,8 +67,8 @@ Support plan:
 - `0.5.0`: userpass login and user administration are implemented; JWT login
   plus JWT/OIDC config and role administration helpers are implemented. Browser
   OIDC callback helpers remain planned.
-- `0.7.0`: AppRole role and SecretID administration, plus admin bootstrap
-  orchestration for auth method setup.
+- `0.7.0`: AppRole role and SecretID administration is implemented. Admin
+  bootstrap orchestration for auth method setup remains planned for this line.
 - `0.8.0`: LDAP, RADIUS, and Kerberos.
 
 ## Secret Engines

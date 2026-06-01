@@ -1,15 +1,361 @@
 //! AppRole authentication support.
 
+use std::collections::BTreeMap;
+
+use reqwest::Method;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::{Authenticated, Client, Error, Result, Unauthenticated, path::validate_mount_path};
+use crate::{
+    Authenticated, Client, Error, Result, Unauthenticated,
+    path::validate_mount_path,
+    response::{
+        Empty, ResponseEnvelope, deserialize_bounded_string_map_or_default,
+        deserialize_bounded_string_vec,
+    },
+};
 
 /// Handle for the AppRole auth method at a configured mount.
 #[derive(Debug)]
 pub struct AppRole<'a> {
     client: &'a Client<Unauthenticated>,
     mount: String,
+}
+
+/// Handle for AppRole auth administration at a configured mount.
+#[derive(Debug)]
+pub struct AppRoleAdmin<'a> {
+    client: &'a Client<Authenticated>,
+    mount: String,
+}
+
+/// AppRole role create/update request.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct AppRoleRoleRequest {
+    /// Require a SecretID during login.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_secret_id: Option<bool>,
+    /// CIDRs allowed to use generated SecretIDs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub secret_id_bound_cidrs: Vec<String>,
+    /// Uses allowed for generated SecretIDs. Zero means unlimited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub secret_id_num_uses: Option<u64>,
+    /// SecretID TTL such as `30m`. Zero duration means no expiry.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub secret_id_ttl: Option<String>,
+    /// Whether generated SecretIDs are local to the cluster.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_secret_ids: Option<bool>,
+    /// Token TTL such as `30m`.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub token_ttl: Option<String>,
+    /// Token max TTL such as `2h`.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub token_max_ttl: Option<String>,
+    /// Token policies attached to generated tokens.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub token_policies: Vec<String>,
+    /// CIDRs allowed to use generated tokens.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub token_bound_cidrs: Vec<String>,
+    /// Bind generated tokens to the source IP used during login.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_strictly_bind_ip: Option<bool>,
+    /// Explicit max TTL for generated tokens.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub token_explicit_max_ttl: Option<String>,
+    /// Omit the default policy from generated tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_no_default_policy: Option<bool>,
+    /// Maximum uses for generated tokens. Zero means unlimited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_num_uses: Option<u64>,
+    /// Periodic token period.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub token_period: Option<String>,
+    /// Generated token type, such as `service`, `batch`, or `default`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_type: Option<String>,
+}
+
+impl AppRoleRoleRequest {
+    /// Creates an empty AppRole role request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds a generated-token policy.
+    #[must_use]
+    pub fn with_token_policy(mut self, policy: impl Into<String>) -> Self {
+        self.token_policies.push(policy.into());
+        self
+    }
+
+    /// Sets the generated-token TTL.
+    pub fn with_token_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "approle token_ttl")?;
+        self.token_ttl = Some(ttl);
+        Ok(self)
+    }
+
+    /// Sets the generated SecretID TTL.
+    pub fn with_secret_id_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "approle secret_id_ttl")?;
+        self.secret_id_ttl = Some(ttl);
+        Ok(self)
+    }
+}
+
+/// AppRole role list.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct AppRoleRoleList {
+    /// Role names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+/// AppRole RoleID response.
+#[derive(Clone, Deserialize)]
+pub struct AppRoleRoleId {
+    /// RoleID value. Treat as secret material.
+    pub role_id: SecretString,
+}
+
+impl core::fmt::Debug for AppRoleRoleId {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("AppRoleRoleId")
+            .field("role_id", &"<redacted>")
+            .finish()
+    }
+}
+
+/// SecretID generation request.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct AppRoleSecretIdRequest {
+    /// Metadata JSON string attached to the SecretID and emitted to audit logs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<String>,
+    /// CIDRs allowed to use this SecretID.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cidr_list: Vec<String>,
+    /// CIDRs allowed to use tokens generated from this SecretID.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub token_bound_cidrs: Vec<String>,
+    /// Number of allowed uses for this SecretID. Zero means unlimited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub num_uses: Option<u64>,
+    /// TTL for this SecretID.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub ttl: Option<String>,
+}
+
+impl AppRoleSecretIdRequest {
+    /// Creates an empty SecretID generation request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the SecretID TTL.
+    pub fn with_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "approle secret_id ttl")?;
+        self.ttl = Some(ttl);
+        Ok(self)
+    }
+}
+
+/// Custom SecretID assignment request.
+#[derive(Clone, Default, Deserialize)]
+pub struct AppRoleCustomSecretIdRequest {
+    /// Caller-provided SecretID. Treat as secret material.
+    pub secret_id: SecretString,
+    /// Metadata JSON string attached to the SecretID and emitted to audit logs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<String>,
+    /// CIDRs allowed to use this SecretID.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cidr_list: Vec<String>,
+    /// CIDRs allowed to use tokens generated from this SecretID.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub token_bound_cidrs: Vec<String>,
+    /// Number of allowed uses for this SecretID. Zero means unlimited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub num_uses: Option<u64>,
+    /// TTL for this SecretID.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub ttl: Option<String>,
+}
+
+#[derive(Serialize)]
+struct AppRoleCustomSecretIdPayload<'a> {
+    secret_id: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    metadata: Option<&'a str>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    cidr_list: Vec<&'a str>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    token_bound_cidrs: Vec<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    num_uses: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ttl: Option<&'a str>,
+}
+
+impl AppRoleCustomSecretIdRequest {
+    /// Creates a custom SecretID assignment request.
+    pub fn new(secret_id: SecretString) -> Self {
+        Self {
+            secret_id,
+            ..Self::default()
+        }
+    }
+}
+
+impl core::fmt::Debug for AppRoleCustomSecretIdRequest {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("AppRoleCustomSecretIdRequest")
+            .field("secret_id", &"<redacted>")
+            .field("metadata", &self.metadata)
+            .field("cidr_list", &self.cidr_list)
+            .field("token_bound_cidrs", &self.token_bound_cidrs)
+            .field("num_uses", &self.num_uses)
+            .field("ttl", &self.ttl)
+            .finish()
+    }
+}
+
+/// Generated or assigned SecretID response.
+#[derive(Clone, Deserialize)]
+pub struct AppRoleSecretId {
+    /// SecretID value. Treat as secret material.
+    pub secret_id: SecretString,
+    /// SecretID accessor. Treat as secret material because it can destroy or
+    /// look up SecretID metadata.
+    pub secret_id_accessor: SecretString,
+    /// SecretID TTL in seconds.
+    #[serde(default)]
+    pub secret_id_ttl: u64,
+    /// SecretID use count limit.
+    #[serde(default)]
+    pub secret_id_num_uses: u64,
+}
+
+impl core::fmt::Debug for AppRoleSecretId {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("AppRoleSecretId")
+            .field("secret_id", &"<redacted>")
+            .field("secret_id_accessor", &"<redacted>")
+            .field("secret_id_ttl", &self.secret_id_ttl)
+            .field("secret_id_num_uses", &self.secret_id_num_uses)
+            .finish()
+    }
+}
+
+/// SecretID metadata returned by lookup endpoints.
+#[derive(Clone, Deserialize)]
+pub struct AppRoleSecretIdInfo {
+    /// CIDRs allowed to use this SecretID.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub cidr_list: Vec<String>,
+    /// SecretID creation timestamp.
+    #[serde(default)]
+    pub creation_time: Option<String>,
+    /// SecretID expiration timestamp.
+    #[serde(default)]
+    pub expiration_time: Option<String>,
+    /// Last update timestamp.
+    #[serde(default)]
+    pub last_updated_time: Option<String>,
+    /// Metadata attached to the SecretID.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_string_map_or_default"
+    )]
+    pub metadata: BTreeMap<String, String>,
+    /// SecretID accessor. Treat as secret material.
+    #[serde(default)]
+    pub secret_id_accessor: Option<SecretString>,
+    /// SecretID use count limit.
+    #[serde(default)]
+    pub secret_id_num_uses: u64,
+    /// SecretID TTL in seconds.
+    #[serde(default)]
+    pub secret_id_ttl: u64,
+    /// CIDRs allowed to use tokens generated from this SecretID.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub token_bound_cidrs: Vec<String>,
+}
+
+impl core::fmt::Debug for AppRoleSecretIdInfo {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("AppRoleSecretIdInfo")
+            .field("cidr_list", &self.cidr_list)
+            .field("creation_time", &self.creation_time)
+            .field("expiration_time", &self.expiration_time)
+            .field("last_updated_time", &self.last_updated_time)
+            .field("metadata", &self.metadata)
+            .field(
+                "secret_id_accessor",
+                &self.secret_id_accessor.as_ref().map(|_| "<redacted>"),
+            )
+            .field("secret_id_num_uses", &self.secret_id_num_uses)
+            .field("secret_id_ttl", &self.secret_id_ttl)
+            .field("token_bound_cidrs", &self.token_bound_cidrs)
+            .finish()
+    }
+}
+
+/// SecretID accessor list.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct AppRoleSecretIdAccessorList {
+    /// SecretID accessors. Treat returned values as sensitive.
+    #[serde(
+        default,
+        deserialize_with = "crate::response::deserialize_bounded_secret_string_vec"
+    )]
+    pub keys: Vec<SecretString>,
 }
 
 /// Metadata returned after a successful login.
@@ -60,6 +406,21 @@ struct LoginAuth {
     renewable: bool,
 }
 
+#[derive(Serialize)]
+struct RoleIdRequest<'a> {
+    role_id: &'a str,
+}
+
+#[derive(Serialize)]
+struct SecretIdLookupRequest<'a> {
+    secret_id: &'a str,
+}
+
+#[derive(Serialize)]
+struct SecretIdAccessorLookupRequest<'a> {
+    secret_id_accessor: &'a str,
+}
+
 impl Client<Unauthenticated> {
     /// Uses the AppRole auth method mounted at `auth/approle`.
     pub fn approle(&self) -> Result<AppRole<'_>> {
@@ -90,6 +451,21 @@ impl Client<Unauthenticated> {
             .ok_or(Error::MissingField("auth"))?;
         let (token, metadata) = split_login_auth(response);
         Ok((self.try_with_token(token)?, metadata))
+    }
+}
+
+impl Client<Authenticated> {
+    /// Administers the AppRole auth method mounted at `auth/approle`.
+    pub fn approle_admin(&self) -> Result<AppRoleAdmin<'_>> {
+        self.approle_admin_at("approle")
+    }
+
+    /// Administers the AppRole auth method mounted at `auth/{mount}`.
+    pub fn approle_admin_at(&self, mount: impl Into<String>) -> Result<AppRoleAdmin<'_>> {
+        Ok(AppRoleAdmin {
+            client: self,
+            mount: validate_mount_path(&mount.into())?.join("/"),
+        })
     }
 }
 
@@ -131,6 +507,257 @@ impl AppRole<'_> {
     }
 }
 
+impl AppRoleAdmin<'_> {
+    /// Lists AppRole role names.
+    pub async fn list_roles(&self) -> Result<AppRoleRoleList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let envelope: ResponseEnvelope<AppRoleRoleList> = self
+            .client
+            .request_json(
+                method,
+                &format!("auth/{}/role", self.mount),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Creates or updates an AppRole role.
+    pub async fn write_role(&self, name: &str, role: &AppRoleRoleRequest) -> Result<Empty> {
+        let name = validate_mount_path(name)?.join("/");
+        self.client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/role/{name}", self.mount),
+                Some(role),
+            )
+            .await
+    }
+
+    /// Reads an AppRole role.
+    pub async fn read_role(&self, name: &str) -> Result<AppRoleRoleRequest> {
+        let name = validate_mount_path(name)?.join("/");
+        let envelope: ResponseEnvelope<AppRoleRoleRequest> = self
+            .client
+            .request_json(
+                Method::GET,
+                &format!("auth/{}/role/{name}", self.mount),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Deletes an AppRole role.
+    pub async fn delete_role(&self, name: &str) -> Result<Empty> {
+        let name = validate_mount_path(name)?.join("/");
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &format!("auth/{}/role/{name}", self.mount),
+                Option::<&Empty>::None,
+                &[reqwest::StatusCode::OK, reqwest::StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Reads the RoleID for an AppRole role.
+    pub async fn read_role_id(&self, name: &str) -> Result<AppRoleRoleId> {
+        let name = validate_mount_path(name)?.join("/");
+        let envelope: ResponseEnvelope<AppRoleRoleId> = self
+            .client
+            .request_json(
+                Method::GET,
+                &format!("auth/{}/role/{name}/role-id", self.mount),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Updates the RoleID for an AppRole role.
+    pub async fn write_role_id(&self, name: &str, role_id: &SecretString) -> Result<AppRoleRoleId> {
+        let name = validate_mount_path(name)?.join("/");
+        let request = RoleIdRequest {
+            role_id: role_id.expose_secret(),
+        };
+        let envelope: ResponseEnvelope<AppRoleRoleId> = self
+            .client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/role/{name}/role-id", self.mount),
+                Some(&request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Generates a new SecretID for an AppRole role.
+    pub async fn generate_secret_id(
+        &self,
+        role_name: &str,
+        request: &AppRoleSecretIdRequest,
+    ) -> Result<AppRoleSecretId> {
+        let role_name = validate_mount_path(role_name)?.join("/");
+        let envelope: ResponseEnvelope<AppRoleSecretId> = self
+            .client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/role/{role_name}/secret-id", self.mount),
+                Some(request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists SecretID accessors for an AppRole role.
+    pub async fn list_secret_id_accessors(
+        &self,
+        role_name: &str,
+    ) -> Result<AppRoleSecretIdAccessorList> {
+        let role_name = validate_mount_path(role_name)?.join("/");
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let envelope: ResponseEnvelope<AppRoleSecretIdAccessorList> = self
+            .client
+            .request_json(
+                method,
+                &format!("auth/{}/role/{role_name}/secret-id", self.mount),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Looks up SecretID metadata using the SecretID value.
+    pub async fn lookup_secret_id(
+        &self,
+        role_name: &str,
+        secret_id: &SecretString,
+    ) -> Result<AppRoleSecretIdInfo> {
+        let role_name = validate_mount_path(role_name)?.join("/");
+        let request = SecretIdLookupRequest {
+            secret_id: secret_id.expose_secret(),
+        };
+        let envelope: ResponseEnvelope<AppRoleSecretIdInfo> = self
+            .client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/role/{role_name}/secret-id/lookup", self.mount),
+                Some(&request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Destroys a SecretID using the SecretID value.
+    pub async fn destroy_secret_id(
+        &self,
+        role_name: &str,
+        secret_id: &SecretString,
+    ) -> Result<Empty> {
+        let role_name = validate_mount_path(role_name)?.join("/");
+        let request = SecretIdLookupRequest {
+            secret_id: secret_id.expose_secret(),
+        };
+        self.client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/role/{role_name}/secret-id/destroy", self.mount),
+                Some(&request),
+            )
+            .await
+    }
+
+    /// Looks up SecretID metadata using the SecretID accessor.
+    pub async fn lookup_secret_id_accessor(
+        &self,
+        role_name: &str,
+        accessor: &SecretString,
+    ) -> Result<AppRoleSecretIdInfo> {
+        let role_name = validate_mount_path(role_name)?.join("/");
+        let request = SecretIdAccessorLookupRequest {
+            secret_id_accessor: accessor.expose_secret(),
+        };
+        let envelope: ResponseEnvelope<AppRoleSecretIdInfo> = self
+            .client
+            .request_json(
+                Method::POST,
+                &format!(
+                    "auth/{}/role/{role_name}/secret-id-accessor/lookup",
+                    self.mount
+                ),
+                Some(&request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Destroys a SecretID using the SecretID accessor.
+    pub async fn destroy_secret_id_accessor(
+        &self,
+        role_name: &str,
+        accessor: &SecretString,
+    ) -> Result<Empty> {
+        let role_name = validate_mount_path(role_name)?.join("/");
+        let request = SecretIdAccessorLookupRequest {
+            secret_id_accessor: accessor.expose_secret(),
+        };
+        self.client
+            .request_json(
+                Method::POST,
+                &format!(
+                    "auth/{}/role/{role_name}/secret-id-accessor/destroy",
+                    self.mount
+                ),
+                Some(&request),
+            )
+            .await
+    }
+
+    /// Assigns a custom SecretID to an AppRole role.
+    pub async fn create_custom_secret_id(
+        &self,
+        role_name: &str,
+        request: &AppRoleCustomSecretIdRequest,
+    ) -> Result<AppRoleSecretId> {
+        let role_name = validate_mount_path(role_name)?.join("/");
+        let payload = AppRoleCustomSecretIdPayload {
+            secret_id: request.secret_id.expose_secret(),
+            metadata: request.metadata.as_deref(),
+            cidr_list: request.cidr_list.iter().map(String::as_str).collect(),
+            token_bound_cidrs: request
+                .token_bound_cidrs
+                .iter()
+                .map(String::as_str)
+                .collect(),
+            num_uses: request.num_uses,
+            ttl: request.ttl.as_deref(),
+        };
+        let envelope: ResponseEnvelope<AppRoleSecretId> = self
+            .client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/role/{role_name}/custom-secret-id", self.mount),
+                Some(&payload),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Starts AppRole SecretID tidy maintenance.
+    pub async fn tidy_secret_ids(&self) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/tidy/secret-id", self.mount),
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+}
+
 fn split_login_auth(auth: LoginAuth) -> (SecretString, LoginMetadata) {
     let LoginAuth {
         client_token,
@@ -154,6 +781,27 @@ where
 {
     let value = String::deserialize(deserializer)?;
     Ok(SecretString::from(value))
+}
+
+fn deserialize_optional_string_or_u64<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Value {
+        String(String),
+        U64(u64),
+    }
+
+    Ok(
+        Option::<Value>::deserialize(deserializer)?.map(|value| match value {
+            Value::String(value) => value,
+            Value::U64(value) => value.to_string(),
+        }),
+    )
 }
 
 #[cfg(test)]

@@ -3031,6 +3031,255 @@ async fn pki_issuer_and_key_lifecycle_paths_are_documented() {
 }
 
 #[tokio::test]
+async fn approle_admin_role_and_secret_id_lifecycle_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..14 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let body = match index {
+                0 => {
+                    assert!(request.starts_with("LIST /v1/auth/approle/role HTTP/1.1"));
+                    r#"{"data":{"keys":["web"]}}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/auth/approle/role/web HTTP/1.1"));
+                    assert!(request.contains(r#""token_policies":["web"]"#));
+                    assert!(request.contains(r#""token_ttl":"10m""#));
+                    "{}".to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/auth/approle/role/web HTTP/1.1"));
+                    r#"{"data":{"token_ttl":600,"token_policies":["web"],"bind_secret_id":true}}"#
+                        .to_owned()
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/auth/approle/role/web/role-id HTTP/1.1"));
+                    format!(r#"{{"data":{{"role_id":"{}{}"}}}}"#, "role-", "id")
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/auth/approle/role/web/role-id HTTP/1.1"));
+                    assert!(request.contains(&format!(r#""role_id":"{}{}""#, "custom-", "role")));
+                    format!(r#"{{"data":{{"role_id":"{}{}"}}}}"#, "custom-", "role")
+                }
+                5 => {
+                    assert!(
+                        request.starts_with("POST /v1/auth/approle/role/web/secret-id HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""metadata":"{\"env\":\"dev\"}""#));
+                    format!(
+                        r#"{{"data":{{"secret_id":"{}{}","secret_id_accessor":"{}{}","secret_id_ttl":600,"secret_id_num_uses":1}}}}"#,
+                        "secret-", "id", "accessor-", "id"
+                    )
+                }
+                6 => {
+                    assert!(
+                        request.starts_with("LIST /v1/auth/approle/role/web/secret-id HTTP/1.1")
+                    );
+                    format!(r#"{{"data":{{"keys":["{}{}"]}}}}"#, "accessor-", "id")
+                }
+                7 => {
+                    assert!(
+                        request.starts_with(
+                            "POST /v1/auth/approle/role/web/secret-id/lookup HTTP/1.1"
+                        )
+                    );
+                    assert!(request.contains(&format!(r#""secret_id":"{}{}""#, "secret-", "id")));
+                    format!(
+                        r#"{{"data":{{"cidr_list":[],"metadata":{{"env":"dev"}},"secret_id_accessor":"{}{}","secret_id_num_uses":1,"secret_id_ttl":600,"token_bound_cidrs":[]}}}}"#,
+                        "accessor-", "id"
+                    )
+                }
+                8 => {
+                    assert!(
+                        request.starts_with(
+                            "POST /v1/auth/approle/role/web/secret-id/destroy HTTP/1.1"
+                        )
+                    );
+                    assert!(request.contains(&format!(r#""secret_id":"{}{}""#, "secret-", "id")));
+                    "{}".to_owned()
+                }
+                9 => {
+                    assert!(request.starts_with(
+                        "POST /v1/auth/approle/role/web/secret-id-accessor/lookup HTTP/1.1"
+                    ));
+                    assert!(request.contains(&format!(
+                        r#""secret_id_accessor":"{}{}""#,
+                        "accessor-", "id"
+                    )));
+                    format!(
+                        r#"{{"data":{{"metadata":{{}},"secret_id_accessor":"{}{}","secret_id_num_uses":1,"secret_id_ttl":600}}}}"#,
+                        "accessor-", "id"
+                    )
+                }
+                10 => {
+                    assert!(request.starts_with(
+                        "POST /v1/auth/approle/role/web/secret-id-accessor/destroy HTTP/1.1"
+                    ));
+                    assert!(request.contains(&format!(
+                        r#""secret_id_accessor":"{}{}""#,
+                        "accessor-", "id"
+                    )));
+                    "{}".to_owned()
+                }
+                11 => {
+                    assert!(
+                        request.starts_with(
+                            "POST /v1/auth/approle/role/web/custom-secret-id HTTP/1.1"
+                        )
+                    );
+                    assert!(
+                        request.contains(&format!(r#""secret_id":"{}{}""#, "custom-", "secret"))
+                    );
+                    format!(
+                        r#"{{"data":{{"secret_id":"{}{}","secret_id_accessor":"{}{}","secret_id_ttl":0,"secret_id_num_uses":0}}}}"#,
+                        "custom-", "secret", "custom-", "accessor"
+                    )
+                }
+                12 => {
+                    assert!(request.starts_with("POST /v1/auth/approle/tidy/secret-id HTTP/1.1"));
+                    r#"{"warnings":["tidy started"]}"#.to_owned()
+                }
+                13 => {
+                    assert!(request.starts_with("DELETE /v1/auth/approle/role/web HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(test_secret(&["root-", "token"])))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let admin = client
+        .approle_admin()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let roles = admin
+        .list_roles()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["web"]);
+
+    let role = openbao::auth::approle::AppRoleRoleRequest::new()
+        .with_token_policy("web")
+        .with_token_ttl("10m")
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .write_role("web", &role)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let role = admin
+        .read_role("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role.token_ttl.as_deref(), Some("600"));
+    assert_eq!(role.token_policies, ["web"]);
+
+    let role_id = admin
+        .read_role_id("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role_id.role_id.expose_secret(), &["role-", "id"].concat());
+    assert!(!format!("{role_id:?}").contains(&["role-", "id"].concat()));
+
+    let role_id = admin
+        .write_role_id("web", &test_secret(&["custom-", "role"]))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        role_id.role_id.expose_secret(),
+        &["custom-", "role"].concat()
+    );
+
+    let secret_request = openbao::auth::approle::AppRoleSecretIdRequest {
+        metadata: Some(r#"{"env":"dev"}"#.to_owned()),
+        ..Default::default()
+    };
+    let secret = admin
+        .generate_secret_id("web", &secret_request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        secret.secret_id.expose_secret(),
+        &["secret-", "id"].concat()
+    );
+    assert!(!format!("{secret:?}").contains(&["secret-", "id"].concat()));
+
+    let accessors = admin
+        .list_secret_id_accessors("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        accessors.keys[0].expose_secret(),
+        &["accessor-", "id"].concat()
+    );
+
+    let info = admin
+        .lookup_secret_id("web", &test_secret(&["secret-", "id"]))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(info.metadata.get("env").map(String::as_str), Some("dev"));
+    assert!(!format!("{info:?}").contains(&["accessor-", "id"].concat()));
+
+    admin
+        .destroy_secret_id("web", &test_secret(&["secret-", "id"]))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let _info = admin
+        .lookup_secret_id_accessor("web", &test_secret(&["accessor-", "id"]))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .destroy_secret_id_accessor("web", &test_secret(&["accessor-", "id"]))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let custom = openbao::auth::approle::AppRoleCustomSecretIdRequest::new(test_secret(&[
+        "custom-", "secret",
+    ]));
+    let custom = admin
+        .create_custom_secret_id("web", &custom)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        custom.secret_id.expose_secret(),
+        &["custom-", "secret"].concat()
+    );
+
+    admin
+        .tidy_secret_ids()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_role("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn pki_acme_config_and_eab_paths_are_documented() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

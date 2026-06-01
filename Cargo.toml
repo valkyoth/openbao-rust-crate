@@ -1,6 +1,6 @@
 [package]
 name = "openbao"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -89,7 +89,7 @@ native-tls = ["reqwest/native-tls"]
 native-tls-acknowledged = []
 
 [dependencies]
-base64-ng = { version = "1.0.5", default-features = false, features = ["alloc"], optional = true }
+base64-ng = { version = "1.0.6", default-features = false, features = ["alloc"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }

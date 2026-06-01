@@ -44,9 +44,9 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
 name = "base64-ng"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1572fa1efbbac7a3fe818a6473ebdad8016843fb674fca86bfb45b66b5b0b204"
+checksum = "8452b0c98385f31f08318109d6e06a859f89e0c5e38aad6103f095443b063052"
 
 [[package]]
 name = "bitflags"
@@ -695,7 +695,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "openbao"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "base64-ng",
  "reqwest",

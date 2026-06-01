@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## 0.7.0 - Unreleased
+
+### Added
+
+- AppRole role and SecretID administration helpers for role
+  create/read/list/delete, RoleID read/update, SecretID generate/list/lookup,
+  SecretID destroy by value or accessor, custom SecretID assignment, and
+  SecretID tidy.
+
 ## 0.6.0 - 2026-05-31
 
 ### Added

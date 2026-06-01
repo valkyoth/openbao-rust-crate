@@ -34,11 +34,13 @@ check_file release-notes/RELEASE_NOTES_0.3.0.md
 check_file release-notes/RELEASE_NOTES_0.4.0.md
 check_file release-notes/RELEASE_NOTES_0.5.0.md
 check_file release-notes/RELEASE_NOTES_0.6.0.md
+check_file release-notes/RELEASE_NOTES_0.7.0.md
 check_file scripts/release_0_6_gate.sh
+check_file scripts/release_0_7_gate.sh
 check_file .github/workflows/ci.yml
 
 check_grep 'name = "openbao"' Cargo.toml
-check_grep 'version = "0.6.0"' Cargo.toml
+check_grep 'version = "0.7.0"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
@@ -49,8 +51,9 @@ check_grep '0.3.0 - Transit And Audit' docs/RELEASE_PLAN.md
 check_grep '0.4.0 - PKI, Kubernetes Auth, TLS Cert Auth' docs/RELEASE_PLAN.md
 check_grep '0.5.0 - Database, JWT/OIDC, Userpass' docs/RELEASE_PLAN.md
 check_grep '0.6.0 - SSH, TOTP, Production Init/Unseal Safety' docs/RELEASE_PLAN.md
+check_grep '0.7.0 - Remaining Secret Engines And Identity' docs/RELEASE_PLAN.md
 check_grep '1.0.0 - First Stable Release' docs/RELEASE_PLAN.md
-check_grep 'Pentest report:' release-notes/RELEASE_NOTES_0.6.0.md
+check_grep 'Pentest report:' release-notes/RELEASE_NOTES_0.7.0.md
 
 if git grep -l "base64-ng contributors" -- ':!scripts/validate-release-metadata.sh' >/dev/null 2>&1; then
   echo "stale copied license metadata found" >&2
