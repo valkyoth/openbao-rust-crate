@@ -92,6 +92,18 @@ impl UserpassUserRequest {
         self.token_policies.push(policy.into());
         self
     }
+
+    /// Adds a generated-token CIDR restriction.
+    pub fn with_token_bound_cidr(mut self, cidr: impl Into<String>) -> Result<Self> {
+        let cidr = cidr.into();
+        crate::validation::validate_cidr(&cidr, "userpass token_bound_cidrs")?;
+        self.token_bound_cidrs.push(cidr);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        crate::validation::validate_cidr_list(&self.token_bound_cidrs, "userpass token_bound_cidrs")
+    }
 }
 
 impl core::fmt::Debug for UserpassUserRequest {
@@ -292,6 +304,7 @@ impl UserpassAuth<'_> {
 impl UserpassAuthAdmin<'_> {
     /// Creates or updates a userpass user.
     pub async fn write_user(&self, username: &str, user: &UserpassUserRequest) -> Result<Empty> {
+        user.validate()?;
         let username = validate_username(username)?;
         let payload = UserpassUserPayload {
             password: user.password.expose_secret(),

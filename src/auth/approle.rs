@@ -130,6 +130,14 @@ impl AppRoleRoleRequest {
         self.secret_id_ttl = Some(ttl);
         Ok(self)
     }
+
+    fn validate(&self) -> Result<()> {
+        crate::validation::validate_cidr_list(
+            &self.secret_id_bound_cidrs,
+            "approle secret_id_bound_cidrs",
+        )?;
+        crate::validation::validate_cidr_list(&self.token_bound_cidrs, "approle token_bound_cidrs")
+    }
 }
 
 /// AppRole role list.
@@ -195,6 +203,48 @@ impl AppRoleSecretIdRequest {
         self.ttl = Some(ttl);
         Ok(self)
     }
+
+    /// Sets the SecretID metadata JSON object string.
+    ///
+    /// OpenBao emits this metadata to audit logs. The value must be a JSON
+    /// object string such as `{"service":"payments"}`.
+    pub fn with_metadata(mut self, metadata: impl Into<String>) -> Result<Self> {
+        let metadata = metadata.into();
+        crate::validation::validate_json_object_string(&metadata, "approle secret_id metadata")?;
+        self.metadata = Some(metadata);
+        Ok(self)
+    }
+
+    /// Adds a CIDR restriction for this SecretID.
+    pub fn with_cidr(mut self, cidr: impl Into<String>) -> Result<Self> {
+        let cidr = cidr.into();
+        crate::validation::validate_cidr(&cidr, "approle secret_id cidr_list")?;
+        self.cidr_list.push(cidr);
+        Ok(self)
+    }
+
+    /// Adds a CIDR restriction for tokens generated from this SecretID.
+    pub fn with_token_bound_cidr(mut self, cidr: impl Into<String>) -> Result<Self> {
+        let cidr = cidr.into();
+        crate::validation::validate_cidr(&cidr, "approle secret_id token_bound_cidrs")?;
+        self.token_bound_cidrs.push(cidr);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(metadata) = &self.metadata {
+            crate::validation::validate_json_object_string(metadata, "approle secret_id metadata")?;
+        }
+        crate::validation::validate_cidr_list(&self.cidr_list, "approle secret_id cidr_list")?;
+        crate::validation::validate_cidr_list(
+            &self.token_bound_cidrs,
+            "approle secret_id token_bound_cidrs",
+        )?;
+        if let Some(ttl) = &self.ttl {
+            crate::validation::validate_duration_parameter(ttl, "approle secret_id ttl")?;
+        }
+        Ok(())
+    }
 }
 
 /// Custom SecretID assignment request.
@@ -247,6 +297,65 @@ impl AppRoleCustomSecretIdRequest {
             secret_id,
             ..Self::default()
         }
+    }
+
+    /// Sets the custom SecretID metadata JSON object string.
+    ///
+    /// OpenBao emits this metadata to audit logs. The value must be a JSON
+    /// object string such as `{"service":"payments"}`.
+    pub fn with_metadata(mut self, metadata: impl Into<String>) -> Result<Self> {
+        let metadata = metadata.into();
+        crate::validation::validate_json_object_string(
+            &metadata,
+            "approle custom secret_id metadata",
+        )?;
+        self.metadata = Some(metadata);
+        Ok(self)
+    }
+
+    /// Adds a CIDR restriction for this custom SecretID.
+    pub fn with_cidr(mut self, cidr: impl Into<String>) -> Result<Self> {
+        let cidr = cidr.into();
+        crate::validation::validate_cidr(&cidr, "approle custom secret_id cidr_list")?;
+        self.cidr_list.push(cidr);
+        Ok(self)
+    }
+
+    /// Adds a CIDR restriction for tokens generated from this custom SecretID.
+    pub fn with_token_bound_cidr(mut self, cidr: impl Into<String>) -> Result<Self> {
+        let cidr = cidr.into();
+        crate::validation::validate_cidr(&cidr, "approle custom secret_id token_bound_cidrs")?;
+        self.token_bound_cidrs.push(cidr);
+        Ok(self)
+    }
+
+    /// Sets the custom SecretID TTL.
+    pub fn with_ttl(mut self, ttl: impl Into<String>) -> Result<Self> {
+        let ttl = ttl.into();
+        crate::validation::validate_duration_parameter(&ttl, "approle custom secret_id ttl")?;
+        self.ttl = Some(ttl);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(metadata) = &self.metadata {
+            crate::validation::validate_json_object_string(
+                metadata,
+                "approle custom secret_id metadata",
+            )?;
+        }
+        crate::validation::validate_cidr_list(
+            &self.cidr_list,
+            "approle custom secret_id cidr_list",
+        )?;
+        crate::validation::validate_cidr_list(
+            &self.token_bound_cidrs,
+            "approle custom secret_id token_bound_cidrs",
+        )?;
+        if let Some(ttl) = &self.ttl {
+            crate::validation::validate_duration_parameter(ttl, "approle custom secret_id ttl")?;
+        }
+        Ok(())
     }
 }
 
@@ -525,6 +634,7 @@ impl AppRoleAdmin<'_> {
 
     /// Creates or updates an AppRole role.
     pub async fn write_role(&self, name: &str, role: &AppRoleRoleRequest) -> Result<Empty> {
+        role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
             .request_json(
@@ -599,6 +709,7 @@ impl AppRoleAdmin<'_> {
         role_name: &str,
         request: &AppRoleSecretIdRequest,
     ) -> Result<AppRoleSecretId> {
+        request.validate()?;
         let role_name = validate_mount_path(role_name)?.join("/");
         let envelope: ResponseEnvelope<AppRoleSecretId> = self
             .client
@@ -722,6 +833,7 @@ impl AppRoleAdmin<'_> {
         role_name: &str,
         request: &AppRoleCustomSecretIdRequest,
     ) -> Result<AppRoleSecretId> {
+        request.validate()?;
         let role_name = validate_mount_path(role_name)?.join("/");
         let payload = AppRoleCustomSecretIdPayload {
             secret_id: request.secret_id.expose_secret(),
@@ -808,9 +920,11 @@ where
 mod tests {
     #![allow(clippy::panic)]
 
-    use secrecy::ExposeSecret;
+    use secrecy::{ExposeSecret, SecretString};
 
-    use super::LoginResponse;
+    use super::{
+        AppRoleCustomSecretIdRequest, AppRoleRoleRequest, AppRoleSecretIdRequest, LoginResponse,
+    };
 
     #[test]
     fn login_auth_deserializes_secrets_into_secret_strings() {
@@ -836,5 +950,34 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn approle_requests_validate_cidrs_and_metadata() {
+        let role = AppRoleRoleRequest {
+            token_bound_cidrs: vec!["192.0.2.0/33".to_owned()],
+            ..AppRoleRoleRequest::new()
+        };
+        assert!(role.validate().is_err());
+
+        let request = AppRoleSecretIdRequest::new()
+            .with_metadata(r#"{"service":"api"}"#)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_cidr("192.0.2.0/24")
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_token_bound_cidr("2001:db8::/32")
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(request.validate().is_ok());
+        assert!(
+            AppRoleSecretIdRequest::new()
+                .with_metadata("[\"not-object\"]")
+                .is_err()
+        );
+
+        let custom = AppRoleCustomSecretIdRequest::new(SecretString::from("secret-id"))
+            .with_cidr("bad-cidr")
+            .err()
+            .unwrap_or_else(|| panic!("invalid custom SecretID CIDR was accepted"));
+        assert!(custom.to_string().contains("cidr"));
     }
 }

@@ -97,6 +97,9 @@ rustls-tls = ["reqwest/rustls"]
 native-tls = ["reqwest/native-tls"]
 # Must be enabled together with native-tls to confirm the transport stack was audited.
 native-tls-acknowledged = []
+# Must be enabled to allow LDAP configs that disable LDAP TLS certificate
+# verification. This is intended only for audited legacy development setups.
+insecure-ldap-tls-acknowledged = []
 
 [dependencies]
 base64-ng = { version = "1.0.6", default-features = false, features = ["alloc"], optional = true }

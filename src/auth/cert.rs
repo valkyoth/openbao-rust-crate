@@ -138,6 +138,15 @@ pub struct CertRole {
     pub token_type: Option<String>,
 }
 
+impl CertRole {
+    fn validate(&self) -> Result<()> {
+        crate::validation::validate_cidr_list(
+            &self.token_bound_cidrs,
+            "cert auth token_bound_cidrs",
+        )
+    }
+}
+
 /// Certificate role list.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct CertRoleList {
@@ -330,6 +339,7 @@ impl CertAuthAdmin<'_> {
 
     /// Creates or updates a CA certificate role.
     pub async fn write_role(&self, name: &str, role: &CertRole) -> Result<Empty> {
+        role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
             .request_json(

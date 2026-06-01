@@ -26,6 +26,19 @@ All notable changes to this project are documented here.
 - Typed custom plugin wrapper pattern documentation for plugin-specific APIs
   built on `Client::request_json`.
 
+### Security
+
+- LDAP `insecure_tls=true` now requires the
+  `insecure-ldap-tls-acknowledged` Cargo feature before request dispatch.
+- AppRole, Userpass, JWT, and TLS certificate auth CIDR fields are validated
+  locally before writes.
+- AppRole SecretID metadata and RabbitMQ role permission JSON strings are
+  validated as JSON object strings before request dispatch.
+- API error sanitization now truncates by UTF-8 byte length rather than Unicode
+  scalar count.
+- AppRole bootstrap docs now call out read-compare-write concurrency behavior
+  and the need to serialize competing bootstrap runs externally.
+
 ## 0.6.0 - 2026-05-31
 
 ### Added

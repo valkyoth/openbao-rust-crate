@@ -2190,7 +2190,8 @@ async fn rabbitmq_config_role_and_credentials_use_documented_paths() {
             "worker",
             &openbao::secrets::rabbitmq::RabbitMqRole::new()
                 .with_tags("monitoring")
-                .with_vhosts(r#"{"/":{"write":".*","read":".*"}}"#),
+                .with_vhosts(r#"{"/":{"write":".*","read":".*"}}"#)
+                .unwrap_or_else(|error| panic!("{error}")),
         )
         .await
         .unwrap_or_else(|error| panic!("{error}"));

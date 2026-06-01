@@ -50,11 +50,20 @@
   secret-aware and redacted from debug output.
 - RabbitMQ connection URIs, administrator passwords, generated passwords, and
   lease IDs are secret-aware and redacted from debug output.
+- RabbitMQ role `vhosts` and `vhost_topics` permission strings are validated as
+  JSON objects before request dispatch.
 - Identity returned lists and metadata maps are bounded during deserialization,
   and request collection sizes are validated before dispatch.
 - LDAP bind passwords, client TLS private keys, static passwords, dynamic
   passwords, library checkout passwords, and lease IDs are secret-aware and
   redacted from debug output.
+- LDAP configs that set `insecure_tls=true` require the
+  `insecure-ldap-tls-acknowledged` Cargo feature.
+- AppRole, Userpass, JWT, and TLS certificate auth CIDR fields are validated
+  locally before writes, and AppRole SecretID metadata is checked as a JSON
+  object string.
+- API error message sanitization is byte-bounded, and AppRole bootstrap docs
+  document the unavoidable read-compare-write race for concurrent runs.
 - Custom plugin guidance recommends typed wrappers around `request_json`, path
   validation, `SecretString` for secret-bearing fields, hand-written redacted
   `Debug`, and tests for documented methods and paths.

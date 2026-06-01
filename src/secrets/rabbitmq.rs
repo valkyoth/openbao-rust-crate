@@ -144,17 +144,27 @@ impl RabbitMqRole {
     }
 
     /// Sets the virtual-host permission JSON string.
-    #[must_use]
-    pub fn with_vhosts(mut self, vhosts: impl Into<String>) -> Self {
+    pub fn with_vhosts(mut self, vhosts: impl Into<String>) -> Result<Self> {
         self.vhosts = Some(vhosts.into());
-        self
+        self.validate()?;
+        Ok(self)
     }
 
     /// Sets the virtual-host topic permission JSON string.
-    #[must_use]
-    pub fn with_vhost_topics(mut self, vhost_topics: impl Into<String>) -> Self {
+    pub fn with_vhost_topics(mut self, vhost_topics: impl Into<String>) -> Result<Self> {
         self.vhost_topics = Some(vhost_topics.into());
-        self
+        self.validate()?;
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(vhosts) = &self.vhosts {
+            crate::validation::validate_json_object_string(vhosts, "rabbitmq vhosts")?;
+        }
+        if let Some(vhost_topics) = &self.vhost_topics {
+            crate::validation::validate_json_object_string(vhost_topics, "rabbitmq vhost_topics")?;
+        }
+        Ok(())
     }
 }
 
@@ -241,6 +251,7 @@ impl RabbitMq<'_> {
 
     /// Creates or updates a RabbitMQ role.
     pub async fn write_role(&self, name: &str, role: &RabbitMqRole) -> Result<Empty> {
+        role.validate()?;
         self.client
             .request_json(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
@@ -374,7 +385,7 @@ mod tests {
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::{RabbitMqConnectionConfig, RabbitMqCredentials, RabbitMqRoleList};
+    use super::{RabbitMqConnectionConfig, RabbitMqCredentials, RabbitMqRole, RabbitMqRoleList};
 
     #[test]
     fn rabbitmq_paths_are_validated() {
@@ -435,5 +446,16 @@ mod tests {
         assert!(credentials_debug.contains("generated-user"));
         assert!(!credentials_debug.contains(credentials.password.expose_secret()));
         assert!(!credentials_debug.contains(credentials.lease_id.expose_secret()));
+    }
+
+    #[test]
+    fn rabbitmq_role_json_fields_are_validated() {
+        assert!(
+            RabbitMqRole::new()
+                .with_vhosts(r#"{"/":{"write":".*","read":".*"}}"#)
+                .is_ok()
+        );
+        assert!(RabbitMqRole::new().with_vhosts("not-json").is_err());
+        assert!(RabbitMqRole::new().with_vhost_topics(r#"[]"#).is_err());
     }
 }

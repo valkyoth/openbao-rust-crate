@@ -364,6 +364,10 @@ impl AdminBootstrap {
 
     /// Ensures an AppRole role exists and matches the desired fields supplied
     /// in `request`.
+    ///
+    /// This uses read-compare-write convergence because OpenBao does not expose
+    /// CAS for AppRole role writes. Serialize concurrent bootstrap runs
+    /// externally when role configuration integrity is safety-critical.
     #[cfg(feature = "approle")]
     pub fn ensure_approle_role(
         &mut self,
@@ -385,6 +389,9 @@ impl AdminBootstrap {
     /// SecretID generation always creates a new credential. This method is
     /// explicit so callers can separate idempotent state convergence from
     /// credential handoff.
+    ///
+    /// Serialize concurrent bootstrap runs externally if the same AppRole role
+    /// is also being converged or modified by another operator or pipeline.
     #[cfg(feature = "approle")]
     pub fn issue_approle_secret_id(
         &mut self,

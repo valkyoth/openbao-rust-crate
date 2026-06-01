@@ -139,11 +139,17 @@ impl Error {
 }
 
 fn sanitize_api_error(error: &str) -> String {
-    error
-        .chars()
-        .filter(|character| !character.is_control())
-        .take(512)
-        .collect()
+    const MAX_API_ERROR_BYTES: usize = 512;
+
+    let mut sanitized = String::new();
+    for character in error.chars().filter(|character| !character.is_control()) {
+        let next_len = sanitized.len() + character.len_utf8();
+        if next_len > MAX_API_ERROR_BYTES {
+            break;
+        }
+        sanitized.push(character);
+    }
+    sanitized
 }
 
 impl std::error::Error for Error {
@@ -165,7 +171,7 @@ impl From<reqwest::Error> for Error {
 mod tests {
     use reqwest::StatusCode;
 
-    use super::Error;
+    use super::{Error, sanitize_api_error};
 
     #[test]
     fn display_sanitizes_api_errors() {
@@ -178,6 +184,14 @@ mod tests {
         assert!(!message.contains('\n'));
         assert!(!message.contains('\r'));
         assert!(message.len() < 600);
+    }
+
+    #[test]
+    fn api_error_sanitizer_truncates_by_bytes() {
+        let sanitized = sanitize_api_error(&"💣".repeat(200));
+
+        assert!(sanitized.len() <= 512);
+        assert!(sanitized.is_char_boundary(sanitized.len()));
     }
 
     #[test]

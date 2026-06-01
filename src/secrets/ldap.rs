@@ -114,6 +114,12 @@ impl LdapConfig {
     }
 
     fn validate(&self) -> Result<()> {
+        #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
+        if self.insecure_tls == Some(true) {
+            return Err(crate::Error::InvalidParameter(
+                "ldap insecure_tls=true requires the insecure-ldap-tls-acknowledged Cargo feature because it disables LDAP TLS certificate verification".into(),
+            ));
+        }
         if let Some(value) = &self.connection_timeout {
             validate_duration_or_seconds(value, "LDAP connection_timeout", true)?;
         }
@@ -1145,5 +1151,14 @@ mod tests {
         }
         let set = LdapLibrarySet::new(names);
         assert!(set.validate().is_err());
+    }
+
+    #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
+    #[test]
+    fn ldap_insecure_tls_requires_acknowledgement_feature() {
+        let mut config = LdapConfig::new("cn=openbao", SecretString::from("bind-password"));
+        config.insecure_tls = Some(true);
+
+        assert!(config.validate().is_err());
     }
 }

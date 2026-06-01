@@ -290,6 +290,10 @@ impl JwtRole {
             ..Self::default()
         }
     }
+
+    fn validate(&self) -> Result<()> {
+        crate::validation::validate_cidr_list(&self.token_bound_cidrs, "jwt auth token_bound_cidrs")
+    }
 }
 
 /// JWT/OIDC role list.
@@ -518,6 +522,7 @@ impl JwtAuthAdmin<'_> {
 
     /// Creates or updates a JWT/OIDC auth role.
     pub async fn write_role(&self, name: &str, role: &JwtRole) -> Result<Empty> {
+        role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
             .request_json(
