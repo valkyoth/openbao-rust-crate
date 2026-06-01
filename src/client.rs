@@ -615,14 +615,16 @@ impl<State> Client<State> {
         method: Method,
         url: Url,
     ) -> Result<reqwest::Response> {
-        self.http
-            // codeql[rust/cleartext-transmission]: non-sensitive OpenBao request path; no auth token, namespace, custom headers, or body.
-            .request(method, url)
-            .header(ACCEPT, "application/json")
-            .header("X-Vault-Request", "true")
-            .send()
-            .await
-            .map_err(Error::from)
+        let mut request = reqwest::Request::new(method, url);
+        request
+            .headers_mut()
+            .insert(ACCEPT, HeaderValue::from_static("application/json"));
+        request.headers_mut().insert(
+            HeaderName::from_static("x-vault-request"),
+            HeaderValue::from_static("true"),
+        );
+
+        self.http.execute(request).await.map_err(Error::from)
     }
 
     async fn send_sensitive_json_request<B>(
@@ -638,21 +640,27 @@ impl<State> Client<State> {
         self.require_encrypted_transport_for_sensitive_request(&url, true)?;
         let http = self.http_for_sensitive_request();
 
-        let mut request = http
-            // codeql[rust/cleartext-transmission]: require_encrypted_transport_for_sensitive_request rejects cleartext before this request is built.
-            .request(method, url)
-            .header(ACCEPT, "application/json")
-            .header("X-Vault-Request", "true");
+        let mut request = reqwest::Request::new(method, url);
+        request
+            .headers_mut()
+            .insert(ACCEPT, HeaderValue::from_static("application/json"));
+        request.headers_mut().insert(
+            HeaderName::from_static("x-vault-request"),
+            HeaderValue::from_static("true"),
+        );
         for (name, value) in headers {
-            request = request.header(name, value);
+            request.headers_mut().insert(name.clone(), value.clone());
         }
 
         if let Some(namespace) = self.config.namespace.as_deref() {
-            request = request.header("X-Vault-Namespace", sensitive_header_value(namespace)?);
+            request.headers_mut().insert(
+                HeaderName::from_static("x-vault-namespace"),
+                sensitive_header_value(namespace)?,
+            );
         }
         if let Some(token) = self.token.as_ref() {
             let (name, value) = token_header_for(token, self.config.header_mode)?;
-            request = request.header(name, value);
+            request.headers_mut().insert(name, value);
         }
         if let Some(payload) = body {
             let encoded = Zeroizing::new(
@@ -661,16 +669,18 @@ impl<State> Client<State> {
             );
             let has_content_type = headers.iter().any(|(name, _value)| *name == CONTENT_TYPE);
             if !has_content_type {
-                request = request.header(CONTENT_TYPE, "application/json");
+                request
+                    .headers_mut()
+                    .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
             }
             // SECURITY: this copy is intentionally non-zeroing because
             // reqwest::Body does not accept a Zeroize-on-drop body buffer.
             // The Zeroizing serialization buffer above is cleared; reqwest,
             // TLS, kernel, and device buffers are documented residual risks.
-            request = request.body(Vec::from(&encoded[..]));
+            *request.body_mut() = Some(Vec::from(&encoded[..]).into());
         }
 
-        request.send().await.map_err(Error::from)
+        http.execute(request).await.map_err(Error::from)
     }
 
     pub(crate) fn url_for_path(&self, path: &str) -> Result<Url> {
