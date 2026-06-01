@@ -30,9 +30,8 @@
   and generated credential helpers, plus identity entity, group, entity-alias,
   and group-alias lifecycle helpers, plus LDAP config, root rotation, static
   roles/credentials, dynamic roles/credentials, and library check-out/check-in
-  helpers.
-- Remaining `0.7.0` planned work: typed custom plugin API pattern
-  documentation.
+  helpers, plus typed custom plugin wrapper pattern documentation.
+- Remaining `0.7.0` planned work: none.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -56,6 +55,9 @@
 - LDAP bind passwords, client TLS private keys, static passwords, dynamic
   passwords, library checkout passwords, and lease IDs are secret-aware and
   redacted from debug output.
+- Custom plugin guidance recommends typed wrappers around `request_json`, path
+  validation, `SecretString` for secret-bearing fields, hand-written redacted
+  `Debug`, and tests for documented methods and paths.
 
 ## Security And Stability Gate
 
@@ -75,3 +77,6 @@
   the full role update endpoint can configure the same fields. They can still
   be reached through `Client::request_json` if an ACL design delegates only a
   single role property path.
+- Custom plugin APIs are intentionally not modeled as a generic trait because
+  plugin schemas are deployment-specific. Use the documented wrapper pattern
+  for typed local APIs.

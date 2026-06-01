@@ -41,6 +41,8 @@ Sources:
 - Namespace header support.
 - Response wrapping headers.
 - Raw JSON request layer.
+- Typed custom plugin wrapper pattern documented in
+  `docs/CUSTOM_PLUGIN_PATTERN.md`.
 - Typed error envelope.
 - Health and seal status.
 - OpenAPI discovery support through `/sys/internal/specs/openapi`.

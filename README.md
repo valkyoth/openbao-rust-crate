@@ -102,12 +102,14 @@ Implemented now:
   and keyring rotation operator APIs.
 - Environment-based client construction from common OpenBao/Vault variables.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
+- Typed custom plugin wrapper pattern documentation for application-specific
+  OpenBao plugin APIs.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
 Planned next:
 
-- Remaining `0.7.0`: typed custom plugin API pattern documentation.
+- Remaining `0.7.0`: none.
 - `0.8.0`: remaining auth methods and broader system backend automation.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
@@ -273,7 +275,7 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, and tidy are implemented. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
-| Custom plugin patterns | Planned | Typed custom plugin API pattern documentation remains planned for `0.7.0`. |
+| Custom plugin patterns | Yes | Documented wrapper pattern for typed plugin-specific APIs over `Client::request_json`. |
 
 ### System Backend And Operations
 
@@ -1010,6 +1012,11 @@ async fn main() -> Result<()> {
 The raw request layer is intentionally low level. Prefer typed helpers when the
 crate supports an endpoint; use raw JSON to bridge missing OpenBao APIs while
 coverage grows.
+
+For application-specific OpenBao plugins, keep raw JSON calls behind a small
+typed wrapper. See [Typed Custom Plugin Pattern](docs/CUSTOM_PLUGIN_PATTERN.md)
+for a complete request/response wrapper example with path validation, secret
+redaction, and test guidance.
 
 ## Local OpenBao Dev Instance
 

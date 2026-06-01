@@ -23,6 +23,8 @@ All notable changes to this project are documented here.
 - LDAP secrets engine helpers for config, root rotation, static
   roles/credentials, dynamic roles/credentials, library sets, status,
   check-out, check-in, and managed check-in.
+- Typed custom plugin wrapper pattern documentation for plugin-specific APIs
+  built on `Client::request_json`.
 
 ## 0.6.0 - 2026-05-31
 
