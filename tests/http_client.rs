@@ -2089,6 +2089,145 @@ async fn database_connection_role_and_credentials_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn rabbitmq_config_role_and_credentials_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let credential_password = ["rabbit", "-", "generated"].concat();
+        for step in 0..7 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/rabbitmq/config/connection HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(request.contains(r#""connection_uri":"https://rabbit.example:15672""#));
+                    assert!(request.contains(r#""username":"admin""#));
+                    assert!(request.contains(r#""password":"rabbit-admin""#));
+                    assert!(request.contains(r#""verify_connection":false"#));
+                    "{}".to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/rabbitmq/config/lease HTTP/1.1"));
+                    assert!(request.contains(r#""ttl":1800"#));
+                    assert!(request.contains(r#""max_ttl":3600"#));
+                    "{}".to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/rabbitmq/roles/worker HTTP/1.1"));
+                    assert!(request.contains(r#""tags":"monitoring""#));
+                    assert!(
+                        request
+                            .contains(r#""vhosts":"{\"/\":{\"write\":\".*\",\"read\":\".*\"}}""#)
+                    );
+                    "{}".to_owned()
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/rabbitmq/roles/worker HTTP/1.1"));
+                    r#"{"data":{"tags":"monitoring","vhosts":"{\"/\":{\"write\":\".*\",\"read\":\".*\"}}","vhost_topics":"{\"/\":{\"amq.topic\":{\"write\":\".*\",\"read\":\".*\"}}"}}"#
+                        .to_owned()
+                }
+                4 => {
+                    assert!(
+                        request
+                            .starts_with("LIST /v1/rabbitmq/roles?after=worker&limit=10 HTTP/1.1")
+                    );
+                    r#"{"data":{"keys":["worker"]}}"#.to_owned()
+                }
+                5 => {
+                    assert!(request.starts_with("GET /v1/rabbitmq/creds/worker HTTP/1.1"));
+                    format!(
+                        r#"{{"lease_id":"rabbitmq/creds/worker/lease","lease_duration":1800,"renewable":true,"data":{{"username":"root-worker","password":"{credential_password}"}}}}"#
+                    )
+                }
+                6 => {
+                    assert!(request.starts_with("DELETE /v1/rabbitmq/roles/worker HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["root-", "token"]));
+    let rabbitmq = client.rabbitmq().unwrap_or_else(|error| panic!("{error}"));
+
+    rabbitmq
+        .configure_connection(
+            &openbao::secrets::rabbitmq::RabbitMqConnectionConfig::new(
+                SecretString::from("https://rabbit.example:15672"),
+                "admin",
+                test_secret(&["rabbit", "-", "admin"]),
+            )
+            .with_verify_connection(false),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    rabbitmq
+        .configure_lease(&openbao::secrets::rabbitmq::RabbitMqLeaseConfig::new(
+            1800, 3600,
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    rabbitmq
+        .write_role(
+            "worker",
+            &openbao::secrets::rabbitmq::RabbitMqRole::new()
+                .with_tags("monitoring")
+                .with_vhosts(r#"{"/":{"write":".*","read":".*"}}"#),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let role = rabbitmq
+        .read_role("worker")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role.tags.as_deref(), Some("monitoring"));
+    let roles = rabbitmq
+        .list_roles_after(Some("worker"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["worker"]);
+    let credentials = rabbitmq
+        .credentials("worker")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(credentials.username, "root-worker");
+    assert_eq!(
+        credentials.password.expose_secret(),
+        test_secret(&["rabbit", "-", "generated"]).expose_secret()
+    );
+    assert_eq!(
+        credentials.lease_id.expose_secret(),
+        "rabbitmq/creds/worker/lease"
+    );
+
+    rabbitmq
+        .delete_role("worker")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

@@ -25,9 +25,11 @@
   SecretID assignment, SecretID tidy, plus admin bootstrap support for auth
   method enablement, AppRole role convergence, explicit SecretID issuance, and
   Cubbyhole read/write/delete/list helpers, plus Kubernetes secrets engine
-  config, role, role-list, role-delete, and service account credential helpers.
-- Remaining `0.7.0` planned work: identity; LDAP secrets engine; RabbitMQ
-  secrets engine; typed custom plugin API pattern documentation.
+  config, role, role-list, role-delete, and service account credential helpers,
+  plus RabbitMQ connection config, lease config, role, role-list, role-delete,
+  and generated credential helpers.
+- Remaining `0.7.0` planned work: identity; LDAP secrets engine; typed custom
+  plugin API pattern documentation.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -44,6 +46,8 @@
   use the same structured validation as other secret engines.
 - Kubernetes secrets generated service account tokens and lease IDs are
   secret-aware and redacted from debug output.
+- RabbitMQ connection URIs, administrator passwords, generated passwords, and
+  lease IDs are secret-aware and redacted from debug output.
 
 ## Security And Stability Gate
 

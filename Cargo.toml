@@ -52,6 +52,7 @@ default = [
     "kv2",
     "kubernetes",
     "pki",
+    "rabbitmq",
     "ssh",
     "totp",
     "transit",
@@ -70,6 +71,7 @@ kv1 = []
 kv2 = []
 kubernetes = []
 pki = []
+rabbitmq = []
 ssh = []
 totp = []
 transit = []

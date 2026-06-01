@@ -16,6 +16,8 @@ All notable changes to this project are documented here.
   helpers.
 - Kubernetes secrets engine configuration, role management, role listing, and
   service account credential generation helpers.
+- RabbitMQ secrets engine connection configuration, lease configuration, role
+  management, role listing, role deletion, and generated credential helpers.
 
 ## 0.6.0 - 2026-05-31
 

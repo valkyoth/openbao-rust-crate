@@ -160,9 +160,9 @@ Stop condition:
   provisioning;
 - Cubbyhole read/write/delete/list helpers;
 - Kubernetes secrets engine config, role, list, delete, and credential helpers;
+- RabbitMQ secrets engine connection, lease, role, and credential helpers;
 - identity entities/groups/aliases;
 - LDAP secrets engine;
-- RabbitMQ secrets engine;
 - typed custom plugin API pattern documented.
 
 Publishable value:

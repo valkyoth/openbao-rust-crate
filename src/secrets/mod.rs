@@ -12,6 +12,8 @@ pub mod kv1;
 pub mod kv2;
 #[cfg(feature = "pki")]
 pub mod pki;
+#[cfg(feature = "rabbitmq")]
+pub mod rabbitmq;
 #[cfg(feature = "ssh")]
 pub mod ssh;
 #[cfg(feature = "totp")]

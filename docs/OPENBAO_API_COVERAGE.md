@@ -3,6 +3,8 @@
 Checked against official OpenBao `2.5.x` documentation on 2026-05-30.
 AppRole administration was refreshed against the same documentation set on
 2026-06-01.
+RabbitMQ secrets engine coverage was refreshed against official `2.5.x`
+documentation on 2026-06-01.
 
 Sources:
 
@@ -21,6 +23,7 @@ Sources:
 - PKI: https://openbao.org/api-docs/secret/pki/
 - SSH: https://openbao.org/api-docs/secret/ssh/
 - TOTP: https://openbao.org/api-docs/secret/totp/
+- RabbitMQ: https://openbao.org/api-docs/secret/rabbitmq/
 
 ## Foundation
 
@@ -120,7 +123,9 @@ Support plan:
   text/plain SSH public-key reads are intentionally not typed.
 - `0.7.0`: Cubbyhole read/write/delete/list is implemented. Kubernetes secrets
   engine config, roles, role listing, deletion, and credential generation are
-  implemented. LDAP, RabbitMQ, and identity remain planned for this line.
+  implemented. RabbitMQ connection config, lease config, role
+  write/read/list/delete, and generated credential helpers are implemented.
+  LDAP and identity remain planned for this line.
 
 ## System Backend
 
