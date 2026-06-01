@@ -68,7 +68,8 @@ Support plan:
   plus JWT/OIDC config and role administration helpers are implemented. Browser
   OIDC callback helpers remain planned.
 - `0.7.0`: AppRole role and SecretID administration is implemented. Admin
-  bootstrap orchestration for auth method setup remains planned for this line.
+  bootstrap orchestration for auth method enablement, AppRole role
+  convergence, and explicit SecretID issuance is implemented.
 - `0.8.0`: LDAP, RADIUS, and Kerberos.
 
 ## Secret Engines
@@ -138,6 +139,8 @@ Support plan:
 - `0.6.0`: idempotent admin bootstrap builder is implemented for KV v2 mounts,
   Transit mounts, Transit keys, ACL policies, KV v2 string secret values, and
   explicit scoped service-token issuance.
+- `0.7.0`: admin bootstrap now supports auth method enablement, AppRole role
+  convergence, and explicit AppRole SecretID issuance.
 - `0.6.0`: production init, unseal, seal, legacy rekey, OpenBao key-share
   rotation, and keyring rotation are implemented only behind explicit
   `operator-ops` plus `operator-ops-acknowledged` feature gates.

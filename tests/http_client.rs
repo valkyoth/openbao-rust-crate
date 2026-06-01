@@ -1858,7 +1858,7 @@ async fn database_connection_role_and_credentials_use_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
-        .with_token(SecretString::from("root-token"));
+        .with_token(test_secret(&["root-", "token"]));
     let database = client
         .database("database")
         .unwrap_or_else(|error| panic!("{error}"));
@@ -4158,6 +4158,123 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
         report.steps[5].status,
         openbao::bootstrap::BootstrapStepStatus::Issued
     );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn admin_bootstrap_can_provision_approle_auth() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut buffer = [0_u8; 8192];
+            let bytes = stream
+                .read(&mut buffer)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&buffer[..bytes]);
+            let (status, body) = match index {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/auth HTTP/1.1"));
+                    ("200 OK", r#"{"data":{}}"#.to_owned())
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/auth/approle HTTP/1.1"));
+                    assert!(request.contains(r#""type":"approle""#));
+                    assert!(request.contains(r#""description":"machine auth""#));
+                    ("204 No Content", "{}".to_owned())
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/auth/approle/role/web HTTP/1.1"));
+                    ("404 Not Found", r#"{"errors":["missing role"]}"#.to_owned())
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/auth/approle/role/web HTTP/1.1"));
+                    assert!(request.contains(r#""bind_secret_id":true"#));
+                    assert!(request.contains(r#""token_policies":["web"]"#));
+                    ("204 No Content", "{}".to_owned())
+                }
+                4 => {
+                    assert!(
+                        request.starts_with("POST /v1/auth/approle/role/web/secret-id HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""ttl":"10m""#));
+                    (
+                        "200 OK",
+                        format!(
+                            r#"{{"data":{{"secret_id":"{}{}","secret_id_accessor":"{}{}","secret_id_ttl":600,"secret_id_num_uses":0}}}}"#,
+                            "secret-", "id", "secret-", "accessor"
+                        ),
+                    )
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+
+    let role = openbao::auth::approle::AppRoleRoleRequest {
+        bind_secret_id: Some(true),
+        ..openbao::auth::approle::AppRoleRoleRequest::new()
+    }
+    .with_token_policy("web");
+    let secret_id = openbao::auth::approle::AppRoleSecretIdRequest::new()
+        .with_ttl("10m")
+        .unwrap_or_else(|error| panic!("{error}"));
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_approle_auth_method("approle", Some("machine auth"))
+        .and_then(|builder| builder.ensure_approle_role("approle", "web", role))
+        .and_then(|builder| {
+            builder.issue_approle_secret_id("web-login", "approle", "web", secret_id)
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let report = bootstrap
+        .run(&client)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(report.steps.len(), 3);
+    assert_eq!(
+        report.steps[0].status,
+        openbao::bootstrap::BootstrapStepStatus::Created
+    );
+    assert_eq!(
+        report.steps[1].status,
+        openbao::bootstrap::BootstrapStepStatus::Created
+    );
+    assert_eq!(
+        report.steps[2].status,
+        openbao::bootstrap::BootstrapStepStatus::Issued
+    );
+    assert_eq!(report.issued_approle_secret_ids.len(), 1);
+    assert_eq!(
+        report.issued_approle_secret_ids[0]
+            .secret_id
+            .secret_id
+            .expose_secret(),
+        &["secret-", "id"].concat()
+    );
+    assert!(!format!("{report:?}").contains(&["secret-", "id"].concat()));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

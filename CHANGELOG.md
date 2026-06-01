@@ -10,6 +10,8 @@ All notable changes to this project are documented here.
   create/read/list/delete, RoleID read/update, SecretID generate/list/lookup,
   SecretID destroy by value or accessor, custom SecretID assignment, and
   SecretID tidy.
+- Admin bootstrap support for auth method enablement, AppRole role
+  convergence, and explicit AppRole SecretID issuance.
 
 ## 0.6.0 - 2026-05-31
 

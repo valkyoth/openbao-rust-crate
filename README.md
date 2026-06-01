@@ -80,8 +80,9 @@ Implemented now:
 - Bounded ACL policy builder helpers for common KV v2 and Transit
   least-privilege rules.
 - Idempotent admin bootstrap plan builder for KV v2 mounts, Transit mounts,
-  Transit keys, ACL policies, KV v2 string secret values, and explicit scoped
-  service-token issuance.
+  Transit keys, ACL policies, KV v2 string secret values, auth methods,
+  AppRole roles, explicit scoped service-token issuance, and explicit AppRole
+  SecretID issuance.
 - Capability checks for the caller token, an explicit token, or a token
   accessor.
 - Audit device list, enable, disable, and hash helpers.
@@ -97,9 +98,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.7.0`: admin bootstrap support for auth method enablement and
-  AppRole role/SecretID provisioning; cubbyhole; identity; Kubernetes secrets;
-  LDAP secrets; RabbitMQ; typed custom plugin API pattern documentation.
+- Remaining `0.7.0`: cubbyhole; identity; Kubernetes secrets; LDAP secrets;
+  RabbitMQ; typed custom plugin API pattern documentation.
 - `0.8.0`: remaining auth methods and broader system backend automation.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
@@ -268,7 +268,7 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
 | Policies and capabilities | Yes | ACL policy read/write/list/delete, bounded policy builder helpers, and self/token/accessor capability checks. |
-| Admin bootstrap | Yes | Idempotent plan builder for mounts, Transit keys, ACL policies, KV v2 string values, and explicit token issuance. |
+| Admin bootstrap | Yes | Idempotent plan builder for mounts, Transit keys, ACL policies, KV v2 string values, auth methods, AppRole roles, explicit token issuance, and explicit AppRole SecretID issuance. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |

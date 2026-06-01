@@ -10,12 +10,14 @@ use std::collections::BTreeMap;
 use secrecy::{ExposeSecret, SecretString};
 use subtle::ConstantTimeEq;
 
+#[cfg(feature = "approle")]
+use crate::auth::approle::{AppRoleRoleRequest, AppRoleSecretId, AppRoleSecretIdRequest};
 use crate::{
     AclPolicyBuilder, Authenticated, Client, Error, Result,
     auth::token::{TokenAuth, TokenCreateRequest},
     path::{validate_endpoint_path, validate_mount_path},
     secrets::transit::TransitCreateKeyRequest,
-    sys::{MountEnableRequest, PolicyWriteRequest},
+    sys::{AuthEnableRequest, MountEnableRequest, PolicyWriteRequest},
 };
 
 const MAX_BOOTSTRAP_OPERATIONS: usize = 512;
@@ -28,6 +30,11 @@ pub struct AdminBootstrap {
 
 #[derive(Clone)]
 enum BootstrapOperation {
+    AuthMethod {
+        path: String,
+        backend_type: String,
+        description: Option<String>,
+    },
     Kv2Mount {
         path: String,
         description: Option<String>,
@@ -54,6 +61,19 @@ enum BootstrapOperation {
         name: String,
         request: TokenCreateRequest,
     },
+    #[cfg(feature = "approle")]
+    AppRoleRole {
+        mount: String,
+        name: String,
+        request: AppRoleRoleRequest,
+    },
+    #[cfg(feature = "approle")]
+    AppRoleSecretId {
+        name: String,
+        mount: String,
+        role_name: String,
+        request: AppRoleSecretIdRequest,
+    },
 }
 
 /// Result of running an [`AdminBootstrap`] plan.
@@ -63,6 +83,9 @@ pub struct BootstrapReport {
     pub steps: Vec<BootstrapStepReport>,
     /// Tokens explicitly issued by the plan.
     pub issued_tokens: Vec<BootstrapIssuedToken>,
+    /// AppRole SecretIDs explicitly issued by the plan.
+    #[cfg(feature = "approle")]
+    pub issued_approle_secret_ids: Vec<BootstrapIssuedAppRoleSecretId>,
 }
 
 /// Per-operation bootstrap status.
@@ -111,6 +134,26 @@ pub struct BootstrapIssuedToken {
     pub auth: TokenAuth,
 }
 
+/// AppRole SecretID material issued by a bootstrap plan.
+#[cfg(feature = "approle")]
+pub struct BootstrapIssuedAppRoleSecretId {
+    /// Logical SecretID name from the bootstrap plan.
+    pub name: String,
+    /// Generated SecretID response. Contains SecretID and accessor material.
+    pub secret_id: AppRoleSecretId,
+}
+
+#[cfg(feature = "approle")]
+impl fmt::Debug for BootstrapIssuedAppRoleSecretId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("BootstrapIssuedAppRoleSecretId")
+            .field("name", &self.name)
+            .field("secret_id", &"<redacted>")
+            .finish()
+    }
+}
+
 impl fmt::Debug for BootstrapIssuedToken {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
@@ -124,6 +167,16 @@ impl fmt::Debug for BootstrapIssuedToken {
 impl fmt::Debug for BootstrapOperation {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::AuthMethod {
+                path,
+                backend_type,
+                description,
+            } => formatter
+                .debug_struct("AuthMethod")
+                .field("path", path)
+                .field("backend_type", backend_type)
+                .field("description", description)
+                .finish(),
             Self::Kv2Mount { path, description } => formatter
                 .debug_struct("Kv2Mount")
                 .field("path", path)
@@ -156,6 +209,26 @@ impl fmt::Debug for BootstrapOperation {
                 .field("name", name)
                 .field("request", &"<redacted>")
                 .finish(),
+            #[cfg(feature = "approle")]
+            Self::AppRoleRole { mount, name, .. } => formatter
+                .debug_struct("AppRoleRole")
+                .field("mount", mount)
+                .field("name", name)
+                .field("request", &"<redacted>")
+                .finish(),
+            #[cfg(feature = "approle")]
+            Self::AppRoleSecretId {
+                name,
+                mount,
+                role_name,
+                ..
+            } => formatter
+                .debug_struct("AppRoleSecretId")
+                .field("name", name)
+                .field("mount", mount)
+                .field("role_name", role_name)
+                .field("request", &"<redacted>")
+                .finish(),
         }
     }
 }
@@ -165,6 +238,31 @@ impl AdminBootstrap {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Ensures an auth method exists at `path`.
+    pub fn ensure_auth_method(
+        &mut self,
+        path: impl AsRef<str>,
+        backend_type: impl AsRef<str>,
+        description: Option<&str>,
+    ) -> Result<&mut Self> {
+        let path = validate_mount_path(path.as_ref())?.join("/");
+        let backend_type = validate_mount_path(backend_type.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::AuthMethod {
+            path,
+            backend_type,
+            description: description.map(str::to_owned),
+        })
+    }
+
+    /// Ensures the AppRole auth method exists at `path`.
+    pub fn ensure_approle_auth_method(
+        &mut self,
+        path: impl AsRef<str>,
+        description: Option<&str>,
+    ) -> Result<&mut Self> {
+        self.ensure_auth_method(path, "approle", description)
     }
 
     /// Ensures a KV v2 mount exists at `path`.
@@ -264,6 +362,48 @@ impl AdminBootstrap {
         self.push_operation(BootstrapOperation::ServiceToken { name, request })
     }
 
+    /// Ensures an AppRole role exists and matches the desired fields supplied
+    /// in `request`.
+    #[cfg(feature = "approle")]
+    pub fn ensure_approle_role(
+        &mut self,
+        mount: impl AsRef<str>,
+        name: impl AsRef<str>,
+        request: AppRoleRoleRequest,
+    ) -> Result<&mut Self> {
+        let mount = validate_mount_path(mount.as_ref())?.join("/");
+        let name = validate_mount_path(name.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::AppRoleRole {
+            mount,
+            name,
+            request,
+        })
+    }
+
+    /// Issues a new AppRole SecretID at the end of the plan.
+    ///
+    /// SecretID generation always creates a new credential. This method is
+    /// explicit so callers can separate idempotent state convergence from
+    /// credential handoff.
+    #[cfg(feature = "approle")]
+    pub fn issue_approle_secret_id(
+        &mut self,
+        name: impl AsRef<str>,
+        mount: impl AsRef<str>,
+        role_name: impl AsRef<str>,
+        request: AppRoleSecretIdRequest,
+    ) -> Result<&mut Self> {
+        let name = validate_mount_path(name.as_ref())?.join("/");
+        let mount = validate_mount_path(mount.as_ref())?.join("/");
+        let role_name = validate_mount_path(role_name.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::AppRoleSecretId {
+            name,
+            mount,
+            role_name,
+            request,
+        })
+    }
+
     fn push_operation(&mut self, operation: BootstrapOperation) -> Result<&mut Self> {
         if self.operations.len() >= MAX_BOOTSTRAP_OPERATIONS {
             return Err(Error::InvalidParameter(
@@ -279,6 +419,20 @@ impl AdminBootstrap {
         let mut report = BootstrapReport::default();
         for operation in &self.operations {
             match operation {
+                BootstrapOperation::AuthMethod {
+                    path,
+                    backend_type,
+                    description,
+                } => {
+                    let status = ensure_auth_method(client, path, backend_type, || {
+                        AuthEnableRequest::new(backend_type.clone())
+                            .with_optional_description(description)
+                    })
+                    .await?;
+                    report
+                        .steps
+                        .push(BootstrapStepReport::new("auth_method", path, status));
+                }
                 BootstrapOperation::Kv2Mount { path, description } => {
                     let status = ensure_mount(client, path, "kv", Some(("version", "2")), || {
                         MountEnableRequest::kv2().with_optional_description(description)
@@ -390,6 +544,56 @@ impl AdminBootstrap {
                         auth,
                     });
                 }
+                #[cfg(feature = "approle")]
+                BootstrapOperation::AppRoleRole {
+                    mount,
+                    name,
+                    request,
+                } => {
+                    let admin = client.approle_admin_at(mount)?;
+                    let status = match admin.read_role(name).await {
+                        Ok(existing) if approle_role_matches_desired(&existing, request) => {
+                            BootstrapStepStatus::Unchanged
+                        }
+                        Ok(_) => {
+                            admin.write_role(name, request).await?;
+                            BootstrapStepStatus::Updated
+                        }
+                        Err(error) if error.is_not_found() => {
+                            admin.write_role(name, request).await?;
+                            BootstrapStepStatus::Created
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapStepReport::new(
+                        "approle_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "approle")]
+                BootstrapOperation::AppRoleSecretId {
+                    name,
+                    mount,
+                    role_name,
+                    request,
+                } => {
+                    let secret_id = client
+                        .approle_admin_at(mount)?
+                        .generate_secret_id(role_name, request)
+                        .await?;
+                    report.steps.push(BootstrapStepReport::new(
+                        "approle_secret_id",
+                        format!("{mount}/{role_name}/{name}"),
+                        BootstrapStepStatus::Issued,
+                    ));
+                    report
+                        .issued_approle_secret_ids
+                        .push(BootstrapIssuedAppRoleSecretId {
+                            name: name.clone(),
+                            secret_id,
+                        });
+                }
             }
         }
         Ok(report)
@@ -400,10 +604,46 @@ trait MountDescriptionExt {
     fn with_optional_description(self, description: &Option<String>) -> Self;
 }
 
+impl MountDescriptionExt for AuthEnableRequest {
+    fn with_optional_description(mut self, description: &Option<String>) -> Self {
+        self.description.clone_from(description);
+        self
+    }
+}
+
 impl MountDescriptionExt for MountEnableRequest {
     fn with_optional_description(mut self, description: &Option<String>) -> Self {
         self.description.clone_from(description);
         self
+    }
+}
+
+async fn ensure_auth_method<F>(
+    client: &Client<Authenticated>,
+    path: &str,
+    expected_type: &str,
+    request: F,
+) -> Result<BootstrapStepStatus>
+where
+    F: FnOnce() -> AuthEnableRequest,
+{
+    let key = format!("{path}/");
+    let auth_methods = client.sys().list_auth_methods().await?;
+    match auth_methods.get(&key).or_else(|| auth_methods.get(path)) {
+        Some(auth) => {
+            if auth.backend_type != expected_type {
+                return Err(Error::InvalidParameter(format!(
+                    "auth method `{path}` exists with type `{}` instead of `{expected_type}`",
+                    auth.backend_type
+                )));
+            }
+            Ok(BootstrapStepStatus::Unchanged)
+        }
+        None => match client.sys().enable_auth_method(path, &request()).await {
+            Ok(_) => Ok(BootstrapStepStatus::Created),
+            Err(error) if is_already_exists_error(&error) => Ok(BootstrapStepStatus::Unchanged),
+            Err(error) => Err(error),
+        },
     }
 }
 
@@ -463,6 +703,66 @@ fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<Str
         .iter()
         .map(|(key, value)| (key.clone(), value.expose_secret()))
         .collect()
+}
+
+#[cfg(feature = "approle")]
+fn approle_role_matches_desired(
+    existing: &AppRoleRoleRequest,
+    desired: &AppRoleRoleRequest,
+) -> bool {
+    desired
+        .bind_secret_id
+        .is_none_or(|value| existing.bind_secret_id == Some(value))
+        && vec_empty_or_equal(
+            &existing.secret_id_bound_cidrs,
+            &desired.secret_id_bound_cidrs,
+        )
+        && desired
+            .secret_id_num_uses
+            .is_none_or(|value| existing.secret_id_num_uses == Some(value))
+        && desired
+            .secret_id_ttl
+            .as_ref()
+            .is_none_or(|value| existing.secret_id_ttl.as_ref() == Some(value))
+        && desired
+            .local_secret_ids
+            .is_none_or(|value| existing.local_secret_ids == Some(value))
+        && desired
+            .token_ttl
+            .as_ref()
+            .is_none_or(|value| existing.token_ttl.as_ref() == Some(value))
+        && desired
+            .token_max_ttl
+            .as_ref()
+            .is_none_or(|value| existing.token_max_ttl.as_ref() == Some(value))
+        && vec_empty_or_equal(&existing.token_policies, &desired.token_policies)
+        && vec_empty_or_equal(&existing.token_bound_cidrs, &desired.token_bound_cidrs)
+        && desired
+            .token_strictly_bind_ip
+            .is_none_or(|value| existing.token_strictly_bind_ip == Some(value))
+        && desired
+            .token_explicit_max_ttl
+            .as_ref()
+            .is_none_or(|value| existing.token_explicit_max_ttl.as_ref() == Some(value))
+        && desired
+            .token_no_default_policy
+            .is_none_or(|value| existing.token_no_default_policy == Some(value))
+        && desired
+            .token_num_uses
+            .is_none_or(|value| existing.token_num_uses == Some(value))
+        && desired
+            .token_period
+            .as_ref()
+            .is_none_or(|value| existing.token_period.as_ref() == Some(value))
+        && desired
+            .token_type
+            .as_ref()
+            .is_none_or(|value| existing.token_type.as_ref() == Some(value))
+}
+
+#[cfg(feature = "approle")]
+fn vec_empty_or_equal(existing: &[String], desired: &[String]) -> bool {
+    desired.is_empty() || existing == desired
 }
 
 #[cfg(test)]
