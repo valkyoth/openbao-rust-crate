@@ -624,11 +624,7 @@ impl<State> Client<State> {
             HeaderValue::from_static("true"),
         );
 
-        self.http
-            // codeql[rust/cleartext-logging]: reqwest can attach the URL to transport errors; http_error_without_url strips it before the error is loggable.
-            .execute(request)
-            .await
-            .map_err(crate::error::http_error_without_url)
+        execute_openbao_http_request(&self.http, request).await
     }
 
     async fn send_sensitive_json_request<B>(
@@ -684,11 +680,7 @@ impl<State> Client<State> {
             *request.body_mut() = Some(Vec::from(&encoded[..]).into());
         }
 
-        http
-            // codeql[rust/cleartext-logging]: reqwest can attach the URL to transport errors; http_error_without_url strips it before the error is loggable.
-            .execute(request)
-            .await
-            .map_err(crate::error::http_error_without_url)
+        execute_openbao_http_request(http, request).await
     }
 
     pub(crate) fn url_for_path(&self, path: &str) -> Result<Url> {
@@ -757,6 +749,16 @@ fn is_loopback_url(url: &Url) -> bool {
     match url.host_str() {
         Some(host) => host.parse::<IpAddr>().is_ok_and(|addr| addr.is_loopback()),
         None => false,
+    }
+}
+
+async fn execute_openbao_http_request(
+    http: &reqwest::Client,
+    outgoing: reqwest::Request,
+) -> Result<reqwest::Response> {
+    match reqwest::Client::execute(http, outgoing).await {
+        Ok(response) => Ok(response),
+        Err(error) => Err(crate::error::http_transport_error(error)),
     }
 }
 

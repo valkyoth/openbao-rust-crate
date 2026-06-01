@@ -173,11 +173,7 @@ async fn transport_errors_do_not_display_request_url() {
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 
-    if let Error::Http(source) = &error {
-        assert!(source.url().is_none());
-    } else {
-        panic!("expected transport error, got {error:?}");
-    }
+    assert!(matches!(error, Error::Transport(_)));
     let message = error.to_string();
     assert!(!message.contains(&addr.to_string()));
     assert!(!message.contains("/v1/secret/data/app/config"));

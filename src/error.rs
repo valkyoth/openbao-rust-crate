@@ -27,6 +27,12 @@ pub enum Error {
     Internal(&'static str),
     /// The request failed before an OpenBao response could be decoded.
     Http(reqwest::Error),
+    /// The request failed before an OpenBao response could be decoded.
+    ///
+    /// Transport errors intentionally avoid retaining the underlying HTTP
+    /// error because lower layers may attach request URLs to loggable error
+    /// chains.
+    Transport(&'static str),
     /// A response body could not be decoded into the expected type.
     Decode(String),
     /// OpenBao returned an error status and optional API error list.
@@ -64,6 +70,7 @@ impl fmt::Display for Error {
             }
             Self::Internal(message) => write!(formatter, "internal OpenBao SDK error: {message}"),
             Self::Http(error) => write!(formatter, "OpenBao HTTP error: {error}"),
+            Self::Transport(message) => write!(formatter, "OpenBao transport error: {message}"),
             Self::Decode(error) => write!(formatter, "OpenBao decode error: {error}"),
             Self::Api { status, errors } if errors.is_empty() => {
                 write!(formatter, "OpenBao API returned {status}")
@@ -163,12 +170,30 @@ impl std::error::Error for Error {
 
 impl From<reqwest::Error> for Error {
     fn from(error: reqwest::Error) -> Self {
-        http_error_without_url(error)
+        http_transport_error(error)
     }
 }
 
-pub(crate) fn http_error_without_url(error: reqwest::Error) -> Error {
-    Error::Http(error.without_url())
+pub(crate) fn http_transport_error(error: reqwest::Error) -> Error {
+    Error::Transport(classify_http_transport_error(&error))
+}
+
+fn classify_http_transport_error(error: &reqwest::Error) -> &'static str {
+    if error.is_timeout() {
+        "request timed out"
+    } else if error.is_connect() {
+        "connection failed"
+    } else if error.is_redirect() {
+        "redirect failed"
+    } else if error.is_body() {
+        "request or response body failed"
+    } else if error.is_decode() {
+        "response body could not be decoded"
+    } else if error.is_request() {
+        "request could not be sent"
+    } else {
+        "request failed before an OpenBao response was received"
+    }
 }
 
 #[cfg(test)]
