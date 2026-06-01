@@ -3409,7 +3409,7 @@ async fn approle_admin_role_and_secret_id_lifecycle_use_documented_paths() {
             };
             requests.push(request);
             let response = format!(
-                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                 body.len(),
                 body
             );
