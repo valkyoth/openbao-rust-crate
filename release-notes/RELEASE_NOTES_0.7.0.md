@@ -68,6 +68,13 @@
   object string.
 - API error message sanitization is byte-bounded, and AppRole bootstrap docs
   document the unavoidable read-compare-write race for concurrent runs.
+- API error strings are sanitized before storage in `Error::Api`.
+- Auth token headers are rebuilt per request instead of cached in the client,
+  and empty or whitespace-only tokens are rejected at validation time.
+- The sensitive loopback HTTP test bypass requires the explicit
+  `sensitive-http-test-only` feature.
+- Lease IDs are length-bounded before JSON request-body use, and
+  `Kv2ServiceConfig` debug output redacts key names as well as values.
 - Custom plugin guidance recommends typed wrappers around `request_json`, path
   validation, `SecretString` for secret-bearing fields, hand-written redacted
   `Debug`, and tests for documented methods and paths.

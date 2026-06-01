@@ -45,6 +45,13 @@ All notable changes to this project are documented here.
   validated as JSON object strings before request dispatch.
 - API error sanitization now truncates by UTF-8 byte length rather than Unicode
   scalar count.
+- OpenBao API error strings are sanitized before storage in `Error::Api`.
+- Auth token headers are rebuilt per request instead of cached in the client,
+  and empty or whitespace-only tokens are rejected.
+- The sensitive loopback HTTP test bypass now requires the explicit
+  `sensitive-http-test-only` Cargo feature.
+- Lease ID request fields now reject oversized values, and
+  `Kv2ServiceConfig` debug output redacts key names.
 - AppRole bootstrap docs now call out read-compare-write concurrency behavior
   and the need to serialize competing bootstrap runs externally.
 

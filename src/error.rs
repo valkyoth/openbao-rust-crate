@@ -138,7 +138,7 @@ impl Error {
     }
 }
 
-fn sanitize_api_error(error: &str) -> String {
+pub(crate) fn sanitize_api_error(error: &str) -> String {
     const MAX_API_ERROR_BYTES: usize = 512;
 
     let mut sanitized = String::new();

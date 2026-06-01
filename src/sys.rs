@@ -1409,8 +1409,6 @@ impl Sys<'_, Unauthenticated> {
             http: self.client.http.clone(),
             sensitive_http: self.client.sensitive_http.clone(),
             token: None,
-            token_header: None,
-            token_header_error: None,
             _state: PhantomData,
         }
         .try_with_token(init_response.root_token.clone())?;
@@ -2234,9 +2232,16 @@ where
 }
 
 fn validate_lease_id(lease_id: &SecretString) -> Result<&str> {
+    const MAX_LEASE_ID_BYTES: usize = 512;
+
     let lease_id = lease_id.expose_secret();
     if lease_id.is_empty() {
         return Err(Error::InvalidPath("lease ID must not be empty".into()));
+    }
+    if lease_id.len() > MAX_LEASE_ID_BYTES {
+        return Err(Error::InvalidPath(
+            "lease ID exceeds maximum allowed length".into(),
+        ));
     }
     if lease_id.as_bytes().iter().any(u8::is_ascii_control) {
         return Err(Error::InvalidPath(
@@ -2583,6 +2588,7 @@ mod tests {
         assert!(validate_lease_id(&SecretString::from("database/creds/ro/abc")).is_ok());
         assert!(validate_lease_id(&SecretString::from("")).is_err());
         assert!(validate_lease_id(&SecretString::from("database/creds/ro\nabc")).is_err());
+        assert!(validate_lease_id(&SecretString::from("x".repeat(513))).is_err());
     }
 
     #[test]

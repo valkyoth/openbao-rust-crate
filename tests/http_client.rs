@@ -1,5 +1,6 @@
 //! HTTP behavior tests for the OpenBao client.
 
+#![cfg(feature = "sensitive-http-test-only")]
 #![allow(clippy::panic)]
 #![allow(deprecated)]
 

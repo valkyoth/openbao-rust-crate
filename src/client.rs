@@ -97,7 +97,7 @@ pub struct OpenBaoConfig {
     root_certificates: Vec<Certificate>,
     root_certificate_mode: RootCertificateMode,
     client_identity: Option<Identity>,
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "sensitive-http-test-only")]
     allow_sensitive_local_http_for_tests: bool,
 }
 
@@ -123,7 +123,7 @@ impl OpenBaoConfig {
             root_certificates: Vec::new(),
             root_certificate_mode: RootCertificateMode::MergeWithSystem,
             client_identity: None,
-            #[cfg(debug_assertions)]
+            #[cfg(feature = "sensitive-http-test-only")]
             allow_sensitive_local_http_for_tests: false,
         })
     }
@@ -169,11 +169,12 @@ impl OpenBaoConfig {
     }
 
     /// Allows credential-bearing HTTP requests only for numeric loopback test
-    /// servers in debug builds.
+    /// servers when the `sensitive-http-test-only` feature is enabled.
     ///
     /// This method exists solely for this crate's local HTTP mock tests. It is
-    /// unavailable in release builds and should not be used by applications.
-    #[cfg(debug_assertions)]
+    /// unavailable unless explicitly compiled in and should not be used by
+    /// applications.
+    #[cfg(feature = "sensitive-http-test-only")]
     #[doc(hidden)]
     pub fn allow_sensitive_local_http_for_tests(mut self) -> Result<Self> {
         self = self.allow_localhost_http()?;
@@ -357,8 +358,6 @@ impl ClientBuilder {
             http,
             sensitive_http,
             token: None,
-            token_header: None,
-            token_header_error: None,
             _state: PhantomData,
         })
     }
@@ -394,8 +393,6 @@ pub struct Client<State = Unauthenticated> {
     pub(crate) http: reqwest::Client,
     pub(crate) sensitive_http: reqwest::Client,
     pub(crate) token: Option<SecretString>,
-    pub(crate) token_header: Option<(HeaderName, HeaderValue)>,
-    pub(crate) token_header_error: Option<String>,
     pub(crate) _state: PhantomData<State>,
 }
 
@@ -441,24 +438,11 @@ impl Client<Unauthenticated> {
     }
 
     fn with_token_deferred_validation(self, token: SecretString) -> Client<Authenticated> {
-        let (token_header, token_header_error) = token_header_for(&token, self.config.header_mode)
-            .map_or_else(
-                |error| {
-                    let message = match error {
-                        Error::InvalidHeader(message) => message,
-                        _ => "token must be a valid HTTP header value".to_owned(),
-                    };
-                    (None, Some(message))
-                },
-                |header| (Some(header), None),
-            );
         Client {
             config: self.config,
             http: self.http,
             sensitive_http: self.sensitive_http,
             token: Some(token),
-            token_header,
-            token_header_error,
             _state: PhantomData,
         }
     }
@@ -483,8 +467,6 @@ impl Client<Unauthenticated> {
             http: self.http.clone(),
             sensitive_http: self.sensitive_http.clone(),
             token: None,
-            token_header: None,
-            token_header_error: None,
             _state: PhantomData,
         }
     }
@@ -611,7 +593,10 @@ impl<State> Client<State> {
                 read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
                     .await
                     .map(|envelope| envelope.errors)
-                    .unwrap_or_default();
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|error| crate::error::sanitize_api_error(&error))
+                    .collect();
             return Err(Error::Api {
                 status,
                 errors: error,
@@ -663,10 +648,8 @@ impl<State> Client<State> {
         if let Some(namespace) = self.config.namespace.as_deref() {
             request = request.header("X-Vault-Namespace", sensitive_header_value(namespace)?);
         }
-        if let Some(message) = self.token_header_error.as_ref() {
-            return Err(Error::InvalidHeader(message.clone()));
-        }
-        if let Some((name, value)) = self.token_header.as_ref() {
+        if let Some(token) = self.token.as_ref() {
+            let (name, value) = token_header_for(token, self.config.header_mode)?;
             request = request.header(name, value);
         }
         if let Some(payload) = body {
@@ -704,7 +687,7 @@ impl<State> Client<State> {
     }
 
     fn http_for_sensitive_request(&self) -> &reqwest::Client {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "sensitive-http-test-only")]
         if self.config.allow_sensitive_local_http_for_tests {
             return &self.http;
         }
@@ -717,7 +700,7 @@ impl<State> Client<State> {
         url: &Url,
         is_sensitive: bool,
     ) -> Result<()> {
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "sensitive-http-test-only")]
         if self.config.allow_sensitive_local_http_for_tests && is_loopback_url(url) {
             return Ok(());
         }
@@ -779,6 +762,11 @@ fn token_header_for(
     token: &SecretString,
     header_mode: HeaderMode,
 ) -> Result<(HeaderName, HeaderValue)> {
+    if token.expose_secret().trim().is_empty() {
+        return Err(Error::InvalidHeader(
+            "authentication token must not be empty".into(),
+        ));
+    }
     match header_mode {
         HeaderMode::VaultToken => Ok((
             HeaderName::from_static("x-vault-token"),
@@ -1080,6 +1068,10 @@ mod tests {
                 super::HeaderMode::VaultToken
             )
             .is_err()
+        );
+        assert!(
+            validate_token_for_header(&SecretString::from("  "), super::HeaderMode::VaultToken)
+                .is_err()
         );
         assert!(
             Client::new("https://bao.example.com")

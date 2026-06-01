@@ -101,7 +101,8 @@ impl fmt::Debug for Kv2ServiceConfig {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Kv2ServiceConfig")
-            .field("keys", &self.values.keys().collect::<Vec<_>>())
+            .field("key_count", &self.values.len())
+            .field("keys", &"<redacted>")
             .field("values", &"<redacted>")
             .finish()
     }
@@ -791,7 +792,8 @@ mod tests {
         );
         assert!(config.required("MISSING").is_err());
         let debug = format!("{config:?}");
-        assert!(debug.contains("API_KEY"));
+        assert!(debug.contains("key_count"));
+        assert!(!debug.contains("API_KEY"));
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("key-value"));
     }
