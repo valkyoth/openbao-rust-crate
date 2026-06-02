@@ -154,13 +154,23 @@
   intentionally excluded because their entries are sensitive.
 - Timestamp parse errors intentionally do not echo the provided timestamp value
   so loggable errors stay value-free near secret-bearing response handling.
+- `Sys::wait_ready_with_delay` retries temporary transport failures until the
+  configured timeout instead of failing on the first connection error.
+- `Error::is_permission_denied` is documented as a superset of
+  `Error::is_forbidden` because OpenBao can report `permission denied` outside
+  HTTP 403 in some policy-check paths.
+- Development Podman TLS material is documented as local-only; generated
+  `dev-state` files remain ignored and historical development keys are not
+  trusted production material.
 
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_8_gate.sh`
 - Result: local release gate passed on 2026-06-02 after pentest remediations.
 - Pentest report: local `PENTEST.md` reviewed on 2026-06-02; actionable local
-  findings were addressed and the report was deleted before commit.
+  findings were addressed and the report was deleted before commit. A follow-up
+  `PENTEST.md` was reviewed on 2026-06-02 after gap-analysis work; actionable
+  local findings were addressed and the report was deleted before commit.
 - `cargo audit` result: passed in local release gate.
 - `cargo deny check` result: passed in local release gate.
 - CodeQL result: pending for this pentest remediation commit.

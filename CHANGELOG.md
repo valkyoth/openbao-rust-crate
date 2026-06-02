@@ -134,6 +134,11 @@ All notable changes to this project are documented here.
   small endpoint and ergonomics gaps were implemented, and larger background,
   OIDC-provider/MFA, retry, tracing, pagination, bootstrap, and lease-tracking
   systems were recorded in the versioned release plan.
+- Follow-up `PENTEST.md` for `0.8.0` was reviewed and deleted before commit;
+  readiness polling now retries temporary transport errors until timeout,
+  query-bearing OIDC callback requests were verified to use the sensitive
+  transport path, `is_permission_denied` semantics were clarified, and
+  development TLS key history guidance was documented.
 
 ## 0.7.0 - 2026-06-01
 

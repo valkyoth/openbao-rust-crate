@@ -3218,7 +3218,9 @@ impl Sys<'_, Unauthenticated> {
     ///
     /// This helper is runtime-neutral: callers provide the async delay
     /// function, such as `tokio::time::sleep`. It returns the ready health
-    /// response, or an SDK error after `timeout` elapses.
+    /// response, or an SDK error after `timeout` elapses. Transport failures,
+    /// rate limiting, sealed responses, and server errors are retried until the
+    /// timeout; non-transient errors are returned immediately.
     pub async fn wait_ready_with_delay<F, Fut>(
         &self,
         timeout: std::time::Duration,
@@ -3229,14 +3231,30 @@ impl Sys<'_, Unauthenticated> {
         F: FnMut(std::time::Duration) -> Fut,
         Fut: core::future::Future<Output = ()>,
     {
+        if timeout.is_zero() {
+            return Err(Error::InvalidTimeout(
+                "OpenBao readiness timeout must be greater than zero",
+            ));
+        }
+        if interval.is_zero() {
+            return Err(Error::InvalidTimeout(
+                "OpenBao readiness poll interval must be greater than zero",
+            ));
+        }
         let start = std::time::Instant::now();
         loop {
-            let health = self.health().await?;
-            if health.initialized && !health.sealed && !health.standby {
-                return Ok(health);
+            match self.health().await {
+                Ok(health) if health.initialized && !health.sealed && !health.standby => {
+                    return Ok(health);
+                }
+                Ok(_) => {}
+                Err(error) if error.is_temporary() => {}
+                Err(error) => return Err(error),
             }
             if start.elapsed() >= timeout {
-                return Err(Error::InvalidTimeout("OpenBao did not become ready"));
+                return Err(Error::InvalidTimeout(
+                    "OpenBao did not become ready within timeout",
+                ));
             }
             delay(interval).await;
         }
@@ -5990,6 +6008,26 @@ mod tests {
             "sys/remount/status/ef3ba21c-8be8-4e5f-8d00-cb46a532c665"
         );
         assert!(remount_status_path("migration/nested").is_err());
+    }
+
+    #[tokio::test]
+    async fn wait_ready_retries_temporary_transport_errors_until_timeout() {
+        let client =
+            crate::Client::new("https://127.0.0.1:1").unwrap_or_else(|error| panic!("{error}"));
+        let error = match client
+            .sys()
+            .wait_ready_with_delay(
+                std::time::Duration::from_millis(1),
+                std::time::Duration::from_millis(1),
+                |_| async {},
+            )
+            .await
+        {
+            Ok(_) => panic!("closed port should not become ready"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(error, crate::Error::InvalidTimeout(_)));
     }
 
     #[cfg(feature = "operator-ops")]

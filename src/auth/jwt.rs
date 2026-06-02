@@ -697,6 +697,10 @@ impl JwtAuth<'_> {
 
     async fn oidc_callback_response(&self, request: &OidcCallbackRequest) -> Result<JwtLoginAuth> {
         request.validate()?;
+        // SECURITY: OAuth2 codes and ID tokens are passed as query values
+        // because OpenBao documents this callback as GET. The shared client
+        // transport treats any query-bearing request as sensitive, so default
+        // builds still require HTTPS and sanitized transport errors.
         let mut query = vec![("state", request.state.clone())];
         if let Some(code) = &request.code {
             query.push(("code", code.expose_secret().to_owned()));

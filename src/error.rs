@@ -150,6 +150,11 @@ impl Error {
     }
 
     /// Returns true when OpenBao reported an authentication or authorization failure.
+    ///
+    /// This returns true for HTTP 403 responses and for API errors whose
+    /// message contains `permission denied`, which OpenBao can return outside
+    /// HTTP 403 in some policy-check paths. It is a superset of
+    /// [`Self::is_forbidden`].
     pub fn is_permission_denied(&self) -> bool {
         self.status() == Some(StatusCode::FORBIDDEN)
             || matches!(
@@ -290,6 +295,20 @@ mod tests {
             errors: Vec::new(),
         };
         assert!(bad_request.is_bad_request());
+
+        let rate_limited = Error::Api {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            errors: Vec::new(),
+        };
+        assert!(rate_limited.is_rate_limited());
+        assert!(rate_limited.is_temporary());
+
+        let permission_denied = Error::Api {
+            status: StatusCode::BAD_REQUEST,
+            errors: vec!["permission denied".to_owned()],
+        };
+        assert!(permission_denied.is_permission_denied());
+        assert!(!permission_denied.is_forbidden());
 
         let duplicate = Error::Api {
             status: StatusCode::BAD_REQUEST,
