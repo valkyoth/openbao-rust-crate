@@ -14,7 +14,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Visitor, ser::
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
-    response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
+    response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec},
     validation::validate_duration_string,
 };
 
@@ -216,6 +216,12 @@ pub struct LdapList {
     /// Names returned by OpenBao.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for LdapList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Static LDAP credentials.

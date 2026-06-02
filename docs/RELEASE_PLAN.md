@@ -190,7 +190,8 @@ Stop condition:
   Identity resources where OpenBao exposes stable read/write APIs.
 - Typed capability wrappers over `sys/capabilities-self`, including helpers
   such as `can_read`, are implemented.
-- Shared key-list trait or type for structurally identical list responses.
+- Shared `ListEntries` trait for structurally identical string list responses
+  is implemented.
 - Optional timestamp parsing helpers behind a lightweight `time` feature.
 
 Publishable value:

@@ -13,7 +13,7 @@ use serde::{
 use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
     path::validate_mount_path,
-    response::{Empty, ResponseEnvelope, deserialize_bounded_string_map_or_default},
+    response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default},
 };
 
 /// Handle for TLS certificate auth login at a configured mount.
@@ -158,6 +158,12 @@ pub struct CertRoleList {
     pub keys: Vec<String>,
 }
 
+impl ListEntries for CertRoleList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
 /// CRL configuration for the TLS certificate auth method.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct CertCrl {
@@ -178,6 +184,12 @@ pub struct CertCrlList {
         deserialize_with = "crate::response::deserialize_bounded_string_vec"
     )]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for CertCrlList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// CRL serial-number information.

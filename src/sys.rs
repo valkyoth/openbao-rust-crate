@@ -17,7 +17,7 @@ use crate::{
     Authenticated, Client, Error, JsonValue, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
+        Empty, ListEntries, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
         deserialize_bounded_string_map, deserialize_bounded_string_vec,
         deserialize_optional_bounded_string_map, deserialize_optional_bounded_string_vec,
     },
@@ -803,6 +803,12 @@ pub struct PolicyList {
     pub policies: Vec<String>,
 }
 
+impl ListEntries for PolicyList {
+    fn entries(&self) -> &[String] {
+        &self.policies
+    }
+}
+
 /// ACL policy read response.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PolicyInfo {
@@ -1306,6 +1312,12 @@ pub struct PluginList {
     /// Plugin names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for PluginList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Request for registering or updating a plugin catalog entry.

@@ -17,7 +17,8 @@ use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ResponseEnvelope, deserialize_bounded_string_map, deserialize_bounded_string_vec,
+        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map,
+        deserialize_bounded_string_vec,
     },
 };
 
@@ -115,6 +116,12 @@ pub struct PkiRoleList {
     /// Role names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for PkiRoleList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// PKI URL configuration.
@@ -487,6 +494,12 @@ pub struct PkiCertificateList {
     pub keys: Vec<String>,
 }
 
+impl ListEntries for PkiCertificateList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
 /// Read certificate response.
 #[derive(Clone, Debug, Deserialize)]
 pub struct PkiCertificate {
@@ -500,6 +513,12 @@ pub struct PkiIssuerList {
     /// Issuer identifiers or names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for PkiIssuerList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// PKI issuer metadata returned by OpenBao.
@@ -555,6 +574,12 @@ pub struct PkiKeyList {
     /// Key identifiers or names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for PkiKeyList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// PKI key metadata returned by OpenBao.
@@ -693,6 +718,12 @@ pub struct PkiAcmeEabList {
     /// Metadata keyed by EAB key identifier.
     #[serde(default, deserialize_with = "deserialize_bounded_eab_info_map")]
     pub key_info: BTreeMap<String, PkiAcmeEabInfo>,
+}
+
+impl ListEntries for PkiAcmeEabList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 impl Client<Authenticated> {

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use crate::{
     Authenticated, Client, Result,
     path::{validate_endpoint_path, validate_mount_path},
-    response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
+    response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec},
 };
 
 /// Handle for a mounted KV v1 secrets engine.
@@ -22,6 +22,12 @@ pub struct Kv1List {
     /// Child keys. Directory-like entries end with `/`.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for Kv1List {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 impl Client<Authenticated> {

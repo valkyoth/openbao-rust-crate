@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize, Serializer, ser::SerializeMap};
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
-    response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
+    response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec},
 };
 
 /// Handle for a mounted RabbitMQ secrets engine.
@@ -174,6 +174,12 @@ pub struct RabbitMqRoleList {
     /// Role names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for RabbitMqRoleList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Generated RabbitMQ credentials.

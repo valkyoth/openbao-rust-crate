@@ -110,6 +110,8 @@ Implemented now:
   and changed steps.
 - Best-effort FIPS-oriented posture reporting for crate-visible Transit and
   deployment assumptions; this is advisory and not a certification claim.
+- Shared `ListEntries` ergonomics for common list responses without changing
+  their documented fields.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Typed custom plugin wrapper pattern documentation for application-specific
   OpenBao plugin APIs.
@@ -118,8 +120,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: Kerberos auth, broader system backend automation, shared
-  list ergonomics, and optional timestamp parsing.
+- Remaining `0.8.0`: Kerberos auth, broader system backend automation, and
+  optional timestamp parsing.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -306,6 +308,7 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | Policies and capabilities | Yes | ACL policy read/write/list/delete, bounded policy builder helpers, self/token/accessor capability checks, and typed capability views. |
 | Admin bootstrap | Yes | Idempotent plan builder, read-only preview, mounts, Transit keys, ACL policies, KV v2 string values, auth methods, AppRole roles, explicit token issuance, and explicit AppRole SecretID issuance. |
 | FIPS posture helper | Advisory | Best-effort report for crate-visible Transit choices and deployment assumptions. Does not certify OpenBao or the deployment. |
+| List ergonomics | Yes | `ListEntries` exposes `entries`, `iter`, `len`, `is_empty`, and `contains` for common string list responses. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
@@ -334,7 +337,7 @@ async fn main() -> Result<()> {
 Create an authenticated client from environment variables:
 
 ```rust,no_run
-use openbao::{Client, Result};
+use openbao::{Client, ListEntries, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -469,6 +472,8 @@ async fn main() -> Result<()> {
 
     let _username = secret.data.username;
     let _password = secret.data.password;
+    let names = kv.list("production").await?;
+    let _has_database_entry = names.contains("database");
     println!("database credentials loaded");
     Ok(())
 }

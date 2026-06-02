@@ -15,7 +15,7 @@ use zeroize::Zeroizing;
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
-    response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
+    response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec},
 };
 
 /// Handle for a mounted Transit secrets engine.
@@ -281,6 +281,12 @@ pub struct TransitKeyList {
     /// Transit key names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for TransitKeyList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Request for Transit encryption.

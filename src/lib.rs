@@ -97,7 +97,7 @@ pub use posture::{
     FipsPosture, FipsPostureFinding, FipsPostureNote, FipsPostureReport, FipsPostureSeverity,
 };
 pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
-pub use response::{Empty, ResponseEnvelope};
+pub use response::{Empty, ListEntries, ResponseEnvelope};
 pub use secrecy::{self, ExposeSecret, SecretString};
 pub use serde_json::{self, Value as JsonValue};
 
@@ -105,9 +105,9 @@ pub use serde_json::{self, Value as JsonValue};
 pub mod prelude {
     pub use crate::{
         AclCapability, AclPolicyBuilder, Authenticated, Certificate, Client, ClientBuilder, Empty,
-        Error, ExposeSecret, HeaderMode, Identity, JsonValue, Method, OpenBao, OpenBaoConfig,
-        ResponseEnvelope, Result, SecretString, SharedClient, StatusCode, Unauthenticated,
-        duration_to_bao_string,
+        Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries, Method, OpenBao,
+        OpenBaoConfig, ResponseEnvelope, Result, SecretString, SharedClient, StatusCode,
+        Unauthenticated, duration_to_bao_string,
     };
     #[cfg(feature = "transit")]
     pub use crate::{

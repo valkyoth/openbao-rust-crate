@@ -13,7 +13,7 @@ use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ResponseEnvelope, deserialize_bounded_string_map_or_default,
+        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
         deserialize_bounded_string_vec,
     },
 };
@@ -125,6 +125,12 @@ pub struct IdentityEntityList {
     /// Entity IDs or names returned by OpenBao.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for IdentityEntityList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Request to delete multiple entities by ID.
@@ -330,6 +336,12 @@ pub struct IdentityGroupList {
     pub keys: Vec<String>,
 }
 
+impl ListEntries for IdentityGroupList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
 /// Entity alias create/update request.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct IdentityEntityAliasRequest {
@@ -471,6 +483,12 @@ pub struct IdentityAliasList {
     /// Alias IDs returned by OpenBao.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for IdentityAliasList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 impl Client<Authenticated> {

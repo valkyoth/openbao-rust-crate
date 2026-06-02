@@ -16,7 +16,7 @@ use serde::{
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
-    response::{Empty, ResponseEnvelope, deserialize_bounded_string_vec},
+    response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec},
 };
 
 const MAX_SSH_FIELD_BYTES: usize = 4096;
@@ -72,6 +72,12 @@ pub struct SshRoleList {
         deserialize_with = "deserialize_bounded_string_vec"
     )]
     pub roles: Vec<String>,
+}
+
+impl ListEntries for SshRoleList {
+    fn entries(&self) -> &[String] {
+        &self.roles
+    }
 }
 
 /// SSH role create/update request.
@@ -445,6 +451,12 @@ pub struct SshIssuerList {
     /// Issuer metadata keyed by issuer identifier.
     #[serde(default, deserialize_with = "deserialize_bounded_issuer_info_map")]
     pub key_info: BTreeMap<String, SshIssuerInfo>,
+}
+
+impl ListEntries for SshIssuerList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// SSH issuer metadata.

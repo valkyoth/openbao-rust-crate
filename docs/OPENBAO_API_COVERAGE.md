@@ -63,6 +63,9 @@ Sources:
   best-effort FIPS-oriented reporting is implemented for crate-visible Transit
   and seal-assumption choices. A future quantum-readiness profile remains
   planned once OpenBao exposes stable primitives.
+- Shared list ergonomics:
+  common string list response structs implement `ListEntries`; secret accessor
+  lists remain separate secret-aware types.
 
 ## Auth Methods
 

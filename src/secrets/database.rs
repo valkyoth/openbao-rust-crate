@@ -11,7 +11,7 @@ use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ResponseEnvelope, deserialize_bounded_string_map_or_default,
+        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
         deserialize_bounded_string_vec,
     },
 };
@@ -119,6 +119,12 @@ pub struct DatabaseList {
     /// Names returned by OpenBao.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for DatabaseList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Dynamic database role request and response.

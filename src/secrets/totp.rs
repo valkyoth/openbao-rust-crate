@@ -13,7 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as DeErr
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
-    response::{Empty, deserialize_bounded_string_vec},
+    response::{Empty, ListEntries, deserialize_bounded_string_vec},
 };
 
 /// Handle for a mounted TOTP secrets engine.
@@ -285,6 +285,12 @@ pub struct TotpKeyList {
     /// Key names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for TotpKeyList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// TOTP code generate response.

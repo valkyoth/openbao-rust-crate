@@ -18,6 +18,36 @@ pub(crate) const MAX_RESPONSE_STRINGS: usize = 4096;
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Empty {}
 
+/// Shared accessor trait for OpenBao list responses.
+///
+/// OpenBao commonly returns list endpoints as a primary `keys`, `policies`,
+/// or `roles` string array. Concrete response structs keep their documented
+/// field names; this trait provides common read-only ergonomics across them.
+pub trait ListEntries {
+    /// Returns the primary list entries.
+    fn entries(&self) -> &[String];
+
+    /// Returns an iterator over the primary list entries.
+    fn iter(&self) -> core::slice::Iter<'_, String> {
+        self.entries().iter()
+    }
+
+    /// Returns the number of primary entries.
+    fn len(&self) -> usize {
+        self.entries().len()
+    }
+
+    /// Returns true when the primary entry list is empty.
+    fn is_empty(&self) -> bool {
+        self.entries().is_empty()
+    }
+
+    /// Returns true when the primary entry list contains `entry`.
+    fn contains(&self, entry: &str) -> bool {
+        self.entries().iter().any(|candidate| candidate == entry)
+    }
+}
+
 /// Standard OpenBao response envelope for endpoints that return `data`.
 #[derive(Clone, Deserialize)]
 pub struct ResponseEnvelope<T> {
@@ -288,7 +318,7 @@ mod tests {
 
     use secrecy::SecretString;
 
-    use super::ResponseEnvelope;
+    use super::{ListEntries, ResponseEnvelope};
 
     #[test]
     fn response_debug_redacts_lease_id() {
@@ -357,5 +387,24 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    #[cfg(all(feature = "kv2", feature = "ssh", feature = "sys"))]
+    fn list_entries_trait_covers_common_primary_fields() {
+        let kv = crate::secrets::kv2::Kv2List {
+            keys: vec!["app/".to_owned(), "db".to_owned()],
+        };
+        let ssh = crate::secrets::ssh::SshRoleList {
+            roles: vec!["admin".to_owned()],
+        };
+        let policies = crate::sys::PolicyList {
+            policies: vec!["default".to_owned()],
+        };
+
+        assert_eq!(kv.len(), 2);
+        assert!(kv.contains("db"));
+        assert_eq!(ssh.entries(), ["admin"]);
+        assert_eq!(policies.iter().next().map(String::as_str), Some("default"));
     }
 }

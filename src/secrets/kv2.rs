@@ -18,7 +18,7 @@ use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ResponseEnvelope, deserialize_bounded_string_vec,
+        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec,
         deserialize_optional_bounded_string_map,
     },
 };
@@ -203,6 +203,12 @@ pub struct Kv2List {
     /// Child keys. Directory-like entries end with `/`.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for Kv2List {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Options for updating KV v2 key metadata.

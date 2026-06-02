@@ -19,6 +19,7 @@ All notable changes to this project are documented here.
   `WouldIssue` statuses before applying a plan.
 - Advisory `FipsPosture` report builder for crate-visible Transit key, hash,
   signature, and seal-assumption choices.
+- Shared `ListEntries` trait for common string list responses.
 
 ### Security
 
@@ -41,6 +42,8 @@ All notable changes to this project are documented here.
 - `FipsPosture` is intentionally best-effort and records unverifiable
   deployment assumptions instead of claiming OpenBao or the deployment is FIPS
   certified.
+- `ListEntries` is implemented only for regular string list responses; secret
+  accessor lists keep their dedicated secret-aware types.
 
 ## 0.7.0 - 2026-06-01
 

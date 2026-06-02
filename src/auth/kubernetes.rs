@@ -10,7 +10,7 @@ use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
     path::validate_mount_path,
     response::{
-        Empty, ResponseEnvelope, deserialize_bounded_string_map_or_default,
+        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
         deserialize_bounded_string_vec,
     },
 };
@@ -91,6 +91,12 @@ pub struct KubernetesRoleList {
     /// Role names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+impl ListEntries for KubernetesRoleList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Metadata returned after a successful Kubernetes login.

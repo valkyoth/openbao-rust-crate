@@ -28,10 +28,9 @@
   capability views for common access checks; read-only admin bootstrap preview
   with would-create, would-update, and would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
-  choices.
+  choices; shared `ListEntries` ergonomics for common string list responses.
 - Remaining `0.8.0` planned work: Kerberos auth coverage; quotas/namespaces
-  and additional system backend coverage; shared list ergonomics; optional
-  timestamp parsing.
+  and additional system backend coverage; optional timestamp parsing.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -65,6 +64,8 @@
 - `FipsPosture` is a best-effort helper over SDK-visible choices only. It does
   not certify OpenBao, cryptographic providers, HSM/KMS use, TLS, operating
   systems, or deployment processes.
+- `ListEntries` is limited to regular string lists. Secret accessor lists are
+  intentionally excluded because their entries are sensitive.
 
 ## Security And Stability Gate
 
