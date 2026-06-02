@@ -7325,6 +7325,99 @@ async fn admin_bootstrap_can_provision_approle_auth() {
 
 #[cfg(feature = "operator-ops")]
 #[tokio::test]
+async fn raw_storage_helpers_use_documented_paths_and_redact_values() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..4 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match index {
+                0 => {
+                    assert!(request.starts_with(
+                        "GET /v1/sys/raw/logical/foo?compressed=false&encoding=base64 HTTP/1.1"
+                    ));
+                    format!(r#"{{"value":"{}{}"}}"#, "raw-", "read-value")
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/raw/logical/foo HTTP/1.1"));
+                    assert!(request.contains(&format!(r#""value":"{}{}""#, "raw-", "write-value")));
+                    assert!(request.contains(r#""compression_type":"gzip""#));
+                    assert!(request.contains(r#""encoding":"base64""#));
+                    "{}".to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/sys/raw/logical?list=true HTTP/1.1"));
+                    r#"{"data":{"keys":["foo","bar/"]}}"#.to_owned()
+                }
+                3 => {
+                    assert!(request.starts_with("DELETE /v1/sys/raw/logical/foo HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let read = client
+        .sys()
+        .raw_read(
+            "logical/foo",
+            &openbao::sys::RawReadOptions::new()
+                .with_compressed(false)
+                .with_encoding(openbao::sys::RawEncoding::Base64),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(read.value.expose_secret(), "raw-read-value");
+    assert!(!format!("{read:?}").contains("raw-read-value"));
+
+    let write = openbao::sys::RawWriteRequest::new(test_secret(&["raw-", "write-value"]))
+        .with_compression(openbao::sys::RawCompression::Gzip)
+        .with_encoding(openbao::sys::RawEncoding::Base64);
+    assert!(!format!("{write:?}").contains("raw-write-value"));
+    client
+        .sys()
+        .raw_write("logical/foo", &write)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let list = client
+        .sys()
+        .raw_list("logical")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(list.keys, ["foo", "bar/"]);
+
+    client
+        .sys()
+        .raw_delete("logical/foo")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
 async fn operator_ops_use_documented_paths_and_redact_material() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

@@ -35,14 +35,15 @@
   locked-user list/filter/unlock helpers;
   Integrated Storage Raft join/configuration/peer/bootstrap, capped
   snapshot download/restore helpers, and Autopilot JSON helpers; Prometheus
-  text metrics output;
+  text metrics output; operator-gated raw storage read/write/list/delete
+  helpers;
   remount/mount-migration start and status helpers; read-only admin bootstrap
   preview with would-create, would-update, and would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
   choices; shared `ListEntries` ergonomics for common string list responses;
   optional RFC3339 timestamp parsing helpers behind the `time` feature.
-- Remaining `0.8.0` planned work: raw storage and additional high-risk
-  operator/diagnostic system backend coverage.
+- Remaining `0.8.0` planned work: additional high-risk operator/diagnostic
+  system backend coverage.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -89,6 +90,10 @@
   `OpenBaoConfig::max_response_bytes`. Restore helpers reject empty payloads
   before dispatch and should be used only during an operator-controlled
   recovery ceremony.
+- Raw storage helpers are unavailable in default builds and require
+  `operator-ops` plus `operator-ops-acknowledged`. Raw values use
+  `SecretString`, raw key lists are bounded, and raw storage paths are
+  validated before dispatch.
 - HA node lists are bounded during deserialization, and remount source,
   destination, and migration ID values are validated before request dispatch.
 - CORS origin and header lists are bounded during deserialization. CORS writes

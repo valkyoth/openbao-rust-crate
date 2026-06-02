@@ -37,6 +37,8 @@ All notable changes to this project are documented here.
 - Active-node step-down helper for `/sys/step-down`.
 - System tools random byte and hash helpers for `/sys/tools/random` and
   `/sys/tools/hash`.
+- Operator-gated raw storage read, write, list, and delete helpers for
+  `/sys/raw/:path`.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -91,6 +93,9 @@ All notable changes to this project are documented here.
 - System tools random responses and hash outputs are represented as
   `SecretString` and redacted from debug output; random byte counts are rejected
   when zero or above the local 1 MiB helper limit.
+- Raw storage helpers are available only with `operator-ops` plus
+  `operator-ops-acknowledged`; raw values use `SecretString`, response key
+  lists are bounded, and raw storage paths are validated before dispatch.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

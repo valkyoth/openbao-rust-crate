@@ -117,6 +117,7 @@ Implemented now:
   their documented fields.
 - Optional RFC3339 timestamp parsing helpers behind the `time` feature.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
+- Operator-gated raw storage read, write, list, and delete helpers.
 - Typed custom plugin wrapper pattern documentation for application-specific
   OpenBao plugin APIs.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
@@ -124,8 +125,7 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: raw storage and additional high-risk system backend
-  operator/diagnostic coverage.
+- Remaining `0.8.0`: additional high-risk system backend diagnostic coverage.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -243,7 +243,7 @@ openbao = { version = "0.8", features = ["time"] }
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
 | `native-tls-acknowledged` | no | Explicit acknowledgment for audited native TLS builds. |
-| `operator-ops` | no | Production init, unseal, seal, rekey, key-share rotate, and keyring rotate APIs. Requires `operator-ops-acknowledged`. |
+| `operator-ops` | no | Production init, unseal, seal, rekey, key-share rotate, keyring rotate, and raw storage APIs. Requires `operator-ops-acknowledged`. |
 | `operator-ops-acknowledged` | no | Explicit acknowledgment for audited operator-operation builds. |
 
 ## Support Matrix
@@ -345,7 +345,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
-| Storage | Partial | Integrated Storage Raft JSON and capped snapshot helpers are implemented; raw storage is deferred for a separate high-risk operator slice. |
+| Storage | Partial | Integrated Storage Raft JSON, capped snapshot helpers, and operator-gated raw storage helpers are implemented; broader diagnostic storage endpoints remain deferred. |
 
 ## Examples
 

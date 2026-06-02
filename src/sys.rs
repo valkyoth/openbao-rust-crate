@@ -131,6 +131,177 @@ pub struct KeyStatus {
     pub encryptions: u64,
 }
 
+/// Raw storage value encoding for `/sys/raw`.
+///
+/// Raw storage APIs are available only with `operator-ops`. OpenBao documents
+/// `/sys/raw` as disabled by default and as addressing the underlying storage
+/// backend path rather than logical secret paths.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+pub enum RawEncoding {
+    /// Do not ask OpenBao to encode or decode the raw value.
+    #[default]
+    #[serde(rename = "")]
+    None,
+    /// Ask OpenBao to use standard base64 text for the raw value.
+    #[serde(rename = "base64")]
+    Base64,
+}
+
+#[cfg(feature = "operator-ops")]
+impl RawEncoding {
+    fn as_query_value(self) -> Option<String> {
+        match self {
+            Self::None => None,
+            Self::Base64 => Some("base64".to_owned()),
+        }
+    }
+
+    fn is_none(value: &Self) -> bool {
+        matches!(value, Self::None)
+    }
+}
+
+/// Raw storage write compression mode for `/sys/raw`.
+///
+/// `None` serializes to an empty string, which asks OpenBao to write without
+/// compression. Leave the request field unset to let OpenBao keep the existing
+/// key's compression behavior where the server supports that.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub enum RawCompression {
+    /// Explicitly write without compression.
+    #[serde(rename = "")]
+    None,
+    /// Ask OpenBao to gzip-compress the stored value.
+    #[serde(rename = "gzip")]
+    Gzip,
+    /// Ask OpenBao to snappy-compress the stored value.
+    #[serde(rename = "snappy")]
+    Snappy,
+}
+
+/// Read options for `/sys/raw/:path`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RawReadOptions {
+    /// Whether OpenBao should attempt to decompress the returned value.
+    pub compressed: bool,
+    /// Optional value encoding requested from OpenBao.
+    pub encoding: RawEncoding,
+}
+
+#[cfg(feature = "operator-ops")]
+impl Default for RawReadOptions {
+    fn default() -> Self {
+        Self {
+            compressed: true,
+            encoding: RawEncoding::None,
+        }
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+impl RawReadOptions {
+    /// Creates default raw read options.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Controls OpenBao's server-side decompression attempt.
+    #[must_use]
+    pub fn with_compressed(mut self, compressed: bool) -> Self {
+        self.compressed = compressed;
+        self
+    }
+
+    /// Requests a specific response value encoding.
+    #[must_use]
+    pub fn with_encoding(mut self, encoding: RawEncoding) -> Self {
+        self.encoding = encoding;
+        self
+    }
+}
+
+/// Raw storage write request for `/sys/raw/:path`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone)]
+pub struct RawWriteRequest {
+    /// Raw value to write. Treat as sensitive storage material.
+    pub value: SecretString,
+    /// Optional compression mode for the stored value.
+    pub compression_type: Option<RawCompression>,
+    /// Optional value encoding.
+    pub encoding: RawEncoding,
+}
+
+#[cfg(feature = "operator-ops")]
+impl RawWriteRequest {
+    /// Creates a raw write request with the required value.
+    #[must_use]
+    pub fn new(value: SecretString) -> Self {
+        Self {
+            value,
+            compression_type: None,
+            encoding: RawEncoding::None,
+        }
+    }
+
+    /// Sets the storage compression behavior.
+    #[must_use]
+    pub fn with_compression(mut self, compression: RawCompression) -> Self {
+        self.compression_type = Some(compression);
+        self
+    }
+
+    /// Sets the value encoding used for the request.
+    #[must_use]
+    pub fn with_encoding(mut self, encoding: RawEncoding) -> Self {
+        self.encoding = encoding;
+        self
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for RawWriteRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RawWriteRequest")
+            .field("value", &"<redacted>")
+            .field("compression_type", &self.compression_type)
+            .field("encoding", &self.encoding)
+            .finish()
+    }
+}
+
+/// Raw storage value returned by `/sys/raw/:path`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct RawReadResponse {
+    /// Raw value returned by OpenBao. Treat as sensitive storage material.
+    pub value: SecretString,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for RawReadResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RawReadResponse")
+            .field("value", &"<redacted>")
+            .finish()
+    }
+}
+
+/// Raw storage key list returned by `/sys/raw/:prefix?list=true`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct RawList {
+    /// Raw storage keys under the requested prefix.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
 /// CORS configuration returned by `/sys/config/cors`.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct CorsConfig {
@@ -2566,6 +2737,16 @@ struct SysHashPayload<'a> {
     format: Option<SysToolsOutputFormat>,
 }
 
+#[cfg(feature = "operator-ops")]
+#[derive(Serialize)]
+struct RawWritePayload<'a> {
+    value: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    compression_type: Option<RawCompression>,
+    #[serde(skip_serializing_if = "RawEncoding::is_none")]
+    encoding: RawEncoding,
+}
+
 #[derive(Serialize)]
 struct InitPayload {
     secret_shares: u8,
@@ -2715,8 +2896,8 @@ impl<State> Sys<'_, State> {
 
     /// Reads JSON telemetry metrics from `/sys/metrics`.
     ///
-    /// The Prometheus text format is intentionally left to a future raw-body
-    /// helper. This method keeps the current JSON-only transport boundary.
+    /// Use [`Self::metrics_prometheus`] when the Prometheus text format is
+    /// required.
     pub async fn metrics_json(&self) -> Result<JsonValue> {
         self.client
             .request_json_query_accepting(
@@ -3137,6 +3318,87 @@ impl Sys<'_, Authenticated> {
                     key: request.key.expose_secret(),
                     nonce: &request.nonce,
                 }),
+            )
+            .await
+    }
+
+    /// Reads one raw storage backend key through `/sys/raw/:path`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// OpenBao documents this endpoint as disabled by default and as operating
+    /// on underlying storage paths, not logical secret paths. Treat returned
+    /// values as sensitive operational material.
+    #[cfg(feature = "operator-ops")]
+    pub async fn raw_read(&self, path: &str, options: &RawReadOptions) -> Result<RawReadResponse> {
+        let mut query = vec![("compressed", options.compressed.to_string())];
+        if let Some(encoding) = options.encoding.as_query_value() {
+            query.push(("encoding", encoding));
+        }
+        self.client
+            .request_json_query_accepting(
+                Method::GET,
+                &raw_storage_path(path)?,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
+    /// Writes one raw storage backend key through `/sys/raw/:path`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This can mutate OpenBao's underlying storage and should be used only
+    /// during an explicit operator recovery or migration procedure.
+    #[cfg(feature = "operator-ops")]
+    pub async fn raw_write(&self, path: &str, request: &RawWriteRequest) -> Result<Empty> {
+        let payload = RawWritePayload {
+            value: request.value.expose_secret(),
+            compression_type: request.compression_type,
+            encoding: request.encoding,
+        };
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                &raw_storage_path(path)?,
+                Some(&payload),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Lists raw storage backend keys through `/sys/raw/:prefix?list=true`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// OpenBao documents this endpoint as requiring `sudo` capability.
+    #[cfg(feature = "operator-ops")]
+    pub async fn raw_list(&self, prefix: &str) -> Result<RawList> {
+        let envelope: ResponseEnvelope<RawList> = self
+            .client
+            .request_json_query_accepting(
+                Method::GET,
+                &raw_storage_path(prefix)?,
+                &[("list", "true".to_owned())],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Deletes one raw storage backend key through `/sys/raw/:path`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This can destroy OpenBao internal state and should be used only during
+    /// an explicit operator recovery or migration procedure.
+    #[cfg(feature = "operator-ops")]
+    pub async fn raw_delete(&self, path: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &raw_storage_path(path)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
             .await
     }
@@ -4354,6 +4616,17 @@ fn sys_hash_path(algorithm: SysHashAlgorithm) -> String {
     ["sys/tools/hash", algorithm.as_path_segment()].join("/")
 }
 
+#[cfg(feature = "operator-ops")]
+fn raw_storage_path(path: &str) -> Result<String> {
+    let segments = validate_endpoint_path(path)?;
+    if segments.is_empty() {
+        return Err(Error::InvalidPath(
+            "raw storage path must not be empty".into(),
+        ));
+    }
+    Ok(["sys/raw", &segments.join("/")].join("/"))
+}
+
 fn validate_sys_random_bytes(bytes: u64) -> Result<()> {
     if bytes == 0 {
         return Err(Error::InvalidParameter(
@@ -5358,6 +5631,11 @@ mod tests {
     };
     #[cfg(feature = "operator-ops")]
     use super::{OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest};
+    #[cfg(feature = "operator-ops")]
+    use super::{
+        RawCompression, RawEncoding, RawList, RawReadOptions, RawReadResponse, RawWriteRequest,
+        raw_storage_path,
+    };
 
     #[test]
     fn sys_paths_are_validated() {
@@ -5397,6 +5675,45 @@ mod tests {
             "sys/remount/status/ef3ba21c-8be8-4e5f-8d00-cb46a532c665"
         );
         assert!(remount_status_path("migration/nested").is_err());
+    }
+
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn raw_storage_paths_and_secret_types_are_validated() {
+        assert_eq!(
+            raw_storage_path("logical/secret").unwrap_or_else(|error| panic!("{error}")),
+            "sys/raw/logical/secret"
+        );
+        assert!(raw_storage_path("").is_err());
+        assert!(raw_storage_path("../logical").is_err());
+
+        let options = RawReadOptions::new()
+            .with_compressed(false)
+            .with_encoding(RawEncoding::Base64);
+        assert!(!options.compressed);
+        assert_eq!(options.encoding, RawEncoding::Base64);
+
+        let request = RawWriteRequest::new(SecretString::from(["raw-", "value"].concat()))
+            .with_compression(RawCompression::Gzip)
+            .with_encoding(RawEncoding::Base64);
+        let debug = format!("{request:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("raw-value"));
+
+        let response = RawReadResponse {
+            value: SecretString::from(["raw-", "response"].concat()),
+        };
+        assert!(!format!("{response:?}").contains("raw-response"));
+
+        let mut keys = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            keys.push(format!("key-{index}"));
+        }
+        let error = match serde_json::from_value::<RawList>(serde_json::json!({ "keys": keys })) {
+            Ok(_) => panic!("oversized raw key list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
     }
 
     #[test]

@@ -203,7 +203,10 @@ Stop condition:
 - Prometheus metrics text output and capped Integrated Storage Raft snapshot
   download/restore helpers are implemented through a private raw-body
   transport path that keeps HTTPS/token enforcement and response-size limits.
-  Raw storage remains planned for a separate high-risk operator slice.
+- Raw storage read/write/list/delete helpers are implemented behind
+  `operator-ops` plus `operator-ops-acknowledged`; values are secret-aware and
+  key lists are bounded. Broader diagnostic endpoints remain planned for a
+  separate high-risk operator slice.
 - HA status and remount/mount-migration start/status helpers are implemented.
 - Key status, CORS config read/write/delete, and active-node step-down helpers
   are implemented.
