@@ -205,8 +205,11 @@ Stop condition:
   transport path that keeps HTTPS/token enforcement and response-size limits.
 - Raw storage read/write/list/delete helpers are implemented behind
   `operator-ops` plus `operator-ops-acknowledged`; values are secret-aware and
-  key lists are bounded. Broader diagnostic endpoints remain planned for a
-  separate high-risk operator slice.
+  key lists are bounded.
+- Pprof diagnostic helpers are implemented behind `operator-ops` plus
+  `operator-ops-acknowledged`; payloads are returned in zeroizing byte buffers
+  under the configured response-size cap. Streaming monitor and unstable
+  internal inspect endpoints remain deferred.
 - HA status and remount/mount-migration start/status helpers are implemented.
 - Key status, CORS config read/write/delete, and active-node step-down helpers
   are implemented.

@@ -219,9 +219,9 @@ Support plan:
   implemented. Integrated Storage Raft join/configuration/peer
   mutation/bootstrap helpers, capped snapshot download/restore helpers, and
   Autopilot JSON helpers are implemented. Raw storage read/write/list/delete
-  helpers are implemented behind explicit operator-operation feature gates.
-  Broader diagnostic endpoints remain planned for separate high-risk operator
-  slices.
+  helpers and pprof diagnostic byte helpers are implemented behind explicit
+  operator-operation feature gates. Streaming monitor and unstable internal
+  inspect endpoints remain deferred.
 
 ## OpenBao-Specific Notes
 

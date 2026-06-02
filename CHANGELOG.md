@@ -39,6 +39,7 @@ All notable changes to this project are documented here.
   `/sys/tools/hash`.
 - Operator-gated raw storage read, write, list, and delete helpers for
   `/sys/raw/:path`.
+- Operator-gated pprof diagnostic helpers for `/sys/pprof/:profile`.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -96,6 +97,10 @@ All notable changes to this project are documented here.
 - Raw storage helpers are available only with `operator-ops` plus
   `operator-ops-acknowledged`; raw values use `SecretString`, response key
   lists are bounded, and raw storage paths are validated before dispatch.
+- Pprof helpers are available only with `operator-ops` plus
+  `operator-ops-acknowledged`; profile payloads are returned in zeroizing byte
+  buffers, response-size limits apply, and profiling duration/debug query
+  values are validated before dispatch.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

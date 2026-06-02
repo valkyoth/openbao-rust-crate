@@ -7418,6 +7418,81 @@ async fn raw_storage_helpers_use_documented_paths_and_redact_values() {
 
 #[cfg(feature = "operator-ops")]
 #[tokio::test]
+async fn pprof_helpers_use_documented_paths_and_capped_bytes() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match index {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/pprof/heap HTTP/1.1"));
+                    b"heap-profile".to_vec()
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/sys/pprof/profile?seconds=2 HTTP/1.1"));
+                    b"cpu-profile".to_vec()
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/sys/pprof/goroutine?debug=2 HTTP/1.1"));
+                    b"goroutine stack trace".to_vec()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/octet-stream\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                String::from_utf8_lossy(&body)
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let heap = client
+        .sys()
+        .pprof(openbao::sys::PprofProfile::Heap, &Default::default())
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(heap.as_slice(), b"heap-profile");
+
+    let cpu = client
+        .sys()
+        .pprof(
+            openbao::sys::PprofProfile::Profile,
+            &openbao::sys::PprofOptions::new().with_seconds(2),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(cpu.as_slice(), b"cpu-profile");
+
+    let goroutine = client
+        .sys()
+        .pprof(
+            openbao::sys::PprofProfile::Goroutine,
+            &openbao::sys::PprofOptions::new().with_debug(2),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(goroutine.as_slice(), b"goroutine stack trace");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
 async fn operator_ops_use_documented_paths_and_redact_material() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

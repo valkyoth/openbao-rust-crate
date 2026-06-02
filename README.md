@@ -118,6 +118,7 @@ Implemented now:
 - Optional RFC3339 timestamp parsing helpers behind the `time` feature.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Operator-gated raw storage read, write, list, and delete helpers.
+- Operator-gated pprof diagnostic byte helpers.
 - Typed custom plugin wrapper pattern documentation for application-specific
   OpenBao plugin APIs.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
@@ -125,7 +126,7 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: additional high-risk system backend diagnostic coverage.
+- Remaining `0.8.0`: final pentest review and release-candidate polish.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -322,6 +323,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Internal UI helpers | Yes | Internal UI namespace and mount discovery helpers with bounded maps; OpenBao does not guarantee endpoint stability. |
 | Metrics | Yes | Typed JSON helper for `/sys/metrics?format=json` and capped Prometheus text helper. |
 | Host diagnostics | Yes | JSON helper for `/sys/host-info` platform diagnostics. |
+| Pprof diagnostics | Gated | Capped zeroizing byte helpers for `/sys/pprof/:profile`, available only with `operator-ops` plus `operator-ops-acknowledged`. |
 | Sanitized config state | Yes | JSON helper for `/sys/config/state/sanitized`. |
 | Audited request headers | Yes | List, read, write, and delete `/sys/config/auditing/request-headers` helpers. |
 | CORS config | Yes | Read, write, and delete `/sys/config/cors` helpers with bounded lists and header validation. |
@@ -345,7 +347,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
-| Storage | Partial | Integrated Storage Raft JSON, capped snapshot helpers, and operator-gated raw storage helpers are implemented; broader diagnostic storage endpoints remain deferred. |
+| Storage | Partial | Integrated Storage Raft JSON, capped snapshot helpers, and operator-gated raw storage helpers are implemented; unstable internal inspect endpoints remain deferred. |
 
 ## Examples
 

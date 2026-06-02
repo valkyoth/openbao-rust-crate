@@ -25,6 +25,8 @@ use crate::{
 };
 
 const MAX_SYS_RANDOM_BYTES: u64 = 1_048_576;
+#[cfg(feature = "operator-ops")]
+const MAX_SYS_PPROF_SECONDS: u16 = 300;
 
 /// System backend handle.
 #[derive(Debug)]
@@ -300,6 +302,93 @@ pub struct RawList {
     /// Raw storage keys under the requested prefix.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+/// Runtime profile exposed by `/sys/pprof`.
+///
+/// Pprof helpers are available only with `operator-ops`. Profile payloads can
+/// contain stack traces, command-line arguments, or other diagnostic material,
+/// so they are returned as zeroizing byte buffers instead of strings.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PprofProfile {
+    /// Historical allocation profile from `/sys/pprof/allocs`.
+    Allocs,
+    /// Blocking profile from `/sys/pprof/block`.
+    Block,
+    /// Process command line from `/sys/pprof/cmdline`.
+    Cmdline,
+    /// Current goroutine profile from `/sys/pprof/goroutine`.
+    Goroutine,
+    /// Live heap profile from `/sys/pprof/heap`.
+    Heap,
+    /// Mutex profile from `/sys/pprof/mutex`.
+    Mutex,
+    /// CPU profile from `/sys/pprof/profile`.
+    Profile,
+    /// Program counter symbol lookup from `/sys/pprof/symbol`.
+    Symbol,
+    /// Thread creation profile from `/sys/pprof/threadcreate`.
+    Threadcreate,
+    /// Execution trace from `/sys/pprof/trace`.
+    Trace,
+}
+
+#[cfg(feature = "operator-ops")]
+impl PprofProfile {
+    fn as_path_segment(self) -> &'static str {
+        match self {
+            Self::Allocs => "allocs",
+            Self::Block => "block",
+            Self::Cmdline => "cmdline",
+            Self::Goroutine => "goroutine",
+            Self::Heap => "heap",
+            Self::Mutex => "mutex",
+            Self::Profile => "profile",
+            Self::Symbol => "symbol",
+            Self::Threadcreate => "threadcreate",
+            Self::Trace => "trace",
+        }
+    }
+}
+
+/// Query options for `/sys/pprof`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct PprofOptions {
+    /// Collection duration for [`PprofProfile::Profile`] and [`PprofProfile::Trace`].
+    ///
+    /// Values must be between 1 and 300 seconds when set. Leave unset to use
+    /// OpenBao's endpoint default.
+    pub seconds: Option<u16>,
+    /// Debug output mode for [`PprofProfile::Goroutine`].
+    ///
+    /// OpenBao documents `2` as text stack trace output. Values above `2` are
+    /// rejected locally.
+    pub debug: Option<u8>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl PprofOptions {
+    /// Creates default pprof query options.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the profiling or trace collection duration in seconds.
+    #[must_use]
+    pub fn with_seconds(mut self, seconds: u16) -> Self {
+        self.seconds = Some(seconds);
+        self
+    }
+
+    /// Sets the goroutine debug output mode.
+    #[must_use]
+    pub fn with_debug(mut self, debug: u8) -> Self {
+        self.debug = Some(debug);
+        self
+    }
 }
 
 /// CORS configuration returned by `/sys/config/cors`.
@@ -3403,6 +3492,38 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Reads a runtime profile through `/sys/pprof/:profile`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// Pprof data can include command-line arguments, stack traces, and other
+    /// local-node diagnostic material. The SDK returns a zeroizing byte buffer
+    /// and applies the configured maximum response-size cap.
+    #[cfg(feature = "operator-ops")]
+    pub async fn pprof(
+        &self,
+        profile: PprofProfile,
+        options: &PprofOptions,
+    ) -> Result<Zeroizing<Vec<u8>>> {
+        validate_pprof_options(profile, options)?;
+        let mut query = Vec::new();
+        if let Some(seconds) = options.seconds {
+            query.push(("seconds", seconds.to_string()));
+        }
+        if let Some(debug) = options.debug {
+            query.push(("debug", debug.to_string()));
+        }
+        self.client
+            .request_bytes_accepting(
+                Method::GET,
+                &pprof_path(profile),
+                &query,
+                None,
+                None,
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
     /// Lists mounted secrets engines.
     pub async fn list_mounts(&self) -> Result<BTreeMap<String, MountInfo>> {
         let envelope: ResponseEnvelope<MountInfoMap> = self
@@ -4627,6 +4748,42 @@ fn raw_storage_path(path: &str) -> Result<String> {
     Ok(["sys/raw", &segments.join("/")].join("/"))
 }
 
+#[cfg(feature = "operator-ops")]
+fn pprof_path(profile: PprofProfile) -> String {
+    ["sys/pprof", profile.as_path_segment()].join("/")
+}
+
+#[cfg(feature = "operator-ops")]
+fn validate_pprof_options(profile: PprofProfile, options: &PprofOptions) -> Result<()> {
+    if let Some(seconds) = options.seconds {
+        if !matches!(profile, PprofProfile::Profile | PprofProfile::Trace) {
+            return Err(Error::InvalidParameter(
+                "pprof seconds is supported only for profile and trace".into(),
+            ));
+        }
+        if seconds == 0 || seconds > MAX_SYS_PPROF_SECONDS {
+            return Err(Error::InvalidParameter(format!(
+                "pprof seconds must be between 1 and {MAX_SYS_PPROF_SECONDS}"
+            )));
+        }
+    }
+
+    if let Some(debug) = options.debug {
+        if !matches!(profile, PprofProfile::Goroutine) {
+            return Err(Error::InvalidParameter(
+                "pprof debug is supported only for goroutine".into(),
+            ));
+        }
+        if debug > 2 {
+            return Err(Error::InvalidParameter(
+                "pprof debug must be 0, 1, or 2".into(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_sys_random_bytes(bytes: u64) -> Result<()> {
     if bytes == 0 {
         return Err(Error::InvalidParameter(
@@ -5633,8 +5790,8 @@ mod tests {
     use super::{OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest};
     #[cfg(feature = "operator-ops")]
     use super::{
-        RawCompression, RawEncoding, RawList, RawReadOptions, RawReadResponse, RawWriteRequest,
-        raw_storage_path,
+        PprofOptions, PprofProfile, RawCompression, RawEncoding, RawList, RawReadOptions,
+        RawReadResponse, RawWriteRequest, pprof_path, raw_storage_path, validate_pprof_options,
     };
 
     #[test]
@@ -5714,6 +5871,44 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn pprof_options_are_validated() {
+        assert_eq!(pprof_path(PprofProfile::Heap), "sys/pprof/heap");
+        assert_eq!(pprof_path(PprofProfile::Trace), "sys/pprof/trace");
+
+        assert!(
+            validate_pprof_options(PprofProfile::Profile, &PprofOptions::new().with_seconds(1))
+                .is_ok()
+        );
+        assert!(
+            validate_pprof_options(
+                PprofProfile::Trace,
+                &PprofOptions::new().with_seconds(super::MAX_SYS_PPROF_SECONDS),
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_pprof_options(PprofProfile::Trace, &PprofOptions::new().with_seconds(0))
+                .is_err()
+        );
+        assert!(
+            validate_pprof_options(PprofProfile::Heap, &PprofOptions::new().with_seconds(1))
+                .is_err()
+        );
+        assert!(
+            validate_pprof_options(PprofProfile::Goroutine, &PprofOptions::new().with_debug(2))
+                .is_ok()
+        );
+        assert!(
+            validate_pprof_options(PprofProfile::Goroutine, &PprofOptions::new().with_debug(3))
+                .is_err()
+        );
+        assert!(
+            validate_pprof_options(PprofProfile::Heap, &PprofOptions::new().with_debug(1)).is_err()
+        );
     }
 
     #[test]
