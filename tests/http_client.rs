@@ -700,6 +700,48 @@ async fn sys_leader_status_sends_documented_path() {
 }
 
 #[tokio::test]
+async fn sys_ha_status_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/ha-status HTTP/1.1"));
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = r#"{"Nodes":[{"hostname":"node1","api_address":"https://10.0.0.2:8200","cluster_address":"https://10.0.0.2:8201","active_node":true,"last_echo":null,"version":"2.5.4"},{"hostname":"node2","api_address":"https://10.0.0.3:8200","cluster_address":"https://10.0.0.3:8201","active_node":false,"last_echo":"2026-06-02T00:00:00Z","version":"2.5.4"}]}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let status = client
+        .sys()
+        .ha_status()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(status.nodes.len(), 2);
+    assert!(status.nodes[0].active_node);
+    assert_eq!(status.nodes[1].hostname, "node2");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_openapi_document_sends_documented_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -1459,6 +1501,74 @@ async fn sys_raft_storage_helpers_use_documented_paths() {
         .write_raft_autopilot_config(&autopilot)
         .await
         .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_remount_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let migration_id = "ef3ba21c-8be8-4e5f-8d00-cb46a532c665";
+    let server = thread::spawn(move || {
+        for step in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/sys/remount HTTP/1.1"));
+                    assert!(request.contains(r#""from":"ns1/ns2/secret""#));
+                    assert!(request.contains(r#""to":"ns1/ns3/new-secret""#));
+                    format!(r#"{{"migration_id":"{migration_id}"}}"#)
+                }
+                1 => {
+                    assert!(request.starts_with(&format!(
+                        "GET /v1/sys/remount/status/{migration_id} HTTP/1.1"
+                    )));
+                    format!(
+                        r#"{{"migration_id":"{migration_id}","migration_info":{{"source_mount":"ns1/ns2/secret","target_mount":"ns1/ns3/new-secret","status":"success"}}}}"#
+                    )
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let response = client
+        .sys()
+        .remount(&openbao::sys::RemountRequest::new(
+            "ns1/ns2/secret",
+            "ns1/ns3/new-secret",
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(response.migration_id, migration_id);
+
+    let status = client
+        .sys()
+        .remount_status(&response.migration_id)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(status.migration_info.status, "success");
+    assert_eq!(status.migration_info.target_mount, "ns1/ns3/new-secret");
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

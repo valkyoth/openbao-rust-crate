@@ -79,6 +79,41 @@ pub struct LeaderStatus {
     pub performance_standby_last_remote_wal: Option<u64>,
 }
 
+/// HA cluster status returned by `/sys/ha-status`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct HaStatus {
+    /// Known HA nodes.
+    #[serde(
+        default,
+        alias = "Nodes",
+        deserialize_with = "deserialize_bounded_ha_node_vec"
+    )]
+    pub nodes: Vec<HaNode>,
+}
+
+/// One node in HA status output.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct HaNode {
+    /// Node hostname.
+    #[serde(default)]
+    pub hostname: String,
+    /// API address advertised by this node.
+    #[serde(default)]
+    pub api_address: String,
+    /// Cluster address advertised by this node.
+    #[serde(default)]
+    pub cluster_address: String,
+    /// Whether this node is active.
+    #[serde(default)]
+    pub active_node: bool,
+    /// Last echo timestamp, when known.
+    #[serde(default)]
+    pub last_echo: Option<String>,
+    /// OpenBao version running on the node.
+    #[serde(default)]
+    pub version: String,
+}
+
 /// Runtime logger verbosity accepted by `/sys/loggers`.
 ///
 /// OpenBao documents these changes as transient: they are not persisted and
@@ -552,6 +587,69 @@ impl RaftAutopilotConfig {
         validate_optional_positive_integer(&self.min_quorum, "Raft Autopilot min_quorum")?;
         Ok(())
     }
+}
+
+/// Request for moving a mounted secrets engine or auth method.
+#[derive(Clone, Debug, Serialize)]
+pub struct RemountRequest {
+    /// Existing mount path, optionally including child namespace prefixes.
+    pub from: String,
+    /// Destination mount path, optionally including child namespace prefixes.
+    pub to: String,
+}
+
+impl RemountRequest {
+    /// Creates a remount request from source and destination mount paths.
+    pub fn new(from: impl Into<String>, to: impl Into<String>) -> Self {
+        Self {
+            from: from.into(),
+            to: to.into(),
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_remount_endpoint_path(&self.from, "remount source")?;
+        validate_remount_endpoint_path(&self.to, "remount destination")?;
+        if self.from.trim_matches('/') == self.to.trim_matches('/') {
+            return Err(Error::InvalidParameter(
+                "remount source and destination must differ".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Response returned when OpenBao starts a mount migration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RemountResponse {
+    /// Migration identifier used to poll status.
+    #[serde(default)]
+    pub migration_id: String,
+}
+
+/// Mount migration status response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RemountStatus {
+    /// Migration identifier.
+    #[serde(default)]
+    pub migration_id: String,
+    /// Migration details.
+    #[serde(default)]
+    pub migration_info: RemountMigrationInfo,
+}
+
+/// Mount migration details.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RemountMigrationInfo {
+    /// Original mount path.
+    #[serde(default)]
+    pub source_mount: String,
+    /// Target mount path.
+    #[serde(default)]
+    pub target_mount: String,
+    /// OpenBao status, such as `in-progress`, `success`, or `failure`.
+    #[serde(default)]
+    pub status: String,
 }
 
 /// Rate-limit quota list response.
@@ -2174,6 +2272,13 @@ impl<State> Sys<'_, State> {
             .await
     }
 
+    /// Reads `/sys/ha-status`.
+    pub async fn ha_status(&self) -> Result<HaStatus> {
+        self.client
+            .request_json(Method::GET, "sys/ha-status", Option::<&Empty>::None)
+            .await
+    }
+
     /// Reads `/sys/internal/specs/openapi`.
     ///
     /// Set `generic_mount_paths` to replace concrete mount paths with a
@@ -3329,6 +3434,29 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Starts moving a mounted secrets engine or auth method.
+    ///
+    /// OpenBao revokes leases or tokens associated with the moved backend.
+    /// Callers should use [`Self::remount_status`] with the returned migration
+    /// ID before assuming the new mount is ready.
+    pub async fn remount(&self, request: &RemountRequest) -> Result<RemountResponse> {
+        request.validate()?;
+        self.client
+            .request_json(Method::POST, "sys/remount", Some(request))
+            .await
+    }
+
+    /// Reads the status of a mount migration.
+    pub async fn remount_status(&self, migration_id: &str) -> Result<RemountStatus> {
+        self.client
+            .request_json(
+                Method::GET,
+                &remount_status_path(migration_id)?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
     async fn raft_peer_operation(
         &self,
         operation: &str,
@@ -3579,6 +3707,22 @@ fn locked_user_unlock_path(mount_accessor: &str, alias_identifier: &str) -> Resu
         &single_path_segment(alias_identifier, "alias identifier")?,
     ]
     .join("/"))
+}
+
+fn remount_status_path(migration_id: &str) -> Result<String> {
+    Ok([
+        "sys/remount/status",
+        &single_path_segment(migration_id, "migration id")?,
+    ]
+    .join("/"))
+}
+
+fn validate_remount_endpoint_path(path: &str, field: &'static str) -> Result<()> {
+    if path.trim_matches('/').is_empty() {
+        return Err(Error::InvalidPath(format!("{field} must not be empty")));
+    }
+    let _segments = validate_endpoint_path(path)?;
+    Ok(())
 }
 
 fn validate_raft_server_id(server_id: &str) -> Result<()> {
@@ -3906,6 +4050,16 @@ where
         .deserialize_seq(BoundedRaftServerListVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
 }
 
+fn deserialize_bounded_ha_node_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<HaNode>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_seq(BoundedHaNodeListVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
 fn deserialize_bounded_locked_namespace_vec<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Vec<LockedUsersNamespace>, D::Error>
@@ -4089,6 +4243,33 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedRaftServerListVisitor<MAX> {
     }
 }
 
+struct BoundedHaNodeListVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedHaNodeListVisitor<MAX> {
+    type Value = Vec<HaNode>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a list of at most {MAX} HA nodes")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<HaNode>()? else {
+                return Ok(values);
+            };
+            values.push(value);
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao HA node list exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedLockedNamespaceListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedLockedNamespaceListVisitor<MAX> {
@@ -4264,13 +4445,14 @@ mod tests {
     use secrecy::SecretString;
 
     use super::{
-        AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, LeaseDuration,
+        AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, HaStatus, LeaseDuration,
         LockedUsers, LoggerLevel, MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList,
         PolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
         RaftPeerRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
-        VersionHistory, locked_user_unlock_path, namespace_path, rate_limit_quota_path, sys_path,
-        validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
-        validate_namespace_request, validate_raft_server_id, validate_rate_limit_quota_config,
+        RemountRequest, VersionHistory, locked_user_unlock_path, namespace_path,
+        rate_limit_quota_path, remount_status_path, sys_path, validate_capability_paths,
+        validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
+        validate_raft_server_id, validate_rate_limit_quota_config,
         validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
@@ -4308,6 +4490,12 @@ mod tests {
         );
         assert!(locked_user_unlock_path("auth/userpass", "alice").is_err());
         assert!(locked_user_unlock_path("auth_userpass_1234", "team/alice").is_err());
+        assert_eq!(
+            remount_status_path("ef3ba21c-8be8-4e5f-8d00-cb46a532c665")
+                .unwrap_or_else(|error| panic!("{error}")),
+            "sys/remount/status/ef3ba21c-8be8-4e5f-8d00-cb46a532c665"
+        );
+        assert!(remount_status_path("migration/nested").is_err());
     }
 
     #[test]
@@ -4721,6 +4909,59 @@ mod tests {
 
         let invalid = RaftAutopilotConfig::new().with_last_contact_threshold("0s");
         assert!(invalid.validate().is_err());
+    }
+
+    #[test]
+    fn ha_status_and_remount_are_bounded_and_validated() {
+        let status: HaStatus = serde_json::from_value(serde_json::json!({
+            "Nodes": [{
+                "hostname": "node1",
+                "api_address": "https://10.0.0.2:8200",
+                "cluster_address": "https://10.0.0.2:8201",
+                "active_node": true,
+                "last_echo": null,
+                "version": "2.5.4"
+            }]
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(status.nodes.len(), 1);
+        assert!(status.nodes[0].active_node);
+
+        let mut nodes = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            nodes.push(serde_json::json!({
+                "hostname": format!("node-{index}"),
+                "api_address": format!("https://10.0.0.{index}:8200"),
+                "cluster_address": format!("https://10.0.0.{index}:8201"),
+                "active_node": false,
+                "version": "2.5.4"
+            }));
+        }
+        let error = match serde_json::from_value::<HaStatus>(serde_json::json!({
+            "nodes": nodes
+        })) {
+            Ok(_) => panic!("oversized HA node list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        assert!(
+            RemountRequest::new("secret", "new-secret")
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            RemountRequest::new("ns1/auth/approle", "ns2/auth/new-approle")
+                .validate()
+                .is_ok()
+        );
+        assert!(RemountRequest::new("", "new-secret").validate().is_err());
+        assert!(RemountRequest::new("secret", "secret").validate().is_err());
+        assert!(
+            RemountRequest::new("secret?x=1", "new-secret")
+                .validate()
+                .is_err()
+        );
     }
 
     #[test]

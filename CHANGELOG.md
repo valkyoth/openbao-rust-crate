@@ -15,6 +15,7 @@ All notable changes to this project are documented here.
 - Kerberos auth login with SPNEGO negotiate headers, service-account/keytab
   config, Kerberos LDAP config, and group policy mapping helpers.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
+- HA status helper with bounded node lists.
 - Host diagnostics helper for `/sys/host-info`.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing.
@@ -24,6 +25,7 @@ All notable changes to this project are documented here.
 - Locked-user list/filter and unlock helpers.
 - Integrated Storage Raft join, configuration, peer remove/promote/demote,
   HA bootstrap, and Autopilot JSON helpers.
+- Remount/mount-migration start and status helpers.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -63,6 +65,8 @@ All notable changes to this project are documented here.
   represented as secret material and redacted from debug output. Raft server
   lists are bounded, peer IDs are validated, and Autopilot duration/integer
   fields are checked before request dispatch.
+- HA node lists are bounded, and remount source, destination, and migration ID
+  values are validated before request dispatch.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

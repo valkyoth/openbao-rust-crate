@@ -51,6 +51,8 @@ Sources:
 - System locked users: https://openbao.org/api-docs/next/system/user-lockout/
 - System Raft storage: https://openbao.org/api-docs/system/storage/raft/
 - System Raft Autopilot: https://openbao.org/api-docs/system/storage/raftautopilot/
+- System HA status: https://openbao.org/api-docs/2.3.x/system/ha-status/
+- System remount: https://openbao.org/api-docs/system/remount/
 
 ## Foundation
 
@@ -198,13 +200,14 @@ Support plan:
 - `0.6.0`: production init, unseal, seal, legacy rekey, OpenBao key-share
   rotation, and keyring rotation are implemented only behind explicit
   `operator-ops` plus `operator-ops-acknowledged` feature gates.
-- `0.8.0`: leader status, OpenAPI discovery, JSON metrics, host diagnostics,
-  runtime logger read/set/reset, installed version history, namespace
-  management, rate-limit quota management, and locked-user list/filter/unlock
-  helpers are implemented. Integrated Storage Raft join/configuration/peer
-  mutation/bootstrap helpers and Autopilot JSON helpers are implemented.
-  Binary Raft snapshots, raw storage, and broader diagnostic endpoints remain
-  planned until the crate has an explicit raw-body transport API.
+- `0.8.0`: leader status, HA status, OpenAPI discovery, JSON metrics, host
+  diagnostics, runtime logger read/set/reset, installed version history,
+  namespace management, rate-limit quota management, remount/mount-migration
+  start/status, and locked-user list/filter/unlock helpers are implemented.
+  Integrated Storage Raft join/configuration/peer mutation/bootstrap helpers
+  and Autopilot JSON helpers are implemented. Binary Raft snapshots, raw
+  storage, and broader diagnostic endpoints remain planned until the crate has
+  an explicit raw-body transport API.
 
 ## OpenBao-Specific Notes
 

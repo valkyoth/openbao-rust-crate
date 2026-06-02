@@ -316,6 +316,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Init status | Yes | Typed `/sys/init` status helper. |
 | Seal status | Yes | Typed `/sys/seal-status` helper. |
 | Leader status | Yes | Typed `/sys/leader` helper. |
+| HA status | Yes | Typed `/sys/ha-status` helper with bounded node lists. |
 | OpenAPI discovery | Yes | Typed JSON helper for `/sys/internal/specs/openapi`. |
 | JSON metrics | Yes | Typed JSON helper for `/sys/metrics?format=json`; Prometheus text output is intentionally deferred. |
 | Host diagnostics | Yes | JSON helper for `/sys/host-info` platform diagnostics. |
@@ -325,6 +326,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Rate-limit quotas | Yes | Global quota config plus named rate-limit quota list/create/read/delete helpers. |
 | Locked users | Yes | List all locked users, filter by mount accessor, and unlock aliases. |
 | Raft storage | Yes | Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON helpers. |
+| Remount | Yes | Start mount migrations and poll migration status. |
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |

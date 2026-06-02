@@ -201,6 +201,7 @@ Stop condition:
 - Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON
   helpers are implemented; binary snapshots and raw storage remain planned for
   a raw-body transport slice.
+- HA status and remount/mount-migration start/status helpers are implemented.
 
 Publishable value:
 
