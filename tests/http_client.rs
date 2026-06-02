@@ -114,7 +114,7 @@ async fn kv2_read_sends_documented_headers_and_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"data":{"data":{"value":"ok"},"metadata":{"created_time":"2026-05-27T00:00:00Z","deletion_time":"","destroyed":false,"version":1}}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -194,7 +194,7 @@ async fn kv2_read_optional_maps_not_found_to_none() {
             .unwrap_or_else(|error| panic!("{error}"));
         let body = r#"{"errors":["not found"]}"#;
         let response = format!(
-            "HTTP/1.1 404 Not Found\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 404 Not Found\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -323,7 +323,7 @@ async fn kv2_service_config_reads_data_without_metadata_and_redacts_values() {
         assert!(request.starts_with("GET /v1/secret/data/app/config HTTP/1.1"));
         let body = r#"{"data":{"data":{"DATABASE_URL":"postgres://secret","API_KEY":"key-value"},"metadata":{"created_time":"2026-05-29T00:00:00Z","deletion_time":"","destroyed":false,"version":4}}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -371,7 +371,7 @@ async fn kv2_delete_accepts_no_content() {
             .unwrap_or_else(|error| panic!("{error}"));
         let request = String::from_utf8_lossy(&buffer[..bytes]);
         assert!(request.starts_with("DELETE /v1/secret/data/app/config HTTP/1.1"));
-        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .unwrap_or_else(|error| panic!("{error}"));
@@ -411,7 +411,7 @@ async fn kv2_list_sends_pagination_query() {
         assert!(request.starts_with("LIST /v1/secret/metadata/app?after=config&limit=10 HTTP/1.1"));
         let body = r#"{"data":{"keys":["config"]}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -455,7 +455,7 @@ async fn kv2_read_version_sends_version_query() {
         assert!(request.starts_with("GET /v1/secret/data/app/config?version=3 HTTP/1.1"));
         let body = r#"{"data":{"data":{"value":"old"},"metadata":{"created_time":"2026-05-27T00:00:00Z","deletion_time":"","destroyed":false,"version":3}}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -501,7 +501,7 @@ async fn kv2_patch_sends_merge_patch_content_type() {
         assert!(!request.contains("content-type: application/json"));
         let body = r#"{"data":{"created_time":"2026-05-27T00:00:00Z","version":2}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -546,7 +546,7 @@ async fn token_lookup_self_sends_documented_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"data":{"accessor":"accessor-value","display_name":"token","policies":["default"],"renewable":true,"ttl":3600}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -590,7 +590,7 @@ async fn sys_enable_mount_sends_documented_path() {
         assert!(request.starts_with("POST /v1/sys/mounts/secret HTTP/1.1"));
         assert!(request.contains(r#""type":"kv""#));
         assert!(request.contains(r#""version":"2""#));
-        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .unwrap_or_else(|error| panic!("{error}"));
@@ -631,7 +631,7 @@ async fn sys_enable_kv2_sends_versioned_kv_mount_request() {
         assert!(request.contains(r#""type":"kv""#));
         assert!(request.contains(r#""description":"application secrets""#));
         assert!(request.contains(r#""options":{"version":"2"}"#));
-        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .unwrap_or_else(|error| panic!("{error}"));
@@ -667,7 +667,7 @@ async fn sys_leader_status_sends_documented_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"ha_enabled":true,"is_self":true,"leader_address":"https://127.0.0.1:8200","leader_cluster_address":"https://127.0.0.1:8201","performance_standby":false,"performance_standby_last_remote_wal":42}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -713,7 +713,7 @@ async fn sys_ha_status_sends_documented_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"Nodes":[{"hostname":"node1","api_address":"https://10.0.0.2:8200","cluster_address":"https://10.0.0.2:8201","active_node":true,"last_echo":null,"version":"2.5.4"},{"hostname":"node2","api_address":"https://10.0.0.3:8200","cluster_address":"https://10.0.0.3:8201","active_node":false,"last_echo":"2026-06-02T00:00:00Z","version":"2.5.4"}]}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -755,7 +755,7 @@ async fn sys_key_status_sends_documented_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"term":3,"install_time":"2026-06-02T00:00:00Z","encryptions":74718331}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -796,7 +796,7 @@ async fn sys_step_down_leader_sends_documented_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = "{}";
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -828,24 +828,25 @@ async fn sys_openapi_document_sends_documented_path() {
         .local_addr()
         .unwrap_or_else(|error| panic!("{error}"));
 
-    let server =
-        thread::spawn(move || {
-            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
-            let request = read_http_request(&mut stream);
-            assert!(request.starts_with(
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(
+            request.starts_with(
                 "GET /v1/sys/internal/specs/openapi?generic_mount_paths=true HTTP/1.1"
-            ));
-            assert!(request.contains("x-vault-token: test-token"));
-            let body = r#"{"openapi":"3.0.2","paths":{}}"#;
-            let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            stream
-                .write_all(response.as_bytes())
-                .unwrap_or_else(|error| panic!("{error}"));
-        });
+            )
+        );
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = r#"{"openapi":"3.0.2","paths":{}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
         .and_then(allow_mock_http)
@@ -879,7 +880,7 @@ async fn sys_metrics_json_sends_documented_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"Gauges":[{"Name":"bao.core.unsealed","Value":1.0}],"Counters":[]}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -920,7 +921,7 @@ async fn sys_host_info_json_sends_documented_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"data":{"cpu":[{"cpu":0,"vendorId":"GenuineIntel"}],"host":{"hostname":"openbao-server-1"},"memory":{"total":17179869184},"timestamp":"2026-06-02T00:00:00Z"}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -961,7 +962,7 @@ async fn sys_sanitized_config_state_json_sends_documented_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"api_addr":"https://127.0.0.1:8200","default_lease_ttl":0,"listeners":[{"type":"tcp","config":{"address":"127.0.0.1:8200","tls_disable":0}}],"storage":{"type":"raft"}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -1025,10 +1026,11 @@ async fn sys_logger_helpers_use_documented_paths() {
                 _ => unreachable!(),
             };
             let response = if body.is_empty() {
-                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+                "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n"
+                    .to_owned()
             } else {
                 format!(
-                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                     body.len(),
                     body
                 )
@@ -1094,7 +1096,7 @@ async fn sys_version_history_uses_documented_list_path() {
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"keys":["2.5.3","2.5.4"],"key_info":{"2.5.3":{"build_date":null,"previous_version":null,"timestamp_installed":"2026-05-01T00:00:00Z"},"2.5.4":{"build_date":"2026-05-26T00:00:00Z","previous_version":"2.5.3","timestamp_installed":"2026-05-27T00:00:00Z"}}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -1156,7 +1158,7 @@ async fn sys_cors_config_lifecycle_uses_documented_paths() {
                 _ => unreachable!(),
             };
             let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                 body.len(),
                 body
             );
@@ -1237,10 +1239,11 @@ async fn sys_namespace_lifecycle_uses_documented_paths() {
                 _ => unreachable!(),
             };
             let response = if body.is_empty() {
-                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+                "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n"
+                    .to_owned()
             } else {
                 format!(
-                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                     body.len(),
                     body
                 )
@@ -1364,10 +1367,11 @@ async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
                 _ => unreachable!(),
             };
             let response = if body.is_empty() {
-                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+                "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n"
+                    .to_owned()
             } else {
                 format!(
-                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                     body.len(),
                     body
                 )
@@ -1479,10 +1483,11 @@ async fn sys_locked_users_lifecycle_uses_documented_paths() {
                 _ => unreachable!(),
             };
             let response = if body.is_empty() {
-                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+                "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n"
+                    .to_owned()
             } else {
                 format!(
-                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                     body.len(),
                     body
                 )
@@ -1604,10 +1609,11 @@ async fn sys_raft_storage_helpers_use_documented_paths() {
                 _ => unreachable!(),
             };
             let response = if body.is_empty() {
-                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+                "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n"
+                    .to_owned()
             } else {
                 format!(
-                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                     body.len(),
                     body
                 )
@@ -1727,7 +1733,7 @@ async fn sys_remount_lifecycle_uses_documented_paths() {
                 _ => unreachable!(),
             };
             let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                 body.len(),
                 body
             );
@@ -1784,7 +1790,7 @@ async fn sys_wrapping_wrap_sends_ttl_header() {
         assert!(request.contains(r#""value":"ok""#));
         let body = r#"{"wrap_info":{"token":"wrapping-token","accessor":"wrapping-accessor","ttl":60,"creation_path":"sys/wrapping/wrap"}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -1833,7 +1839,7 @@ async fn sys_policy_write_sends_documented_path() {
         let request = String::from_utf8_lossy(&buffer[..bytes]);
         assert!(request.starts_with("POST /v1/sys/policy/app-read HTTP/1.1"));
         assert!(request.contains(r#""policy":"path \"secret/*\" { capabilities = [\"read\"] }""#));
-        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .unwrap_or_else(|error| panic!("{error}"));
@@ -1883,7 +1889,7 @@ async fn sys_capabilities_self_sends_paths() {
         assert!(!request.contains(r#""token":"#));
         let body = r#"{"data":{"capabilities":["read"],"secret/data/app":["read"]}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -1933,7 +1939,7 @@ async fn sys_enable_audit_device_sends_documented_path() {
         assert!(request.starts_with("POST /v1/sys/audit/file HTTP/1.1"));
         assert!(request.contains(r#""type":"file""#));
         assert!(request.contains(r#""file_path":"/tmp/openbao-audit.log""#));
-        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .unwrap_or_else(|error| panic!("{error}"));
@@ -2003,10 +2009,11 @@ async fn sys_audited_request_header_lifecycle_uses_documented_paths() {
                 _ => unreachable!(),
             };
             let response = if body.is_empty() {
-                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+                "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n"
+                    .to_owned()
             } else {
                 format!(
-                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                     body.len(),
                     body
                 )
@@ -2079,7 +2086,7 @@ async fn sys_audit_hash_sends_secret_input() {
         assert!(request.contains(r#""input":"secret-value""#));
         let body = r#"{"hash":"hmac-sha256:abc123"}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -2123,7 +2130,7 @@ async fn sys_lease_lookup_sends_json_body_endpoint() {
         assert!(request.contains(r#""lease_id":"database/creds/readonly/abc""#));
         let body = r#"{"data":{"expire_time":"2026-05-28T12:00:00Z","id":"database/creds/readonly/abc","issue_time":"2026-05-28T11:00:00Z","last_renewal":null,"renewable":true,"ttl":3600}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -2173,7 +2180,7 @@ async fn sys_lease_renew_maps_response_envelope() {
         let body =
             r#"{"lease_id":"database/creds/readonly/abc","renewable":true,"lease_duration":1800}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -2224,7 +2231,7 @@ async fn sys_lease_revoke_uses_non_prefix_endpoint() {
         assert!(request.contains(r#""lease_id":"database/creds/readonly/abc""#));
         assert!(!request.contains("/revoke-prefix/"));
         assert!(!request.contains("/revoke-force/"));
-        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .unwrap_or_else(|error| panic!("{error}"));
@@ -2263,7 +2270,7 @@ async fn sys_plugin_catalog_lists_all_plugins() {
         assert!(request.starts_with("GET /v1/sys/plugins/catalog HTTP/1.1"));
         let body = r#"{"data":{"auth":["ldap"],"database":["postgresql-database-plugin"],"secret":["transit"],"detailed":[{"builtin":true,"deprecation_status":"supported","name":"transit","type":"secret","version":"v2.5.4+builtin.openbao"}]}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -2418,7 +2425,7 @@ async fn sys_plugin_reload_sends_documented_path() {
         assert!(request.starts_with("POST /v1/sys/plugins/reload/backend HTTP/1.1"));
         assert!(request.contains(r#""plugin":"example-plugin""#));
         assert!(request.contains(r#""scope":"global""#));
-        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .unwrap_or_else(|error| panic!("{error}"));
@@ -2461,7 +2468,7 @@ async fn transit_create_key_sends_documented_path() {
         assert!(request.starts_with("POST /v1/transit/keys/app-key HTTP/1.1"));
         assert!(request.contains(r#""type":"aes256-gcm96""#));
         assert!(request.contains(r#""derived":true"#));
-        let response = "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n";
+        let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
             .write_all(response.as_bytes())
             .unwrap_or_else(|error| panic!("{error}"));
@@ -3023,7 +3030,7 @@ async fn decode_errors_do_not_echo_secret_response_values() {
             .unwrap_or_else(|error| panic!("{error}"));
         let body = r#"{"data":{"data":{"value":"SECRET-RESPONSE-FRAGMENT"},"metadata":{"created_time":"2026-05-27T00:00:00Z","deletion_time":"","destroyed":false,"version":1}}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -3070,7 +3077,7 @@ async fn non_json_content_type_is_rejected() {
             .unwrap_or_else(|error| panic!("{error}"));
         let body = r#"{"data":{"data":{"value":"ok"},"metadata":{"created_time":"2026-05-27T00:00:00Z","deletion_time":"","destroyed":false,"version":1}}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: text/html\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: text/html\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -3115,7 +3122,7 @@ async fn missing_json_content_type_is_rejected() {
             .unwrap_or_else(|error| panic!("{error}"));
         let body = r#"{"data":{"data":{"value":"ok"},"metadata":{"created_time":"2026-05-27T00:00:00Z","deletion_time":"","destroyed":false,"version":1}}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -4128,7 +4135,7 @@ async fn kubernetes_login_sends_documented_path_and_secret_jwt() {
         assert!(request.contains(r#""jwt":"service-account-jwt""#));
         let body = r#"{"auth":{"client_token":"k8s-token","accessor":"k8s-accessor","policies":["default"],"metadata":{"role":"web"},"lease_duration":3600,"renewable":true}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -4412,7 +4419,7 @@ async fn jwt_login_sends_documented_path_and_secret_jwt() {
         assert!(request.contains(r#""jwt":"signed-jwt""#));
         let body = r#"{"auth":{"client_token":"jwt-token","accessor":"jwt-accessor","policies":["default"],"metadata":{"role":"web"},"lease_duration":3600,"renewable":true}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -4561,7 +4568,7 @@ async fn userpass_login_sends_documented_path_and_secret_password() {
         assert!(request.contains(r#""password":"p-value""#));
         let body = r#"{"auth":{"client_token":"userpass-token","accessor":"userpass-accessor","policies":["default"],"metadata":{"username":"alice"},"lease_duration":3600,"renewable":true}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -4713,7 +4720,7 @@ async fn radius_login_sends_documented_path_and_secret_password() {
         assert!(request.contains(r#""password":"p-value""#));
         let body = r#"{"auth":{"client_token":"radius-token","accessor":"radius-accessor","policies":["default"],"metadata":{"username":"alice"},"lease_duration":3600,"renewable":true}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -4855,7 +4862,7 @@ async fn ldap_auth_login_sends_documented_path_and_secret_password() {
         assert!(request.contains(r#""password":"p-value""#));
         let body = r#"{"auth":{"client_token":"ldap-token","accessor":"ldap-accessor","policies":["default"],"metadata":{"username":"alice"},"lease_duration":3600,"renewable":true}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -5049,7 +5056,7 @@ async fn kerberos_auth_login_sends_documented_negotiate_header() {
         assert!(request.contains("authorization: Negotiate spnego-token"));
         let body = r#"{"auth":{"client_token":"kerberos-token","accessor":"kerberos-accessor","policies":["default"],"metadata":{"username":"alice"},"lease_duration":3600,"renewable":true}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
@@ -5235,7 +5242,7 @@ async fn cert_login_sends_documented_path_and_role_name() {
         assert!(request.contains(r#""name":"web-ca""#));
         let body = r#"{"auth":{"client_token":"cert-token","accessor":"cert-accessor","policies":["web"],"lease_duration":3600,"renewable":true}}"#;
         let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
             body
         );
