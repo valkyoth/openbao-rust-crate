@@ -114,6 +114,72 @@ pub struct HaNode {
     pub version: String,
 }
 
+/// Barrier encryption key status returned by `/sys/key-status`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct KeyStatus {
+    /// Sequential barrier key number.
+    #[serde(default)]
+    pub term: u64,
+    /// Time the current barrier key was installed.
+    #[serde(default)]
+    pub install_time: Option<String>,
+    /// Estimated encryptions performed with the current barrier key.
+    #[serde(default)]
+    pub encryptions: u64,
+}
+
+/// CORS configuration returned by `/sys/config/cors`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct CorsConfig {
+    /// Whether CORS configuration is enabled.
+    #[serde(default)]
+    pub enabled: bool,
+    /// Origins allowed to make cross-origin requests.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub allowed_origins: Vec<String>,
+    /// Additional headers allowed on cross-origin requests.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub allowed_headers: Vec<String>,
+}
+
+/// Request for configuring `/sys/config/cors`.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct CorsConfigRequest {
+    /// Origins allowed to make cross-origin requests.
+    pub allowed_origins: Vec<String>,
+    /// Additional headers allowed on cross-origin requests.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_headers: Vec<String>,
+}
+
+impl CorsConfigRequest {
+    /// Creates a CORS request with the required allowed origins.
+    #[must_use]
+    pub fn new<I, S>(allowed_origins: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self {
+            allowed_origins: allowed_origins.into_iter().map(Into::into).collect(),
+            allowed_headers: Vec::new(),
+        }
+    }
+
+    /// Adds one allowed header name.
+    #[must_use]
+    pub fn with_allowed_header(mut self, header: impl Into<String>) -> Self {
+        self.allowed_headers.push(header.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_cors_origins(&self.allowed_origins)?;
+        validate_http_header_names(&self.allowed_headers, "CORS allowed header")?;
+        Ok(())
+    }
+}
+
 /// Runtime logger verbosity accepted by `/sys/loggers`.
 ///
 /// OpenBao documents these changes as transient: they are not persisted and
@@ -2279,6 +2345,13 @@ impl<State> Sys<'_, State> {
             .await
     }
 
+    /// Reads `/sys/key-status`.
+    pub async fn key_status(&self) -> Result<KeyStatus> {
+        self.client
+            .request_json(Method::GET, "sys/key-status", Option::<&Empty>::None)
+            .await
+    }
+
     /// Reads `/sys/internal/specs/openapi`.
     ///
     /// Set `generic_mount_paths` to replace concrete mount paths with a
@@ -2494,6 +2567,16 @@ impl Sys<'_, Authenticated> {
     pub async fn operator_rotate_keyring(&self) -> Result<Empty> {
         self.client
             .request_json(Method::POST, "sys/rotate/keyring", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Forces the active node to step down through `/sys/step-down`.
+    ///
+    /// OpenBao requires a root token or `sudo` capability on the path. The
+    /// node may become active again if no standby takes the active lock.
+    pub async fn step_down_leader(&self) -> Result<Empty> {
+        self.client
+            .request_json(Method::POST, "sys/step-down", Option::<&Empty>::None)
             .await
     }
 
@@ -3141,6 +3224,40 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Reads `/sys/config/cors`.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint.
+    pub async fn cors_config(&self) -> Result<CorsConfig> {
+        self.client
+            .request_json(Method::GET, "sys/config/cors", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Writes `/sys/config/cors`.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint. The request uses
+    /// explicit string arrays so commas are not ambiguously parsed by callers.
+    pub async fn write_cors_config(&self, request: &CorsConfigRequest) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(Method::POST, "sys/config/cors", Some(request))
+            .await
+    }
+
+    /// Deletes `/sys/config/cors`.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint.
+    pub async fn delete_cors_config(&self) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                "sys/config/cors",
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     /// Lists installed OpenBao versions through `/sys/version-history`.
     pub async fn version_history(&self) -> Result<VersionHistory> {
         let method =
@@ -3687,6 +3804,46 @@ fn validate_namespace_request(request: &NamespaceRequest) -> Result<()> {
                 "namespace metadata must not contain control characters".into(),
             ));
         }
+    }
+    Ok(())
+}
+
+fn validate_cors_origins(origins: &[String]) -> Result<()> {
+    if origins.is_empty() {
+        return Err(Error::InvalidParameter(
+            "CORS allowed_origins must contain at least one origin".into(),
+        ));
+    }
+    if origins.len() > crate::response::MAX_RESPONSE_STRINGS {
+        return Err(Error::InvalidParameter(
+            "CORS allowed_origins exceeds maximum item count".into(),
+        ));
+    }
+    for origin in origins {
+        if origin.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "CORS allowed origin must not be empty".into(),
+            ));
+        }
+        if origin.as_bytes().iter().any(u8::is_ascii_control) {
+            return Err(Error::InvalidParameter(
+                "CORS allowed origin must not contain control characters".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_http_header_names(headers: &[String], field: &'static str) -> Result<()> {
+    if headers.len() > crate::response::MAX_RESPONSE_STRINGS {
+        return Err(Error::InvalidParameter(format!(
+            "{field} list exceeds maximum item count"
+        )));
+    }
+    for header in headers {
+        HeaderName::from_bytes(header.as_bytes()).map_err(|_| {
+            Error::InvalidParameter(format!("{field} must contain valid HTTP header names"))
+        })?;
     }
     Ok(())
 }
@@ -4445,14 +4602,14 @@ mod tests {
     use secrecy::SecretString;
 
     use super::{
-        AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, HaStatus, LeaseDuration,
-        LockedUsers, LoggerLevel, MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList,
-        PolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
-        RaftPeerRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
-        RemountRequest, VersionHistory, locked_user_unlock_path, namespace_path,
-        rate_limit_quota_path, remount_status_path, sys_path, validate_capability_paths,
-        validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
-        validate_raft_server_id, validate_rate_limit_quota_config,
+        AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, CorsConfig,
+        CorsConfigRequest, HaStatus, LeaseDuration, LockedUsers, LoggerLevel, MountEnableRequest,
+        NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest, RaftAutopilotConfig,
+        RaftConfiguration, RaftJoinRequest, RaftPeerRequest, RateLimitQuotaConfig,
+        RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest, VersionHistory,
+        locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
+        sys_path, validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
+        validate_namespace_request, validate_raft_server_id, validate_rate_limit_quota_config,
         validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
@@ -4959,6 +5116,51 @@ mod tests {
         assert!(RemountRequest::new("secret", "secret").validate().is_err());
         assert!(
             RemountRequest::new("secret?x=1", "new-secret")
+                .validate()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn cors_config_lists_are_bounded_and_validated() {
+        let config: CorsConfig = serde_json::from_value(serde_json::json!({
+            "enabled": true,
+            "allowed_origins": ["https://app.example.com"],
+            "allowed_headers": ["X-Custom-Header"]
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(config.enabled);
+        assert_eq!(config.allowed_origins, ["https://app.example.com"]);
+        assert_eq!(config.allowed_headers, ["X-Custom-Header"]);
+
+        let mut origins = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            origins.push(format!("https://app-{index}.example.com"));
+        }
+        let error = match serde_json::from_value::<CorsConfig>(serde_json::json!({
+            "allowed_origins": origins
+        })) {
+            Ok(_) => panic!("oversized CORS origin list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        assert!(
+            CorsConfigRequest::new(["https://app.example.com"])
+                .with_allowed_header("X-Custom-Header")
+                .validate()
+                .is_ok()
+        );
+        assert!(CorsConfigRequest::new(["*"]).validate().is_ok());
+        assert!(CorsConfigRequest::new([""]).validate().is_err());
+        assert!(
+            CorsConfigRequest::new(["https://app.example.com\n"])
+                .validate()
+                .is_err()
+        );
+        assert!(
+            CorsConfigRequest::new(["https://app.example.com"])
+                .with_allowed_header("bad header")
                 .validate()
                 .is_err()
         );

@@ -16,7 +16,9 @@ All notable changes to this project are documented here.
   config, Kerberos LDAP config, and group policy mapping helpers.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
 - HA status helper with bounded node lists.
+- Key status helper for barrier encryption key metadata.
 - Host diagnostics helper for `/sys/host-info`.
+- CORS configuration read/write/delete helpers.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing.
 - Namespace list, create, read, patch, and delete helpers.
@@ -26,6 +28,7 @@ All notable changes to this project are documented here.
 - Integrated Storage Raft join, configuration, peer remove/promote/demote,
   HA bootstrap, and Autopilot JSON helpers.
 - Remount/mount-migration start and status helpers.
+- Active-node step-down helper for `/sys/step-down`.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -67,6 +70,8 @@ All notable changes to this project are documented here.
   fields are checked before request dispatch.
 - HA node lists are bounded, and remount source, destination, and migration ID
   values are validated before request dispatch.
+- CORS origins and headers are bounded; configured header names are validated
+  before request dispatch.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

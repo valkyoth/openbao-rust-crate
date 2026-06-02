@@ -742,6 +742,86 @@ async fn sys_ha_status_sends_documented_path() {
 }
 
 #[tokio::test]
+async fn sys_key_status_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/key-status HTTP/1.1"));
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = r#"{"term":3,"install_time":"2026-06-02T00:00:00Z","encryptions":74718331}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let status = client
+        .sys()
+        .key_status()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(status.term, 3);
+    assert_eq!(status.encryptions, 74_718_331);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_step_down_leader_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("POST /v1/sys/step-down HTTP/1.1"));
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = "{}";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    client
+        .sys()
+        .step_down_leader()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_openapi_document_sends_documented_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -1002,6 +1082,77 @@ async fn sys_version_history_uses_documented_list_path() {
             .and_then(|entry| entry.previous_version.as_deref()),
         Some("2.5.3")
     );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_cors_config_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/config/cors HTTP/1.1"));
+                    r#"{"enabled":true,"allowed_origins":["https://app.example.com"],"allowed_headers":["X-Custom-Header"]}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/config/cors HTTP/1.1"));
+                    assert!(request.contains(r#""allowed_origins":["https://app.example.com"]"#));
+                    assert!(request.contains(r#""allowed_headers":["X-Custom-Header"]"#));
+                    "{}".to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with("DELETE /v1/sys/config/cors HTTP/1.1"));
+                    "{}".to_owned()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let config = client
+        .sys()
+        .cors_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(config.enabled);
+    assert_eq!(config.allowed_origins, ["https://app.example.com"]);
+
+    client
+        .sys()
+        .write_cors_config(
+            &openbao::sys::CorsConfigRequest::new(["https://app.example.com"])
+                .with_allowed_header("X-Custom-Header"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .delete_cors_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

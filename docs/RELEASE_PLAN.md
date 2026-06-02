@@ -202,6 +202,8 @@ Stop condition:
   helpers are implemented; binary snapshots and raw storage remain planned for
   a raw-body transport slice.
 - HA status and remount/mount-migration start/status helpers are implemented.
+- Key status, CORS config read/write/delete, and active-node step-down helpers
+  are implemented.
 
 Publishable value:
 
