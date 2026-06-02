@@ -26,13 +26,13 @@
   mapping, user read/list/delete, paginated user-list helpers; system leader
   status, OpenAPI discovery, JSON telemetry metrics helpers, and typed
   capability views for common access checks; runtime logger level helpers and
-  installed version-history listing; namespace management helpers; read-only
-  admin bootstrap preview with would-create, would-update, and would-issue
-  statuses; advisory
+  installed version-history listing; namespace management helpers; rate-limit
+  quota config and named quota helpers; read-only admin bootstrap preview with
+  would-create, would-update, and would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
   choices; shared `ListEntries` ergonomics for common string list responses;
   optional RFC3339 timestamp parsing helpers behind the `time` feature.
-- Remaining `0.8.0` planned work: Kerberos auth coverage; quotas/storage and
+- Remaining `0.8.0` planned work: Kerberos auth coverage; storage and
   additional system backend coverage.
 - Minimum supported Rust: 1.90.0.
 
@@ -62,6 +62,8 @@
   deserialization, and logger level writes use a typed allowlist.
 - Namespace paths reject trailing slashes, spaces, and reserved namespace names
   before request dispatch. Namespace metadata maps are bounded.
+- Rate-limit quota rates must be positive finite numbers, duration fields are
+  validated, quota names are single path segments, and exempt paths are bounded.
 - Typed capability views keep the existing raw string lists available and
   preserve unknown future capability names instead of dropping or rejecting
   them.

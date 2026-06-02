@@ -222,6 +222,139 @@ impl NamespaceRequest {
     }
 }
 
+/// Global rate-limit quota configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RateLimitQuotaConfig {
+    /// Paths exempt from every rate-limit quota.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub rate_limit_exempt_paths: Vec<String>,
+    /// Whether rejected quota requests are audit logged.
+    #[serde(default)]
+    pub enable_rate_limit_audit_logging: bool,
+    /// Whether OpenBao adds rate-limit headers to responses.
+    #[serde(default)]
+    pub enable_rate_limit_response_headers: bool,
+}
+
+impl RateLimitQuotaConfig {
+    /// Creates an empty rate-limit quota configuration.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds one exempt path.
+    #[must_use]
+    pub fn with_exempt_path(mut self, path: impl Into<String>) -> Self {
+        self.rate_limit_exempt_paths.push(path.into());
+        self
+    }
+}
+
+/// Rate-limit quota list response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RateLimitQuotaList {
+    /// Quota names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Quota metadata keyed by quota name, when returned by OpenBao.
+    #[serde(default, deserialize_with = "deserialize_bounded_rate_limit_quota_map")]
+    pub key_info: BTreeMap<String, RateLimitQuotaInfo>,
+}
+
+impl ListEntries for RateLimitQuotaList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Rate-limit quota information returned by OpenBao.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RateLimitQuotaInfo {
+    /// Quota name.
+    #[serde(default)]
+    pub name: String,
+    /// Path or namespace to which the quota applies.
+    #[serde(default)]
+    pub path: String,
+    /// Requests allowed during the configured interval.
+    #[serde(default)]
+    pub rate: f64,
+    /// Rate-limit interval.
+    #[serde(default)]
+    pub interval: Option<LeaseDuration>,
+    /// Optional blocking duration after the quota is exceeded.
+    #[serde(default)]
+    pub block_interval: Option<LeaseDuration>,
+    /// Auth role restriction, when configured.
+    #[serde(default)]
+    pub role: Option<String>,
+    /// Quota type returned by OpenBao.
+    #[serde(default, rename = "type")]
+    pub quota_type: Option<String>,
+}
+
+/// Request body for creating or updating a rate-limit quota.
+#[derive(Clone, Debug, Serialize)]
+pub struct RateLimitQuotaRequest {
+    /// Path or namespace to which the quota applies. Empty means the root API.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    /// Requests allowed during the configured interval. Must be positive.
+    pub rate: f64,
+    /// Rate-limit interval, such as `1s` or `2m`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interval: Option<String>,
+    /// Optional blocking duration after the quota is exceeded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_interval: Option<String>,
+    /// Auth role restriction, when the path targets a role-aware auth mount.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+}
+
+impl RateLimitQuotaRequest {
+    /// Creates a rate-limit quota request with the required `rate`.
+    #[must_use]
+    pub fn new(rate: f64) -> Self {
+        Self {
+            path: None,
+            rate,
+            interval: None,
+            block_interval: None,
+            role: None,
+        }
+    }
+
+    /// Sets the quota path or namespace.
+    #[must_use]
+    pub fn with_path(mut self, path: impl Into<String>) -> Self {
+        self.path = Some(path.into());
+        self
+    }
+
+    /// Sets the positive rate-limit interval.
+    #[must_use]
+    pub fn with_interval(mut self, interval: impl Into<String>) -> Self {
+        self.interval = Some(interval.into());
+        self
+    }
+
+    /// Sets the positive blocking interval.
+    #[must_use]
+    pub fn with_block_interval(mut self, block_interval: impl Into<String>) -> Self {
+        self.block_interval = Some(block_interval.into());
+        self
+    }
+
+    /// Sets the auth role restriction.
+    #[must_use]
+    pub fn with_role(mut self, role: impl Into<String>) -> Self {
+        self.role = Some(role.into());
+        self
+    }
+}
+
 /// OpenBao seal status response.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SealStatus {
@@ -2621,6 +2754,86 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Reads global rate-limit quota configuration from `/sys/quotas/config`.
+    pub async fn read_rate_limit_quota_config(&self) -> Result<RateLimitQuotaConfig> {
+        let envelope: ResponseEnvelope<RateLimitQuotaConfig> = self
+            .client
+            .request_json(Method::GET, "sys/quotas/config", Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Writes global rate-limit quota configuration to `/sys/quotas/config`.
+    pub async fn write_rate_limit_quota_config(
+        &self,
+        request: &RateLimitQuotaConfig,
+    ) -> Result<Empty> {
+        validate_rate_limit_quota_config(request)?;
+        self.client
+            .request_json(Method::POST, "sys/quotas/config", Some(request))
+            .await
+    }
+
+    /// Deletes global rate-limit quota configuration from `/sys/quotas/config`.
+    pub async fn delete_rate_limit_quota_config(&self) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                "sys/quotas/config",
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Lists named rate-limit quotas through `/sys/quotas/rate-limit`.
+    pub async fn list_rate_limit_quotas(&self) -> Result<RateLimitQuotaList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let envelope: ResponseEnvelope<RateLimitQuotaList> = self
+            .client
+            .request_json(method, "sys/quotas/rate-limit", Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Creates or updates a named rate-limit quota.
+    pub async fn write_rate_limit_quota(
+        &self,
+        name: &str,
+        request: &RateLimitQuotaRequest,
+    ) -> Result<Empty> {
+        validate_rate_limit_quota_request(request)?;
+        self.client
+            .request_json(Method::POST, &rate_limit_quota_path(name)?, Some(request))
+            .await
+    }
+
+    /// Reads a named rate-limit quota.
+    pub async fn read_rate_limit_quota(&self, name: &str) -> Result<RateLimitQuotaInfo> {
+        let envelope: ResponseEnvelope<RateLimitQuotaInfo> = self
+            .client
+            .request_json(
+                Method::GET,
+                &rate_limit_quota_path(name)?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Deletes a named rate-limit quota.
+    pub async fn delete_rate_limit_quota(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &rate_limit_quota_path(name)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     /// Looks up a wrapping token.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
         let payload = WrappingTokenPayload {
@@ -2828,6 +3041,65 @@ fn validate_namespace_request(request: &NamespaceRequest) -> Result<()> {
                 "namespace metadata must not contain control characters".into(),
             ));
         }
+    }
+    Ok(())
+}
+
+fn rate_limit_quota_path(name: &str) -> Result<String> {
+    Ok([
+        "sys/quotas/rate-limit",
+        &single_path_segment(name, "quota name")?,
+    ]
+    .join("/"))
+}
+
+fn single_path_segment(value: &str, kind: &'static str) -> Result<String> {
+    let segments = validate_mount_path(value)?;
+    if segments.len() != 1 {
+        return Err(Error::InvalidPath(format!(
+            "{kind} must be a single path segment"
+        )));
+    }
+    Ok(segments[0].clone())
+}
+
+fn validate_rate_limit_quota_config(request: &RateLimitQuotaConfig) -> Result<()> {
+    if request.rate_limit_exempt_paths.len() > crate::response::MAX_RESPONSE_STRINGS {
+        return Err(Error::InvalidParameter(
+            "rate limit exempt paths exceed maximum item count".into(),
+        ));
+    }
+    for path in &request.rate_limit_exempt_paths {
+        if path.trim_matches('/').is_empty() {
+            return Err(Error::InvalidPath(
+                "rate limit exempt path must not be empty".into(),
+            ));
+        }
+        let _validated = validate_endpoint_path(path)?;
+    }
+    Ok(())
+}
+
+fn validate_rate_limit_quota_request(request: &RateLimitQuotaRequest) -> Result<()> {
+    if !request.rate.is_finite() || request.rate <= 0.0 {
+        return Err(Error::InvalidParameter(
+            "rate limit quota rate must be a positive finite number".into(),
+        ));
+    }
+    if let Some(path) = &request.path {
+        let _validated = validate_endpoint_path(path)?;
+    }
+    if let Some(interval) = &request.interval {
+        crate::validation::validate_duration_parameter(interval, "rate limit interval")?;
+    }
+    if let Some(block_interval) = &request.block_interval {
+        crate::validation::validate_duration_parameter(
+            block_interval,
+            "rate limit block_interval",
+        )?;
+    }
+    if let Some(role) = request.role.as_deref() {
+        validate_query_string_value(role, "rate limit role")?;
     }
     Ok(())
 }
@@ -3044,6 +3316,17 @@ where
     )
 }
 
+fn deserialize_bounded_rate_limit_quota_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, RateLimitQuotaInfo>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(
+        BoundedRateLimitQuotaMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
 fn deserialize_bounded_mount_info_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, MountInfo>, D::Error>
@@ -3147,6 +3430,35 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedNamespaceInfoMapVisitor<MAX>
     }
 }
 
+struct BoundedRateLimitQuotaMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedRateLimitQuotaMapVisitor<MAX> {
+    type Value = BTreeMap<String, RateLimitQuotaInfo>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} rate limit quota entries")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, RateLimitQuotaInfo>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao rate limit quota map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedVersionHistoryMapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionHistoryMapVisitor<MAX> {
@@ -3214,9 +3526,11 @@ mod tests {
     use super::{
         AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, LeaseDuration,
         LoggerLevel, MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList,
-        PolicyWriteRequest, VersionHistory, namespace_path, sys_path, validate_capability_paths,
+        PolicyWriteRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
+        VersionHistory, namespace_path, rate_limit_quota_path, sys_path, validate_capability_paths,
         validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
-        validate_sha256_hex, validate_wrapping_ttl,
+        validate_rate_limit_quota_config, validate_rate_limit_quota_request, validate_sha256_hex,
+        validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
     use super::{OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest};
@@ -3241,6 +3555,11 @@ mod tests {
         assert!(namespace_path("team/app/").is_err());
         assert!(namespace_path("team app").is_err());
         assert!(namespace_path("team/sys").is_err());
+        assert_eq!(
+            rate_limit_quota_path("global-rate-limiter").unwrap_or_else(|error| panic!("{error}")),
+            "sys/quotas/rate-limit/global-rate-limiter"
+        );
+        assert!(rate_limit_quota_path("quota/nested").is_err());
     }
 
     #[test]
@@ -3460,6 +3779,57 @@ mod tests {
             "key_info": key_info
         })) {
             Ok(_) => panic!("oversized namespace map unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn rate_limit_quota_requests_and_maps_are_bounded() {
+        let config = RateLimitQuotaConfig::new()
+            .with_exempt_path("sys/health")
+            .with_exempt_path("sys/seal-status");
+        assert!(validate_rate_limit_quota_config(&config).is_ok());
+
+        let config = RateLimitQuotaConfig::new().with_exempt_path("");
+        assert!(validate_rate_limit_quota_config(&config).is_err());
+
+        let request = RateLimitQuotaRequest::new(100.0)
+            .with_path("auth/approle/login")
+            .with_interval("2m")
+            .with_block_interval("5m")
+            .with_role("web");
+        assert!(validate_rate_limit_quota_request(&request).is_ok());
+        assert!(validate_rate_limit_quota_request(&RateLimitQuotaRequest::new(0.0)).is_err());
+        assert!(
+            validate_rate_limit_quota_request(&RateLimitQuotaRequest::new(f64::INFINITY)).is_err()
+        );
+        assert!(
+            validate_rate_limit_quota_request(
+                &RateLimitQuotaRequest::new(1.0).with_interval("forever")
+            )
+            .is_err()
+        );
+
+        let mut key_info = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            key_info.insert(
+                format!("quota-{index}"),
+                serde_json::json!({
+                    "name": format!("quota-{index}"),
+                    "path": "",
+                    "rate": 100.0,
+                    "interval": 1,
+                    "block_interval": 0,
+                    "type": "rate-limit"
+                }),
+            );
+        }
+        let error = match serde_json::from_value::<RateLimitQuotaList>(serde_json::json!({
+            "keys": ["quota-0"],
+            "key_info": key_info
+        })) {
+            Ok(_) => panic!("oversized rate limit quota map unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

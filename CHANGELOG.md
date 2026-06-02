@@ -16,6 +16,8 @@ All notable changes to this project are documented here.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing.
 - Namespace list, create, read, patch, and delete helpers.
+- Rate-limit quota config and named rate-limit quota list/create/read/delete
+  helpers.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -42,6 +44,8 @@ All notable changes to this project are documented here.
 - Logger and version-history responses use bounded map/list deserialization.
 - Namespace paths are validated against OpenBao namespace naming restrictions,
   and namespace metadata maps are bounded.
+- Rate-limit quota rates, duration fields, names, paths, exempt-path lists, and
+  optional roles are validated before request dispatch.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

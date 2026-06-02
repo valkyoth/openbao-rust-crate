@@ -1034,6 +1034,147 @@ async fn sys_namespace_lifecycle_uses_documented_paths() {
 }
 
 #[tokio::test]
+async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..7 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/quotas/config HTTP/1.1"));
+                    r#"{"data":{"enable_rate_limit_audit_logging":false,"enable_rate_limit_response_headers":true,"rate_limit_exempt_paths":["sys/health","sys/seal-status"]}}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/quotas/config HTTP/1.1"));
+                    assert!(request.contains(r#""enable_rate_limit_audit_logging":true"#));
+                    assert!(request.contains(r#""rate_limit_exempt_paths":["sys/health"]"#));
+                    String::new()
+                }
+                2 => {
+                    assert!(request.starts_with("LIST /v1/sys/quotas/rate-limit HTTP/1.1"));
+                    r#"{"data":{"keys":["global-rate-limiter"]}}"#.to_owned()
+                }
+                3 => {
+                    assert!(request.starts_with(
+                        "POST /v1/sys/quotas/rate-limit/global-rate-limiter HTTP/1.1"
+                    ));
+                    assert!(request.contains(r#""rate":897.3"#));
+                    assert!(request.contains(r#""interval":"2m""#));
+                    assert!(request.contains(r#""block_interval":"5m""#));
+                    String::new()
+                }
+                4 => {
+                    assert!(
+                        request.starts_with(
+                            "GET /v1/sys/quotas/rate-limit/global-rate-limiter HTTP/1.1"
+                        )
+                    );
+                    r#"{"data":{"block_interval":300,"interval":2,"name":"global-rate-limiter","path":"","rate":897.3,"role":"","type":"rate-limit"}}"#.to_owned()
+                }
+                5 => {
+                    assert!(request.starts_with(
+                        "DELETE /v1/sys/quotas/rate-limit/global-rate-limiter HTTP/1.1"
+                    ));
+                    String::new()
+                }
+                6 => {
+                    assert!(request.starts_with("DELETE /v1/sys/quotas/config HTTP/1.1"));
+                    String::new()
+                }
+                _ => unreachable!(),
+            };
+            let response = if body.is_empty() {
+                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+            } else {
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            };
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let quota_config = client
+        .sys()
+        .read_rate_limit_quota_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(quota_config.enable_rate_limit_response_headers);
+    assert_eq!(
+        quota_config.rate_limit_exempt_paths,
+        ["sys/health", "sys/seal-status"]
+    );
+
+    let mut quota_config = openbao::sys::RateLimitQuotaConfig::new().with_exempt_path("sys/health");
+    quota_config.enable_rate_limit_audit_logging = true;
+    client
+        .sys()
+        .write_rate_limit_quota_config(&quota_config)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let quotas = client
+        .sys()
+        .list_rate_limit_quotas()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(
+        quotas
+            .keys
+            .iter()
+            .any(|quota| quota == "global-rate-limiter")
+    );
+
+    client
+        .sys()
+        .write_rate_limit_quota(
+            "global-rate-limiter",
+            &openbao::sys::RateLimitQuotaRequest::new(897.3)
+                .with_interval("2m")
+                .with_block_interval("5m"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let quota = client
+        .sys()
+        .read_rate_limit_quota("global-rate-limiter")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(quota.name, "global-rate-limiter");
+    assert_eq!(quota.rate, 897.3);
+
+    client
+        .sys()
+        .delete_rate_limit_quota("global-rate-limiter")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .delete_rate_limit_quota_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_wrapping_wrap_sends_ttl_header() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
