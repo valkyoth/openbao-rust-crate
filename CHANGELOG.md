@@ -12,6 +12,7 @@ All notable changes to this project are documented here.
   policy/group mapping, list, read, and delete helpers.
 - RADIUS auth login, method configuration, user policy mapping, user
   read/list/delete, and paginated user-list helpers.
+- System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
 
 ### Security
 
@@ -25,6 +26,8 @@ All notable changes to this project are documented here.
 - LDAP auth lists, policy lists, and login metadata maps use bounded
   deserializers, and TLS version, CIDR, duration, and insecure LDAP TLS
   settings are validated before dispatch.
+- Metrics support is JSON-only in `0.8.0`; Prometheus text output remains
+  outside the typed JSON transport boundary.
 
 ## 0.7.0 - 2026-06-01
 

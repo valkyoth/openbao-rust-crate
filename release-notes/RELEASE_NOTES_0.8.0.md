@@ -23,10 +23,12 @@
 - New `0.8.0` work currently implemented: LDAP auth login, method
   configuration, group policy mapping, user policy/group mapping, list, read,
   and delete helpers; RADIUS auth login, method configuration, user policy
-  mapping, user read/list/delete, and paginated user-list helpers.
-- Remaining `0.8.0` planned work: Kerberos auth coverage; more system backend
-  coverage; FIPS posture helper; bootstrap dry-run preview; typed capability
-  wrappers; shared list ergonomics; optional timestamp parsing.
+  mapping, user read/list/delete, paginated user-list helpers; system leader
+  status, OpenAPI discovery, and JSON telemetry metrics helpers.
+- Remaining `0.8.0` planned work: Kerberos auth coverage; quotas/namespaces
+  and additional system backend coverage; FIPS posture helper; bootstrap
+  dry-run preview; typed capability wrappers; shared list ergonomics; optional
+  timestamp parsing.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -49,6 +51,8 @@
 - LDAP auth list responses, policy lists, and login metadata maps are bounded
   during deserialization. TLS version, token CIDR/duration, path-name, and
   insecure LDAP TLS settings are validated before request dispatch.
+- Metrics support is intentionally JSON-only in `0.8.0`; Prometheus text
+  output is deferred until the crate has an explicit raw-body API.
 
 ## Security And Stability Gate
 

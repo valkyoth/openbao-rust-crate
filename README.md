@@ -84,7 +84,8 @@ Implemented now:
 - Transit key create, read, list, delete, encrypt, decrypt, rewrap, data key,
   random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and
   optional raw-byte helpers.
-- System health, seal status, and loopback-only dev bootstrap helpers.
+- System health, seal status, leader status, OpenAPI discovery, JSON metrics,
+  and loopback-only dev bootstrap helpers.
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
 - ACL policy list, read, write, delete, and prefix list helpers.
@@ -293,6 +294,9 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | Health | Yes | Accepts OpenBao active, standby, sealed, and uninitialized health statuses. |
 | Init status | Yes | Typed `/sys/init` status helper. |
 | Seal status | Yes | Typed `/sys/seal-status` helper. |
+| Leader status | Yes | Typed `/sys/leader` helper. |
+| OpenAPI discovery | Yes | Typed JSON helper for `/sys/internal/specs/openapi`. |
+| JSON metrics | Yes | Typed JSON helper for `/sys/metrics?format=json`; Prometheus text output is intentionally deferred. |
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
@@ -302,7 +306,7 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
-| Quotas, metrics, namespaces | Planned | Planned in the `0.8.0` operations line. |
+| Quotas, namespaces, storage, loggers | Planned | Remaining operations coverage planned after the first `0.8.0` system helper slice. |
 
 ## Examples
 
@@ -1009,22 +1013,18 @@ async fn main() -> Result<()> {
 }
 ```
 
-Call an endpoint that is not typed yet:
+Discover OpenBao's OpenAPI document:
 
 ```rust,no_run
 use openbao::{Client, Result};
-use openbao::Method;
 use openbao::SecretString;
-use serde_json::Value;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
     let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
-    let response: Value = client
-        .request_json(Method::GET, "sys/internal/specs/openapi", Option::<&Value>::None)
-        .await?;
+    let response = client.sys().openapi_document(true).await?;
 
     println!("openapi keys: {}", response.as_object().map_or(0, |object| object.len()));
     Ok(())

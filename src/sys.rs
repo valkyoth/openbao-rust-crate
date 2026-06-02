@@ -14,7 +14,7 @@ use serde::{
 };
 
 use crate::{
-    Authenticated, Client, Error, Result, Unauthenticated,
+    Authenticated, Client, Error, JsonValue, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
@@ -54,6 +54,29 @@ pub struct Health {
 pub struct InitStatus {
     /// Whether the node has already been initialized.
     pub initialized: bool,
+}
+
+/// High Availability leader status returned by `/sys/leader`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct LeaderStatus {
+    /// Whether HA mode is enabled.
+    #[serde(default)]
+    pub ha_enabled: bool,
+    /// Whether this node is the active leader.
+    #[serde(default)]
+    pub is_self: bool,
+    /// Active leader API address.
+    #[serde(default)]
+    pub leader_address: Option<String>,
+    /// Active leader cluster address.
+    #[serde(default)]
+    pub leader_cluster_address: Option<String>,
+    /// Whether this node is a performance standby.
+    #[serde(default)]
+    pub performance_standby: bool,
+    /// Last remote WAL observed by a performance standby.
+    #[serde(default)]
+    pub performance_standby_last_remote_wal: Option<u64>,
 }
 
 /// OpenBao seal status response.
@@ -1294,6 +1317,45 @@ impl<State> Sys<'_, State> {
     pub async fn seal_status(&self) -> Result<SealStatus> {
         self.client
             .request_json(Method::GET, "sys/seal-status", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads `/sys/leader`.
+    pub async fn leader_status(&self) -> Result<LeaderStatus> {
+        self.client
+            .request_json(Method::GET, "sys/leader", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads `/sys/internal/specs/openapi`.
+    ///
+    /// Set `generic_mount_paths` to replace concrete mount paths with a
+    /// dynamic `{mountPath}` parameter when OpenBao supports it.
+    pub async fn openapi_document(&self, generic_mount_paths: bool) -> Result<JsonValue> {
+        self.client
+            .request_json_query_accepting(
+                Method::GET,
+                "sys/internal/specs/openapi",
+                &[("generic_mount_paths", generic_mount_paths.to_string())],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
+    /// Reads JSON telemetry metrics from `/sys/metrics`.
+    ///
+    /// The Prometheus text format is intentionally left to a future raw-body
+    /// helper. This method keeps the current JSON-only transport boundary.
+    pub async fn metrics_json(&self) -> Result<JsonValue> {
+        self.client
+            .request_json_query_accepting(
+                Method::GET,
+                "sys/metrics",
+                &[("format", "json".to_owned())],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
             .await
     }
 }

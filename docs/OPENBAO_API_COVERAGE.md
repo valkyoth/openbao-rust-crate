@@ -173,7 +173,9 @@ Support plan:
 - `0.6.0`: production init, unseal, seal, legacy rekey, OpenBao key-share
   rotation, and keyring rotation are implemented only behind explicit
   `operator-ops` plus `operator-ops-acknowledged` feature gates.
-- `0.8.0`: metrics, quotas, namespaces, storage, diagnostic endpoints.
+- `0.8.0`: leader status, OpenAPI discovery, and JSON metrics are
+  implemented. Quotas, namespaces, storage, loggers, locked users, version
+  history, and broader diagnostic endpoints remain planned.
 
 ## OpenBao-Specific Notes
 

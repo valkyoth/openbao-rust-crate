@@ -654,6 +654,137 @@ async fn sys_enable_kv2_sends_versioned_kv_mount_request() {
 }
 
 #[tokio::test]
+async fn sys_leader_status_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/leader HTTP/1.1"));
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = r#"{"ha_enabled":true,"is_self":true,"leader_address":"https://127.0.0.1:8200","leader_cluster_address":"https://127.0.0.1:8201","performance_standby":false,"performance_standby_last_remote_wal":42}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let status = client
+        .sys()
+        .leader_status()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(status.ha_enabled);
+    assert!(status.is_self);
+    assert_eq!(
+        status.leader_address.as_deref(),
+        Some("https://127.0.0.1:8200")
+    );
+    assert_eq!(status.performance_standby_last_remote_wal, Some(42));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_openapi_document_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server =
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with(
+                "GET /v1/sys/internal/specs/openapi?generic_mount_paths=true HTTP/1.1"
+            ));
+            assert!(request.contains("x-vault-token: test-token"));
+            let body = r#"{"openapi":"3.0.2","paths":{}}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let document = client
+        .sys()
+        .openapi_document(true)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(document["openapi"], "3.0.2");
+    assert!(document["paths"].is_object());
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_metrics_json_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/metrics?format=json HTTP/1.1"));
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = r#"{"Gauges":[{"Name":"bao.core.unsealed","Value":1.0}],"Counters":[]}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let metrics = client
+        .sys()
+        .metrics_json()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(metrics["Gauges"].is_array());
+    assert!(metrics["Counters"].is_array());
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_wrapping_wrap_sends_ttl_header() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
