@@ -25,14 +25,20 @@
   and delete helpers; RADIUS auth login, method configuration, user policy
   mapping, user read/list/delete, paginated user-list helpers; Kerberos auth
   SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group
-  policy mapping helpers; system leader status, OpenAPI discovery, internal UI
+  policy mapping helpers; JWT/OIDC authorization URL, callback, and
+  direct/device poll helpers; token role CRUD, token tidy, and revoke-orphan
+  helpers; Transit key config update, rotation, export, backup, restore, trim,
+  and batch encrypt/decrypt/rewrap/sign/verify helpers; PKI role merge-patch,
+  tidy status, and tidy cancel helpers; Identity entity/group lookup and entity
+  merge helpers; system leader status, OpenAPI discovery, internal UI
   namespace/mount discovery, JSON telemetry metrics helpers, HA status, key
   status, host diagnostics, sanitized config state JSON, audited request-header
   config helpers, CORS config helpers, operator-gated active-node step-down,
   and typed capability views for common access checks; system random byte and
   hash tool helpers; runtime logger level helpers and installed version-history listing;
   namespace management helpers; rate-limit quota config and named quota helpers;
-  locked-user list/filter/unlock helpers;
+  locked-user list/filter/unlock helpers; lease prefix revoke, force prefix
+  revoke, and lease count helpers;
   Integrated Storage Raft join/configuration/peer/bootstrap, capped
   snapshot download/restore helpers, and Autopilot JSON helpers; Prometheus
   text metrics output; operator-gated raw storage read/write/list/delete
@@ -41,9 +47,11 @@
   preview with would-create, would-update, and would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
   choices; shared `ListEntries` ergonomics for common string list responses;
-  optional RFC3339 timestamp parsing helpers behind the `time` feature.
+  optional RFC3339 timestamp parsing helpers behind the `time` feature;
+  runtime-neutral `Sys::wait_ready_with_delay` helper; and additional error
+  predicates for rate limiting, temporary failures, and permission denial.
 - Remaining `0.8.0` planned work: final release-candidate polish after CI
-  confirms this pentest remediation commit.
+  confirms the pentest and gap-analysis remediation commits.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -62,6 +70,13 @@
   dispatch.
 - RADIUS configuration documents the protocol's UDP and MD5-based authenticator
   risk so high-assurance deployments can prefer stronger auth methods.
+- JWT/OIDC callback and poll helpers keep returned tokens and accessors in
+  `SecretString`; query-bearing callback requests are treated as sensitive by
+  the HTTP transport path to avoid retaining detailed request URLs in transport
+  errors.
+- Token roles validate duration and CIDR fields locally, token accessors remain
+  secret-aware, and token tidy is documented as an administrative maintenance
+  operation.
 - LDAP auth bind passwords, client TLS private keys, login passwords, returned
   tokens, and token accessors are secret-aware where applicable and redacted
   from debug output.
@@ -76,6 +91,14 @@
   insecure LDAP TLS settings are validated before request dispatch.
 - Kerberos LDAP TLS version fields reject deprecated TLS 1.0 and TLS 1.1
   values.
+- Transit exported key material, backups, batch ciphertext/plaintext/signature
+  fields, and restored backup payloads are secret-aware and redacted from debug
+  output. Transit batch inputs and server-returned batch result lists are
+  bounded.
+- PKI tidy status/cancel responses use typed fields, and role merge-patch uses
+  JSON Merge Patch content type.
+- Identity lookup and merge inputs validate required fields and bound source ID
+  lists.
 - Metrics support includes JSON output and Prometheus text output. Prometheus
   text uses the private raw-body transport path while preserving HTTPS/token
   enforcement and response-size limits.
@@ -87,6 +110,8 @@
   validated, quota names are single path segments, and exempt paths are bounded.
 - Locked-user namespace, mount-accessor, and alias-identifier lists are bounded
   during deserialization. Unlock path parameters must be single path segments.
+- Lease prefix revocation validates prefix paths locally, force prefix
+  revocation is documented as emergency-only, and lease count maps are bounded.
 - Raft join client keys, auto-join metadata, and DR operation tokens are
   secret-aware and redacted from debug output. Raft server lists are bounded,
   peer IDs are validated, Raft join leader addresses and auto-join schemes must
@@ -148,3 +173,8 @@
 - Kerberos SPNEGO token acquisition is intentionally left to platform Kerberos
   tooling; the crate accepts the base64-encoded token required by the OpenBao
   HTTP API.
+- Token auto-renewal, lease tracking, retry policy/backoff, a shared pagination
+  abstraction, Identity OIDC provider/MFA management, PKI root rotate/replace,
+  named issuer issue/sign flows, OpenTelemetry tracing, seal-status watching,
+  HTTP/2 transport configuration, and application-side secret-struct wrappers
+  are planned or require design decisions before stabilization.

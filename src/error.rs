@@ -120,9 +120,45 @@ impl Error {
         self.status() == Some(StatusCode::BAD_REQUEST)
     }
 
+    /// Returns true when OpenBao rate-limited the request.
+    pub fn is_rate_limited(&self) -> bool {
+        self.status() == Some(StatusCode::TOO_MANY_REQUESTS)
+    }
+
     /// Returns true when OpenBao is sealed or temporarily unavailable.
     pub fn is_sealed(&self) -> bool {
         self.status() == Some(StatusCode::SERVICE_UNAVAILABLE)
+    }
+
+    /// Returns true when retrying later may reasonably succeed.
+    ///
+    /// This includes rate limiting, service unavailability, server errors, and
+    /// transport failures before an OpenBao response was decoded. It does not
+    /// treat sealed OpenBao as definitively recoverable for every application;
+    /// callers with strict startup behavior should check [`Self::is_sealed`]
+    /// separately.
+    pub fn is_temporary(&self) -> bool {
+        match self {
+            Self::Transport(_) | Self::Http(_) => true,
+            Self::Api { status, .. } => {
+                *status == StatusCode::TOO_MANY_REQUESTS
+                    || *status == StatusCode::SERVICE_UNAVAILABLE
+                    || status.is_server_error()
+            }
+            _ => false,
+        }
+    }
+
+    /// Returns true when OpenBao reported an authentication or authorization failure.
+    pub fn is_permission_denied(&self) -> bool {
+        self.status() == Some(StatusCode::FORBIDDEN)
+            || matches!(
+                self,
+                Self::Api { errors, .. }
+                    if errors.iter().any(|message| message
+                        .to_ascii_lowercase()
+                        .contains("permission denied"))
+            )
     }
 
     /// Returns true when a create operation lost an idempotent creation race.

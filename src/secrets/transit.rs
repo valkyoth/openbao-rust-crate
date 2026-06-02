@@ -275,6 +275,178 @@ pub struct TransitKeyInfo {
     pub imported: bool,
 }
 
+/// Request for updating a Transit key's mutable configuration.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct TransitUpdateKeyRequest {
+    /// Minimum version allowed for decryption or verification.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_decryption_version: Option<u64>,
+    /// Minimum version allowed for encryption, signing, or HMAC generation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_encryption_version: Option<u64>,
+    /// Whether key deletion is allowed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deletion_allowed: Option<bool>,
+    /// Whether raw key material may be exported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exportable: Option<bool>,
+    /// Whether plaintext key backup is allowed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_plaintext_backup: Option<bool>,
+    /// Automatic rotation period, such as `24h`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auto_rotate_period: Option<String>,
+}
+
+impl TransitUpdateKeyRequest {
+    /// Allows the key to be deleted.
+    #[must_use]
+    pub fn allow_deletion(mut self) -> Self {
+        self.deletion_allowed = Some(true);
+        self
+    }
+
+    /// Sets the automatic rotation period after validating duration syntax.
+    pub fn with_auto_rotate_period(mut self, period: impl Into<String>) -> Result<Self> {
+        let period = period.into();
+        crate::validation::validate_duration_parameter(&period, "Transit auto_rotate_period")?;
+        self.auto_rotate_period = Some(period);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(period) = &self.auto_rotate_period {
+            crate::validation::validate_duration_parameter(period, "Transit auto_rotate_period")?;
+        }
+        Ok(())
+    }
+}
+
+/// Transit export key material type.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TransitExportKeyType {
+    /// Symmetric encryption key material.
+    EncryptionKey,
+    /// Signing key material.
+    SigningKey,
+    /// HMAC key material.
+    HmacKey,
+    /// Public key material only.
+    PublicKey,
+    /// Certificate chain material.
+    CertificateChain,
+}
+
+impl TransitExportKeyType {
+    fn as_path_segment(self) -> &'static str {
+        match self {
+            Self::EncryptionKey => "encryption-key",
+            Self::SigningKey => "signing-key",
+            Self::HmacKey => "hmac-key",
+            Self::PublicKey => "public-key",
+            Self::CertificateChain => "certificate-chain",
+        }
+    }
+}
+
+/// Exported Transit key material.
+#[derive(Clone, Deserialize)]
+pub struct TransitExportResponse {
+    /// Exported keys keyed by version.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_map")]
+    pub keys: BTreeMap<String, SecretString>,
+    /// Exported key type, when returned.
+    #[serde(default, rename = "type")]
+    pub key_type: Option<String>,
+    /// Key name, when returned.
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+impl fmt::Debug for TransitExportResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitExportResponse")
+            .field("keys", &format_args!("<{} redacted>", self.keys.len()))
+            .field("key_type", &self.key_type)
+            .field("name", &self.name)
+            .finish()
+    }
+}
+
+/// Backup payload returned by the Transit backup endpoint.
+#[derive(Clone, Deserialize)]
+pub struct TransitBackup {
+    /// Opaque encrypted key backup.
+    pub backup: SecretString,
+}
+
+impl fmt::Debug for TransitBackup {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitBackup")
+            .field("backup", &"<redacted>")
+            .finish()
+    }
+}
+
+/// Request for restoring a Transit key backup.
+#[derive(Clone)]
+pub struct TransitRestoreRequest {
+    /// Opaque backup returned by OpenBao.
+    pub backup: SecretString,
+    /// Overwrite an existing key with the same name.
+    pub force: Option<bool>,
+}
+
+impl fmt::Debug for TransitRestoreRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitRestoreRequest")
+            .field("backup", &"<redacted>")
+            .field("force", &self.force)
+            .finish()
+    }
+}
+
+impl TransitRestoreRequest {
+    /// Creates a restore request from an opaque Transit backup.
+    pub fn new(backup: SecretString) -> Self {
+        Self {
+            backup,
+            force: None,
+        }
+    }
+
+    /// Forces restore over an existing key.
+    #[must_use]
+    pub fn force(mut self) -> Self {
+        self.force = Some(true);
+        self
+    }
+}
+
+/// Request for trimming older Transit key versions.
+#[derive(Clone, Copy, Debug, Serialize)]
+pub struct TransitTrimRequest {
+    /// Minimum key version that must remain available.
+    pub min_available_version: u64,
+}
+
+impl TransitTrimRequest {
+    /// Creates a trim request.
+    pub fn new(min_available_version: u64) -> Result<Self> {
+        if min_available_version == 0 {
+            return Err(Error::InvalidParameter(
+                "Transit min_available_version must be greater than zero".into(),
+            ));
+        }
+        Ok(Self {
+            min_available_version,
+        })
+    }
+}
+
 /// Transit key list response.
 #[derive(Clone, Debug, Deserialize)]
 pub struct TransitKeyList {
@@ -907,6 +1079,186 @@ pub struct TransitVerifyResponse {
     pub valid: bool,
 }
 
+/// Batch encryption request using the same endpoint as single-item encryption.
+#[derive(Clone, Debug, Default)]
+pub struct TransitBatchEncryptRequest {
+    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    pub batch_input: Vec<TransitEncryptRequest>,
+}
+
+/// Batch decryption request using the same endpoint as single-item decryption.
+#[derive(Clone, Debug, Default)]
+pub struct TransitBatchDecryptRequest {
+    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    pub batch_input: Vec<TransitDecryptRequest>,
+}
+
+/// Batch rewrap request using the same endpoint as single-item rewrap.
+#[derive(Clone, Debug, Default)]
+pub struct TransitBatchRewrapRequest {
+    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    pub batch_input: Vec<TransitRewrapRequest>,
+}
+
+/// Batch signing request using the same endpoint as single-item signing.
+#[derive(Clone, Debug, Default)]
+pub struct TransitBatchSignRequest {
+    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    pub batch_input: Vec<TransitSignRequest>,
+}
+
+/// Batch verification request using the same endpoint as single-item verification.
+#[derive(Clone, Debug, Default)]
+pub struct TransitBatchVerifyRequest {
+    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    pub batch_input: Vec<TransitVerifyRequest>,
+}
+
+/// One item returned by a batch encryption operation.
+#[derive(Clone, Deserialize)]
+pub struct TransitBatchEncryptItem {
+    /// Ciphertext for this item, when successful.
+    #[serde(default)]
+    pub ciphertext: Option<SecretString>,
+    /// Key version used, when returned.
+    #[serde(default)]
+    pub key_version: Option<u64>,
+    /// OpenBao item error, when this item failed.
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+impl fmt::Debug for TransitBatchEncryptItem {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitBatchEncryptItem")
+            .field(
+                "ciphertext",
+                &self.ciphertext.as_ref().map(|_| "<redacted>"),
+            )
+            .field("key_version", &self.key_version)
+            .field("error", &self.error)
+            .finish()
+    }
+}
+
+/// One item returned by a batch decryption operation.
+#[derive(Clone, Deserialize)]
+pub struct TransitBatchDecryptItem {
+    /// Base64-encoded plaintext for this item, when successful.
+    #[serde(default)]
+    pub plaintext: Option<SecretString>,
+    /// OpenBao item error, when this item failed.
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+impl fmt::Debug for TransitBatchDecryptItem {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitBatchDecryptItem")
+            .field("plaintext", &self.plaintext.as_ref().map(|_| "<redacted>"))
+            .field("error", &self.error)
+            .finish()
+    }
+}
+
+/// One item returned by a batch rewrap operation.
+#[derive(Clone, Deserialize)]
+pub struct TransitBatchRewrapItem {
+    /// Rewrapped ciphertext for this item, when successful.
+    #[serde(default)]
+    pub ciphertext: Option<SecretString>,
+    /// OpenBao item error, when this item failed.
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+impl fmt::Debug for TransitBatchRewrapItem {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitBatchRewrapItem")
+            .field(
+                "ciphertext",
+                &self.ciphertext.as_ref().map(|_| "<redacted>"),
+            )
+            .field("error", &self.error)
+            .finish()
+    }
+}
+
+/// One item returned by a batch signing operation.
+#[derive(Clone, Deserialize)]
+pub struct TransitBatchSignItem {
+    /// Signature for this item, when successful.
+    #[serde(default)]
+    pub signature: Option<SecretString>,
+    /// OpenBao item error, when this item failed.
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+impl fmt::Debug for TransitBatchSignItem {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitBatchSignItem")
+            .field("signature", &self.signature.as_ref().map(|_| "<redacted>"))
+            .field("error", &self.error)
+            .finish()
+    }
+}
+
+/// One item returned by a batch verification operation.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitBatchVerifyItem {
+    /// Whether this item verified successfully.
+    #[serde(default)]
+    pub valid: bool,
+    /// OpenBao item error, when this item failed.
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+/// Batch encryption response.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitBatchEncryptResponse {
+    /// Per-item results.
+    #[serde(default, deserialize_with = "deserialize_bounded_batch_encrypt_vec")]
+    pub batch_results: Vec<TransitBatchEncryptItem>,
+}
+
+/// Batch decryption response.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitBatchDecryptResponse {
+    /// Per-item results.
+    #[serde(default, deserialize_with = "deserialize_bounded_batch_decrypt_vec")]
+    pub batch_results: Vec<TransitBatchDecryptItem>,
+}
+
+/// Batch rewrap response.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitBatchRewrapResponse {
+    /// Per-item results.
+    #[serde(default, deserialize_with = "deserialize_bounded_batch_rewrap_vec")]
+    pub batch_results: Vec<TransitBatchRewrapItem>,
+}
+
+/// Batch signing response.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitBatchSignResponse {
+    /// Per-item results.
+    #[serde(default, deserialize_with = "deserialize_bounded_batch_sign_vec")]
+    pub batch_results: Vec<TransitBatchSignItem>,
+}
+
+/// Batch verification response.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitBatchVerifyResponse {
+    /// Per-item results.
+    #[serde(default, deserialize_with = "deserialize_bounded_batch_verify_vec")]
+    pub batch_results: Vec<TransitBatchVerifyItem>,
+}
+
 #[derive(Serialize)]
 struct TransitEncryptPayload<'a> {
     plaintext: &'a str,
@@ -1004,6 +1356,18 @@ struct TransitVerifyPayload<'a> {
     salt_length: Option<TransitSaltLength>,
 }
 
+#[derive(Serialize)]
+struct TransitBatchPayload<T> {
+    batch_input: Vec<T>,
+}
+
+#[derive(Serialize)]
+struct TransitRestorePayload<'a> {
+    backup: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    force: Option<bool>,
+}
+
 impl Client<Authenticated> {
     /// Uses the Transit engine mounted at `mount`.
     pub fn transit(&self, mount: impl Into<String>) -> Result<Transit<'_>> {
@@ -1084,6 +1448,109 @@ impl Transit<'_> {
             .await
     }
 
+    /// Updates a named Transit key's mutable configuration.
+    pub async fn update_key(&self, name: &str, request: &TransitUpdateKeyRequest) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                &self.key_path(name, Some("config"))?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Rotates a named Transit key to a new key version.
+    pub async fn rotate_key(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.key_path(name, Some("rotate"))?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Exports key material for an exportable Transit key.
+    ///
+    /// The returned key material is secret-aware and redacted from `Debug`.
+    /// Operators must ensure the target key was explicitly configured as
+    /// exportable for a controlled workflow.
+    pub async fn export_key(
+        &self,
+        key_type: TransitExportKeyType,
+        name: &str,
+        version: Option<u64>,
+    ) -> Result<TransitExportResponse> {
+        let version = version.map(|version| version.to_string());
+        let mut segments = vec!["export", key_type.as_path_segment()];
+        let name = validate_key_name(name)?;
+        for segment in &name {
+            segments.push(segment);
+        }
+        if let Some(version) = version.as_deref() {
+            segments.push(version);
+        }
+        let envelope: ResponseEnvelope<TransitExportResponse> = self
+            .client
+            .request_json(Method::GET, &self.path(&segments)?, Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads an encrypted backup of a Transit key.
+    ///
+    /// Backup payloads can restore key material and are therefore returned as
+    /// secret material.
+    pub async fn backup_key(&self, name: &str) -> Result<TransitBackup> {
+        let name = validate_key_name(name)?.join("/");
+        let envelope: ResponseEnvelope<TransitBackup> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["backup", &name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Restores a Transit key backup.
+    ///
+    /// When `name` is `None`, OpenBao restores the key name contained inside
+    /// the backup. Supplying a name restores to that key name.
+    pub async fn restore_key(
+        &self,
+        name: Option<&str>,
+        request: &TransitRestoreRequest,
+    ) -> Result<Empty> {
+        let payload = TransitRestorePayload {
+            backup: request.backup.expose_secret(),
+            force: request.force,
+        };
+        let path = match name {
+            Some(name) => {
+                let name = validate_key_name(name)?.join("/");
+                self.path(&["restore", &name])?
+            }
+            None => self.path(&["restore"])?,
+        };
+        self.client
+            .request_json(Method::POST, &path, Some(&payload))
+            .await
+    }
+
+    /// Trims older Transit key versions up to `min_available_version`.
+    pub async fn trim_key(&self, name: &str, request: &TransitTrimRequest) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.key_path(name, Some("trim"))?,
+                Some(request),
+            )
+            .await
+    }
+
     /// Encrypts base64-encoded plaintext with a Transit key.
     ///
     /// The plaintext is wrapped in `SecretString` and the crate zeroizes its
@@ -1094,19 +1561,7 @@ impl Transit<'_> {
         name: &str,
         request: &TransitEncryptRequest,
     ) -> Result<TransitEncryptResponse> {
-        let payload = TransitEncryptPayload {
-            plaintext: request.plaintext.expose_secret(),
-            associated_data: request
-                .associated_data
-                .as_ref()
-                .map(|secret| secret.expose_secret()),
-            context: request
-                .context
-                .as_ref()
-                .map(|secret| secret.expose_secret()),
-            key_version: request.key_version,
-            nonce: request.nonce.as_ref().map(|secret| secret.expose_secret()),
-        };
+        let payload = encrypt_payload(request);
         self.enveloped(
             Method::POST,
             &self.operation_path("encrypt", name, None)?,
@@ -1125,18 +1580,7 @@ impl Transit<'_> {
         name: &str,
         request: &TransitDecryptRequest,
     ) -> Result<TransitDecryptResponse> {
-        let payload = TransitDecryptPayload {
-            ciphertext: request.ciphertext.expose_secret(),
-            associated_data: request
-                .associated_data
-                .as_ref()
-                .map(|secret| secret.expose_secret()),
-            context: request
-                .context
-                .as_ref()
-                .map(|secret| secret.expose_secret()),
-            nonce: request.nonce.as_ref().map(|secret| secret.expose_secret()),
-        };
+        let payload = decrypt_payload(request);
         self.enveloped(
             Method::POST,
             &self.operation_path("decrypt", name, None)?,
@@ -1155,15 +1599,7 @@ impl Transit<'_> {
         name: &str,
         request: &TransitRewrapRequest,
     ) -> Result<TransitRewrapResponse> {
-        let payload = TransitRewrapPayload {
-            ciphertext: request.ciphertext.expose_secret(),
-            context: request
-                .context
-                .as_ref()
-                .map(|secret| secret.expose_secret()),
-            key_version: request.key_version,
-            nonce: request.nonce.as_ref().map(|secret| secret.expose_secret()),
-        };
+        let payload = rewrap_payload(request);
         self.enveloped(
             Method::POST,
             &self.operation_path("rewrap", name, None)?,
@@ -1274,18 +1710,7 @@ impl Transit<'_> {
         algorithm: Option<TransitHashAlgorithm>,
         request: &TransitSignRequest,
     ) -> Result<TransitSignResponse> {
-        let payload = TransitSignPayload {
-            input: request.input.expose_secret(),
-            key_version: request.key_version,
-            context: request
-                .context
-                .as_ref()
-                .map(|secret| secret.expose_secret()),
-            prehashed: request.prehashed,
-            signature_algorithm: request.signature_algorithm,
-            marshaling_algorithm: request.marshaling_algorithm,
-            salt_length: request.salt_length,
-        };
+        let payload = sign_payload(request);
         self.enveloped(
             Method::POST,
             &self.operation_path("sign", name, algorithm)?,
@@ -1301,21 +1726,118 @@ impl Transit<'_> {
         algorithm: Option<TransitHashAlgorithm>,
         request: &TransitVerifyRequest,
     ) -> Result<TransitVerifyResponse> {
-        let payload = TransitVerifyPayload {
-            input: request.input.expose_secret(),
-            signature: request
-                .signature
-                .as_ref()
-                .map(|secret| secret.expose_secret()),
-            hmac: request.hmac.as_ref().map(|secret| secret.expose_secret()),
-            context: request
-                .context
-                .as_ref()
-                .map(|secret| secret.expose_secret()),
-            prehashed: request.prehashed,
-            signature_algorithm: request.signature_algorithm,
-            marshaling_algorithm: request.marshaling_algorithm,
-            salt_length: request.salt_length,
+        let payload = verify_payload(request);
+        self.enveloped(
+            Method::POST,
+            &self.operation_path("verify", name, algorithm)?,
+            &payload,
+        )
+        .await
+    }
+
+    /// Encrypts multiple base64-encoded plaintext values in one Transit request.
+    pub async fn batch_encrypt(
+        &self,
+        name: &str,
+        request: &TransitBatchEncryptRequest,
+    ) -> Result<TransitBatchEncryptResponse> {
+        validate_batch_len(request.batch_input.len())?;
+        let payload = TransitBatchPayload {
+            batch_input: request
+                .batch_input
+                .iter()
+                .map(encrypt_payload)
+                .collect::<Vec<_>>(),
+        };
+        self.enveloped(
+            Method::POST,
+            &self.operation_path("encrypt", name, None)?,
+            &payload,
+        )
+        .await
+    }
+
+    /// Decrypts multiple Transit ciphertext values in one Transit request.
+    pub async fn batch_decrypt(
+        &self,
+        name: &str,
+        request: &TransitBatchDecryptRequest,
+    ) -> Result<TransitBatchDecryptResponse> {
+        validate_batch_len(request.batch_input.len())?;
+        let payload = TransitBatchPayload {
+            batch_input: request
+                .batch_input
+                .iter()
+                .map(decrypt_payload)
+                .collect::<Vec<_>>(),
+        };
+        self.enveloped(
+            Method::POST,
+            &self.operation_path("decrypt", name, None)?,
+            &payload,
+        )
+        .await
+    }
+
+    /// Rewraps multiple Transit ciphertext values in one Transit request.
+    pub async fn batch_rewrap(
+        &self,
+        name: &str,
+        request: &TransitBatchRewrapRequest,
+    ) -> Result<TransitBatchRewrapResponse> {
+        validate_batch_len(request.batch_input.len())?;
+        let payload = TransitBatchPayload {
+            batch_input: request
+                .batch_input
+                .iter()
+                .map(rewrap_payload)
+                .collect::<Vec<_>>(),
+        };
+        self.enveloped(
+            Method::POST,
+            &self.operation_path("rewrap", name, None)?,
+            &payload,
+        )
+        .await
+    }
+
+    /// Signs multiple base64-encoded inputs in one Transit request.
+    pub async fn batch_sign(
+        &self,
+        name: &str,
+        algorithm: Option<TransitHashAlgorithm>,
+        request: &TransitBatchSignRequest,
+    ) -> Result<TransitBatchSignResponse> {
+        validate_batch_len(request.batch_input.len())?;
+        let payload = TransitBatchPayload {
+            batch_input: request
+                .batch_input
+                .iter()
+                .map(sign_payload)
+                .collect::<Vec<_>>(),
+        };
+        self.enveloped(
+            Method::POST,
+            &self.operation_path("sign", name, algorithm)?,
+            &payload,
+        )
+        .await
+    }
+
+    /// Verifies multiple Transit signatures or HMACs in one Transit request.
+    pub async fn batch_verify(
+        &self,
+        name: &str,
+        algorithm: Option<TransitHashAlgorithm>,
+        request: &TransitBatchVerifyRequest,
+    ) -> Result<TransitBatchVerifyResponse> {
+        validate_batch_len(request.batch_input.len())?;
+        let payload = TransitBatchPayload {
+            batch_input: request
+                .batch_input
+                .iter()
+                .map(verify_payload)
+                .collect::<Vec<_>>(),
         };
         self.enveloped(
             Method::POST,
@@ -1379,6 +1901,97 @@ fn validate_key_name(name: &str) -> Result<Vec<String>> {
     validate_mount_path(name)
 }
 
+fn validate_batch_len(len: usize) -> Result<()> {
+    if len == 0 {
+        return Err(Error::InvalidParameter(
+            "Transit batch_input must not be empty".into(),
+        ));
+    }
+    if len > crate::response::MAX_RESPONSE_STRINGS {
+        return Err(Error::InvalidParameter(
+            "Transit batch_input exceeds item limit".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn encrypt_payload(request: &TransitEncryptRequest) -> TransitEncryptPayload<'_> {
+    TransitEncryptPayload {
+        plaintext: request.plaintext.expose_secret(),
+        associated_data: request
+            .associated_data
+            .as_ref()
+            .map(|secret| secret.expose_secret()),
+        context: request
+            .context
+            .as_ref()
+            .map(|secret| secret.expose_secret()),
+        key_version: request.key_version,
+        nonce: request.nonce.as_ref().map(|secret| secret.expose_secret()),
+    }
+}
+
+fn decrypt_payload(request: &TransitDecryptRequest) -> TransitDecryptPayload<'_> {
+    TransitDecryptPayload {
+        ciphertext: request.ciphertext.expose_secret(),
+        associated_data: request
+            .associated_data
+            .as_ref()
+            .map(|secret| secret.expose_secret()),
+        context: request
+            .context
+            .as_ref()
+            .map(|secret| secret.expose_secret()),
+        nonce: request.nonce.as_ref().map(|secret| secret.expose_secret()),
+    }
+}
+
+fn rewrap_payload(request: &TransitRewrapRequest) -> TransitRewrapPayload<'_> {
+    TransitRewrapPayload {
+        ciphertext: request.ciphertext.expose_secret(),
+        context: request
+            .context
+            .as_ref()
+            .map(|secret| secret.expose_secret()),
+        key_version: request.key_version,
+        nonce: request.nonce.as_ref().map(|secret| secret.expose_secret()),
+    }
+}
+
+fn sign_payload(request: &TransitSignRequest) -> TransitSignPayload<'_> {
+    TransitSignPayload {
+        input: request.input.expose_secret(),
+        key_version: request.key_version,
+        context: request
+            .context
+            .as_ref()
+            .map(|secret| secret.expose_secret()),
+        prehashed: request.prehashed,
+        signature_algorithm: request.signature_algorithm,
+        marshaling_algorithm: request.marshaling_algorithm,
+        salt_length: request.salt_length,
+    }
+}
+
+fn verify_payload(request: &TransitVerifyRequest) -> TransitVerifyPayload<'_> {
+    TransitVerifyPayload {
+        input: request.input.expose_secret(),
+        signature: request
+            .signature
+            .as_ref()
+            .map(|secret| secret.expose_secret()),
+        hmac: request.hmac.as_ref().map(|secret| secret.expose_secret()),
+        context: request
+            .context
+            .as_ref()
+            .map(|secret| secret.expose_secret()),
+        prehashed: request.prehashed,
+        signature_algorithm: request.signature_algorithm,
+        marshaling_algorithm: request.marshaling_algorithm,
+        salt_length: request.salt_length,
+    }
+}
+
 #[cfg(feature = "transit-bytes")]
 fn base64_encode_secret(input: &[u8]) -> Result<SecretString> {
     let encoded = base64_ng::STANDARD
@@ -1412,6 +2025,73 @@ where
     deserializer.deserialize_map(BoundedU64MapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
 }
 
+fn deserialize_bounded_secret_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_map(BoundedSecretMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+fn deserialize_bounded_batch_encrypt_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<TransitBatchEncryptItem>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_bounded_vec(deserializer)
+}
+
+fn deserialize_bounded_batch_decrypt_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<TransitBatchDecryptItem>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_bounded_vec(deserializer)
+}
+
+fn deserialize_bounded_batch_rewrap_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<TransitBatchRewrapItem>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_bounded_vec(deserializer)
+}
+
+fn deserialize_bounded_batch_sign_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<TransitBatchSignItem>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_bounded_vec(deserializer)
+}
+
+fn deserialize_bounded_batch_verify_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<TransitBatchVerifyItem>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_bounded_vec(deserializer)
+}
+
+fn deserialize_bounded_vec<'de, D, T>(deserializer: D) -> core::result::Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    deserializer.deserialize_seq(
+        BoundedVecVisitor::<T, { crate::response::MAX_RESPONSE_STRINGS }> {
+            _marker: core::marker::PhantomData,
+        },
+    )
+}
+
 struct BoundedU64MapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
@@ -1434,6 +2114,65 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao integer map exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
+struct BoundedSecretMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretMapVisitor<MAX> {
+    type Value = BTreeMap<String, SecretString>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} secret string values")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, SecretString>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao secret map exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
+struct BoundedVecVisitor<T, const MAX: usize> {
+    _marker: core::marker::PhantomData<T>,
+}
+
+impl<'de, T, const MAX: usize> Visitor<'de> for BoundedVecVisitor<T, MAX>
+where
+    T: Deserialize<'de>,
+{
+    type Value = Vec<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a list of at most {MAX} values")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<T>()? else {
+                return Ok(values);
+            };
+            values.push(value);
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao batch result exceeds item limit"));
         }
         Ok(values)
     }

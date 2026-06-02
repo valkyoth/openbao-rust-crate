@@ -193,6 +193,21 @@ Stop condition:
   is implemented.
 - Optional timestamp parsing helpers behind a lightweight `time` feature are
   implemented.
+- JWT/OIDC browser-flow helpers for authorization URL, callback, and
+  direct/device polling are implemented.
+- Token role write/read/list/delete, token tidy, and revoke-orphan helpers are
+  implemented.
+- Transit key config update, key rotation, export, backup, restore, trim, and
+  batch encrypt/decrypt/rewrap/sign/verify helpers are implemented.
+- PKI role merge-patch, tidy status, and tidy cancel helpers are implemented.
+- Identity entity/group lookup and entity merge helpers are implemented.
+- Lease prefix revoke, force prefix revoke, and lease count helpers are
+  implemented.
+- `Error::is_rate_limited`, `Error::is_temporary`, and
+  `Error::is_permission_denied` helpers are implemented.
+- Runtime-neutral `Sys::wait_ready_with_delay` is implemented for startup and
+  integration-test polling. KV v2 versioned typed reads were already covered by
+  `read_version` and `read_data_version`.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing are implemented.
 - Namespace list, create, read, patch, and delete helpers are implemented.
@@ -237,6 +252,21 @@ Stop condition:
 - feature matrix frozen for `1.0`;
 - migration guide from `0.1` through `0.9`;
 - migration guide from `vaultrs` and bespoke `reqwest` OpenBao wrappers;
+- token auto-renewal and lease-tracker designs are implemented or explicitly
+  deferred with API notes;
+- retry policy with exponential backoff is implemented or explicitly deferred
+  with API notes;
+- a shared paginated-list abstraction is implemented or explicitly deferred;
+- admin bootstrap convergence for PKI roles and Identity entities/groups is
+  implemented or explicitly deferred;
+- Identity OIDC provider/key/role/token management, MFA method management, and
+  MFA login enforcement are scoped for `1.0` or deferred with documented
+  reasons;
+- PKI root rotate/replace and named issuer issue/sign lifecycle helpers are
+  scoped for `1.0` or deferred with documented reasons;
+- optional tracing/OpenTelemetry, seal-status watcher/back-pressure, HTTP/2
+  transport configuration, public response serde fixtures, and application-side
+  secret-struct wrappers have design decisions recorded;
 - quantum-readiness design note that tracks OpenBao support, avoids premature
   API promises, and defines how hybrid/post-quantum profiles will be exposed
   once stable upstream primitives exist;

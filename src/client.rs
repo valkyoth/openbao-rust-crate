@@ -620,6 +620,7 @@ impl<State> Client<State> {
         }
         let is_sensitive = self.token.is_some()
             || self.config.namespace.is_some()
+            || !query.is_empty()
             || !headers.is_empty()
             || body.is_some();
         let response = if is_sensitive {

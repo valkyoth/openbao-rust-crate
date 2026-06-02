@@ -14,6 +14,13 @@ All notable changes to this project are documented here.
   read/list/delete, and paginated user-list helpers.
 - Kerberos auth login with SPNEGO negotiate headers, service-account/keytab
   config, Kerberos LDAP config, and group policy mapping helpers.
+- JWT/OIDC browser-flow helpers for authorization URL, callback, and
+  direct/device polling.
+- Token role write/read/list/delete, token tidy, and revoke-orphan helpers.
+- Transit key config update, key rotation, export, backup, restore, trim, and
+  batch encrypt/decrypt/rewrap/sign/verify helpers.
+- PKI role merge-patch, tidy status, and tidy cancel helpers.
+- Identity entity/group lookup and entity merge helpers.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
 - Internal UI namespace and mount discovery helpers.
 - HA status helper with bounded node lists.
@@ -32,6 +39,7 @@ All notable changes to this project are documented here.
   HA bootstrap, and Autopilot JSON helpers.
 - Capped Integrated Storage Raft snapshot download, restore, and force-restore
   helpers.
+- Lease prefix revoke, force prefix revoke, and lease count helpers.
 - Prometheus text metrics helper for `/sys/metrics?format=prometheus`.
 - Remount/mount-migration start and status helpers.
 - Operator-gated active-node step-down helper for `/sys/step-down`.
@@ -48,6 +56,10 @@ All notable changes to this project are documented here.
   signature, and seal-assumption choices.
 - Shared `ListEntries` trait for common string list responses.
 - Optional RFC3339 timestamp parsing helpers behind the `time` feature.
+- Runtime-neutral `Sys::wait_ready_with_delay` helper for service startup and
+  integration-test polling.
+- Additional error predicates: `is_rate_limited`, `is_temporary`, and
+  `is_permission_denied`.
 
 ### Security
 
@@ -118,6 +130,10 @@ All notable changes to this project are documented here.
   and TLS 1.1 values.
 - Local `PENTEST.md` for `0.8.0` was reviewed on 2026-06-02 and deleted before
   commit; actionable local findings were addressed.
+- Local `GAP_ANALYSIS.md` for `0.8.0` was reviewed and deleted before commit;
+  small endpoint and ergonomics gaps were implemented, and larger background,
+  OIDC-provider/MFA, retry, tracing, pagination, bootstrap, and lease-tracking
+  systems were recorded in the versioned release plan.
 
 ## 0.7.0 - 2026-06-01
 

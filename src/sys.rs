@@ -2548,6 +2548,17 @@ pub struct LeaseRenewal {
     pub renewable: bool,
 }
 
+/// Lease count summary returned by `/sys/leases/count`.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct LeaseCount {
+    /// Total lease count returned by OpenBao.
+    #[serde(default)]
+    pub lease_count: u64,
+    /// Counts grouped by mount or namespace path.
+    #[serde(default, deserialize_with = "deserialize_bounded_u64_map")]
+    pub counts: BTreeMap<String, u64>,
+}
+
 impl fmt::Debug for LeaseRenewal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
@@ -3201,6 +3212,34 @@ impl Sys<'_, Unauthenticated> {
                 }),
             )
             .await
+    }
+
+    /// Polls `/sys/health` until OpenBao is initialized, unsealed, and active.
+    ///
+    /// This helper is runtime-neutral: callers provide the async delay
+    /// function, such as `tokio::time::sleep`. It returns the ready health
+    /// response, or an SDK error after `timeout` elapses.
+    pub async fn wait_ready_with_delay<F, Fut>(
+        &self,
+        timeout: std::time::Duration,
+        interval: std::time::Duration,
+        mut delay: F,
+    ) -> Result<Health>
+    where
+        F: FnMut(std::time::Duration) -> Fut,
+        Fut: core::future::Future<Output = ()>,
+    {
+        let start = std::time::Instant::now();
+        loop {
+            let health = self.health().await?;
+            if health.initialized && !health.sealed && !health.standby {
+                return Ok(health);
+            }
+            if start.elapsed() >= timeout {
+                return Err(Error::InvalidTimeout("OpenBao did not become ready"));
+            }
+            delay(interval).await;
+        }
     }
 }
 
@@ -3964,6 +4003,60 @@ impl Sys<'_, Authenticated> {
                 &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
             .await
+    }
+
+    /// Revokes all leases under a lease ID prefix.
+    ///
+    /// This requires tightly controlled sudo capability and can revoke many
+    /// dynamic credentials at once.
+    pub async fn revoke_lease_prefix(&self, prefix: &str, sync: Option<bool>) -> Result<Empty> {
+        let prefix = validate_lease_prefix(prefix)?;
+        let query = sync
+            .map(|sync| vec![("sync", sync.to_string())])
+            .unwrap_or_default();
+        self.client
+            .request_json_query_accepting(
+                Method::POST,
+                &format!("sys/leases/revoke-prefix/{prefix}"),
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Force-revokes all leases under a prefix while suppressing backend errors.
+    ///
+    /// This endpoint is dangerous because backend cleanup errors are ignored.
+    /// Use only for operator-controlled emergency recovery.
+    pub async fn force_revoke_lease_prefix(&self, prefix: &str) -> Result<Empty> {
+        let prefix = validate_lease_prefix(prefix)?;
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                &format!("sys/leases/revoke-force/{prefix}"),
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Counts active leases, optionally filtered by OpenBao lease type.
+    pub async fn count_leases(&self, lease_type: Option<&str>) -> Result<LeaseCount> {
+        let query = lease_type
+            .map(|lease_type| vec![("type", lease_type.to_owned())])
+            .unwrap_or_default();
+        let envelope: ResponseEnvelope<LeaseCount> = self
+            .client
+            .request_json_query_accepting(
+                Method::GET,
+                "sys/leases/count",
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Lists all plugin catalog entries grouped by plugin type.
@@ -5127,6 +5220,25 @@ fn validate_lease_id(lease_id: &SecretString) -> Result<&str> {
     Ok(lease_id)
 }
 
+fn validate_lease_prefix(prefix: &str) -> Result<String> {
+    const MAX_LEASE_PREFIX_BYTES: usize = 512;
+
+    if prefix.is_empty() {
+        return Err(Error::InvalidPath("lease prefix must not be empty".into()));
+    }
+    if prefix.len() > MAX_LEASE_PREFIX_BYTES {
+        return Err(Error::InvalidPath(
+            "lease prefix exceeds maximum allowed length".into(),
+        ));
+    }
+    if prefix.as_bytes().iter().any(u8::is_ascii_control) {
+        return Err(Error::InvalidPath(
+            "lease prefix must not contain control characters".into(),
+        ));
+    }
+    Ok(validate_endpoint_path(prefix)?.join("/"))
+}
+
 fn plugin_catalog_type_path(plugin_type: PluginType) -> Result<String> {
     Ok(["sys/plugins/catalog", plugin_type.as_path_segment()].join("/"))
 }
@@ -5263,6 +5375,15 @@ where
     D: Deserializer<'de>,
 {
     deserialize_bounded_string_map(deserializer)
+}
+
+fn deserialize_bounded_u64_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, u64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(BoundedU64MapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
 }
 
 fn deserialize_bounded_version_history_map<'de, D>(
@@ -5547,6 +5668,33 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedRateLimitQuotaMapVisitor<MAX
             return Err(A::Error::custom(
                 "OpenBao rate limit quota map exceeds item limit",
             ));
+        }
+        Ok(values)
+    }
+}
+
+struct BoundedU64MapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
+    type Value = BTreeMap<String, u64>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} integer values")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, u64>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao integer map exceeds item limit"));
         }
         Ok(values)
     }

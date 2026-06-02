@@ -310,6 +310,189 @@ impl ListEntries for JwtRoleList {
     }
 }
 
+/// Request for starting an OIDC browser login flow.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct OidcAuthUrlRequest {
+    /// Role used for the OIDC login. Defaults to the mount default role when omitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    /// Callback URL registered with OpenBao and the OIDC provider.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect_uri: Option<String>,
+    /// Optional nonce that must match the later callback or poll request.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_nonce: Option<String>,
+}
+
+impl OidcAuthUrlRequest {
+    /// Creates a browser OIDC authorization URL request for a callback URL.
+    pub fn new(redirect_uri: impl Into<String>) -> Self {
+        Self {
+            redirect_uri: Some(redirect_uri.into()),
+            ..Self::default()
+        }
+    }
+
+    /// Creates a device/direct callback-mode request without a redirect URI.
+    pub fn device() -> Self {
+        Self::default()
+    }
+
+    /// Sets the role used for the OIDC login.
+    #[must_use]
+    pub fn with_role(mut self, role: impl Into<String>) -> Self {
+        self.role = Some(role.into());
+        self
+    }
+
+    /// Sets the client nonce used to bind later callback or poll requests.
+    #[must_use]
+    pub fn with_client_nonce(mut self, client_nonce: impl Into<String>) -> Self {
+        self.client_nonce = Some(client_nonce.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(role) = &self.role {
+            validate_mount_path(role)?;
+        }
+        if let Some(redirect_uri) = &self.redirect_uri
+            && redirect_uri.trim().is_empty()
+        {
+            return Err(Error::InvalidParameter(
+                "OIDC redirect_uri must not be empty".into(),
+            ));
+        }
+        if let Some(client_nonce) = &self.client_nonce
+            && client_nonce.trim().is_empty()
+        {
+            return Err(Error::InvalidParameter(
+                "OIDC client_nonce must not be empty".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Authorization URL returned by OpenBao for an OIDC login flow.
+#[derive(Clone, Debug, Deserialize)]
+pub struct OidcAuthUrlResponse {
+    /// Authorization URL that the user should visit in a browser.
+    pub auth_url: String,
+    /// Device-flow user code, when OpenBao returns one.
+    #[serde(default)]
+    pub user_code: Option<String>,
+    /// Poll interval in seconds for direct or device callback modes.
+    #[serde(default)]
+    pub poll_interval: Option<u64>,
+}
+
+/// Request for completing a browser OIDC callback.
+#[derive(Clone, Debug)]
+pub struct OidcCallbackRequest {
+    /// Opaque state returned by the OIDC provider.
+    pub state: String,
+    /// Provider authorization code. Required when `id_token` is omitted.
+    pub code: Option<SecretString>,
+    /// Provider ID token. Required when `code` is omitted.
+    pub id_token: Option<SecretString>,
+    /// Client nonce supplied to `oidc_auth_url`, when used.
+    pub client_nonce: Option<String>,
+}
+
+impl OidcCallbackRequest {
+    /// Creates a callback request using an authorization code.
+    pub fn with_code(state: impl Into<String>, code: SecretString) -> Self {
+        Self {
+            state: state.into(),
+            code: Some(code),
+            id_token: None,
+            client_nonce: None,
+        }
+    }
+
+    /// Creates a callback request using an ID token.
+    pub fn with_id_token(state: impl Into<String>, id_token: SecretString) -> Self {
+        Self {
+            state: state.into(),
+            code: None,
+            id_token: Some(id_token),
+            client_nonce: None,
+        }
+    }
+
+    /// Sets the client nonce that must match the authorization URL request.
+    #[must_use]
+    pub fn with_client_nonce(mut self, client_nonce: impl Into<String>) -> Self {
+        self.client_nonce = Some(client_nonce.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.state.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "OIDC state must not be empty".into(),
+            ));
+        }
+        if self.code.is_none() && self.id_token.is_none() {
+            return Err(Error::InvalidParameter(
+                "OIDC callback requires code or id_token".into(),
+            ));
+        }
+        if let Some(client_nonce) = &self.client_nonce
+            && client_nonce.trim().is_empty()
+        {
+            return Err(Error::InvalidParameter(
+                "OIDC client_nonce must not be empty".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Request for polling an OIDC direct or device callback flow.
+#[derive(Clone, Debug, Serialize)]
+pub struct OidcPollRequest {
+    /// Opaque state returned by the authorization URL request.
+    pub state: String,
+    /// Client nonce supplied to `oidc_auth_url`, when used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_nonce: Option<String>,
+}
+
+impl OidcPollRequest {
+    /// Creates an OIDC poll request.
+    pub fn new(state: impl Into<String>) -> Self {
+        Self {
+            state: state.into(),
+            client_nonce: None,
+        }
+    }
+
+    /// Sets the client nonce that must match the authorization URL request.
+    #[must_use]
+    pub fn with_client_nonce(mut self, client_nonce: impl Into<String>) -> Self {
+        self.client_nonce = Some(client_nonce.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.state.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "OIDC state must not be empty".into(),
+            ));
+        }
+        if let Some(client_nonce) = &self.client_nonce
+            && client_nonce.trim().is_empty()
+        {
+            return Err(Error::InvalidParameter(
+                "OIDC client_nonce must not be empty".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Metadata returned after a successful JWT login.
 #[derive(Debug, Deserialize)]
 pub struct JwtLoginMetadata {
@@ -436,6 +619,49 @@ impl Client<Authenticated> {
 }
 
 impl JwtAuth<'_> {
+    /// Obtains an OIDC authorization URL for a browser, direct, or device flow.
+    pub async fn oidc_auth_url(&self, request: &OidcAuthUrlRequest) -> Result<OidcAuthUrlResponse> {
+        request.validate()?;
+        let envelope: ResponseEnvelope<OidcAuthUrlResponse> = self
+            .client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/oidc/auth_url", self.mount),
+                Some(request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Completes an OIDC callback and returns an authenticated client.
+    ///
+    /// The callback parameters are sent as query values because OpenBao
+    /// documents the callback endpoint as a `GET` endpoint.
+    pub async fn oidc_callback(
+        self,
+        request: &OidcCallbackRequest,
+    ) -> Result<(Client<Authenticated>, JwtLoginMetadata)> {
+        let response = self.oidc_callback_response(request).await?;
+        let (token, metadata) = split_login_auth(response);
+        Ok((
+            self.client.clone_without_state().try_with_token(token)?,
+            metadata,
+        ))
+    }
+
+    /// Polls a direct or device OIDC flow and returns an authenticated client on success.
+    pub async fn oidc_poll(
+        self,
+        request: &OidcPollRequest,
+    ) -> Result<(Client<Authenticated>, JwtLoginMetadata)> {
+        let response = self.oidc_poll_response(request).await?;
+        let (token, metadata) = split_login_auth(response);
+        Ok((
+            self.client.clone_without_state().try_with_token(token)?,
+            metadata,
+        ))
+    }
+
     /// Logs in and returns token metadata plus an authenticated client.
     pub async fn login(
         self,
@@ -464,6 +690,44 @@ impl JwtAuth<'_> {
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
                 Some(&request),
+            )
+            .await?;
+        response.auth.ok_or(Error::MissingField("auth"))
+    }
+
+    async fn oidc_callback_response(&self, request: &OidcCallbackRequest) -> Result<JwtLoginAuth> {
+        request.validate()?;
+        let mut query = vec![("state", request.state.clone())];
+        if let Some(code) = &request.code {
+            query.push(("code", code.expose_secret().to_owned()));
+        }
+        if let Some(id_token) = &request.id_token {
+            query.push(("id_token", id_token.expose_secret().to_owned()));
+        }
+        if let Some(client_nonce) = &request.client_nonce {
+            query.push(("client_nonce", client_nonce.clone()));
+        }
+        let response: JwtLoginResponse = self
+            .client
+            .request_json_query_accepting(
+                Method::GET,
+                &format!("auth/{}/oidc/callback", self.mount),
+                &query,
+                Option::<&Empty>::None,
+                &[reqwest::StatusCode::OK],
+            )
+            .await?;
+        response.auth.ok_or(Error::MissingField("auth"))
+    }
+
+    async fn oidc_poll_response(&self, request: &OidcPollRequest) -> Result<JwtLoginAuth> {
+        request.validate()?;
+        let response: JwtLoginResponse = self
+            .client
+            .request_json(
+                Method::POST,
+                &format!("auth/{}/oidc/poll", self.mount),
+                Some(request),
             )
             .await?;
         response.auth.ok_or(Error::MissingField("auth"))

@@ -354,6 +354,44 @@ pub struct PkiTidyRequest {
     pub tidy_acme: Option<bool>,
 }
 
+/// PKI tidy status returned by `/pki/tidy-status`.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiTidyStatus {
+    /// Safety buffer in seconds, when returned.
+    #[serde(default)]
+    pub safety_buffer: Option<u64>,
+    /// Whether certificate-store tidy is enabled.
+    #[serde(default)]
+    pub tidy_cert_store: Option<bool>,
+    /// Whether revoked-certificate tidy is enabled.
+    #[serde(default)]
+    pub tidy_revoked_certs: Option<bool>,
+    /// Error message for the tidy operation, when returned.
+    #[serde(default)]
+    pub error: Option<String>,
+    /// Whether a tidy operation is currently running, when returned.
+    #[serde(default)]
+    pub running: Option<bool>,
+    /// Current tidy state, when returned.
+    #[serde(default)]
+    pub state: Option<String>,
+    /// Human-readable tidy message, when returned.
+    #[serde(default)]
+    pub message: Option<String>,
+    /// Last tidy start timestamp, when returned.
+    #[serde(default)]
+    pub time_started: Option<String>,
+    /// Last tidy finish timestamp, when returned.
+    #[serde(default)]
+    pub time_finished: Option<String>,
+    /// Number of revoked certificates deleted, when returned.
+    #[serde(default)]
+    pub revoked_cert_deleted_count: Option<u64>,
+    /// Number of certificate-store entries deleted, when returned.
+    #[serde(default)]
+    pub cert_store_deleted_count: Option<u64>,
+}
+
 /// CRL rotation response.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct PkiRotateCrlResponse {
@@ -804,6 +842,20 @@ impl Pki<'_> {
             .await
     }
 
+    /// Patches a PKI role with JSON Merge Patch semantics.
+    pub async fn patch_role(&self, name: &str, patch: &PkiRole) -> Result<PkiRole> {
+        self.enveloped_with_headers(
+            Method::PATCH,
+            &self.path(&["roles", name])?,
+            &[(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/merge-patch+json"),
+            )],
+            Some(patch),
+        )
+        .await
+    }
+
     /// Reads a PKI role.
     pub async fn read_role(&self, name: &str) -> Result<PkiRole> {
         self.enveloped(
@@ -883,6 +935,26 @@ impl Pki<'_> {
         self.client
             .request_json(Method::POST, &self.path(&["tidy"])?, Some(request))
             .await
+    }
+
+    /// Reads the status of the current or most recent PKI tidy operation.
+    pub async fn tidy_status(&self) -> Result<PkiTidyStatus> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["tidy-status"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Cancels an in-progress PKI tidy operation.
+    pub async fn tidy_cancel(&self) -> Result<PkiTidyStatus> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["tidy-cancel"])?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Issues a certificate and private key using a PKI role.

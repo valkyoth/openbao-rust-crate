@@ -242,6 +242,118 @@ pub struct TokenAccessorList {
     pub keys: Vec<SecretString>,
 }
 
+/// Token role configuration used by `/auth/token/roles/:role_name`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct TokenRole {
+    /// Policies allowed to be requested when creating tokens through the role.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_policies: Vec<String>,
+    /// Policies that cannot be requested through the role.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub disallowed_policies: Vec<String>,
+    /// Additional policies always attached to generated tokens.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub token_policies: Vec<String>,
+    /// Whether generated tokens are orphan tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orphan: Option<bool>,
+    /// Whether generated tokens are renewable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub renewable: Option<bool>,
+    /// Token path suffix.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path_suffix: Option<String>,
+    /// Allowed entity aliases.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_entity_aliases: Vec<String>,
+    /// Token type, such as `service`, `batch`, or `default`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_type: Option<String>,
+    /// Token TTL, such as `30m`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_ttl: Option<String>,
+    /// Token maximum TTL, such as `2h`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_max_ttl: Option<String>,
+    /// Explicit maximum TTL, such as `4h`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_explicit_max_ttl: Option<String>,
+    /// Periodic token period.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_period: Option<String>,
+    /// Number of uses for generated tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_num_uses: Option<u64>,
+    /// Bound CIDRs for generated tokens.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub token_bound_cidrs: Vec<String>,
+}
+
+impl TokenRole {
+    /// Sets the allowed policies for this role.
+    #[must_use]
+    pub fn with_allowed_policies<I, P>(mut self, policies: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<String>,
+    {
+        self.allowed_policies = policies.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// Sets the token TTL after validating OpenBao duration syntax.
+    pub fn with_token_ttl(mut self, token_ttl: impl Into<String>) -> Result<Self> {
+        let token_ttl = token_ttl.into();
+        crate::validation::validate_duration_parameter(&token_ttl, "token role token_ttl")?;
+        self.token_ttl = Some(token_ttl);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(token_ttl) = &self.token_ttl {
+            crate::validation::validate_duration_parameter(token_ttl, "token role token_ttl")?;
+        }
+        if let Some(token_max_ttl) = &self.token_max_ttl {
+            crate::validation::validate_duration_parameter(
+                token_max_ttl,
+                "token role token_max_ttl",
+            )?;
+        }
+        if let Some(token_explicit_max_ttl) = &self.token_explicit_max_ttl {
+            crate::validation::validate_duration_parameter(
+                token_explicit_max_ttl,
+                "token role token_explicit_max_ttl",
+            )?;
+        }
+        if let Some(token_period) = &self.token_period {
+            crate::validation::validate_duration_parameter(
+                token_period,
+                "token role token_period",
+            )?;
+        }
+        crate::validation::validate_cidr_list(&self.token_bound_cidrs, "token role bound CIDR")
+    }
+}
+
+/// Token role list response.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct TokenRoleList {
+    /// Token role names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl crate::response::ListEntries for TokenRoleList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
 #[derive(Deserialize)]
 struct TokenAuthEnvelope {
     auth: Option<TokenAuth>,
@@ -385,6 +497,16 @@ impl Token<'_> {
             .await
     }
 
+    /// Revokes a token while orphaning its child tokens.
+    pub async fn revoke_orphan(&self, token: &SecretString) -> Result<Empty> {
+        let payload = TokenPayload {
+            token: token.expose_secret(),
+        };
+        self.client
+            .request_json(Method::POST, "auth/token/revoke-orphan", Some(&payload))
+            .await
+    }
+
     /// Revokes the caller's token and its child tokens.
     pub async fn revoke_self(&self) -> Result<Empty> {
         self.client
@@ -403,6 +525,67 @@ impl Token<'_> {
         };
         self.client
             .request_json(Method::POST, "auth/token/revoke-accessor", Some(&payload))
+            .await
+    }
+
+    /// Writes a token role used as a template for token creation.
+    pub async fn write_role(&self, role_name: &str, role: &TokenRole) -> Result<Empty> {
+        role.validate()?;
+        let role_name = crate::path::validate_mount_path(role_name)?.join("/");
+        self.client
+            .request_json(
+                Method::POST,
+                &format!("auth/token/roles/{role_name}"),
+                Some(role),
+            )
+            .await
+    }
+
+    /// Reads a token role.
+    pub async fn read_role(&self, role_name: &str) -> Result<TokenRole> {
+        let role_name = crate::path::validate_mount_path(role_name)?.join("/");
+        let envelope: ResponseEnvelope<TokenRole> = self
+            .client
+            .request_json(
+                Method::GET,
+                &format!("auth/token/roles/{role_name}"),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists token roles.
+    pub async fn list_roles(&self) -> Result<TokenRoleList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let envelope: ResponseEnvelope<TokenRoleList> = self
+            .client
+            .request_json(method, "auth/token/roles", Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Deletes a token role.
+    pub async fn delete_role(&self, role_name: &str) -> Result<Empty> {
+        let role_name = crate::path::validate_mount_path(role_name)?.join("/");
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &format!("auth/token/roles/{role_name}"),
+                Option::<&Empty>::None,
+                &[reqwest::StatusCode::OK, reqwest::StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Triggers OpenBao token-store tidy.
+    ///
+    /// This is an administrative operation that can be expensive on large token
+    /// stores; callers should run it deliberately, not on hot request paths.
+    pub async fn tidy(&self) -> Result<Empty> {
+        self.client
+            .request_json(Method::POST, "auth/token/tidy", Option::<&Empty>::None)
             .await
     }
 }

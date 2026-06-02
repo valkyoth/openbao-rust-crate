@@ -115,8 +115,9 @@ Support plan:
 - `0.4.0`: Kubernetes login/config/role helpers and TLS certificate
   login/config/role/CRL helpers are implemented.
 - `0.5.0`: userpass login and user administration are implemented; JWT login
-  plus JWT/OIDC config and role administration helpers are implemented. Browser
-  OIDC callback helpers remain planned.
+  plus JWT/OIDC config and role administration helpers are implemented.
+- `0.8.0`: JWT/OIDC browser flow helpers for authorization URL, callback, and
+  direct/device polling are implemented.
 - `0.7.0`: AppRole role and SecretID administration is implemented. Admin
   bootstrap orchestration for auth method enablement, AppRole role
   convergence, and explicit SecretID issuance is implemented.
@@ -157,12 +158,16 @@ Support plan:
   decode base64 Transit response fields using `base64-ng`; typed RSA
   signature options, JWS marshaling helpers, and RSA-PSS salt length helpers
   are implemented for sign/verify.
+- `0.8.0`: Transit key config update, key rotation, export, backup, restore,
+  trim, and batch encrypt/decrypt/rewrap/sign/verify helpers are implemented.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer
   revocation, CA/key import, ACME config/EAB/directory URL helpers, CRL
-  rotation, and tidy are implemented. Full ACME account/order/challenge client
-  flows are intentionally left to dedicated ACME clients.
+  rotation, tidy, tidy status, tidy cancel, and role merge-patch are
+  implemented. Root rotate/replace and named issuer issue/sign flows remain
+  planned. Full ACME account/order/challenge client flows are intentionally
+  left to dedicated ACME clients.
 - `0.5.0`: database connection config/list/read/delete/reset, root rotation,
   dynamic role list/write/read/delete, dynamic credentials, static role
   list/write/read/delete, static credentials, and static role rotation are
@@ -178,8 +183,11 @@ Support plan:
   implemented. RabbitMQ connection config, lease config, role
   write/read/list/delete, and generated credential helpers are implemented.
   Identity entity, group, entity-alias, and group-alias lifecycle helpers are
-  implemented. LDAP config, root rotation, static roles/credentials, dynamic
-  roles/credentials, and library check-out/check-in helpers are implemented.
+  implemented. Entity/group lookup and entity merge helpers are implemented in
+  `0.8.0`. Identity OIDC provider/key/role/token management, MFA method
+  management, and MFA login enforcement remain planned. LDAP config, root
+  rotation, static roles/credentials, dynamic roles/credentials, and library
+  check-out/check-in helpers are implemented.
 
 ## System Backend
 
@@ -197,6 +205,8 @@ Support plan:
   lookup/renew/revoke, plugin catalog list/type-list/register/read/delete,
   mounted plugin backend reload, init status, and loopback-only dev bootstrap
   are implemented.
+- `0.8.0`: token role write/read/list/delete, token tidy, and revoke-orphan are
+  implemented.
 - `0.8.0`: capability responses now include typed borrowed views and common
   access-check helpers while preserving the raw string lists.
 - `0.6.0`: idempotent admin bootstrap builder is implemented for KV v2 mounts,
@@ -222,8 +232,33 @@ Support plan:
   Autopilot JSON helpers are implemented; Raft join inputs require HTTPS leader
   addresses and HTTPS auto-join schemes. Raw storage read/write/list/delete
   helpers and pprof diagnostic byte helpers are implemented behind explicit
-  operator-operation feature gates. CORS wildcard origins are rejected locally;
-  streaming monitor and unstable internal inspect endpoints remain deferred.
+  operator-operation feature gates. Lease prefix revoke, force prefix revoke,
+  and lease count helpers are implemented. CORS wildcard origins are rejected
+  locally; streaming monitor and unstable internal inspect endpoints remain
+  deferred.
+
+## Ergonomics And Capability Roadmap
+
+Implemented in `0.8.0`:
+
+- `Error::is_rate_limited`, `Error::is_temporary`, and
+  `Error::is_permission_denied` helpers.
+- Runtime-neutral `Sys::wait_ready_with_delay` for startup and integration
+  tests.
+- KV v2 historical reads were already covered by `read_version` and
+  `read_data_version`.
+
+Planned for later releases:
+
+- token auto-renewal and lease tracking wrappers;
+- retry policy with exponential backoff;
+- a shared paginated-list abstraction;
+- admin bootstrap convergence for PKI roles and Identity entities/groups;
+- optional tracing/OpenTelemetry request spans;
+- seal-status watcher/back-pressure helpers;
+- optional HTTP/2 transport configuration;
+- full serde fixture coverage for every public response type;
+- application-side secret struct wrappers or derive macro design.
 
 ## OpenBao-Specific Notes
 

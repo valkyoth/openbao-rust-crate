@@ -159,6 +159,144 @@ impl IdentityEntityBatchDeleteRequest {
     }
 }
 
+/// Entity lookup request.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityEntityLookupRequest {
+    /// Entity ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    /// Entity name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Alias ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alias_id: Option<String>,
+    /// Alias name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alias_name: Option<String>,
+    /// Alias mount accessor.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alias_mount_accessor: Option<String>,
+}
+
+impl IdentityEntityLookupRequest {
+    /// Looks up an entity by ID.
+    pub fn by_id(id: impl Into<String>) -> Self {
+        Self {
+            id: Some(id.into()),
+            ..Self::default()
+        }
+    }
+
+    /// Looks up an entity by name.
+    pub fn by_name(name: impl Into<String>) -> Self {
+        Self {
+            name: Some(name.into()),
+            ..Self::default()
+        }
+    }
+
+    /// Looks up an entity by alias name and mount accessor.
+    pub fn by_alias(
+        alias_name: impl Into<String>,
+        alias_mount_accessor: impl Into<String>,
+    ) -> Self {
+        Self {
+            alias_name: Some(alias_name.into()),
+            alias_mount_accessor: Some(alias_mount_accessor.into()),
+            ..Self::default()
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        let identifiers = [
+            self.id.as_ref(),
+            self.name.as_ref(),
+            self.alias_id.as_ref(),
+            self.alias_name.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .count();
+        if identifiers == 0 {
+            return Err(Error::InvalidParameter(
+                "identity entity lookup requires an id, name, alias_id, or alias_name".into(),
+            ));
+        }
+        if [
+            self.id.as_ref(),
+            self.name.as_ref(),
+            self.alias_id.as_ref(),
+            self.alias_name.as_ref(),
+            self.alias_mount_accessor.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .any(|value| value.trim().is_empty())
+        {
+            return Err(Error::InvalidParameter(
+                "identity entity lookup fields must not be empty".into(),
+            ));
+        }
+        if self.alias_name.is_some() && self.alias_mount_accessor.is_none() {
+            return Err(Error::InvalidParameter(
+                "identity alias lookup requires alias_mount_accessor".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Entity merge request.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityEntityMergeRequest {
+    /// Entity ID that remains after merge.
+    pub to_entity_id: String,
+    /// Entity IDs merged into `to_entity_id`.
+    pub from_entity_ids: Vec<String>,
+    /// Whether conflicting aliases are forced into the target entity.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub force: Option<bool>,
+}
+
+impl IdentityEntityMergeRequest {
+    /// Creates an entity merge request.
+    pub fn new(
+        to_entity_id: impl Into<String>,
+        from_entity_ids: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
+        Self {
+            to_entity_id: to_entity_id.into(),
+            from_entity_ids: from_entity_ids.into_iter().map(Into::into).collect(),
+            force: None,
+        }
+    }
+
+    /// Forces the merge when OpenBao allows it.
+    #[must_use]
+    pub fn force(mut self) -> Self {
+        self.force = Some(true);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.to_entity_id.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "identity merge target entity ID must not be empty".into(),
+            ));
+        }
+        if self.from_entity_ids.is_empty() {
+            return Err(Error::InvalidParameter(
+                "identity merge requires at least one source entity ID".into(),
+            ));
+        }
+        validate_string_count(
+            self.from_entity_ids.len(),
+            "identity merge source entity IDs",
+        )
+    }
+}
+
 /// Identity group type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IdentityGroupType {
@@ -334,6 +472,94 @@ pub struct IdentityGroupList {
     /// Group IDs or names returned by OpenBao.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+/// Group lookup request.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityGroupLookupRequest {
+    /// Group ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    /// Group name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Alias ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alias_id: Option<String>,
+    /// Alias name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alias_name: Option<String>,
+    /// Alias mount accessor.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alias_mount_accessor: Option<String>,
+}
+
+impl IdentityGroupLookupRequest {
+    /// Looks up a group by ID.
+    pub fn by_id(id: impl Into<String>) -> Self {
+        Self {
+            id: Some(id.into()),
+            ..Self::default()
+        }
+    }
+
+    /// Looks up a group by name.
+    pub fn by_name(name: impl Into<String>) -> Self {
+        Self {
+            name: Some(name.into()),
+            ..Self::default()
+        }
+    }
+
+    /// Looks up a group by alias name and mount accessor.
+    pub fn by_alias(
+        alias_name: impl Into<String>,
+        alias_mount_accessor: impl Into<String>,
+    ) -> Self {
+        Self {
+            alias_name: Some(alias_name.into()),
+            alias_mount_accessor: Some(alias_mount_accessor.into()),
+            ..Self::default()
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        let identifiers = [
+            self.id.as_ref(),
+            self.name.as_ref(),
+            self.alias_id.as_ref(),
+            self.alias_name.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .count();
+        if identifiers == 0 {
+            return Err(Error::InvalidParameter(
+                "identity group lookup requires an id, name, alias_id, or alias_name".into(),
+            ));
+        }
+        if [
+            self.id.as_ref(),
+            self.name.as_ref(),
+            self.alias_id.as_ref(),
+            self.alias_name.as_ref(),
+            self.alias_mount_accessor.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .any(|value| value.trim().is_empty())
+        {
+            return Err(Error::InvalidParameter(
+                "identity group lookup fields must not be empty".into(),
+            ));
+        }
+        if self.alias_name.is_some() && self.alias_mount_accessor.is_none() {
+            return Err(Error::InvalidParameter(
+                "identity group alias lookup requires alias_mount_accessor".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 impl ListEntries for IdentityGroupList {
@@ -572,6 +798,35 @@ impl Identity<'_> {
             .await
     }
 
+    /// Looks up an entity by ID, name, or alias fields.
+    pub async fn lookup_entity(
+        &self,
+        request: &IdentityEntityLookupRequest,
+    ) -> Result<IdentityEntityInfo> {
+        request.validate()?;
+        let envelope: ResponseEnvelope<IdentityEntityInfo> = self
+            .client
+            .request_json(
+                Method::POST,
+                &self.path(&["lookup", "entity"])?,
+                Some(request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Merges one or more source entities into a target entity.
+    pub async fn merge_entities(&self, request: &IdentityEntityMergeRequest) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["entity", "merge"])?,
+                Some(request),
+            )
+            .await
+    }
+
     /// Lists entity IDs.
     pub async fn list_entity_ids(&self) -> Result<IdentityEntityList> {
         self.list_at(&["entity", "id"]).await
@@ -667,6 +922,23 @@ impl Identity<'_> {
     /// Lists group IDs.
     pub async fn list_group_ids(&self) -> Result<IdentityGroupList> {
         self.list_at(&["group", "id"]).await
+    }
+
+    /// Looks up a group by ID, name, or alias fields.
+    pub async fn lookup_group(
+        &self,
+        request: &IdentityGroupLookupRequest,
+    ) -> Result<IdentityGroupInfo> {
+        request.validate()?;
+        let envelope: ResponseEnvelope<IdentityGroupInfo> = self
+            .client
+            .request_json(
+                Method::POST,
+                &self.path(&["lookup", "group"])?,
+                Some(request),
+            )
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Creates or updates a group by name.
