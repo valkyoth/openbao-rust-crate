@@ -251,6 +251,51 @@ impl RateLimitQuotaConfig {
     }
 }
 
+/// Locked users grouped by namespace.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct LockedUsers {
+    /// Locked users grouped by namespace.
+    #[serde(default, deserialize_with = "deserialize_bounded_locked_namespace_vec")]
+    pub by_namespace: Vec<LockedUsersNamespace>,
+    /// Total locked users across returned namespaces.
+    #[serde(default)]
+    pub total: u64,
+}
+
+/// Locked user information for one namespace.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct LockedUsersNamespace {
+    /// Namespace identifier.
+    #[serde(default)]
+    pub namespace_id: String,
+    /// Namespace path.
+    #[serde(default)]
+    pub namespace_path: String,
+    /// Locked user count in this namespace.
+    #[serde(default)]
+    pub counts: u64,
+    /// Locked users grouped by auth mount accessor.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_locked_mount_accessor_vec"
+    )]
+    pub mount_accessors: Vec<LockedUsersMountAccessor>,
+}
+
+/// Locked user information for one auth mount accessor.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct LockedUsersMountAccessor {
+    /// Auth mount accessor.
+    #[serde(default)]
+    pub mount_accessor: String,
+    /// Locked user count for this accessor.
+    #[serde(default)]
+    pub counts: u64,
+    /// User aliases currently locked for this accessor.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub alias_identifiers: Vec<String>,
+}
+
 /// Rate-limit quota list response.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct RateLimitQuotaList {
@@ -1739,6 +1784,11 @@ struct LoggerLevelPayload<'a> {
 }
 
 #[derive(Serialize)]
+struct LockedUsersPayload<'a> {
+    mount_accessor: &'a str,
+}
+
+#[derive(Serialize)]
 struct CapabilitiesPayload<'a> {
     paths: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1866,6 +1916,19 @@ impl<State> Sys<'_, State> {
                 &[StatusCode::OK],
             )
             .await
+    }
+
+    /// Reads host diagnostics from `/sys/host-info`.
+    ///
+    /// OpenBao returns platform-specific CPU, disk, host, and memory sections,
+    /// so this method exposes the `data` object as JSON while keeping the
+    /// normal response-size and content-type protections.
+    pub async fn host_info_json(&self) -> Result<JsonValue> {
+        let envelope: ResponseEnvelope<JsonValue> = self
+            .client
+            .request_json(Method::GET, "sys/host-info", Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Reads runtime logger levels from `/sys/loggers`.
@@ -2834,6 +2897,46 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Lists users currently locked by OpenBao through `/sys/locked-users`.
+    pub async fn list_locked_users(&self) -> Result<LockedUsers> {
+        let envelope: ResponseEnvelope<LockedUsers> = self
+            .client
+            .request_json(Method::GET, "sys/locked-users", Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists locked users for one auth mount accessor.
+    pub async fn list_locked_users_for_accessor(
+        &self,
+        mount_accessor: &str,
+    ) -> Result<LockedUsers> {
+        let mount_accessor = single_path_segment(mount_accessor, "mount accessor")?;
+        let payload = LockedUsersPayload {
+            mount_accessor: &mount_accessor,
+        };
+        let envelope: ResponseEnvelope<LockedUsers> = self
+            .client
+            .request_json(Method::GET, "sys/locked-users", Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Unlocks a user alias for an auth mount accessor.
+    ///
+    /// The OpenBao endpoint is idempotent and succeeds even when the user is
+    /// not currently locked.
+    pub async fn unlock_user(&self, mount_accessor: &str, alias_identifier: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                &locked_user_unlock_path(mount_accessor, alias_identifier)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     /// Looks up a wrapping token.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
         let payload = WrappingTokenPayload {
@@ -3049,6 +3152,16 @@ fn rate_limit_quota_path(name: &str) -> Result<String> {
     Ok([
         "sys/quotas/rate-limit",
         &single_path_segment(name, "quota name")?,
+    ]
+    .join("/"))
+}
+
+fn locked_user_unlock_path(mount_accessor: &str, alias_identifier: &str) -> Result<String> {
+    Ok([
+        "sys/locked-users",
+        &single_path_segment(mount_accessor, "mount accessor")?,
+        "unlock",
+        &single_path_segment(alias_identifier, "alias identifier")?,
     ]
     .join("/"))
 }
@@ -3327,6 +3440,28 @@ where
     )
 }
 
+fn deserialize_bounded_locked_namespace_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<LockedUsersNamespace>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_seq(
+        BoundedLockedNamespaceListVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
+fn deserialize_bounded_locked_mount_accessor_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<LockedUsersMountAccessor>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_seq(
+        BoundedLockedMountAccessorListVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
 fn deserialize_bounded_mount_info_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, MountInfo>, D::Error>
@@ -3459,6 +3594,67 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedRateLimitQuotaMapVisitor<MAX
     }
 }
 
+struct BoundedLockedNamespaceListVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedLockedNamespaceListVisitor<MAX> {
+    type Value = Vec<LockedUsersNamespace>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a list of at most {MAX} locked-user namespaces")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<LockedUsersNamespace>()? else {
+                return Ok(values);
+            };
+            values.push(value);
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao locked-user namespace list exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
+struct BoundedLockedMountAccessorListVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedLockedMountAccessorListVisitor<MAX> {
+    type Value = Vec<LockedUsersMountAccessor>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "a list of at most {MAX} locked-user mount accessors"
+        )
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<LockedUsersMountAccessor>()? else {
+                return Ok(values);
+            };
+            values.push(value);
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao locked-user mount accessor list exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedVersionHistoryMapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionHistoryMapVisitor<MAX> {
@@ -3525,12 +3721,12 @@ mod tests {
 
     use super::{
         AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, LeaseDuration,
-        LoggerLevel, MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList,
+        LockedUsers, LoggerLevel, MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList,
         PolicyWriteRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
-        VersionHistory, namespace_path, rate_limit_quota_path, sys_path, validate_capability_paths,
-        validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
-        validate_rate_limit_quota_config, validate_rate_limit_quota_request, validate_sha256_hex,
-        validate_wrapping_ttl,
+        VersionHistory, locked_user_unlock_path, namespace_path, rate_limit_quota_path, sys_path,
+        validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
+        validate_namespace_request, validate_rate_limit_quota_config,
+        validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
     use super::{OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest};
@@ -3560,6 +3756,13 @@ mod tests {
             "sys/quotas/rate-limit/global-rate-limiter"
         );
         assert!(rate_limit_quota_path("quota/nested").is_err());
+        assert_eq!(
+            locked_user_unlock_path("auth_userpass_1234", "alice")
+                .unwrap_or_else(|error| panic!("{error}")),
+            "sys/locked-users/auth_userpass_1234/unlock/alice"
+        );
+        assert!(locked_user_unlock_path("auth/userpass", "alice").is_err());
+        assert!(locked_user_unlock_path("auth_userpass_1234", "team/alice").is_err());
     }
 
     #[test]
@@ -3830,6 +4033,69 @@ mod tests {
             "key_info": key_info
         })) {
             Ok(_) => panic!("oversized rate limit quota map unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn locked_user_lists_are_bounded() {
+        let users: LockedUsers = serde_json::from_value(serde_json::json!({
+            "by_namespace": [{
+                "namespace_id": "root",
+                "namespace_path": "",
+                "counts": 2,
+                "mount_accessors": [{
+                    "mount_accessor": "auth_userpass_1234",
+                    "counts": 2,
+                    "alias_identifiers": ["alice", "bob"]
+                }]
+            }],
+            "total": 2
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(users.total, 2);
+        assert_eq!(
+            users.by_namespace[0].mount_accessors[0].alias_identifiers[0],
+            "alice"
+        );
+
+        let mut by_namespace = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            by_namespace.push(serde_json::json!({
+                "namespace_id": format!("ns-{index}"),
+                "namespace_path": format!("ns-{index}/"),
+                "counts": 1,
+                "mount_accessors": []
+            }));
+        }
+        let error = match serde_json::from_value::<LockedUsers>(serde_json::json!({
+            "by_namespace": by_namespace,
+            "total": 1
+        })) {
+            Ok(_) => panic!("oversized locked-user namespace list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        let mut mount_accessors = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            mount_accessors.push(serde_json::json!({
+                "mount_accessor": format!("auth_userpass_{index}"),
+                "counts": 1,
+                "alias_identifiers": []
+            }));
+        }
+        let error = match serde_json::from_value::<LockedUsers>(serde_json::json!({
+            "by_namespace": [{
+                "namespace_id": "root",
+                "namespace_path": "",
+                "counts": 1,
+                "mount_accessors": mount_accessors
+            }],
+            "total": 1
+        })) {
+            Ok(_) => panic!("oversized locked-user mount accessor list unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

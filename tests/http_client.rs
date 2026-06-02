@@ -785,6 +785,47 @@ async fn sys_metrics_json_sends_documented_path() {
 }
 
 #[tokio::test]
+async fn sys_host_info_json_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/host-info HTTP/1.1"));
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = r#"{"data":{"cpu":[{"cpu":0,"vendorId":"GenuineIntel"}],"host":{"hostname":"openbao-server-1"},"memory":{"total":17179869184},"timestamp":"2026-06-02T00:00:00Z"}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let info = client
+        .sys()
+        .host_info_json()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(info["host"]["hostname"], "openbao-server-1");
+    assert!(info["cpu"].is_array());
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_logger_helpers_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -1168,6 +1209,88 @@ async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
     client
         .sys()
         .delete_rate_limit_quota_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_locked_users_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/locked-users HTTP/1.1"));
+                    r#"{"data":{"by_namespace":[{"namespace_id":"root","namespace_path":"","counts":2,"mount_accessors":[{"mount_accessor":"auth_userpass_1234","counts":2,"alias_identifiers":["alice","bob"]}]}],"total":2}}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/sys/locked-users HTTP/1.1"));
+                    assert!(request.contains(r#""mount_accessor":"auth_userpass_1234""#));
+                    r#"{"data":{"by_namespace":[{"namespace_id":"root","namespace_path":"","counts":1,"mount_accessors":[{"mount_accessor":"auth_userpass_1234","counts":1,"alias_identifiers":["alice"]}]}],"total":1}}"#.to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with(
+                        "POST /v1/sys/locked-users/auth_userpass_1234/unlock/alice HTTP/1.1"
+                    ));
+                    String::new()
+                }
+                _ => unreachable!(),
+            };
+            let response = if body.is_empty() {
+                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+            } else {
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            };
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let locked = client
+        .sys()
+        .list_locked_users()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(locked.total, 2);
+    assert_eq!(
+        locked.by_namespace[0].mount_accessors[0].alias_identifiers,
+        ["alice", "bob"]
+    );
+
+    let locked = client
+        .sys()
+        .list_locked_users_for_accessor("auth_userpass_1234")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(locked.total, 1);
+    assert_eq!(
+        locked.by_namespace[0].mount_accessors[0].alias_identifiers,
+        ["alice"]
+    );
+
+    client
+        .sys()
+        .unlock_user("auth_userpass_1234", "alice")
         .await
         .unwrap_or_else(|error| panic!("{error}"));
 

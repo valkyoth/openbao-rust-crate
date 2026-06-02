@@ -247,8 +247,9 @@ pub mod prelude {
     };
     #[cfg(feature = "sys")]
     pub use crate::sys::{
-        Capability, CapabilityView, Health, LeaderStatus, LoggerLevel, LoggerLevels, NamespaceInfo,
-        NamespaceList, NamespaceRequest, RateLimitQuotaConfig, RateLimitQuotaInfo,
-        RateLimitQuotaList, RateLimitQuotaRequest, Sys, VersionHistory, VersionHistoryEntry,
+        Capability, CapabilityView, Health, LeaderStatus, LockedUsers, LockedUsersMountAccessor,
+        LockedUsersNamespace, LoggerLevel, LoggerLevels, NamespaceInfo, NamespaceList,
+        NamespaceRequest, RateLimitQuotaConfig, RateLimitQuotaInfo, RateLimitQuotaList,
+        RateLimitQuotaRequest, Sys, VersionHistory, VersionHistoryEntry,
     };
 }

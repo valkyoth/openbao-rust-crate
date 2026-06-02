@@ -15,11 +15,13 @@ All notable changes to this project are documented here.
 - Kerberos auth login with SPNEGO negotiate headers, service-account/keytab
   config, Kerberos LDAP config, and group policy mapping helpers.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
+- Host diagnostics helper for `/sys/host-info`.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing.
 - Namespace list, create, read, patch, and delete helpers.
 - Rate-limit quota config and named rate-limit quota list/create/read/delete
   helpers.
+- Locked-user list/filter and unlock helpers.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -52,6 +54,9 @@ All notable changes to this project are documented here.
   and namespace metadata maps are bounded.
 - Rate-limit quota rates, duration fields, names, paths, exempt-path lists, and
   optional roles are validated before request dispatch.
+- Locked-user namespace, mount-accessor, and alias-identifier lists are bounded
+  during deserialization, and unlock path parameters must be single path
+  segments.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

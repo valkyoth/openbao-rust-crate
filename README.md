@@ -124,8 +124,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: Kerberos auth, broader system backend automation, and
-  storage coverage.
+- Remaining `0.8.0`: storage coverage and additional system backend
+  automation.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -318,10 +318,12 @@ openbao = { version = "0.8", features = ["time"] }
 | Leader status | Yes | Typed `/sys/leader` helper. |
 | OpenAPI discovery | Yes | Typed JSON helper for `/sys/internal/specs/openapi`. |
 | JSON metrics | Yes | Typed JSON helper for `/sys/metrics?format=json`; Prometheus text output is intentionally deferred. |
+| Host diagnostics | Yes | JSON helper for `/sys/host-info` platform diagnostics. |
 | Runtime loggers | Yes | Read, set, and reset transient `/sys/loggers` verbosity levels. |
 | Version history | Yes | Typed LIST helper for installed OpenBao version history. |
 | Namespaces | Yes | List, create, read, patch, and delete namespace helpers with local name validation. |
 | Rate-limit quotas | Yes | Global quota config plus named rate-limit quota list/create/read/delete helpers. |
+| Locked users | Yes | List all locked users, filter by mount accessor, and unlock aliases. |
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |

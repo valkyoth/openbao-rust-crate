@@ -47,6 +47,8 @@ Sources:
 - System namespaces: https://openbao.org/api-docs/system/namespaces/
 - System quotas config: https://openbao.org/api-docs/system/quotas-config/
 - System rate-limit quotas: https://openbao.org/api-docs/2.4.x/system/rate-limit-quotas/
+- System host info: https://openbao.org/api-docs/system/host-info/
+- System locked users: https://openbao.org/api-docs/next/system/user-lockout/
 
 ## Foundation
 
@@ -194,10 +196,11 @@ Support plan:
 - `0.6.0`: production init, unseal, seal, legacy rekey, OpenBao key-share
   rotation, and keyring rotation are implemented only behind explicit
   `operator-ops` plus `operator-ops-acknowledged` feature gates.
-- `0.8.0`: leader status, OpenAPI discovery, JSON metrics, runtime logger
-  read/set/reset, installed version history, namespace management, and
-  rate-limit quota management are implemented. Storage, locked users, and
-  broader diagnostic endpoints remain planned.
+- `0.8.0`: leader status, OpenAPI discovery, JSON metrics, host diagnostics,
+  runtime logger read/set/reset, installed version history, namespace
+  management, rate-limit quota management, and locked-user list/filter/unlock
+  helpers are implemented. Storage and broader diagnostic endpoints remain
+  planned.
 
 ## OpenBao-Specific Notes
 

@@ -26,11 +26,12 @@
   mapping, user read/list/delete, paginated user-list helpers; Kerberos auth
   SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group
   policy mapping helpers; system leader status, OpenAPI discovery, JSON
-  telemetry metrics helpers, and typed
-  capability views for common access checks; runtime logger level helpers and
-  installed version-history listing; namespace management helpers; rate-limit
-  quota config and named quota helpers; read-only admin bootstrap preview with
-  would-create, would-update, and would-issue statuses; advisory
+  telemetry metrics helpers, host diagnostics, and typed capability views for
+  common access checks; runtime logger level helpers and installed
+  version-history listing; namespace management helpers; rate-limit quota
+  config and named quota helpers; locked-user list/filter/unlock helpers;
+  read-only admin bootstrap preview with would-create, would-update, and
+  would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
   choices; shared `ListEntries` ergonomics for common string list responses;
   optional RFC3339 timestamp parsing helpers behind the `time` feature.
@@ -71,6 +72,8 @@
   before request dispatch. Namespace metadata maps are bounded.
 - Rate-limit quota rates must be positive finite numbers, duration fields are
   validated, quota names are single path segments, and exempt paths are bounded.
+- Locked-user namespace, mount-accessor, and alias-identifier lists are bounded
+  during deserialization. Unlock path parameters must be single path segments.
 - Typed capability views keep the existing raw string lists available and
   preserve unknown future capability names instead of dropping or rejecting
   them.

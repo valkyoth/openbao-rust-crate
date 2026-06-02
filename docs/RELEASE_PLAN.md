@@ -197,6 +197,7 @@ Stop condition:
   history listing are implemented.
 - Namespace list, create, read, patch, and delete helpers are implemented.
 - Rate-limit quota config and named rate-limit quota helpers are implemented.
+- Host diagnostics and locked-user list/filter/unlock helpers are implemented.
 
 Publishable value:
 
