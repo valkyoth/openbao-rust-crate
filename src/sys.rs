@@ -1936,6 +1936,30 @@ pub struct AuditHash {
     pub hash: String,
 }
 
+/// Audited request headers returned by `/sys/config/auditing/request-headers`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct AuditedRequestHeaders {
+    /// Audited request-header configuration keyed by header name.
+    #[serde(default, deserialize_with = "deserialize_bounded_audited_header_map")]
+    pub headers: BTreeMap<String, AuditedRequestHeaderConfig>,
+}
+
+/// Audit configuration for one request header.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+pub struct AuditedRequestHeaderConfig {
+    /// Whether OpenBao should HMAC this header value in audit logs.
+    #[serde(default)]
+    pub hmac: bool,
+}
+
+impl AuditedRequestHeaderConfig {
+    /// Creates audited request-header configuration.
+    #[must_use]
+    pub const fn new(hmac: bool) -> Self {
+        Self { hmac }
+    }
+}
+
 /// Metadata returned by `/sys/leases/lookup`.
 #[derive(Clone, Deserialize)]
 pub struct LeaseLookup {
@@ -2395,6 +2419,22 @@ impl<State> Sys<'_, State> {
             .request_json(Method::GET, "sys/host-info", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
+    }
+
+    /// Reads sanitized OpenBao configuration state from `/sys/config/state/sanitized`.
+    ///
+    /// OpenBao removes known sensitive configuration fields before returning
+    /// this document. The schema is broad and deployment-specific, so this
+    /// helper exposes the sanitized JSON object under the normal response-size
+    /// and content-type protections.
+    pub async fn sanitized_config_state_json(&self) -> Result<JsonValue> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/config/state/sanitized",
+                Option::<&Empty>::None,
+            )
+            .await
     }
 
     /// Reads runtime logger levels from `/sys/loggers`.
@@ -3003,6 +3043,72 @@ impl Sys<'_, Authenticated> {
                 Method::POST,
                 &sys_path("sys/audit-hash", path, None)?,
                 Some(&payload),
+            )
+            .await
+    }
+
+    /// Lists audited request headers through `/sys/config/auditing/request-headers`.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint.
+    pub async fn list_audited_request_headers(&self) -> Result<AuditedRequestHeaders> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/config/auditing/request-headers",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads one audited request header configuration.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint.
+    pub async fn read_audited_request_header(
+        &self,
+        name: &str,
+    ) -> Result<AuditedRequestHeaderConfig> {
+        let headers: BTreeMap<String, AuditedRequestHeaderConfig> = self
+            .client
+            .request_json(
+                Method::GET,
+                &audited_request_header_path(name)?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        headers
+            .into_values()
+            .next()
+            .ok_or(Error::MissingField("audited request header"))
+    }
+
+    /// Creates or updates one audited request header configuration.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint.
+    pub async fn write_audited_request_header(
+        &self,
+        name: &str,
+        config: AuditedRequestHeaderConfig,
+    ) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                &audited_request_header_path(name)?,
+                Some(&config),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Deletes one audited request header configuration.
+    ///
+    /// OpenBao requires `sudo` capability for this endpoint.
+    pub async fn delete_audited_request_header(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &audited_request_header_path(name)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
             .await
     }
@@ -3866,6 +3972,15 @@ fn locked_user_unlock_path(mount_accessor: &str, alias_identifier: &str) -> Resu
     .join("/"))
 }
 
+fn audited_request_header_path(name: &str) -> Result<String> {
+    let name = HeaderName::from_bytes(name.as_bytes()).map_err(|_| {
+        Error::InvalidParameter(
+            "audited request header name must be a valid HTTP header name".into(),
+        )
+    })?;
+    Ok(["sys/config/auditing/request-headers", name.as_str()].join("/"))
+}
+
 fn remount_status_path(migration_id: &str) -> Result<String> {
     Ok([
         "sys/remount/status",
@@ -4315,6 +4430,46 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedAuditDeviceMapVisitor<MAX> {
     }
 }
 
+fn deserialize_bounded_audited_header_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, AuditedRequestHeaderConfig>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(
+        BoundedAuditedHeaderMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
+struct BoundedAuditedHeaderMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedAuditedHeaderMapVisitor<MAX> {
+    type Value = BTreeMap<String, AuditedRequestHeaderConfig>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} audited request headers")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, AuditedRequestHeaderConfig>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao audited request header map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedNamespaceInfoMapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedNamespaceInfoMapVisitor<MAX> {
@@ -4602,14 +4757,15 @@ mod tests {
     use secrecy::SecretString;
 
     use super::{
-        AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, CorsConfig,
-        CorsConfigRequest, HaStatus, LeaseDuration, LockedUsers, LoggerLevel, MountEnableRequest,
-        NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest, RaftAutopilotConfig,
-        RaftConfiguration, RaftJoinRequest, RaftPeerRequest, RateLimitQuotaConfig,
-        RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest, VersionHistory,
-        locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
-        sys_path, validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
-        validate_namespace_request, validate_raft_server_id, validate_rate_limit_quota_config,
+        AuditEnableRequest, AuditedRequestHeaders, AuthEnableRequest, Capabilities, Capability,
+        CorsConfig, CorsConfigRequest, HaStatus, LeaseDuration, LockedUsers, LoggerLevel,
+        MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest,
+        RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest, RaftPeerRequest,
+        RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest,
+        VersionHistory, audited_request_header_path, locked_user_unlock_path, namespace_path,
+        rate_limit_quota_path, remount_status_path, sys_path, validate_capability_paths,
+        validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
+        validate_raft_server_id, validate_rate_limit_quota_config,
         validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
@@ -5164,6 +5320,43 @@ mod tests {
                 .validate()
                 .is_err()
         );
+    }
+
+    #[test]
+    fn audited_request_headers_are_bounded_and_validated() {
+        let headers: AuditedRequestHeaders = serde_json::from_value(serde_json::json!({
+            "headers": {
+                "X-Forwarded-For": { "hmac": true }
+            }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(
+            headers
+                .headers
+                .get("X-Forwarded-For")
+                .is_some_and(|config| config.hmac)
+        );
+
+        let mut entries = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            entries.insert(format!("X-Test-{index}"), serde_json::json!({"hmac": true}));
+        }
+        let error = match serde_json::from_value::<AuditedRequestHeaders>(serde_json::json!({
+            "headers": entries
+        })) {
+            Ok(_) => panic!("oversized audited header map unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        assert_eq!(
+            audited_request_header_path("X-Forwarded-For")
+                .unwrap_or_else(|error| panic!("{error}")),
+            "sys/config/auditing/request-headers/x-forwarded-for"
+        );
+        assert!(audited_request_header_path("").is_err());
+        assert!(audited_request_header_path("Bad Header").is_err());
+        assert!(audited_request_header_path("bad/header").is_err());
     }
 
     #[test]

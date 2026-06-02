@@ -321,6 +321,8 @@ openbao = { version = "0.8", features = ["time"] }
 | OpenAPI discovery | Yes | Typed JSON helper for `/sys/internal/specs/openapi`. |
 | JSON metrics | Yes | Typed JSON helper for `/sys/metrics?format=json`; Prometheus text output is intentionally deferred. |
 | Host diagnostics | Yes | JSON helper for `/sys/host-info` platform diagnostics. |
+| Sanitized config state | Yes | JSON helper for `/sys/config/state/sanitized`. |
+| Audited request headers | Yes | List, read, write, and delete `/sys/config/auditing/request-headers` helpers. |
 | CORS config | Yes | Read, write, and delete `/sys/config/cors` helpers with bounded lists and header validation. |
 | Runtime loggers | Yes | Read, set, and reset transient `/sys/loggers` verbosity levels. |
 | Version history | Yes | Typed LIST helper for installed OpenBao version history. |

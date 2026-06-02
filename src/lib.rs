@@ -247,12 +247,12 @@ pub mod prelude {
     };
     #[cfg(feature = "sys")]
     pub use crate::sys::{
-        Capability, CapabilityView, CorsConfig, CorsConfigRequest, HaNode, HaStatus, Health,
-        KeyStatus, LeaderStatus, LockedUsers, LockedUsersMountAccessor, LockedUsersNamespace,
-        LoggerLevel, LoggerLevels, NamespaceInfo, NamespaceList, NamespaceRequest,
-        RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest, RaftJoinResponse, RaftPeerRequest,
-        RaftServer, RateLimitQuotaConfig, RateLimitQuotaInfo, RateLimitQuotaList,
-        RateLimitQuotaRequest, RemountMigrationInfo, RemountRequest, RemountResponse,
-        RemountStatus, Sys, VersionHistory, VersionHistoryEntry,
+        AuditedRequestHeaderConfig, AuditedRequestHeaders, Capability, CapabilityView, CorsConfig,
+        CorsConfigRequest, HaNode, HaStatus, Health, KeyStatus, LeaderStatus, LockedUsers,
+        LockedUsersMountAccessor, LockedUsersNamespace, LoggerLevel, LoggerLevels, NamespaceInfo,
+        NamespaceList, NamespaceRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
+        RaftJoinResponse, RaftPeerRequest, RaftServer, RateLimitQuotaConfig, RateLimitQuotaInfo,
+        RateLimitQuotaList, RateLimitQuotaRequest, RemountMigrationInfo, RemountRequest,
+        RemountResponse, RemountStatus, Sys, VersionHistory, VersionHistoryEntry,
     };
 }

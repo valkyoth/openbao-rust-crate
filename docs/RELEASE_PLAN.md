@@ -204,6 +204,8 @@ Stop condition:
 - HA status and remount/mount-migration start/status helpers are implemented.
 - Key status, CORS config read/write/delete, and active-node step-down helpers
   are implemented.
+- Sanitized config state and audited request-header configuration helpers are
+  implemented.
 
 Publishable value:
 

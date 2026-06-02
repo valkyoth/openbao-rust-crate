@@ -26,12 +26,13 @@
   mapping, user read/list/delete, paginated user-list helpers; Kerberos auth
   SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group
   policy mapping helpers; system leader status, OpenAPI discovery, JSON
-  telemetry metrics helpers, HA status, key status, host diagnostics, CORS
-  config helpers, active-node step-down, and typed capability views for common
-  access checks; runtime logger level helpers and installed version-history
-  listing; namespace management helpers; rate-limit quota config and named
-  quota helpers; locked-user list/filter/unlock helpers; Integrated Storage
-  Raft join/configuration/peer/bootstrap and Autopilot JSON helpers;
+  telemetry metrics helpers, HA status, key status, host diagnostics, sanitized
+  config state JSON, audited request-header config helpers, CORS config
+  helpers, active-node step-down, and typed capability views for common access
+  checks; runtime logger level helpers and installed version-history listing;
+  namespace management helpers; rate-limit quota config and named quota
+  helpers; locked-user list/filter/unlock helpers; Integrated Storage Raft
+  join/configuration/peer/bootstrap and Autopilot JSON helpers;
   remount/mount-migration start and status helpers; read-only admin bootstrap
   preview with would-create, would-update, and would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
@@ -85,6 +86,8 @@
 - CORS origin and header lists are bounded during deserialization. CORS writes
   require at least one non-empty origin, reject control characters, and validate
   configured HTTP header names before request dispatch.
+- Audited request-header maps are bounded during deserialization, and request
+  header names are validated with HTTP header parsing before request dispatch.
 - Typed capability views keep the existing raw string lists available and
   preserve unknown future capability names instead of dropping or rejecting
   them.

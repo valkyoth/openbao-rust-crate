@@ -948,6 +948,47 @@ async fn sys_host_info_json_sends_documented_path() {
 }
 
 #[tokio::test]
+async fn sys_sanitized_config_state_json_sends_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/config/state/sanitized HTTP/1.1"));
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = r#"{"api_addr":"https://127.0.0.1:8200","default_lease_ttl":0,"listeners":[{"type":"tcp","config":{"address":"127.0.0.1:8200","tls_disable":0}}],"storage":{"type":"raft"}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let state = client
+        .sys()
+        .sanitized_config_state_json()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(state["storage"]["type"], "raft");
+    assert_eq!(state["listeners"][0]["type"], "tcp");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_logger_helpers_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -1916,6 +1957,104 @@ async fn sys_enable_audit_device_sends_documented_path() {
     client
         .sys()
         .enable_audit_device("file", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_audited_request_header_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..4 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(
+                        request.starts_with("GET /v1/sys/config/auditing/request-headers HTTP/1.1")
+                    );
+                    r#"{"headers":{"X-Forwarded-For":{"hmac":true}}}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with(
+                        "GET /v1/sys/config/auditing/request-headers/x-forwarded-for HTTP/1.1"
+                    ));
+                    r#"{"X-Forwarded-For":{"hmac":true}}"#.to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with(
+                        "POST /v1/sys/config/auditing/request-headers/x-forwarded-for HTTP/1.1"
+                    ));
+                    assert!(request.contains(r#""hmac":true"#));
+                    String::new()
+                }
+                3 => {
+                    assert!(request.starts_with(
+                        "DELETE /v1/sys/config/auditing/request-headers/x-forwarded-for HTTP/1.1"
+                    ));
+                    String::new()
+                }
+                _ => unreachable!(),
+            };
+            let response = if body.is_empty() {
+                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+            } else {
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            };
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let headers = client
+        .sys()
+        .list_audited_request_headers()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(
+        headers
+            .headers
+            .get("X-Forwarded-For")
+            .is_some_and(|config| config.hmac)
+    );
+
+    let header = client
+        .sys()
+        .read_audited_request_header("X-Forwarded-For")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(header.hmac);
+
+    client
+        .sys()
+        .write_audited_request_header(
+            "X-Forwarded-For",
+            openbao::sys::AuditedRequestHeaderConfig::new(true),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    client
+        .sys()
+        .delete_audited_request_header("X-Forwarded-For")
         .await
         .unwrap_or_else(|error| panic!("{error}"));
 

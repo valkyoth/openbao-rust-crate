@@ -42,6 +42,8 @@ Sources:
 - Identity entity alias: https://openbao.org/api-docs/secret/identity/entity-alias/
 - Identity group alias: https://openbao.org/api-docs/secret/identity/group-alias/
 - LDAP secrets engine: https://openbao.org/api-docs/secret/ldap/
+- System audit config: https://openbao.org/api-docs/system/config-auditing/
+- System config state: https://openbao.org/api-docs/system/config-state/
 - System loggers: https://openbao.org/api-docs/system/loggers/
 - System version history: https://openbao.org/api-docs/next/system/version-history/
 - System namespaces: https://openbao.org/api-docs/system/namespaces/
@@ -204,8 +206,9 @@ Support plan:
   rotation, and keyring rotation are implemented only behind explicit
   `operator-ops` plus `operator-ops-acknowledged` feature gates.
 - `0.8.0`: leader status, HA status, key status, OpenAPI discovery, JSON
-  metrics, host diagnostics, CORS configuration, runtime logger read/set/reset,
-  installed version history, namespace management, rate-limit quota management,
+  metrics, host diagnostics, sanitized config state, audited request-header
+  configuration, CORS configuration, runtime logger read/set/reset, installed
+  version history, namespace management, rate-limit quota management,
   remount/mount-migration start/status, active-node step-down, and locked-user
   list/filter/unlock helpers are implemented. Integrated Storage Raft
   join/configuration/peer mutation/bootstrap helpers and Autopilot JSON helpers

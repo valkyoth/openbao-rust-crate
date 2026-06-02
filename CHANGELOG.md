@@ -18,6 +18,8 @@ All notable changes to this project are documented here.
 - HA status helper with bounded node lists.
 - Key status helper for barrier encryption key metadata.
 - Host diagnostics helper for `/sys/host-info`.
+- Sanitized config state JSON helper.
+- Audited request-header list/read/write/delete helpers.
 - CORS configuration read/write/delete helpers.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing.
@@ -72,6 +74,8 @@ All notable changes to this project are documented here.
   values are validated before request dispatch.
 - CORS origins and headers are bounded; configured header names are validated
   before request dispatch.
+- Audited request-header maps are bounded, and header names are validated with
+  HTTP header parsing before request dispatch.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state
