@@ -782,6 +782,7 @@ async fn sys_key_status_sends_documented_path() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "operator-ops")]
 #[tokio::test]
 async fn sys_step_down_leader_sends_documented_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));

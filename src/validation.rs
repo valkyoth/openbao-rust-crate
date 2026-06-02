@@ -32,10 +32,8 @@ pub(crate) fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
         if digit_start == index {
             return false;
         }
-        let Ok(component) = core::str::from_utf8(&bytes[digit_start..index])
-            .unwrap_or("")
-            .parse::<u64>()
-        else {
+        let digits = &value[digit_start..index];
+        let Ok(component) = digits.parse::<u64>() else {
             return false;
         };
         if component > MAX_DURATION_COMPONENT {
@@ -60,6 +58,28 @@ pub(crate) fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
         index += 1;
     }
     true
+}
+
+pub(crate) fn validate_optional_ldap_tls_version(
+    value: &Option<String>,
+    field: &'static str,
+) -> Result<()> {
+    if let Some(value) = value {
+        match value.as_str() {
+            "tls12" | "tls13" => {}
+            "tls10" | "tls11" => {
+                return Err(Error::InvalidParameter(format!(
+                    "{field} value {value:?} is deprecated; use tls12 or tls13"
+                )));
+            }
+            _ => {
+                return Err(Error::InvalidParameter(format!(
+                    "{field} must be tls12 or tls13"
+                )));
+            }
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn validate_cidr_list(values: &[String], field: &'static str) -> Result<()> {

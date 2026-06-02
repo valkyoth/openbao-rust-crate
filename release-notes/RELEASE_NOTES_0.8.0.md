@@ -28,9 +28,9 @@
   policy mapping helpers; system leader status, OpenAPI discovery, internal UI
   namespace/mount discovery, JSON telemetry metrics helpers, HA status, key
   status, host diagnostics, sanitized config state JSON, audited request-header
-  config helpers, CORS config helpers, active-node step-down, and typed
-  capability views for common access checks; system random byte and hash tool
-  helpers; runtime logger level helpers and installed version-history listing;
+  config helpers, CORS config helpers, operator-gated active-node step-down,
+  and typed capability views for common access checks; system random byte and
+  hash tool helpers; runtime logger level helpers and installed version-history listing;
   namespace management helpers; rate-limit quota config and named quota helpers;
   locked-user list/filter/unlock helpers;
   Integrated Storage Raft join/configuration/peer/bootstrap, capped
@@ -42,8 +42,8 @@
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
   choices; shared `ListEntries` ergonomics for common string list responses;
   optional RFC3339 timestamp parsing helpers behind the `time` feature.
-- Remaining `0.8.0` planned work: final pentest review and release-candidate
-  polish.
+- Remaining `0.8.0` planned work: final release-candidate polish after CI
+  confirms this pentest remediation commit.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -60,17 +60,22 @@
 - RADIUS user list responses and login metadata maps are bounded during
   deserialization, and token CIDR/duration fields are validated before request
   dispatch.
+- RADIUS configuration documents the protocol's UDP and MD5-based authenticator
+  risk so high-assurance deployments can prefer stronger auth methods.
 - LDAP auth bind passwords, client TLS private keys, login passwords, returned
   tokens, and token accessors are secret-aware where applicable and redacted
   from debug output.
 - LDAP auth list responses, policy lists, and login metadata maps are bounded
   during deserialization. TLS version, token CIDR/duration, path-name, and
   insecure LDAP TLS settings are validated before request dispatch.
+- LDAP auth TLS version fields reject deprecated TLS 1.0 and TLS 1.1 values.
 - Kerberos auth keytabs, SPNEGO tokens, LDAP bind passwords, returned tokens,
   and token accessors are secret-aware and redacted from debug output.
 - Kerberos group list responses and login metadata maps are bounded during
   deserialization. LDAP TLS version, token CIDR/duration, group-name, and
   insecure LDAP TLS settings are validated before request dispatch.
+- Kerberos LDAP TLS version fields reject deprecated TLS 1.0 and TLS 1.1
+  values.
 - Metrics support includes JSON output and Prometheus text output. Prometheus
   text uses the private raw-body transport path while preserving HTTPS/token
   enforcement and response-size limits.
@@ -84,8 +89,9 @@
   during deserialization. Unlock path parameters must be single path segments.
 - Raft join client keys, auto-join metadata, and DR operation tokens are
   secret-aware and redacted from debug output. Raft server lists are bounded,
-  peer IDs are validated, and Autopilot duration/integer fields are checked
-  before request dispatch.
+  peer IDs are validated, Raft join leader addresses and auto-join schemes must
+  use HTTPS, and Autopilot duration/integer fields are checked before request
+  dispatch.
 - Raft snapshots are returned in zeroizing byte buffers and remain capped by
   `OpenBaoConfig::max_response_bytes`. Restore helpers reject empty payloads
   before dispatch and should be used only during an operator-controlled
@@ -101,8 +107,8 @@
 - HA node lists are bounded during deserialization, and remount source,
   destination, and migration ID values are validated before request dispatch.
 - CORS origin and header lists are bounded during deserialization. CORS writes
-  require at least one non-empty origin, reject control characters, and validate
-  configured HTTP header names before request dispatch.
+  require at least one non-empty origin, reject wildcard origins and control
+  characters, and validate configured HTTP header names before request dispatch.
 - Audited request-header maps are bounded during deserialization, and request
   header names are validated with HTTP header parsing before request dispatch.
 - System tools random byte and hash outputs are secret-aware and redacted from
@@ -127,14 +133,15 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_8_gate.sh`
-- Result: pending.
-- Pentest report: pending.
-- `cargo audit` result: pending.
-- `cargo deny check` result: pending.
-- CodeQL result: pending.
-- Podman OpenBao integration result: pending.
-- SBOM generation result: pending.
-- Reproducible package result: pending.
+- Result: local release gate passed on 2026-06-02 after pentest remediations.
+- Pentest report: local `PENTEST.md` reviewed on 2026-06-02; actionable local
+  findings were addressed and the report was deleted before commit.
+- `cargo audit` result: passed in local release gate.
+- `cargo deny check` result: passed in local release gate.
+- CodeQL result: pending for this pentest remediation commit.
+- Podman OpenBao integration result: passed in local release gate.
+- SBOM generation result: passed in local release gate.
+- Reproducible package result: passed in local release gate.
 
 ## Known Limitations
 

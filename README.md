@@ -126,7 +126,7 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: final pentest review and release-candidate polish.
+- Remaining `0.8.0`: final CI confirmation, release-candidate polish, and tag.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -283,7 +283,7 @@ openbao = { version = "0.8", features = ["time"] }
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
 | JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config and role administration helpers. Browser OIDC callback helpers are still planned. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
-| RADIUS auth | Yes | Login, method config, user create/read/list/delete, and paginated user list helpers. |
+| RADIUS auth | Yes | Login, method config, user create/read/list/delete, paginated user list helpers, and a documented warning for RADIUS UDP/MD5 protocol risk. |
 | Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group create/read/list/delete mapping helpers. |
 | Userpass auth | Yes | Login and user create/read/list/delete, password update, and policy update helpers. |
 
@@ -326,15 +326,15 @@ openbao = { version = "0.8", features = ["time"] }
 | Pprof diagnostics | Gated | Capped zeroizing byte helpers for `/sys/pprof/:profile`, available only with `operator-ops` plus `operator-ops-acknowledged`. |
 | Sanitized config state | Yes | JSON helper for `/sys/config/state/sanitized`. |
 | Audited request headers | Yes | List, read, write, and delete `/sys/config/auditing/request-headers` helpers. |
-| CORS config | Yes | Read, write, and delete `/sys/config/cors` helpers with bounded lists and header validation. |
+| CORS config | Yes | Read, write, and delete `/sys/config/cors` helpers with bounded lists, header validation, and wildcard-origin rejection. |
 | Runtime loggers | Yes | Read, set, and reset transient `/sys/loggers` verbosity levels. |
 | Version history | Yes | Typed LIST helper for installed OpenBao version history. |
 | Namespaces | Yes | List, create, read, patch, and delete namespace helpers with local name validation. |
 | Rate-limit quotas | Yes | Global quota config plus named rate-limit quota list/create/read/delete helpers. |
 | Locked users | Yes | List all locked users, filter by mount accessor, and unlock aliases. |
-| Raft storage | Yes | Integrated Storage Raft join/configuration/peer/bootstrap, capped snapshot download/restore, and Autopilot JSON helpers. |
+| Raft storage | Yes | Integrated Storage Raft join/configuration/peer/bootstrap, capped snapshot download/restore, and Autopilot JSON helpers; join helpers require HTTPS leader addresses. |
 | Remount | Yes | Start mount migrations and poll migration status. |
-| Step down | Yes | Authenticated `/sys/step-down` helper for active-node handoff. |
+| Step down | Gated | Active-node handoff helper for `/sys/step-down`, available only with `operator-ops` plus `operator-ops-acknowledged`. |
 | System tools | Yes | Random byte generation and hash helpers with bounded random requests and secret-aware outputs. |
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |

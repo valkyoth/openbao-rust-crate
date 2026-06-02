@@ -4,7 +4,7 @@ use core::{fmt, marker::PhantomData};
 use std::{collections::BTreeMap, net::IpAddr};
 
 use reqwest::{
-    Method, StatusCode,
+    Method, StatusCode, Url,
     header::{CONTENT_TYPE, HeaderName, HeaderValue},
 };
 use secrecy::{ExposeSecret, SecretString};
@@ -1026,16 +1026,19 @@ impl RaftJoinRequest {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.leader_api_addr.trim().is_empty() {
+        let leader_url = Url::parse(&self.leader_api_addr).map_err(|_| {
+            Error::InvalidParameter("Raft leader_api_addr must be a valid URL".into())
+        })?;
+        if leader_url.scheme() != "https" {
             return Err(Error::InvalidParameter(
-                "Raft leader_api_addr must not be empty".into(),
+                "Raft leader_api_addr must use https://".into(),
             ));
         }
         if let Some(scheme) = &self.auto_join_scheme
-            && !matches!(scheme.as_str(), "http" | "https")
+            && scheme != "https"
         {
             return Err(Error::InvalidParameter(
-                "Raft auto_join_scheme must be http or https".into(),
+                "Raft auto_join_scheme must be https".into(),
             ));
         }
         if let Some(port) = self.auto_join_port
@@ -3284,6 +3287,8 @@ impl Sys<'_, Authenticated> {
     ///
     /// OpenBao requires a root token or `sudo` capability on the path. The
     /// node may become active again if no standby takes the active lock.
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
     pub async fn step_down_leader(&self) -> Result<Empty> {
         self.client
             .request_json(Method::POST, "sys/step-down", Option::<&Empty>::None)
@@ -4887,6 +4892,11 @@ fn validate_cors_origins(origins: &[String]) -> Result<()> {
                 "CORS allowed origin must not be empty".into(),
             ));
         }
+        if origin.trim() == "*" {
+            return Err(Error::InvalidParameter(
+                "CORS wildcard '*' is not allowed because it permits any origin to make authenticated requests to OpenBao".into(),
+            ));
+        }
         if origin.as_bytes().iter().any(u8::is_ascii_control) {
             return Err(Error::InvalidParameter(
                 "CORS allowed origin must not contain control characters".into(),
@@ -6300,6 +6310,11 @@ mod tests {
 
         let mut invalid_join = RaftJoinRequest::new("");
         assert!(invalid_join.validate().is_err());
+        invalid_join.leader_api_addr = "http://leader.example.com:8200".to_owned();
+        assert!(invalid_join.validate().is_err());
+        invalid_join.leader_api_addr = "https://leader.example.com:8200".to_owned();
+        invalid_join.auto_join_scheme = Some("http".to_owned());
+        assert!(invalid_join.validate().is_err());
         invalid_join.leader_api_addr = "https://leader.example.com:8200".to_owned();
         invalid_join.auto_join_scheme = Some("ftp".to_owned());
         assert!(invalid_join.validate().is_err());
@@ -6449,7 +6464,7 @@ mod tests {
                 .validate()
                 .is_ok()
         );
-        assert!(CorsConfigRequest::new(["*"]).validate().is_ok());
+        assert!(CorsConfigRequest::new(["*"]).validate().is_err());
         assert!(CorsConfigRequest::new([""]).validate().is_err());
         assert!(
             CorsConfigRequest::new(["https://app.example.com\n"])

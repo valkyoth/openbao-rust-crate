@@ -34,7 +34,7 @@ All notable changes to this project are documented here.
   helpers.
 - Prometheus text metrics helper for `/sys/metrics?format=prometheus`.
 - Remount/mount-migration start and status helpers.
-- Active-node step-down helper for `/sys/step-down`.
+- Operator-gated active-node step-down helper for `/sys/step-down`.
 - System tools random byte and hash helpers for `/sys/tools/random` and
   `/sys/tools/hash`.
 - Operator-gated raw storage read, write, list, and delete helpers for
@@ -55,6 +55,8 @@ All notable changes to this project are documented here.
   represented as `SecretString` and redacted from debug output.
 - RADIUS user lists and login metadata maps use bounded deserializers, and
   CIDR/duration request fields are validated before dispatch.
+- RADIUS configuration documents the protocol's UDP and MD5-based authenticator
+  risk so high-assurance deployments can prefer stronger auth methods.
 - LDAP auth bind passwords, client TLS private keys, login passwords, returned
   tokens, and accessors are represented as secret material where applicable and
   redacted from debug output.
@@ -78,15 +80,16 @@ All notable changes to this project are documented here.
   segments.
 - Raft join client keys, auto-join metadata, and DR operation tokens are
   represented as secret material and redacted from debug output. Raft server
-  lists are bounded, peer IDs are validated, and Autopilot duration/integer
-  fields are checked before request dispatch.
+  lists are bounded, peer IDs are validated, Raft join leader addresses and
+  auto-join schemes must use HTTPS, and Autopilot duration/integer fields are
+  checked before request dispatch.
 - Raft snapshots use the same HTTPS/token protections and response-size caps as
   JSON requests. Downloaded snapshots are returned in zeroizing byte buffers,
   and restore helpers reject empty payloads before dispatch.
 - HA node lists are bounded, and remount source, destination, and migration ID
   values are validated before request dispatch.
-- CORS origins and headers are bounded; configured header names are validated
-  before request dispatch.
+- CORS origins and headers are bounded, wildcard origins are rejected, and
+  configured header names are validated before request dispatch.
 - Audited request-header maps are bounded, and header names are validated with
   HTTP header parsing before request dispatch.
 - Internal UI namespace lists and mount maps are bounded; UI mount detail paths
@@ -111,6 +114,10 @@ All notable changes to this project are documented here.
 - `ListEntries` is implemented only for regular string list responses; secret
   accessor lists keep their dedicated secret-aware types.
 - Timestamp parse errors do not echo caller-provided values.
+- LDAP auth and Kerberos LDAP TLS version fields now reject deprecated TLS 1.0
+  and TLS 1.1 values.
+- Local `PENTEST.md` for `0.8.0` was reviewed on 2026-06-02 and deleted before
+  commit; actionable local findings were addressed.
 
 ## 0.7.0 - 2026-06-01
 

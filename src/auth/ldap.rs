@@ -14,7 +14,7 @@ use crate::{
         Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
         deserialize_bounded_string_vec,
     },
-    validation::validate_duration_string,
+    validation::{validate_duration_string, validate_optional_ldap_tls_version},
 };
 
 /// Handle for LDAP auth login at a configured mount.
@@ -286,8 +286,8 @@ impl LdapAuthConfig {
             "LDAP auth token_explicit_max_ttl",
         )?;
         validate_optional_duration(&self.token_period, "LDAP auth token_period")?;
-        validate_optional_tls_version(&self.tls_min_version, "LDAP auth tls_min_version")?;
-        validate_optional_tls_version(&self.tls_max_version, "LDAP auth tls_max_version")?;
+        validate_optional_ldap_tls_version(&self.tls_min_version, "LDAP auth tls_min_version")?;
+        validate_optional_ldap_tls_version(&self.tls_max_version, "LDAP auth tls_max_version")?;
         validate_optional_alias_mode(&self.dereference_aliases)?;
         Ok(())
     }
@@ -746,17 +746,6 @@ fn duration_or_seconds_is_valid(value: &str, allow_zero: bool) -> bool {
         || validate_duration_string(value, allow_zero)
 }
 
-fn validate_optional_tls_version(value: &Option<String>, field: &'static str) -> Result<()> {
-    if let Some(value) = value
-        && !matches!(value.as_str(), "tls10" | "tls11" | "tls12" | "tls13")
-    {
-        return Err(Error::InvalidParameter(format!(
-            "{field} must be tls10, tls11, tls12, or tls13"
-        )));
-    }
-    Ok(())
-}
-
 fn validate_optional_alias_mode(value: &Option<String>) -> Result<()> {
     if let Some(value) = value
         && !matches!(value.as_str(), "never" | "finding" | "searching" | "always")
@@ -922,6 +911,9 @@ mod tests {
         config.tls_min_version = Some("tls12".to_owned());
         config.connection_timeout = Some("30s".to_owned());
         assert!(config.validate().is_ok());
+
+        config.tls_min_version = Some("tls10".to_owned());
+        assert!(config.validate().is_err());
 
         config.tls_min_version = Some("ssl3".to_owned());
         assert!(config.validate().is_err());

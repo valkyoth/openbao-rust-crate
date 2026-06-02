@@ -124,7 +124,8 @@ Support plan:
   delete helpers are implemented. RADIUS login, config, user mapping, user
   deletion, and paginated user listing are implemented. Kerberos SPNEGO login,
   service-account/keytab config, Kerberos LDAP config, and group policy mapping
-  helpers are implemented.
+  helpers are implemented. LDAP and Kerberos LDAP TLS version fields reject
+  deprecated TLS 1.0 and TLS 1.1 values.
 
 ## Secret Engines
 
@@ -214,14 +215,15 @@ Support plan:
   config state, audited request-header configuration, CORS configuration,
   runtime logger read/set/reset, installed version history, namespace
   management, rate-limit quota management, remount/mount-migration
-  start/status, active-node step-down, system random/hash tools, Prometheus
-  metrics text output, and locked-user list/filter/unlock helpers are
+  start/status, operator-gated active-node step-down, system random/hash tools,
+  Prometheus metrics text output, and locked-user list/filter/unlock helpers are
   implemented. Integrated Storage Raft join/configuration/peer
   mutation/bootstrap helpers, capped snapshot download/restore helpers, and
-  Autopilot JSON helpers are implemented. Raw storage read/write/list/delete
+  Autopilot JSON helpers are implemented; Raft join inputs require HTTPS leader
+  addresses and HTTPS auto-join schemes. Raw storage read/write/list/delete
   helpers and pprof diagnostic byte helpers are implemented behind explicit
-  operator-operation feature gates. Streaming monitor and unstable internal
-  inspect endpoints remain deferred.
+  operator-operation feature gates. CORS wildcard origins are rejected locally;
+  streaming monitor and unstable internal inspect endpoints remain deferred.
 
 ## OpenBao-Specific Notes
 

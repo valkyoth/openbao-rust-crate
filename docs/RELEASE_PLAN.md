@@ -199,7 +199,8 @@ Stop condition:
 - Rate-limit quota config and named rate-limit quota helpers are implemented.
 - Host diagnostics and locked-user list/filter/unlock helpers are implemented.
 - Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON
-  helpers are implemented.
+  helpers are implemented; join helper configuration requires HTTPS leader
+  addresses and HTTPS auto-join schemes.
 - Prometheus metrics text output and capped Integrated Storage Raft snapshot
   download/restore helpers are implemented through a private raw-body
   transport path that keeps HTTPS/token enforcement and response-size limits.
@@ -211,8 +212,10 @@ Stop condition:
   under the configured response-size cap. Streaming monitor and unstable
   internal inspect endpoints remain deferred.
 - HA status and remount/mount-migration start/status helpers are implemented.
-- Key status, CORS config read/write/delete, and active-node step-down helpers
-  are implemented.
+- Key status and CORS config read/write/delete helpers are implemented; CORS
+  wildcard origins are rejected locally.
+- Active-node step-down is implemented behind `operator-ops` plus
+  `operator-ops-acknowledged`.
 - Sanitized config state and audited request-header configuration helpers are
   implemented.
 - Internal UI namespace and mount discovery helpers are implemented with an

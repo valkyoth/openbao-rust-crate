@@ -2,6 +2,7 @@
 /.env
 /.env.*
 !/deploy/podman/openbao.dev.env.example
+*.key
 /deploy/podman/dev-state/
 /deploy/podman/dev-state/tls/*.key
 /deploy/podman/dev-state/tls/*.pem

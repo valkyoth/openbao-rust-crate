@@ -32,6 +32,14 @@ pub struct RadiusAuthAdmin<'a> {
 }
 
 /// RADIUS auth method configuration.
+///
+/// # Security Note
+///
+/// RADIUS commonly uses UDP transport with an MD5-based authenticator. MD5 is
+/// cryptographically broken. For high-assurance deployments, prefer LDAPS,
+/// certificate auth, or Kerberos. If RADIUS is required, consider RadSec
+/// (RADIUS over TLS) or equivalent transport protection at the infrastructure
+/// layer.
 #[derive(Clone, Default)]
 pub struct RadiusConfig {
     /// RADIUS server host name or IP address.
