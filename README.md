@@ -33,9 +33,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.8.0` development line. `0.8.0` builds on
-`0.7.0` with remaining auth method and system backend coverage, plus optional
-timestamp parsing helpers, planned for the release.
+This README documents the `0.8.0` release candidate. `0.8.0` builds on
+`0.7.0` with remaining auth method and system backend coverage, Transit and
+Identity gap closures, and optional timestamp parsing helpers.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -50,15 +50,16 @@ Implemented now:
 - Kubernetes auth login plus config and role administration helpers.
 - TLS certificate auth login, method config, CA role, and CRL administration
   helpers.
-- JWT login plus JWT/OIDC auth method config and role administration helpers.
+- JWT login plus JWT/OIDC auth method config, role administration, browser
+  authorization URL, callback, and direct/device polling helpers.
 - LDAP auth login plus config and user/group policy mapping helpers.
 - RADIUS login plus config and user policy mapping helpers.
 - Kerberos login plus service-account, LDAP config, and group policy mapping
   helpers.
 - Userpass login plus user create/read/list/delete, password update, and
   policy update helpers.
-- Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
-  helpers.
+- Token create, role create/read/list/delete, lookup, accessor lookup/list,
+  renew, revoke, revoke-orphan, revoke-self, and tidy helpers.
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
   version delete, undelete, destroy, metadata, backend config, typed data, and
   secret-aware service config read/write helpers.
@@ -71,7 +72,8 @@ Implemented now:
   create/read/list/delete, and dynamic credential helpers.
 - Database connection config, dynamic roles, static roles, root/static
   rotation, and credential helpers.
-- Identity entity, group, entity-alias, and group-alias lifecycle helpers.
+- Identity entity, group, entity-alias, and group-alias lifecycle, lookup, and
+  entity merge helpers.
 - LDAP secrets engine config, static role, dynamic role, credential, library
   checkout, and check-in helpers.
 - SSH role, zero-address role, IP lookup, OTP credential, issuer config,
@@ -80,15 +82,18 @@ Implemented now:
 - TOTP key create/read/list/delete, code generation, and code validation
   helpers.
 - PKI URL and CRL config, root/intermediate generation, intermediate signing
-  and install, role write/read/list/delete, issue, sign, revoke, certificate
-  list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import,
-  ACME config/EAB/directory URL, CRL rotate, and tidy helpers.
-- Transit key create, read, list, delete, encrypt, decrypt, rewrap, data key,
-  random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and
-  optional raw-byte helpers.
-- System health, seal status, leader status, OpenAPI discovery, JSON metrics,
-  runtime logger level, version history, namespace management, rate-limit quota
-  management, and loopback-only dev bootstrap helpers.
+  and install, role write/read/list/delete/patch, issue, sign, revoke,
+  certificate list/read, issuer/key list/read/delete/update, issuer revoke,
+  CA/key import, ACME config/EAB/directory URL, CRL rotate, tidy, tidy status,
+  and tidy cancel helpers.
+- Transit key create, read, list, delete, config update, rotate, export,
+  backup, restore, trim, encrypt/decrypt/rewrap batch helpers, data key,
+  random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options,
+  and optional raw-byte helpers.
+- System health, readiness polling, seal status, leader status, OpenAPI
+  discovery, JSON metrics, runtime logger level, version history, namespace
+  management, rate-limit quota management, and loopback-only dev bootstrap
+  helpers.
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
 - ACL policy list, read, write, delete, and prefix list helpers.
@@ -101,7 +106,8 @@ Implemented now:
 - Capability checks for the caller token, an explicit token, or a token
   accessor.
 - Audit device list, enable, disable, and hash helpers.
-- Safe exact lease lookup, renew, and revoke helpers.
+- Safe exact lease lookup, renew, revoke, prefix revoke, force prefix revoke,
+  and lease count helpers.
 - Plugin catalog list, type-list, register, read, delete, and backend reload
   helpers.
 - Explicitly gated production init, unseal, seal, rekey, key-share rotation,
@@ -126,7 +132,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: final CI confirmation, release-candidate polish, and tag.
+- Remaining `0.8.0`: none; GitHub CI and pentest are complete. Tag after final
+  release approval.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -177,9 +184,9 @@ range:
 
 ```toml
 [dependencies]
-openbao = "0.7"
+openbao = "0.8"
 serde = { version = "1.0.228", features = ["derive"] }
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
 ```
 
 Some advanced examples below use JSON helper types directly:
@@ -221,7 +228,7 @@ openbao = { version = "0.8", features = ["time"] }
 | `cubbyhole` | yes | Token-scoped Cubbyhole read/write/delete/list helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
 | `identity` | yes | Identity entity, group, entity-alias, and group-alias helpers. |
-| `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
+| `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, callback, and poll helpers. |
 | `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, and group mapping helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
@@ -230,15 +237,15 @@ openbao = { version = "0.8", features = ["time"] }
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
 | `rabbitmq` | yes | RabbitMQ secrets engine connection, lease, role, and credential helpers. |
 | `userpass` | yes | Userpass login and user administration helpers. |
-| `token` | yes | Token lifecycle helpers. |
+| `token` | yes | Token lifecycle, token role, tidy, and revoke-orphan helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
-| `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, and tidy helpers. |
+| `pki` | yes | PKI authority, issuer/key metadata/import, role, role patch, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, tidy, tidy status, and tidy cancel helpers. |
 | `ssh` | yes | SSH roles, OTP credentials, issuer management, CA sign/issue, issuer config, and OTP verification helpers. |
 | `totp` | yes | TOTP key and code helpers. |
-| `transit` | yes | Transit cryptography helpers. |
+| `transit` | yes | Transit key lifecycle, batch cryptography, and single-operation cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
-| `sys` | yes | System backend helpers. |
+| `sys` | yes | System backend, readiness, leases, quotas, storage, diagnostics, and operator-gated helpers. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `rustls-tls` | yes | Rustls transport configuration. |
@@ -281,7 +288,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
-| JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config and role administration helpers. Browser OIDC callback helpers are still planned. |
+| JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL, callback, and direct/device poll helpers. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
 | RADIUS auth | Yes | Login, method config, user create/read/list/delete, paginated user list helpers, and a documented warning for RADIUS UDP/MD5 protocol risk. |
 | Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group create/read/list/delete mapping helpers. |
@@ -464,6 +471,43 @@ async fn main() -> Result<()> {
     let jwt = SecretString::from(std::env::var("SERVICE_JWT").unwrap_or_default());
 
     let (client, login) = client.login_jwt(Some("web"), jwt).await?;
+    let health = client.sys().health().await?;
+
+    let _token_accessor = login.accessor;
+    println!("openbao version: {}", health.version);
+    Ok(())
+}
+```
+
+Start an OIDC browser login and handle the callback without logging returned
+token material:
+
+```rust,no_run
+use openbao::auth::jwt::{OidcAuthUrlRequest, OidcCallbackRequest};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let client = Client::new("https://bao.example.com:8200")?;
+    let jwt = client.jwt()?;
+
+    let auth = jwt
+        .oidc_auth_url(
+            &OidcAuthUrlRequest::new("https://app.example.com/oidc/callback")
+                .with_role("web")
+                .with_client_nonce("nonce-from-session"),
+        )
+        .await?;
+    println!("redirect the browser to: {}", auth.auth_url);
+
+    let code = SecretString::from(std::env::var("OIDC_CODE").unwrap_or_default());
+    let callback = OidcCallbackRequest::with_code(
+        std::env::var("OIDC_STATE").unwrap_or_default(),
+        code,
+    )
+    .with_client_nonce("nonce-from-session");
+
+    let (client, login) = jwt.oidc_callback(&callback).await?;
     let health = client.sys().health().await?;
 
     let _token_accessor = login.accessor;
@@ -797,6 +841,53 @@ async fn main() -> Result<()> {
 }
 ```
 
+Manage a Transit key and encrypt a small batch:
+
+```rust,no_run
+use openbao::secrets::transit::{
+    TransitBatchEncryptRequest, TransitCreateKeyRequest, TransitEncryptRequest,
+    TransitTrimRequest, TransitUpdateKeyRequest,
+};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let transit = client.transit("transit")?;
+
+    transit
+        .create_key("app-key", &TransitCreateKeyRequest::default())
+        .await?;
+    transit.rotate_key("app-key").await?;
+    transit
+        .update_key("app-key", &TransitUpdateKeyRequest {
+            min_decryption_version: Some(1),
+            ..Default::default()
+        })
+        .await?;
+
+    let encrypted = transit
+        .batch_encrypt(
+            "app-key",
+            &TransitBatchEncryptRequest {
+                batch_input: vec![
+                    TransitEncryptRequest::new(SecretString::from("Zmlyc3Q=")),
+                    TransitEncryptRequest::new(SecretString::from("c2Vjb25k")),
+                ],
+            },
+        )
+        .await?;
+
+    transit
+        .trim_key("app-key", &TransitTrimRequest::new(1)?)
+        .await?;
+
+    println!("encrypted items: {}", encrypted.batch_results.len());
+    Ok(())
+}
+```
+
 Sign data for JWS/JWT-style ECDSA workflows:
 
 ```rust,no_run
@@ -829,6 +920,29 @@ async fn main() -> Result<()> {
         .await?;
 
     println!("signature valid: {}", verified.valid);
+    Ok(())
+}
+```
+
+Create a constrained token role for repeatable service-token issuance:
+
+```rust,no_run
+use openbao::auth::token::TokenRole;
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+
+    let role = TokenRole::default()
+        .with_allowed_policies(["app-read", "app-transit"])
+        .with_token_ttl("30m")?;
+
+    client.token().write_role("app-service", &role).await?;
+    let roles = client.token().list_roles().await?;
+
+    println!("configured token roles: {}", roles.keys.len());
     Ok(())
 }
 ```
@@ -888,6 +1002,52 @@ async fn main() -> Result<()> {
 
     let mounts = client.sys().list_mounts().await?;
     println!("mount count: {}", mounts.len());
+    Ok(())
+}
+```
+
+Wait for OpenBao readiness with a runtime-provided sleep function:
+
+```rust,no_run
+use openbao::{Client, Result, SecretString};
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+
+    client
+        .sys()
+        .wait_ready_with_delay(
+            Duration::from_secs(30),
+            Duration::from_millis(250),
+            tokio::time::sleep,
+        )
+        .await?;
+
+    println!("OpenBao is ready for authenticated requests");
+    Ok(())
+}
+```
+
+Count leases and revoke an application lease prefix:
+
+```rust,no_run
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+
+    let counts = client.sys().count_leases(None).await?;
+    client
+        .sys()
+        .revoke_lease_prefix("database/creds/old-service", Some(true))
+        .await?;
+
+    println!("lease count buckets: {}", counts.counts.len());
     Ok(())
 }
 ```

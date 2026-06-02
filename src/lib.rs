@@ -9,13 +9,16 @@
 //! - authentication state is represented in the type system.
 //!
 //! The public API covers environment-based client construction, AppRole login,
-//! direct token auth, LDAP/RADIUS/Kerberos auth, token lifecycle helpers, Cubbyhole,
-//! Identity, KV v1/v2, Kubernetes secrets, RabbitMQ secrets, Transit, system
-//! health/seal status, dev-only bootstrap, mount management, audit devices,
-//! safe exact lease helpers, plugin catalog operations, SSH, TOTP, and raw
-//! JSON calls for advanced users. Selected system endpoints that return
-//! non-JSON data, such as Prometheus metrics and capped Raft snapshots, are
-//! exposed through typed helpers rather than a public raw-body escape hatch.
+//! direct token auth, LDAP/RADIUS/Kerberos auth, JWT/OIDC browser-flow helpers,
+//! token lifecycle and token-role helpers, Cubbyhole, Identity lifecycle,
+//! lookup, and merge helpers, KV v1/v2, Kubernetes secrets, RabbitMQ secrets,
+//! Transit lifecycle, batch, and single-operation cryptography helpers, PKI
+//! issue/sign/revoke/tidy helpers, system health/readiness, dev-only
+//! bootstrap, mount management, audit devices, exact and prefix lease helpers,
+//! plugin catalog operations, SSH, TOTP, and raw JSON calls for advanced users.
+//! Selected system endpoints that return non-JSON data, such as Prometheus
+//! metrics and capped Raft snapshots, are exposed through typed helpers rather
+//! than a public raw-body escape hatch.
 //!
 //! Secret request payloads are serialized through a zeroizing intermediate
 //! buffer before handoff to `reqwest`. The HTTP stack still owns a normal body
@@ -170,7 +173,10 @@ pub mod prelude {
     #[cfg(feature = "cert-auth")]
     pub use crate::auth::cert::{CertAuth, CertAuthAdmin, CertLoginMetadata, CertRole};
     #[cfg(feature = "jwt-auth")]
-    pub use crate::auth::jwt::{JwtAuth, JwtAuthAdmin, JwtLoginMetadata, JwtRole};
+    pub use crate::auth::jwt::{
+        JwtAuth, JwtAuthAdmin, JwtLoginMetadata, JwtRole, OidcAuthUrlRequest, OidcAuthUrlResponse,
+        OidcCallbackRequest, OidcPollRequest,
+    };
     #[cfg(feature = "kerberos-auth")]
     pub use crate::auth::kerberos::{
         KerberosAuth, KerberosAuthAdmin, KerberosConfig, KerberosGroupInfo, KerberosGroupList,
@@ -189,7 +195,10 @@ pub mod prelude {
         RadiusAuth, RadiusAuthAdmin, RadiusConfig, RadiusLoginMetadata, RadiusUserRequest,
     };
     #[cfg(feature = "token")]
-    pub use crate::auth::token::{Token, TokenAuth, TokenCreateRequest, TokenInfo};
+    pub use crate::auth::token::{
+        Token, TokenAccessorList, TokenAuth, TokenCreateRequest, TokenInfo, TokenRole,
+        TokenRoleList,
+    };
     #[cfg(feature = "userpass")]
     pub use crate::auth::userpass::{
         UserpassAuth, UserpassAuthAdmin, UserpassLoginMetadata, UserpassUserRequest,
@@ -217,8 +226,9 @@ pub mod prelude {
     };
     #[cfg(feature = "identity")]
     pub use crate::secrets::identity::{
-        IdentityAliasInfo, IdentityEntityInfo, IdentityEntityRequest, IdentityGroupInfo,
-        IdentityGroupRequest,
+        IdentityAliasInfo, IdentityEntityInfo, IdentityEntityLookupRequest,
+        IdentityEntityMergeRequest, IdentityEntityRequest, IdentityGroupInfo,
+        IdentityGroupLookupRequest, IdentityGroupRequest,
     };
     #[cfg(feature = "kubernetes")]
     pub use crate::secrets::kubernetes::{
@@ -235,7 +245,7 @@ pub mod prelude {
     #[cfg(feature = "ldap")]
     pub use crate::secrets::ldap::{Ldap, LdapConfig, LdapDynamicRole, LdapStaticRole};
     #[cfg(feature = "pki")]
-    pub use crate::secrets::pki::{Pki, PkiIssueRequest, PkiRole};
+    pub use crate::secrets::pki::{Pki, PkiIssueRequest, PkiRole, PkiTidyRequest, PkiTidyStatus};
     #[cfg(feature = "rabbitmq")]
     pub use crate::secrets::rabbitmq::{
         RabbitMq, RabbitMqConnectionConfig, RabbitMqCredentials, RabbitMqRole,
@@ -246,17 +256,26 @@ pub mod prelude {
     pub use crate::secrets::totp::{Totp, TotpKeyCreateRequest, TotpKeyInfo};
     #[cfg(feature = "transit")]
     pub use crate::secrets::transit::{
-        Transit, TransitCreateKeyRequest, TransitKeyInfo, TransitKeyType,
+        Transit, TransitBackup, TransitBatchDecryptItem, TransitBatchDecryptRequest,
+        TransitBatchDecryptResponse, TransitBatchEncryptItem, TransitBatchEncryptRequest,
+        TransitBatchEncryptResponse, TransitBatchRewrapItem, TransitBatchRewrapRequest,
+        TransitBatchRewrapResponse, TransitBatchSignItem, TransitBatchSignRequest,
+        TransitBatchSignResponse, TransitBatchVerifyItem, TransitBatchVerifyRequest,
+        TransitBatchVerifyResponse, TransitCreateKeyRequest, TransitDecryptRequest,
+        TransitDecryptResponse, TransitEncryptRequest, TransitEncryptResponse,
+        TransitExportKeyType, TransitExportResponse, TransitKeyInfo, TransitKeyList,
+        TransitKeyType, TransitRestoreRequest, TransitSignRequest, TransitSignResponse,
+        TransitTrimRequest, TransitUpdateKeyRequest, TransitVerifyRequest, TransitVerifyResponse,
     };
     #[cfg(feature = "sys")]
     pub use crate::sys::{
         AuditedRequestHeaderConfig, AuditedRequestHeaders, Capability, CapabilityView, CorsConfig,
-        CorsConfigRequest, HaNode, HaStatus, Health, KeyStatus, LeaderStatus, LockedUsers,
-        LockedUsersMountAccessor, LockedUsersNamespace, LoggerLevel, LoggerLevels, NamespaceInfo,
-        NamespaceList, NamespaceRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
-        RaftJoinResponse, RaftPeerRequest, RaftServer, RateLimitQuotaConfig, RateLimitQuotaInfo,
-        RateLimitQuotaList, RateLimitQuotaRequest, RemountMigrationInfo, RemountRequest,
-        RemountResponse, RemountStatus, Sys, UiMountDetails, UiMountSummary, UiMounts,
-        UiNamespaces, VersionHistory, VersionHistoryEntry,
+        CorsConfigRequest, HaNode, HaStatus, Health, KeyStatus, LeaderStatus, LeaseCount,
+        LockedUsers, LockedUsersMountAccessor, LockedUsersNamespace, LoggerLevel, LoggerLevels,
+        NamespaceInfo, NamespaceList, NamespaceRequest, RaftAutopilotConfig, RaftConfiguration,
+        RaftJoinRequest, RaftJoinResponse, RaftPeerRequest, RaftServer, RateLimitQuotaConfig,
+        RateLimitQuotaInfo, RateLimitQuotaList, RateLimitQuotaRequest, RemountMigrationInfo,
+        RemountRequest, RemountResponse, RemountStatus, Sys, UiMountDetails, UiMountSummary,
+        UiMounts, UiNamespaces, VersionHistory, VersionHistoryEntry,
     };
 }

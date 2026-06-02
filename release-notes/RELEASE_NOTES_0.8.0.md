@@ -50,8 +50,9 @@
   optional RFC3339 timestamp parsing helpers behind the `time` feature;
   runtime-neutral `Sys::wait_ready_with_delay` helper; and additional error
   predicates for rate limiting, temporary failures, and permission denial.
-- Remaining `0.8.0` planned work: final release-candidate polish after CI
-  confirms the pentest and gap-analysis remediation commits.
+- Remaining `0.8.0` planned work: none. GitHub CI and the final local pentest
+  pass are complete; the release is ready for the `v0.8.0` tag after
+  maintainer approval.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -173,7 +174,7 @@
   local findings were addressed and the report was deleted before commit.
 - `cargo audit` result: passed in local release gate.
 - `cargo deny check` result: passed in local release gate.
-- CodeQL result: pending for this pentest remediation commit.
+- CodeQL result: passed on GitHub for the current release candidate.
 - Podman OpenBao integration result: passed in local release gate.
 - SBOM generation result: passed in local release gate.
 - Reproducible package result: passed in local release gate.
