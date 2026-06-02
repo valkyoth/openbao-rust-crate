@@ -928,6 +928,9 @@ async fn sys_capabilities_self_sends_paths() {
         capabilities.by_path.get("secret/data/app"),
         Some(&vec!["read".to_owned()])
     );
+    assert!(capabilities.single_path().can_read());
+    assert!(capabilities.can_read_path("/secret/data/app"));
+    assert!(!capabilities.can_delete_path("secret/data/app"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

@@ -857,6 +857,169 @@ impl PolicyWriteRequest {
     }
 }
 
+/// Capability name returned by OpenBao capability inspection endpoints.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum Capability {
+    /// Allows creation when a value does not already exist.
+    Create,
+    /// Allows reading an existing value or metadata.
+    Read,
+    /// Allows updating an existing value.
+    Update,
+    /// Allows deleting a value.
+    Delete,
+    /// Allows listing path children.
+    List,
+    /// Allows partial patch updates.
+    Patch,
+    /// Allows privileged system operations on paths that require sudo.
+    Sudo,
+    /// Denies access.
+    Deny,
+    /// Root-level capability returned for root tokens.
+    Root,
+    /// Capability name not known by this crate version.
+    Unknown(String),
+}
+
+impl Capability {
+    /// Parses a capability name while preserving unknown future values.
+    #[must_use]
+    pub fn from_name(name: impl AsRef<str>) -> Self {
+        match name.as_ref() {
+            "create" => Self::Create,
+            "read" => Self::Read,
+            "update" => Self::Update,
+            "delete" => Self::Delete,
+            "list" => Self::List,
+            "patch" => Self::Patch,
+            "sudo" => Self::Sudo,
+            "deny" => Self::Deny,
+            "root" => Self::Root,
+            other => Self::Unknown(other.to_owned()),
+        }
+    }
+
+    /// Returns the OpenBao capability name.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Create => "create",
+            Self::Read => "read",
+            Self::Update => "update",
+            Self::Delete => "delete",
+            Self::List => "list",
+            Self::Patch => "patch",
+            Self::Sudo => "sudo",
+            Self::Deny => "deny",
+            Self::Root => "root",
+            Self::Unknown(name) => name.as_str(),
+        }
+    }
+}
+
+impl fmt::Display for Capability {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
+impl From<&str> for Capability {
+    fn from(value: &str) -> Self {
+        Self::from_name(value)
+    }
+}
+
+impl From<String> for Capability {
+    fn from(value: String) -> Self {
+        Self::from_name(value)
+    }
+}
+
+/// Borrowed typed view over one OpenBao capability list.
+#[derive(Clone, Copy, Debug)]
+pub struct CapabilityView<'a> {
+    capabilities: &'a [String],
+}
+
+impl<'a> CapabilityView<'a> {
+    /// Returns the original capability names returned by OpenBao.
+    #[must_use]
+    pub fn raw(self) -> &'a [String] {
+        self.capabilities
+    }
+
+    /// Iterates over typed capabilities, preserving unknown future values.
+    pub fn iter(self) -> impl Iterator<Item = Capability> + 'a {
+        self.capabilities.iter().map(Capability::from_name)
+    }
+
+    /// Returns true when this list contains the given capability.
+    #[must_use]
+    pub fn contains(self, capability: Capability) -> bool {
+        self.contains_name(capability.as_str())
+    }
+
+    /// Returns true when OpenBao explicitly denied access.
+    #[must_use]
+    pub fn is_denied(self) -> bool {
+        self.contains_name(Capability::Deny.as_str())
+    }
+
+    /// Returns true when the capability list allows create.
+    #[must_use]
+    pub fn can_create(self) -> bool {
+        self.allows(Capability::Create)
+    }
+
+    /// Returns true when the capability list allows read.
+    #[must_use]
+    pub fn can_read(self) -> bool {
+        self.allows(Capability::Read)
+    }
+
+    /// Returns true when the capability list allows update.
+    #[must_use]
+    pub fn can_update(self) -> bool {
+        self.allows(Capability::Update)
+    }
+
+    /// Returns true when the capability list allows delete.
+    #[must_use]
+    pub fn can_delete(self) -> bool {
+        self.allows(Capability::Delete)
+    }
+
+    /// Returns true when the capability list allows list.
+    #[must_use]
+    pub fn can_list(self) -> bool {
+        self.allows(Capability::List)
+    }
+
+    /// Returns true when the capability list allows patch.
+    #[must_use]
+    pub fn can_patch(self) -> bool {
+        self.allows(Capability::Patch)
+    }
+
+    /// Returns true when the capability list allows sudo.
+    #[must_use]
+    pub fn can_sudo(self) -> bool {
+        self.allows(Capability::Sudo)
+    }
+
+    fn allows(self, capability: Capability) -> bool {
+        !self.is_denied()
+            && (self.contains_name(Capability::Root.as_str()) || self.contains(capability))
+    }
+
+    fn contains_name(self, capability: &str) -> bool {
+        self.capabilities
+            .iter()
+            .any(|candidate| candidate == capability)
+    }
+}
+
 /// Capabilities returned for queried OpenBao paths.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct Capabilities {
@@ -865,6 +1028,59 @@ pub struct Capabilities {
     /// Capabilities keyed by queried path.
     #[serde(flatten)]
     pub by_path: BTreeMap<String, Vec<String>>,
+}
+
+impl Capabilities {
+    /// Returns the single-path compatibility capability list.
+    #[must_use]
+    pub fn single_path(&self) -> CapabilityView<'_> {
+        CapabilityView {
+            capabilities: &self.capabilities,
+        }
+    }
+
+    /// Returns capabilities for one queried path.
+    ///
+    /// Leading slashes are ignored to match the normalization used by request
+    /// path validation.
+    #[must_use]
+    pub fn for_path(&self, path: &str) -> Option<CapabilityView<'_>> {
+        let path = path.trim_start_matches('/');
+        self.by_path
+            .get(path)
+            .map(|capabilities| CapabilityView { capabilities })
+    }
+
+    /// Iterates over path-keyed capability lists.
+    pub fn paths(&self) -> impl Iterator<Item = (&str, CapabilityView<'_>)> {
+        self.by_path
+            .iter()
+            .map(|(path, capabilities)| (path.as_str(), CapabilityView { capabilities }))
+    }
+
+    /// Returns true when the path-keyed capability list allows read.
+    #[must_use]
+    pub fn can_read_path(&self, path: &str) -> bool {
+        self.for_path(path).is_some_and(CapabilityView::can_read)
+    }
+
+    /// Returns true when the path-keyed capability list allows update.
+    #[must_use]
+    pub fn can_update_path(&self, path: &str) -> bool {
+        self.for_path(path).is_some_and(CapabilityView::can_update)
+    }
+
+    /// Returns true when the path-keyed capability list allows delete.
+    #[must_use]
+    pub fn can_delete_path(&self, path: &str) -> bool {
+        self.for_path(path).is_some_and(CapabilityView::can_delete)
+    }
+
+    /// Returns true when the path-keyed capability list allows list.
+    #[must_use]
+    pub fn can_list_path(&self, path: &str) -> bool {
+        self.for_path(path).is_some_and(CapabilityView::can_list)
+    }
 }
 
 impl<'de> Deserialize<'de> for Capabilities {
@@ -2554,9 +2770,10 @@ mod tests {
     use secrecy::SecretString;
 
     use super::{
-        AuditEnableRequest, AuthEnableRequest, LeaseDuration, MountEnableRequest, PolicyList,
-        PolicyWriteRequest, sys_path, validate_capability_paths, validate_dev_bootstrap_options,
-        validate_lease_id, validate_sha256_hex, validate_wrapping_ttl,
+        AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, LeaseDuration,
+        MountEnableRequest, PolicyList, PolicyWriteRequest, sys_path, validate_capability_paths,
+        validate_dev_bootstrap_options, validate_lease_id, validate_sha256_hex,
+        validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
     use super::{OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest};
@@ -2578,6 +2795,39 @@ mod tests {
         assert_eq!(paths, ["secret/data/app", "sys/policy/default"]);
         assert!(validate_capability_paths([""]).is_err());
         assert!(validate_capability_paths(["../secret"]).is_err());
+    }
+
+    #[test]
+    fn capability_views_cover_common_access_checks() {
+        let capabilities = serde_json::from_value::<Capabilities>(serde_json::json!({
+            "capabilities": ["root"],
+            "secret/data/app": ["read", "list", "future-capability"],
+            "secret/data/blocked": ["deny"]
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+
+        assert!(capabilities.single_path().can_delete());
+        assert!(capabilities.can_read_path("/secret/data/app"));
+        assert!(capabilities.can_list_path("secret/data/app"));
+        assert!(!capabilities.can_delete_path("secret/data/app"));
+        assert!(!capabilities.can_read_path("secret/data/blocked"));
+        assert!(
+            capabilities
+                .for_path("secret/data/app")
+                .unwrap_or_else(|| panic!("missing capability view"))
+                .contains(Capability::Unknown("future-capability".to_owned()))
+        );
+        let paths = capabilities
+            .paths()
+            .map(|(path, view)| (path.to_owned(), view.raw().len()))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            paths,
+            [
+                ("secret/data/app".to_owned(), 3),
+                ("secret/data/blocked".to_owned(), 1)
+            ]
+        );
     }
 
     #[test]

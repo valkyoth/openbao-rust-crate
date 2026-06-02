@@ -116,7 +116,8 @@ Implemented now:
 Planned next:
 
 - Remaining `0.8.0`: Kerberos auth, broader system backend automation, FIPS
-  posture reporting, and bootstrap dry-run preview.
+  posture reporting, bootstrap dry-run preview, shared list ergonomics, and
+  optional timestamp parsing.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -300,7 +301,7 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
-| Policies and capabilities | Yes | ACL policy read/write/list/delete, bounded policy builder helpers, and self/token/accessor capability checks. |
+| Policies and capabilities | Yes | ACL policy read/write/list/delete, bounded policy builder helpers, self/token/accessor capability checks, and typed capability views. |
 | Admin bootstrap | Yes | Idempotent plan builder for mounts, Transit keys, ACL policies, KV v2 string values, auth methods, AppRole roles, explicit token issuance, and explicit AppRole SecretID issuance. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |

@@ -24,11 +24,11 @@
   configuration, group policy mapping, user policy/group mapping, list, read,
   and delete helpers; RADIUS auth login, method configuration, user policy
   mapping, user read/list/delete, paginated user-list helpers; system leader
-  status, OpenAPI discovery, and JSON telemetry metrics helpers.
+  status, OpenAPI discovery, JSON telemetry metrics helpers, and typed
+  capability views for common access checks.
 - Remaining `0.8.0` planned work: Kerberos auth coverage; quotas/namespaces
   and additional system backend coverage; FIPS posture helper; bootstrap
-  dry-run preview; typed capability wrappers; shared list ergonomics; optional
-  timestamp parsing.
+  dry-run preview; shared list ergonomics; optional timestamp parsing.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -53,6 +53,9 @@
   insecure LDAP TLS settings are validated before request dispatch.
 - Metrics support is intentionally JSON-only in `0.8.0`; Prometheus text
   output is deferred until the crate has an explicit raw-body API.
+- Typed capability views keep the existing raw string lists available and
+  preserve unknown future capability names instead of dropping or rejecting
+  them.
 
 ## Security And Stability Gate
 

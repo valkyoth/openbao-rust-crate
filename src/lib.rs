@@ -216,5 +216,5 @@ pub mod prelude {
         Transit, TransitCreateKeyRequest, TransitKeyInfo, TransitKeyType,
     };
     #[cfg(feature = "sys")]
-    pub use crate::sys::{Health, LeaderStatus, Sys};
+    pub use crate::sys::{Capability, CapabilityView, Health, LeaderStatus, Sys};
 }

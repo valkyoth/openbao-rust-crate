@@ -13,6 +13,8 @@ All notable changes to this project are documented here.
 - RADIUS auth login, method configuration, user policy mapping, user
   read/list/delete, and paginated user-list helpers.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
+- Typed capability views and common `can_read`/`can_update`/`can_delete`/
+  `can_list` helpers for system capability responses.
 
 ### Security
 
@@ -28,6 +30,8 @@ All notable changes to this project are documented here.
   settings are validated before dispatch.
 - Metrics support is JSON-only in `0.8.0`; Prometheus text output remains
   outside the typed JSON transport boundary.
+- Capability inspection preserves the existing raw string lists while keeping
+  unknown future capability names visible through `Capability::Unknown`.
 
 ## 0.7.0 - 2026-06-01
 

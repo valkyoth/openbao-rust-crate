@@ -165,6 +165,8 @@ Support plan:
   lookup/renew/revoke, plugin catalog list/type-list/register/read/delete,
   mounted plugin backend reload, init status, and loopback-only dev bootstrap
   are implemented.
+- `0.8.0`: capability responses now include typed borrowed views and common
+  access-check helpers while preserving the raw string lists.
 - `0.6.0`: idempotent admin bootstrap builder is implemented for KV v2 mounts,
   Transit mounts, Transit keys, ACL policies, KV v2 string secret values, and
   explicit scoped service-token issuance.
