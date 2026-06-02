@@ -62,8 +62,9 @@ All notable changes to this project are documented here.
   accessors are secret-aware; Kerberos group lists and login metadata maps are
   bounded, and LDAP TLS version, CIDR, duration, and insecure TLS settings are
   validated before dispatch.
-- Metrics support is JSON-only in `0.8.0`; Prometheus text output remains
-  outside the typed JSON transport boundary.
+- Metrics support includes JSON and Prometheus text output. Prometheus text
+  output uses the private raw-body transport path while preserving
+  response-size limits.
 - Logger and version-history responses use bounded map/list deserialization.
 - Namespace paths are validated against OpenBao namespace naming restrictions,
   and namespace metadata maps are bounded.
@@ -79,8 +80,6 @@ All notable changes to this project are documented here.
 - Raft snapshots use the same HTTPS/token protections and response-size caps as
   JSON requests. Downloaded snapshots are returned in zeroizing byte buffers,
   and restore helpers reject empty payloads before dispatch.
-- Prometheus metrics text output uses the private raw-body transport path while
-  preserving response-size limits.
 - HA node lists are bounded, and remount source, destination, and migration ID
   values are validated before request dispatch.
 - CORS origins and headers are bounded; configured header names are validated
