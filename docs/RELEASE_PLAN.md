@@ -175,7 +175,7 @@ Stop condition:
 
 - LDAP and RADIUS auth coverage implemented; Kerberos auth coverage remains;
 - sys policies, capabilities, plugins catalog/reload, quotas, metrics,
-  namespaces, storage, leader, HA status, locked users;
+  storage, leader, HA status, locked users;
 - OpenAPI discovery helper.
 - `FipsPosture` helper that can validate supported request builders and typed
   Transit choices against a conservative allowlist, warn on SHA-1, SHA-3,
@@ -195,6 +195,7 @@ Stop condition:
   implemented.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing are implemented.
+- Namespace list, create, read, patch, and delete helpers are implemented.
 
 Publishable value:
 

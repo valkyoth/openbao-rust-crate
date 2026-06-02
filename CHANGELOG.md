@@ -15,6 +15,7 @@ All notable changes to this project are documented here.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing.
+- Namespace list, create, read, patch, and delete helpers.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -39,6 +40,8 @@ All notable changes to this project are documented here.
 - Metrics support is JSON-only in `0.8.0`; Prometheus text output remains
   outside the typed JSON transport boundary.
 - Logger and version-history responses use bounded map/list deserialization.
+- Namespace paths are validated against OpenBao namespace naming restrictions,
+  and namespace metadata maps are bounded.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

@@ -5,7 +5,7 @@ use std::{collections::BTreeMap, net::IpAddr};
 
 use reqwest::{
     Method, StatusCode,
-    header::{HeaderName, HeaderValue},
+    header::{CONTENT_TYPE, HeaderName, HeaderValue},
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
@@ -166,6 +166,60 @@ pub struct VersionHistoryEntry {
     /// Installation timestamp.
     #[serde(default)]
     pub timestamp_installed: Option<String>,
+}
+
+/// Namespace metadata returned by `/sys/namespaces`.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct NamespaceInfo {
+    /// Namespace identifier.
+    #[serde(default)]
+    pub id: String,
+    /// Namespace path.
+    #[serde(default)]
+    pub path: String,
+    /// Caller-defined namespace metadata.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_map")]
+    pub custom_metadata: BTreeMap<String, String>,
+}
+
+/// Namespace list response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct NamespaceList {
+    /// Namespace paths returned by OpenBao.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Namespace metadata keyed by namespace path.
+    #[serde(default, deserialize_with = "deserialize_bounded_namespace_info_map")]
+    pub key_info: BTreeMap<String, NamespaceInfo>,
+}
+
+impl ListEntries for NamespaceList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Request body for namespace create and patch operations.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct NamespaceRequest {
+    /// Caller-defined namespace metadata.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub custom_metadata: BTreeMap<String, String>,
+}
+
+impl NamespaceRequest {
+    /// Creates an empty namespace request.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds one metadata entry.
+    #[must_use]
+    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.custom_metadata.insert(key.into(), value.into());
+        self
+    }
 }
 
 /// OpenBao seal status response.
@@ -2507,6 +2561,66 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Lists child namespaces through `/sys/namespaces`.
+    pub async fn list_namespaces(&self) -> Result<NamespaceList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let envelope: ResponseEnvelope<NamespaceList> = self
+            .client
+            .request_json(method, "sys/namespaces", Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Creates a namespace through `/sys/namespaces/:path`.
+    pub async fn create_namespace(&self, path: &str, request: &NamespaceRequest) -> Result<Empty> {
+        validate_namespace_request(request)?;
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                &namespace_path(path)?,
+                Some(request),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Reads namespace information through `/sys/namespaces/:path`.
+    pub async fn read_namespace(&self, path: &str) -> Result<NamespaceInfo> {
+        self.client
+            .request_json(Method::GET, &namespace_path(path)?, Option::<&Empty>::None)
+            .await
+    }
+
+    /// Patches namespace metadata through `/sys/namespaces/:path`.
+    pub async fn patch_namespace(&self, path: &str, request: &NamespaceRequest) -> Result<Empty> {
+        validate_namespace_request(request)?;
+        self.client
+            .request_json_headers_accepting(
+                Method::PATCH,
+                &namespace_path(path)?,
+                &[(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/merge-patch+json"),
+                )],
+                Some(request),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Deletes a namespace through `/sys/namespaces/:path`.
+    pub async fn delete_namespace(&self, path: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &namespace_path(path)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     /// Looks up a wrapping token.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
         let payload = WrappingTokenPayload {
@@ -2668,6 +2782,54 @@ fn sys_logger_path(name: &str) -> Result<String> {
         ));
     }
     Ok(["sys/loggers", &segments[0]].join("/"))
+}
+
+fn namespace_path(path: &str) -> Result<String> {
+    let segments = validate_namespace_path(path)?;
+    Ok(["sys/namespaces", &segments.join("/")].join("/"))
+}
+
+fn validate_namespace_path(path: &str) -> Result<Vec<String>> {
+    if path.ends_with('/') {
+        return Err(Error::InvalidPath(
+            "namespace path must not end with a slash".into(),
+        ));
+    }
+    let segments = validate_mount_path(path)?;
+    for segment in &segments {
+        if segment.contains(' ') {
+            return Err(Error::InvalidPath(
+                "namespace path segments must not contain spaces".into(),
+            ));
+        }
+        if matches!(
+            segment.as_str(),
+            "root" | "sys" | "audit" | "auth" | "cubbyhole" | "identity"
+        ) {
+            return Err(Error::InvalidPath(
+                "namespace path segment uses a reserved OpenBao namespace name".into(),
+            ));
+        }
+    }
+    Ok(segments)
+}
+
+fn validate_namespace_request(request: &NamespaceRequest) -> Result<()> {
+    if request.custom_metadata.len() > crate::response::MAX_RESPONSE_STRINGS {
+        return Err(Error::InvalidParameter(
+            "namespace metadata exceeds maximum item count".into(),
+        ));
+    }
+    for (key, value) in &request.custom_metadata {
+        if key.as_bytes().iter().any(u8::is_ascii_control)
+            || value.as_bytes().iter().any(u8::is_ascii_control)
+        {
+            return Err(Error::InvalidParameter(
+                "namespace metadata must not contain control characters".into(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn validate_wrapping_ttl(ttl: &str) -> Result<()> {
@@ -2871,6 +3033,17 @@ where
     )
 }
 
+fn deserialize_bounded_namespace_info_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, NamespaceInfo>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(
+        BoundedNamespaceInfoMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
 fn deserialize_bounded_mount_info_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, MountInfo>, D::Error>
@@ -2947,6 +3120,33 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedAuditDeviceMapVisitor<MAX> {
     }
 }
 
+struct BoundedNamespaceInfoMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedNamespaceInfoMapVisitor<MAX> {
+    type Value = BTreeMap<String, NamespaceInfo>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} namespace entries")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, NamespaceInfo>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao namespace map exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedVersionHistoryMapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionHistoryMapVisitor<MAX> {
@@ -3013,8 +3213,9 @@ mod tests {
 
     use super::{
         AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, LeaseDuration,
-        LoggerLevel, MountEnableRequest, PolicyList, PolicyWriteRequest, VersionHistory, sys_path,
-        validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
+        LoggerLevel, MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList,
+        PolicyWriteRequest, VersionHistory, namespace_path, sys_path, validate_capability_paths,
+        validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
         validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
@@ -3033,6 +3234,13 @@ mod tests {
             "sys/loggers/core"
         );
         assert!(super::sys_logger_path("core/nested").is_err());
+        assert_eq!(
+            namespace_path("team/app").unwrap_or_else(|error| panic!("{error}")),
+            "sys/namespaces/team/app"
+        );
+        assert!(namespace_path("team/app/").is_err());
+        assert!(namespace_path("team app").is_err());
+        assert!(namespace_path("team/sys").is_err());
     }
 
     #[test]
@@ -3218,6 +3426,40 @@ mod tests {
             "key_info": key_info
         })) {
             Ok(_) => panic!("oversized version history map unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn namespace_requests_and_maps_are_bounded() {
+        let mut request = NamespaceRequest::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            request
+                .custom_metadata
+                .insert(format!("key-{index}"), "value".to_owned());
+        }
+        assert!(validate_namespace_request(&request).is_err());
+
+        let request = NamespaceRequest::new().with_metadata("bad", "line\nbreak");
+        assert!(validate_namespace_request(&request).is_err());
+
+        let mut key_info = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            key_info.insert(
+                format!("ns-{index}/"),
+                serde_json::json!({
+                    "id": format!("id-{index}"),
+                    "path": format!("ns-{index}/"),
+                    "custom_metadata": {}
+                }),
+            );
+        }
+        let error = match serde_json::from_value::<NamespaceList>(serde_json::json!({
+            "keys": ["ns-0/"],
+            "key_info": key_info
+        })) {
+            Ok(_) => panic!("oversized namespace map unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

@@ -240,7 +240,7 @@ pub mod prelude {
     };
     #[cfg(feature = "sys")]
     pub use crate::sys::{
-        Capability, CapabilityView, Health, LeaderStatus, LoggerLevel, LoggerLevels, Sys,
-        VersionHistory, VersionHistoryEntry,
+        Capability, CapabilityView, Health, LeaderStatus, LoggerLevel, LoggerLevels, NamespaceInfo,
+        NamespaceList, NamespaceRequest, Sys, VersionHistory, VersionHistoryEntry,
     };
 }

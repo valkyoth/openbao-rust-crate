@@ -85,8 +85,8 @@ Implemented now:
   random, hash, HMAC, sign, verify, typed RSA/JWS signing options, and
   optional raw-byte helpers.
 - System health, seal status, leader status, OpenAPI discovery, JSON metrics,
-  runtime logger level, version history, and loopback-only dev bootstrap
-  helpers.
+  runtime logger level, version history, namespace management, and
+  loopback-only dev bootstrap helpers.
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
 - ACL policy list, read, write, delete, and prefix list helpers.
@@ -123,7 +123,7 @@ Implemented now:
 Planned next:
 
 - Remaining `0.8.0`: Kerberos auth, broader system backend automation, and
-  quota/namespace/storage coverage.
+  quota/storage coverage.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -316,6 +316,7 @@ openbao = { version = "0.8", features = ["time"] }
 | JSON metrics | Yes | Typed JSON helper for `/sys/metrics?format=json`; Prometheus text output is intentionally deferred. |
 | Runtime loggers | Yes | Read, set, and reset transient `/sys/loggers` verbosity levels. |
 | Version history | Yes | Typed LIST helper for installed OpenBao version history. |
+| Namespaces | Yes | List, create, read, patch, and delete namespace helpers with local name validation. |
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
@@ -327,7 +328,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
-| Quotas, namespaces, storage | Planned | Remaining operations coverage planned after the current `0.8.0` system helper slices. |
+| Quotas, storage | Planned | Remaining operations coverage planned after the current `0.8.0` system helper slices. |
 
 ## Examples
 

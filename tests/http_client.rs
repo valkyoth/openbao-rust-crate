@@ -924,6 +924,116 @@ async fn sys_version_history_uses_documented_list_path() {
 }
 
 #[tokio::test]
+async fn sys_namespace_lifecycle_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("LIST /v1/sys/namespaces HTTP/1.1"));
+                    r#"{"data":{"keys":["team/"],"key_info":{"team/":{"id":"ns-team","path":"team/","custom_metadata":{"owner":"platform"}}}}}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/namespaces/team/app HTTP/1.1"));
+                    assert!(request.contains(r#""custom_metadata":{"owner":"platform"}"#));
+                    String::new()
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/sys/namespaces/team/app HTTP/1.1"));
+                    r#"{"id":"ns-app","path":"team/app/","custom_metadata":{"owner":"platform"}}"#
+                        .to_owned()
+                }
+                3 => {
+                    assert!(request.starts_with("PATCH /v1/sys/namespaces/team/app HTTP/1.1"));
+                    assert!(request.contains("content-type: application/merge-patch+json"));
+                    assert!(request.contains(r#""custom_metadata":{"env":"dev"}"#));
+                    String::new()
+                }
+                4 => {
+                    assert!(request.starts_with("DELETE /v1/sys/namespaces/team/app HTTP/1.1"));
+                    String::new()
+                }
+                _ => unreachable!(),
+            };
+            let response = if body.is_empty() {
+                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+            } else {
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            };
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let namespaces = client
+        .sys()
+        .list_namespaces()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(namespaces.keys.iter().any(|namespace| namespace == "team/"));
+    assert_eq!(
+        namespaces
+            .key_info
+            .get("team/")
+            .and_then(|namespace| namespace.custom_metadata.get("owner"))
+            .map(String::as_str),
+        Some("platform")
+    );
+
+    client
+        .sys()
+        .create_namespace(
+            "team/app",
+            &openbao::sys::NamespaceRequest::new().with_metadata("owner", "platform"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let namespace = client
+        .sys()
+        .read_namespace("team/app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(namespace.id, "ns-app");
+    assert_eq!(namespace.path, "team/app/");
+
+    client
+        .sys()
+        .patch_namespace(
+            "team/app",
+            &openbao::sys::NamespaceRequest::new().with_metadata("env", "dev"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    client
+        .sys()
+        .delete_namespace("team/app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_wrapping_wrap_sends_ttl_header() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
