@@ -51,6 +51,7 @@ Implemented now:
 - TLS certificate auth login, method config, CA role, and CRL administration
   helpers.
 - JWT login plus JWT/OIDC auth method config and role administration helpers.
+- LDAP auth login plus config and user/group policy mapping helpers.
 - RADIUS login plus config and user policy mapping helpers.
 - Userpass login plus user create/read/list/delete, password update, and
   policy update helpers.
@@ -113,8 +114,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: LDAP and Kerberos auth, broader system backend
-  automation, FIPS posture reporting, and bootstrap dry-run preview.
+- Remaining `0.8.0`: Kerberos auth, broader system backend automation, FIPS
+  posture reporting, and bootstrap dry-run preview.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -181,7 +182,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.8", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.8", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -203,6 +204,7 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | `identity` | yes | Identity entity, group, entity-alias, and group-alias helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
+| `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
 | `radius-auth` | yes | RADIUS login/config/user mapping helpers. |
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
@@ -258,6 +260,7 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
 | JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config and role administration helpers. Browser OIDC callback helpers are still planned. |
+| LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
 | RADIUS auth | Yes | Login, method config, user create/read/list/delete, and paginated user list helpers. |
 | Userpass auth | Yes | Login and user create/read/list/delete, password update, and policy update helpers. |
 

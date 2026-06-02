@@ -47,6 +47,7 @@ default = [
     "identity",
     "jwt-auth",
     "kubernetes-auth",
+    "ldap-auth",
     "radius-auth",
     "userpass",
     "token",
@@ -69,6 +70,7 @@ database = []
 identity = []
 jwt-auth = []
 kubernetes-auth = []
+ldap-auth = []
 radius-auth = []
 userpass = []
 token = []

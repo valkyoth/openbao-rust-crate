@@ -459,6 +459,7 @@ impl Client<Unauthenticated> {
         feature = "cert-auth",
         feature = "jwt-auth",
         feature = "kubernetes-auth",
+        feature = "ldap-auth",
         feature = "radius-auth",
         feature = "userpass"
     ))]

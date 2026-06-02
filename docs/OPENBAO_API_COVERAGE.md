@@ -11,6 +11,8 @@ LDAP secrets engine coverage was refreshed against official `2.5.x`
 documentation on 2026-06-01.
 RADIUS auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
+LDAP auth coverage was refreshed against official `2.5.x` documentation on
+2026-06-02.
 
 Sources:
 
@@ -25,6 +27,7 @@ Sources:
 - Kubernetes auth: https://openbao.org/api-docs/auth/kubernetes/
 - TLS certificate auth: https://openbao.org/api-docs/auth/cert/
 - Userpass auth: https://openbao.org/api-docs/auth/userpass/
+- LDAP auth: https://openbao.org/api-docs/auth/ldap/
 - RADIUS auth: https://openbao.org/api-docs/auth/radius/
 - Transit: https://openbao.org/api-docs/secret/transit/
 - PKI: https://openbao.org/api-docs/secret/pki/
@@ -87,8 +90,10 @@ Support plan:
 - `0.7.0`: AppRole role and SecretID administration is implemented. Admin
   bootstrap orchestration for auth method enablement, AppRole role
   convergence, and explicit SecretID issuance is implemented.
-- `0.8.0`: RADIUS login, config, user mapping, user deletion, and paginated
-  user listing are implemented. LDAP and Kerberos auth remain planned.
+- `0.8.0`: LDAP login, config, user mapping, group mapping, list, read, and
+  delete helpers are implemented. RADIUS login, config, user mapping, user
+  deletion, and paginated user listing are implemented. Kerberos auth remains
+  planned.
 
 ## Secret Engines
 

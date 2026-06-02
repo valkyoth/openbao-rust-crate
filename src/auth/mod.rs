@@ -8,6 +8,8 @@ pub mod cert;
 pub mod jwt;
 #[cfg(feature = "kubernetes-auth")]
 pub mod kubernetes;
+#[cfg(feature = "ldap-auth")]
+pub mod ldap;
 #[cfg(feature = "radius-auth")]
 pub mod radius;
 #[cfg(feature = "token")]

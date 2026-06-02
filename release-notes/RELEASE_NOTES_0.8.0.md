@@ -20,12 +20,13 @@
   Cubbyhole, Kubernetes secrets, RabbitMQ secrets, Identity, LDAP secrets,
   admin bootstrap, production operator APIs behind explicit gates, and optional
   Transit byte helpers.
-- New `0.8.0` work currently implemented: RADIUS auth login, method
-  configuration, user policy mapping, user read/list/delete, and paginated
-  user-list helpers.
-- Remaining `0.8.0` planned work: LDAP and Kerberos auth coverage; more system
-  backend coverage; FIPS posture helper; bootstrap dry-run preview; typed
-  capability wrappers; shared list ergonomics; optional timestamp parsing.
+- New `0.8.0` work currently implemented: LDAP auth login, method
+  configuration, group policy mapping, user policy/group mapping, list, read,
+  and delete helpers; RADIUS auth login, method configuration, user policy
+  mapping, user read/list/delete, and paginated user-list helpers.
+- Remaining `0.8.0` planned work: Kerberos auth coverage; more system backend
+  coverage; FIPS posture helper; bootstrap dry-run preview; typed capability
+  wrappers; shared list ergonomics; optional timestamp parsing.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -42,6 +43,12 @@
 - RADIUS user list responses and login metadata maps are bounded during
   deserialization, and token CIDR/duration fields are validated before request
   dispatch.
+- LDAP auth bind passwords, client TLS private keys, login passwords, returned
+  tokens, and token accessors are secret-aware where applicable and redacted
+  from debug output.
+- LDAP auth list responses, policy lists, and login metadata maps are bounded
+  during deserialization. TLS version, token CIDR/duration, path-name, and
+  insecure LDAP TLS settings are validated before request dispatch.
 
 ## Security And Stability Gate
 

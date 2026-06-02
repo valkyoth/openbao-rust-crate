@@ -8,6 +8,8 @@ All notable changes to this project are documented here.
 
 - Started the `0.8.0` development line for remaining auth-method and system
   backend coverage.
+- LDAP auth login, method configuration, group policy mapping, user
+  policy/group mapping, list, read, and delete helpers.
 - RADIUS auth login, method configuration, user policy mapping, user
   read/list/delete, and paginated user-list helpers.
 
@@ -17,6 +19,12 @@ All notable changes to this project are documented here.
   represented as `SecretString` and redacted from debug output.
 - RADIUS user lists and login metadata maps use bounded deserializers, and
   CIDR/duration request fields are validated before dispatch.
+- LDAP auth bind passwords, client TLS private keys, login passwords, returned
+  tokens, and accessors are represented as secret material where applicable and
+  redacted from debug output.
+- LDAP auth lists, policy lists, and login metadata maps use bounded
+  deserializers, and TLS version, CIDR, duration, and insecure LDAP TLS
+  settings are validated before dispatch.
 
 ## 0.7.0 - 2026-06-01
 
