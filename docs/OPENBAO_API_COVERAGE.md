@@ -55,6 +55,7 @@ Sources:
 - System locked users: https://openbao.org/api-docs/next/system/user-lockout/
 - System Raft storage: https://openbao.org/api-docs/system/storage/raft/
 - System Raft Autopilot: https://openbao.org/api-docs/system/storage/raftautopilot/
+- System metrics: https://openbao.org/api-docs/2.4.x/system/metrics/
 - System HA status: https://openbao.org/api-docs/2.3.x/system/ha-status/
 - System key status: https://openbao.org/api-docs/system/key-status/
 - System CORS config: https://openbao.org/api-docs/system/config-cors/
@@ -213,12 +214,13 @@ Support plan:
   config state, audited request-header configuration, CORS configuration,
   runtime logger read/set/reset, installed version history, namespace
   management, rate-limit quota management, remount/mount-migration
-  start/status, active-node step-down, system random/hash tools, and
-  locked-user list/filter/unlock helpers are implemented. Integrated Storage
-  Raft join/configuration/peer mutation/bootstrap helpers and Autopilot JSON
-  helpers are implemented.
-  Binary Raft snapshots, raw storage, and broader diagnostic endpoints remain
-  planned until the crate has an explicit raw-body transport API.
+  start/status, active-node step-down, system random/hash tools, Prometheus
+  metrics text output, and locked-user list/filter/unlock helpers are
+  implemented. Integrated Storage Raft join/configuration/peer
+  mutation/bootstrap helpers, capped snapshot download/restore helpers, and
+  Autopilot JSON helpers are implemented.
+  Raw storage and broader diagnostic endpoints remain planned for separate
+  high-risk operator slices.
 
 ## OpenBao-Specific Notes
 

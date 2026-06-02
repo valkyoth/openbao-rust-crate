@@ -33,14 +33,16 @@
   helpers; runtime logger level helpers and installed version-history listing;
   namespace management helpers; rate-limit quota config and named quota helpers;
   locked-user list/filter/unlock helpers;
-  Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON helpers;
+  Integrated Storage Raft join/configuration/peer/bootstrap, capped
+  snapshot download/restore helpers, and Autopilot JSON helpers; Prometheus
+  text metrics output;
   remount/mount-migration start and status helpers; read-only admin bootstrap
   preview with would-create, would-update, and would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
   choices; shared `ListEntries` ergonomics for common string list responses;
   optional RFC3339 timestamp parsing helpers behind the `time` feature.
-- Remaining `0.8.0` planned work: raw storage/snapshot transport coverage and
-  additional system backend coverage.
+- Remaining `0.8.0` planned work: raw storage and additional high-risk
+  operator/diagnostic system backend coverage.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -68,8 +70,9 @@
 - Kerberos group list responses and login metadata maps are bounded during
   deserialization. LDAP TLS version, token CIDR/duration, group-name, and
   insecure LDAP TLS settings are validated before request dispatch.
-- Metrics support is intentionally JSON-only in `0.8.0`; Prometheus text
-  output is deferred until the crate has an explicit raw-body API.
+- Metrics support includes JSON output and Prometheus text output. Prometheus
+  text uses the private raw-body transport path while preserving HTTPS/token
+  enforcement and response-size limits.
 - Logger level and version-history responses are bounded during
   deserialization, and logger level writes use a typed allowlist.
 - Namespace paths reject trailing slashes, spaces, and reserved namespace names
@@ -82,6 +85,10 @@
   secret-aware and redacted from debug output. Raft server lists are bounded,
   peer IDs are validated, and Autopilot duration/integer fields are checked
   before request dispatch.
+- Raft snapshots are returned in zeroizing byte buffers and remain capped by
+  `OpenBaoConfig::max_response_bytes`. Restore helpers reject empty payloads
+  before dispatch and should be used only during an operator-controlled
+  recovery ceremony.
 - HA node lists are bounded during deserialization, and remount source,
   destination, and migration ID values are validated before request dispatch.
 - CORS origin and header lists are bounded during deserialization. CORS writes

@@ -13,7 +13,9 @@
 //! Identity, KV v1/v2, Kubernetes secrets, RabbitMQ secrets, Transit, system
 //! health/seal status, dev-only bootstrap, mount management, audit devices,
 //! safe exact lease helpers, plugin catalog operations, SSH, TOTP, and raw
-//! JSON calls for advanced users.
+//! JSON calls for advanced users. Selected system endpoints that return
+//! non-JSON data, such as Prometheus metrics and capped Raft snapshots, are
+//! exposed through typed helpers rather than a public raw-body escape hatch.
 //!
 //! Secret request payloads are serialized through a zeroizing intermediate
 //! buffer before handoff to `reqwest`. The HTTP stack still owns a normal body
@@ -109,6 +111,7 @@ pub use time::{self, OffsetDateTime};
 pub use timestamp::{
     OptionalTimestampExt, TimestampExt, parse_optional_rfc3339_timestamp, parse_rfc3339_timestamp,
 };
+pub use zeroize::{self, Zeroize, Zeroizing};
 
 /// Common imports for application code using the OpenBao SDK.
 pub mod prelude {
@@ -116,7 +119,7 @@ pub mod prelude {
         AclCapability, AclPolicyBuilder, Authenticated, Certificate, Client, ClientBuilder, Empty,
         Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries, Method, OpenBao,
         OpenBaoConfig, ResponseEnvelope, Result, SecretString, SharedClient, StatusCode,
-        Unauthenticated, duration_to_bao_string,
+        Unauthenticated, Zeroize, Zeroizing, duration_to_bao_string,
     };
     #[cfg(feature = "transit")]
     pub use crate::{

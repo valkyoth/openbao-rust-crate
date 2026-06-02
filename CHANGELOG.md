@@ -30,6 +30,9 @@ All notable changes to this project are documented here.
 - Locked-user list/filter and unlock helpers.
 - Integrated Storage Raft join, configuration, peer remove/promote/demote,
   HA bootstrap, and Autopilot JSON helpers.
+- Capped Integrated Storage Raft snapshot download, restore, and force-restore
+  helpers.
+- Prometheus text metrics helper for `/sys/metrics?format=prometheus`.
 - Remount/mount-migration start and status helpers.
 - Active-node step-down helper for `/sys/step-down`.
 - System tools random byte and hash helpers for `/sys/tools/random` and
@@ -73,6 +76,11 @@ All notable changes to this project are documented here.
   represented as secret material and redacted from debug output. Raft server
   lists are bounded, peer IDs are validated, and Autopilot duration/integer
   fields are checked before request dispatch.
+- Raft snapshots use the same HTTPS/token protections and response-size caps as
+  JSON requests. Downloaded snapshots are returned in zeroizing byte buffers,
+  and restore helpers reject empty payloads before dispatch.
+- Prometheus metrics text output uses the private raw-body transport path while
+  preserving response-size limits.
 - HA node lists are bounded, and remount source, destination, and migration ID
   values are validated before request dispatch.
 - CORS origins and headers are bounded; configured header names are validated

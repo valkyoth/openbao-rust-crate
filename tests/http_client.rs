@@ -1045,19 +1045,37 @@ async fn sys_metrics_json_sends_documented_path() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
-        let request = read_http_request(&mut stream);
-        assert!(request.starts_with("GET /v1/sys/metrics?format=json HTTP/1.1"));
-        assert!(request.contains("x-vault-token: test-token"));
-        let body = r#"{"Gauges":[{"Name":"bao.core.unsealed","Value":1.0}],"Counters":[]}"#;
-        let response = format!(
-            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        stream
-            .write_all(response.as_bytes())
-            .unwrap_or_else(|error| panic!("{error}"));
+        for step in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let (content_type, body) = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/metrics?format=json HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: test-token"));
+                    (
+                        "application/json",
+                        r#"{"Gauges":[{"Name":"bao.core.unsealed","Value":1.0}],"Counters":[]}"#,
+                    )
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/sys/metrics?format=prometheus HTTP/1.1"));
+                    assert!(request.contains("accept: text/plain"));
+                    (
+                        "text/plain; version=0.0.4",
+                        "# HELP bao_core_unsealed OpenBao unsealed\nbao_core_unsealed 1\n",
+                    )
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: {content_type}\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
@@ -1074,6 +1092,13 @@ async fn sys_metrics_json_sends_documented_path() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert!(metrics["Gauges"].is_array());
     assert!(metrics["Counters"].is_array());
+
+    let metrics = client
+        .sys()
+        .metrics_prometheus()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(metrics.contains("bao_core_unsealed 1"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
@@ -1715,7 +1740,7 @@ async fn sys_raft_storage_helpers_use_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for step in 0..9 {
+        for step in 0..12 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match step {
@@ -1726,47 +1751,65 @@ async fn sys_raft_storage_helpers_use_documented_paths() {
                     );
                     assert!(request.contains(r#""leader_client_key":"leader-client-key""#));
                     assert!(request.contains(r#""auto_join":"provider-metadata""#));
-                    r#"{"joined":true}"#.to_owned()
+                    r#"{"joined":true}"#.as_bytes().to_vec()
                 }
                 1 => {
                     assert!(request.starts_with("GET /v1/sys/storage/raft/configuration HTTP/1.1"));
-                    r#"{"data":{"config":{"index":24,"servers":[{"address":"127.0.0.1:8201","leader":true,"node_id":"raft1","protocol_version":"3","voter":true},{"address":"127.0.0.2:8201","leader":false,"node_id":"raft2","protocol_version":"3","voter":false}]}}}"#.to_owned()
+                    r#"{"data":{"config":{"index":24,"servers":[{"address":"127.0.0.1:8201","leader":true,"node_id":"raft1","protocol_version":"3","voter":true},{"address":"127.0.0.2:8201","leader":false,"node_id":"raft2","protocol_version":"3","voter":false}]}}}"#.as_bytes().to_vec()
                 }
                 2 => {
                     assert!(request.starts_with("POST /v1/sys/storage/raft/remove-peer HTTP/1.1"));
                     assert!(request.contains(r#""server_id":"raft2""#));
-                    String::new()
+                    Vec::new()
                 }
                 3 => {
                     assert!(request.starts_with("POST /v1/sys/storage/raft/promote HTTP/1.1"));
                     assert!(request.contains(r#""server_id":"raft2""#));
                     assert!(request.contains(r#""dr_operation_token":"dr-operation-token""#));
-                    String::new()
+                    Vec::new()
                 }
                 4 => {
                     assert!(request.starts_with("POST /v1/sys/storage/raft/demote HTTP/1.1"));
                     assert!(request.contains(r#""server_id":"raft2""#));
-                    String::new()
+                    Vec::new()
                 }
                 5 => {
                     assert!(request.starts_with("POST /v1/sys/storage/raft/bootstrap HTTP/1.1"));
-                    String::new()
+                    Vec::new()
                 }
                 6 => {
+                    assert!(request.starts_with("GET /v1/sys/storage/raft/snapshot HTTP/1.1"));
+                    assert!(request.contains("accept: application/octet-stream"));
+                    b"raft-snapshot-bytes".to_vec()
+                }
+                7 => {
+                    assert!(request.starts_with("POST /v1/sys/storage/raft/snapshot HTTP/1.1"));
+                    assert!(request.contains("content-type: application/octet-stream"));
+                    assert!(request.contains("restore-snapshot"));
+                    Vec::new()
+                }
+                8 => {
+                    assert!(
+                        request.starts_with("POST /v1/sys/storage/raft/snapshot-force HTTP/1.1")
+                    );
+                    assert!(request.contains("force-restore-snapshot"));
+                    Vec::new()
+                }
+                9 => {
                     assert!(
                         request.starts_with("GET /v1/sys/storage/raft/autopilot/state HTTP/1.1")
                     );
-                    r#"{"healthy":true,"failure_tolerance":1,"servers":{"raft1":{"id":"raft1","name":"raft1","address":"127.0.0.1:8201","node_status":"alive","last_contact":"0s","last_term":3,"last_index":459,"healthy":true,"stable_since":"2026-06-02T00:00:00Z","status":"leader","meta":null}},"leader":"raft1","voters":["raft1"],"non_voters":null}"#.to_owned()
+                    r#"{"healthy":true,"failure_tolerance":1,"servers":{"raft1":{"id":"raft1","name":"raft1","address":"127.0.0.1:8201","node_status":"alive","last_contact":"0s","last_term":3,"last_index":459,"healthy":true,"stable_since":"2026-06-02T00:00:00Z","status":"leader","meta":null}},"leader":"raft1","voters":["raft1"],"non_voters":null}"#.as_bytes().to_vec()
                 }
-                7 => {
+                10 => {
                     assert!(
                         request.starts_with(
                             "GET /v1/sys/storage/raft/autopilot/configuration HTTP/1.1"
                         )
                     );
-                    r#"{"cleanup_dead_servers":false,"dead_server_last_contact_threshold":"24h0m0s","last_contact_threshold":"10s","max_trailing_logs":1000,"min_quorum":3,"server_stabilization_time":"10s"}"#.to_owned()
+                    r#"{"cleanup_dead_servers":false,"dead_server_last_contact_threshold":"24h0m0s","last_contact_threshold":"10s","max_trailing_logs":1000,"min_quorum":3,"server_stabilization_time":"10s"}"#.as_bytes().to_vec()
                 }
-                8 => {
+                11 => {
                     assert!(
                         request.starts_with(
                             "POST /v1/sys/storage/raft/autopilot/configuration HTTP/1.1"
@@ -1775,18 +1818,24 @@ async fn sys_raft_storage_helpers_use_documented_paths() {
                     assert!(request.contains(r#""cleanup_dead_servers":true"#));
                     assert!(request.contains(r#""last_contact_threshold":"10s""#));
                     assert!(request.contains(r#""min_quorum":"3""#));
-                    String::new()
+                    Vec::new()
                 }
                 _ => unreachable!(),
             };
             let response = if body.is_empty() {
                 "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n"
                     .to_owned()
+            } else if step == 6 {
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/octet-stream\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                    body.len(),
+                    String::from_utf8_lossy(&body)
+                )
             } else {
                 format!(
                     "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                     body.len(),
-                    body
+                    String::from_utf8_lossy(&body)
                 )
             };
             stream
@@ -1841,6 +1890,23 @@ async fn sys_raft_storage_helpers_use_documented_paths() {
     client
         .sys()
         .raft_bootstrap()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let snapshot = client
+        .sys()
+        .raft_snapshot()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(snapshot.as_slice(), b"raft-snapshot-bytes");
+    client
+        .sys()
+        .raft_restore_snapshot(b"restore-snapshot")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .raft_force_restore_snapshot(b"force-restore-snapshot")
         .await
         .unwrap_or_else(|error| panic!("{error}"));
 

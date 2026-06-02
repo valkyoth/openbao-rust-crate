@@ -124,8 +124,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: raw storage/snapshot transport coverage and additional
-  system backend automation.
+- Remaining `0.8.0`: raw storage and additional high-risk system backend
+  operator/diagnostic coverage.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -320,7 +320,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Key status | Yes | Typed `/sys/key-status` helper. |
 | OpenAPI discovery | Yes | Typed JSON helper for `/sys/internal/specs/openapi`. |
 | Internal UI helpers | Yes | Internal UI namespace and mount discovery helpers with bounded maps; OpenBao does not guarantee endpoint stability. |
-| JSON metrics | Yes | Typed JSON helper for `/sys/metrics?format=json`; Prometheus text output is intentionally deferred. |
+| Metrics | Yes | Typed JSON helper for `/sys/metrics?format=json` and capped Prometheus text helper. |
 | Host diagnostics | Yes | JSON helper for `/sys/host-info` platform diagnostics. |
 | Sanitized config state | Yes | JSON helper for `/sys/config/state/sanitized`. |
 | Audited request headers | Yes | List, read, write, and delete `/sys/config/auditing/request-headers` helpers. |
@@ -330,7 +330,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Namespaces | Yes | List, create, read, patch, and delete namespace helpers with local name validation. |
 | Rate-limit quotas | Yes | Global quota config plus named rate-limit quota list/create/read/delete helpers. |
 | Locked users | Yes | List all locked users, filter by mount accessor, and unlock aliases. |
-| Raft storage | Yes | Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON helpers. |
+| Raft storage | Yes | Integrated Storage Raft join/configuration/peer/bootstrap, capped snapshot download/restore, and Autopilot JSON helpers. |
 | Remount | Yes | Start mount migrations and poll migration status. |
 | Step down | Yes | Authenticated `/sys/step-down` helper for active-node handoff. |
 | System tools | Yes | Random byte generation and hash helpers with bounded random requests and secret-aware outputs. |
@@ -345,7 +345,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
-| Storage | Partial | Integrated Storage Raft JSON helpers are implemented; binary snapshots and raw storage are deferred until raw-body transport is explicit. |
+| Storage | Partial | Integrated Storage Raft JSON and capped snapshot helpers are implemented; raw storage is deferred for a separate high-risk operator slice. |
 
 ## Examples
 

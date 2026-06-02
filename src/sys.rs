@@ -12,7 +12,6 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
-#[cfg(feature = "transit-bytes")]
 use zeroize::Zeroizing;
 
 use crate::{
@@ -2730,6 +2729,27 @@ impl<State> Sys<'_, State> {
             .await
     }
 
+    /// Reads Prometheus text telemetry metrics from `/sys/metrics`.
+    ///
+    /// The response still obeys [`OpenBaoConfig`](crate::OpenBaoConfig)'s
+    /// maximum response size. Use a dedicated metrics token and keep telemetry
+    /// label cardinality bounded in production deployments.
+    pub async fn metrics_prometheus(&self) -> Result<String> {
+        let body = self
+            .client
+            .request_bytes_accepting(
+                Method::GET,
+                "sys/metrics",
+                &[("format", "prometheus".to_owned())],
+                Some(HeaderValue::from_static("text/plain")),
+                None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        String::from_utf8(body.as_slice().to_vec())
+            .map_err(|_| Error::Decode("OpenBao metrics response was not valid UTF-8".into()))
+    }
+
     /// Reads host diagnostics from `/sys/host-info`.
     ///
     /// OpenBao returns platform-specific CPU, disk, host, and memory sections,
@@ -4015,6 +4035,63 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Downloads an Integrated Storage Raft snapshot as bytes.
+    ///
+    /// The returned snapshot is encrypted by OpenBao's storage barrier, but it
+    /// is still sensitive operational material. The SDK keeps the in-memory
+    /// buffer zeroizing and applies the configured response-size cap. Large
+    /// production snapshots may require a future streaming API.
+    pub async fn raft_snapshot(&self) -> Result<Zeroizing<Vec<u8>>> {
+        self.client
+            .request_bytes_accepting(
+                Method::GET,
+                "sys/storage/raft/snapshot",
+                &[],
+                Some(HeaderValue::from_static("application/octet-stream")),
+                None,
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
+    /// Restores Integrated Storage Raft from a snapshot.
+    ///
+    /// Snapshot restore can replace cluster state. Use only as part of an
+    /// operator-controlled recovery ceremony.
+    pub async fn raft_restore_snapshot(&self, snapshot: &[u8]) -> Result<Empty> {
+        validate_raft_snapshot(snapshot)?;
+        self.client
+            .request_bytes_accepting(
+                Method::POST,
+                "sys/storage/raft/snapshot",
+                &[],
+                None,
+                Some(snapshot),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await?;
+        Ok(Empty {})
+    }
+
+    /// Force-restores Integrated Storage Raft from a snapshot.
+    ///
+    /// This bypasses OpenBao's checks that auto-unseal or Shamir keys match the
+    /// snapshot. Use only after an explicit operator review.
+    pub async fn raft_force_restore_snapshot(&self, snapshot: &[u8]) -> Result<Empty> {
+        validate_raft_snapshot(snapshot)?;
+        self.client
+            .request_bytes_accepting(
+                Method::POST,
+                "sys/storage/raft/snapshot-force",
+                &[],
+                None,
+                Some(snapshot),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await?;
+        Ok(Empty {})
+    }
+
     /// Reads Raft Autopilot state as JSON.
     ///
     /// The state schema is mostly diagnostic and may grow with OpenBao, so this
@@ -4471,6 +4548,15 @@ fn validate_raft_server_id(server_id: &str) -> Result<()> {
     if server_id.as_bytes().iter().any(u8::is_ascii_control) {
         return Err(Error::InvalidParameter(
             "Raft server_id must not contain control characters".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_raft_snapshot(snapshot: &[u8]) -> Result<()> {
+    if snapshot.is_empty() {
+        return Err(Error::InvalidParameter(
+            "Raft snapshot payload must not be empty".into(),
         ));
     }
     Ok(())
@@ -5267,7 +5353,7 @@ mod tests {
         internal_ui_mount_path, locked_user_unlock_path, namespace_path, rate_limit_quota_path,
         remount_status_path, sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
         validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
-        validate_raft_server_id, validate_rate_limit_quota_config,
+        validate_raft_server_id, validate_raft_snapshot, validate_rate_limit_quota_config,
         validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
@@ -5714,6 +5800,8 @@ mod tests {
         assert!(!debug.contains("dr-operation-token"));
         assert!(validate_raft_server_id("").is_err());
         assert!(validate_raft_server_id("raft\n1").is_err());
+        assert!(validate_raft_snapshot(b"snapshot").is_ok());
+        assert!(validate_raft_snapshot(b"").is_err());
     }
 
     #[test]

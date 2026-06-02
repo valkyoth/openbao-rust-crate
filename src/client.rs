@@ -559,6 +559,45 @@ impl<State> Client<State> {
             .await
     }
 
+    pub(crate) async fn request_bytes_accepting(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        accept: Option<HeaderValue>,
+        body: Option<&[u8]>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<Zeroizing<Vec<u8>>> {
+        let mut url = self.url_for_path(path)?;
+        if !query.is_empty() {
+            let mut pairs = url.query_pairs_mut();
+            for (key, value) in query {
+                pairs.append_pair(key, value);
+            }
+        }
+
+        let response = self
+            .send_sensitive_bytes_request(method, url, accept, body)
+            .await?;
+        let status = response.status();
+        if !accepted_statuses.contains(&status) {
+            let error =
+                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
+                    .await
+                    .map(|envelope| envelope.errors)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|error| crate::error::sanitize_api_error(&error))
+                    .collect();
+            return Err(Error::Api {
+                status,
+                errors: error,
+            });
+        }
+
+        read_response_bytes(response, self.config.max_response_bytes).await
+    }
+
     async fn request_json_query_headers_accepting<T, B>(
         &self,
         method: Method,
@@ -680,6 +719,49 @@ impl<State> Client<State> {
             // The Zeroizing serialization buffer above is cleared; reqwest,
             // TLS, kernel, and device buffers are documented residual risks.
             *request.body_mut() = Some(Vec::from(&encoded[..]).into());
+        }
+
+        execute_openbao_http_request(http, request).await
+    }
+
+    async fn send_sensitive_bytes_request(
+        &self,
+        method: Method,
+        url: Url,
+        accept: Option<HeaderValue>,
+        body: Option<&[u8]>,
+    ) -> Result<reqwest::Response> {
+        self.require_encrypted_transport_for_sensitive_request(&url, true)?;
+        let http = self.http_for_sensitive_request();
+
+        let mut request = reqwest::Request::new(method, url);
+        if let Some(accept) = accept {
+            request.headers_mut().insert(ACCEPT, accept);
+        }
+        request.headers_mut().insert(
+            HeaderName::from_static("x-vault-request"),
+            HeaderValue::from_static("true"),
+        );
+
+        if let Some(namespace) = self.config.namespace.as_deref() {
+            request.headers_mut().insert(
+                HeaderName::from_static("x-vault-namespace"),
+                sensitive_header_value(namespace)?,
+            );
+        }
+        if let Some(token) = self.token.as_ref() {
+            let (name, value) = token_header_for(token, self.config.header_mode)?;
+            request.headers_mut().insert(name, value);
+        }
+        if let Some(body) = body {
+            request.headers_mut().insert(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/octet-stream"),
+            );
+            // SECURITY: reqwest takes ownership of a normal body buffer. The
+            // caller-provided slice is not retained by this crate, but lower
+            // transport layers may hold transient copies during the request.
+            *request.body_mut() = Some(body.to_vec().into());
         }
 
         execute_openbao_http_request(http, request).await
@@ -896,15 +978,25 @@ where
     }
 }
 
-async fn read_json_response<T>(
-    mut response: reqwest::Response,
-    max_response_bytes: usize,
-) -> Result<T>
+async fn read_json_response<T>(response: reqwest::Response, max_response_bytes: usize) -> Result<T>
 where
     T: DeserializeOwned,
 {
     validate_json_content_type(&response)?;
+    let body = read_response_bytes(response, max_response_bytes).await?;
 
+    serde_json::from_slice(&body).map_err(|error| {
+        Error::Decode(format!(
+            "OpenBao response did not match expected schema ({})",
+            json_error_category(error)
+        ))
+    })
+}
+
+async fn read_response_bytes(
+    mut response: reqwest::Response,
+    max_response_bytes: usize,
+) -> Result<Zeroizing<Vec<u8>>> {
     if response
         .content_length()
         .is_some_and(|length| length > max_response_bytes as u64)
@@ -924,12 +1016,7 @@ where
         body.extend_from_slice(&chunk);
     }
 
-    serde_json::from_slice(&body).map_err(|error| {
-        Error::Decode(format!(
-            "OpenBao response did not match expected schema ({})",
-            json_error_category(error)
-        ))
-    })
+    Ok(body)
 }
 
 fn json_error_category(error: serde_json::Error) -> &'static str {
