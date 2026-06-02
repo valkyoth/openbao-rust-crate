@@ -15,6 +15,8 @@ All notable changes to this project are documented here.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
+- Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
+  `WouldIssue` statuses before applying a plan.
 
 ### Security
 
@@ -32,6 +34,8 @@ All notable changes to this project are documented here.
   outside the typed JSON transport boundary.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
+- Bootstrap preview performs read-side comparisons only and never writes state
+  or issues credentials.
 
 ## 0.7.0 - 2026-06-01
 

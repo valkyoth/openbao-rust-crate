@@ -123,6 +123,31 @@ impl BootstrapReport {
     }
 }
 
+/// Read-only result of previewing an [`AdminBootstrap`] plan.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct BootstrapPreviewReport {
+    /// Per-operation preview entries.
+    pub steps: Vec<BootstrapPreviewStep>,
+}
+
+impl BootstrapPreviewReport {
+    /// Returns true when every idempotent convergence step already matches and
+    /// the plan contains no credential issuance steps.
+    #[must_use]
+    pub fn is_converged(&self) -> bool {
+        self.steps
+            .iter()
+            .all(|step| step.status == BootstrapPreviewStatus::Unchanged)
+    }
+
+    /// Returns steps that would create, update, or issue state.
+    pub fn changed_steps(&self) -> impl Iterator<Item = &BootstrapPreviewStep> {
+        self.steps
+            .iter()
+            .filter(|step| step.status != BootstrapPreviewStatus::Unchanged)
+    }
+}
+
 /// Per-operation bootstrap status.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BootstrapStepStatus {
@@ -134,6 +159,19 @@ pub enum BootstrapStepStatus {
     Updated,
     /// A new credential was issued. This is intentionally not idempotent.
     Issued,
+}
+
+/// Per-operation dry-run bootstrap status.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BootstrapPreviewStatus {
+    /// The target already matches the desired state.
+    Unchanged,
+    /// The target is absent and would be created by [`AdminBootstrap::run`].
+    WouldCreate,
+    /// The target exists and would be updated by [`AdminBootstrap::run`].
+    WouldUpdate,
+    /// A new credential would be issued by [`AdminBootstrap::run`].
+    WouldIssue,
 }
 
 /// Per-operation bootstrap report entry.
@@ -152,6 +190,31 @@ impl BootstrapStepReport {
         target_type: &'static str,
         target: impl Into<String>,
         status: BootstrapStepStatus,
+    ) -> Self {
+        Self {
+            target_type,
+            target: target.into(),
+            status,
+        }
+    }
+}
+
+/// Per-operation dry-run bootstrap report entry.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BootstrapPreviewStep {
+    /// Bootstrap target type.
+    pub target_type: &'static str,
+    /// Bootstrap target name or path.
+    pub target: String,
+    /// Read-only preview status.
+    pub status: BootstrapPreviewStatus,
+}
+
+impl BootstrapPreviewStep {
+    fn new(
+        target_type: &'static str,
+        target: impl Into<String>,
+        status: BootstrapPreviewStatus,
     ) -> Self {
         Self {
             target_type,
@@ -456,6 +519,140 @@ impl AdminBootstrap {
         Ok(self)
     }
 
+    /// Previews the bootstrap plan without writing state or issuing
+    /// credentials.
+    ///
+    /// This performs the same read-side comparisons as [`Self::run`] where
+    /// possible. Credential issuance steps are reported as
+    /// [`BootstrapPreviewStatus::WouldIssue`] and are never executed.
+    pub async fn preview(&self, client: &Client<Authenticated>) -> Result<BootstrapPreviewReport> {
+        let mut report = BootstrapPreviewReport::default();
+        for operation in &self.operations {
+            match operation {
+                BootstrapOperation::AuthMethod {
+                    path, backend_type, ..
+                } => {
+                    let status = preview_auth_method(client, path, backend_type).await?;
+                    report
+                        .steps
+                        .push(BootstrapPreviewStep::new("auth_method", path, status));
+                }
+                BootstrapOperation::Kv2Mount { path, .. } => {
+                    let status = preview_mount(client, path, "kv", Some(("version", "2"))).await?;
+                    report
+                        .steps
+                        .push(BootstrapPreviewStep::new("kv2_mount", path, status));
+                }
+                BootstrapOperation::TransitMount { path, .. } => {
+                    let status = preview_mount(client, path, "transit", None).await?;
+                    report
+                        .steps
+                        .push(BootstrapPreviewStep::new("transit_mount", path, status));
+                }
+                BootstrapOperation::TransitKey { mount, name, .. } => {
+                    let status = match client.transit(mount)?.read_key(name).await {
+                        Ok(_) => BootstrapPreviewStatus::Unchanged,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "transit_key",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                BootstrapOperation::Policy { name, policy } => {
+                    let status = match client.sys().read_policy(name).await {
+                        Ok(existing) if existing.rules == *policy => {
+                            BootstrapPreviewStatus::Unchanged
+                        }
+                        Ok(_) => BootstrapPreviewStatus::WouldUpdate,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report
+                        .steps
+                        .push(BootstrapPreviewStep::new("policy", name, status));
+                }
+                BootstrapOperation::Kv2SecretValues {
+                    mount,
+                    path,
+                    values,
+                } => {
+                    let kv = client.kv2(mount)?;
+                    let current = match kv.read_service_config(path).await {
+                        Ok(config) => Some(config),
+                        Err(error) if error.is_not_found() => None,
+                        Err(error) => return Err(error),
+                    };
+                    let needs_patch = current.as_ref().is_none_or(|config| {
+                        values.iter().any(|(key, value)| {
+                            config.get(key).is_none_or(|current| {
+                                !secret_values_equal(current.expose_secret(), value.expose_secret())
+                            })
+                        })
+                    });
+                    let status = if needs_patch {
+                        if current.is_some() {
+                            BootstrapPreviewStatus::WouldUpdate
+                        } else {
+                            BootstrapPreviewStatus::WouldCreate
+                        }
+                    } else {
+                        BootstrapPreviewStatus::Unchanged
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "kv2_secret",
+                        format!("{mount}/{path}"),
+                        status,
+                    ));
+                }
+                BootstrapOperation::ServiceToken { name, .. } => {
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "service_token",
+                        name,
+                        BootstrapPreviewStatus::WouldIssue,
+                    ));
+                }
+                #[cfg(feature = "approle")]
+                BootstrapOperation::AppRoleRole {
+                    mount,
+                    name,
+                    request,
+                } => {
+                    let admin = client.approle_admin_at(mount)?;
+                    let status = match admin.read_role(name).await {
+                        Ok(existing) if approle_role_matches_desired(&existing, request) => {
+                            BootstrapPreviewStatus::Unchanged
+                        }
+                        Ok(_) => BootstrapPreviewStatus::WouldUpdate,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "approle_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "approle")]
+                BootstrapOperation::AppRoleSecretId {
+                    name,
+                    mount,
+                    role_name,
+                    ..
+                } => {
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "approle_secret_id",
+                        format!("{mount}/{role_name}/{name}"),
+                        BootstrapPreviewStatus::WouldIssue,
+                    ));
+                }
+            }
+        }
+        Ok(report)
+    }
+
     /// Runs the bootstrap plan.
     pub async fn run(&self, client: &Client<Authenticated>) -> Result<BootstrapReport> {
         let mut report = BootstrapReport::default();
@@ -689,6 +886,27 @@ where
     }
 }
 
+async fn preview_auth_method(
+    client: &Client<Authenticated>,
+    path: &str,
+    expected_type: &str,
+) -> Result<BootstrapPreviewStatus> {
+    let key = format!("{path}/");
+    let auth_methods = client.sys().list_auth_methods().await?;
+    match auth_methods.get(&key).or_else(|| auth_methods.get(path)) {
+        Some(auth) => {
+            if auth.backend_type != expected_type {
+                return Err(Error::InvalidParameter(format!(
+                    "auth method `{path}` exists with type `{}` instead of `{expected_type}`",
+                    auth.backend_type
+                )));
+            }
+            Ok(BootstrapPreviewStatus::Unchanged)
+        }
+        None => Ok(BootstrapPreviewStatus::WouldCreate),
+    }
+}
+
 async fn ensure_mount<F>(
     client: &Client<Authenticated>,
     path: &str,
@@ -728,6 +946,39 @@ where
                 Err(error) => Err(error),
             }
         }
+        Err(error) => Err(error),
+    }
+}
+
+async fn preview_mount(
+    client: &Client<Authenticated>,
+    path: &str,
+    expected_type: &str,
+    expected_option: Option<(&str, &str)>,
+) -> Result<BootstrapPreviewStatus> {
+    match client.sys().read_mount(path).await {
+        Ok(mount) => {
+            if mount.backend_type != expected_type {
+                return Err(Error::InvalidParameter(format!(
+                    "mount `{path}` exists with type `{}` instead of `{expected_type}`",
+                    mount.backend_type
+                )));
+            }
+            if let Some((key, value)) = expected_option
+                && mount
+                    .options
+                    .as_ref()
+                    .and_then(|options| options.get(key))
+                    .map(String::as_str)
+                    != Some(value)
+            {
+                return Err(Error::InvalidParameter(format!(
+                    "mount `{path}` exists without required option `{key}={value}`"
+                )));
+            }
+            Ok(BootstrapPreviewStatus::Unchanged)
+        }
+        Err(error) if error.is_not_found() => Ok(BootstrapPreviewStatus::WouldCreate),
         Err(error) => Err(error),
     }
 }
@@ -820,7 +1071,8 @@ mod tests {
         AclCapability, AclPolicyBuilder, Authenticated, Client, Error, OpenBaoConfig,
         auth::token::TokenCreateRequest,
         bootstrap::{
-            AdminBootstrap, BootstrapStepStatus, MAX_BOOTSTRAP_OPERATIONS, is_already_exists_error,
+            AdminBootstrap, BootstrapPreviewReport, BootstrapPreviewStatus, BootstrapPreviewStep,
+            BootstrapStepStatus, MAX_BOOTSTRAP_OPERATIONS, is_already_exists_error,
             secret_values_equal,
         },
         secrets::transit::TransitCreateKeyRequest,
@@ -884,6 +1136,14 @@ mod tests {
     fn bootstrap_statuses_are_stable_values() {
         assert_eq!(BootstrapStepStatus::Created, BootstrapStepStatus::Created);
         assert_ne!(BootstrapStepStatus::Created, BootstrapStepStatus::Unchanged);
+        assert_eq!(
+            BootstrapPreviewStatus::WouldCreate,
+            BootstrapPreviewStatus::WouldCreate
+        );
+        assert_ne!(
+            BootstrapPreviewStatus::WouldCreate,
+            BootstrapPreviewStatus::Unchanged
+        );
     }
 
     #[test]
@@ -961,6 +1221,27 @@ mod tests {
 
         assert!(report.issued_token("app").is_some());
         assert!(report.issued_token("missing").is_none());
+        assert!(!report.is_converged());
+        assert_eq!(report.changed_steps().count(), 1);
+    }
+
+    #[test]
+    fn bootstrap_preview_report_helpers_find_changed_steps() {
+        let report = BootstrapPreviewReport {
+            steps: vec![
+                BootstrapPreviewStep {
+                    target_type: "policy",
+                    target: "app".to_owned(),
+                    status: BootstrapPreviewStatus::Unchanged,
+                },
+                BootstrapPreviewStep {
+                    target_type: "service_token",
+                    target: "app".to_owned(),
+                    status: BootstrapPreviewStatus::WouldIssue,
+                },
+            ],
+        };
+
         assert!(!report.is_converged());
         assert_eq!(report.changed_steps().count(), 1);
     }

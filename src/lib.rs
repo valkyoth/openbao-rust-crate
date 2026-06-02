@@ -119,8 +119,8 @@ pub mod prelude {
         feature = "token"
     ))]
     pub use crate::bootstrap::{
-        AdminBootstrap, BootstrapIssuedToken, BootstrapReport, BootstrapStepReport,
-        BootstrapStepStatus,
+        AdminBootstrap, BootstrapIssuedToken, BootstrapPreviewReport, BootstrapPreviewStatus,
+        BootstrapPreviewStep, BootstrapReport, BootstrapStepReport, BootstrapStepStatus,
     };
 
     #[cfg(any(

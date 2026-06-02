@@ -5639,6 +5639,69 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
 }
 
 #[tokio::test]
+async fn admin_bootstrap_preview_is_read_only() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/mounts/secret HTTP/1.1"));
+        assert!(!request.starts_with("POST "));
+        let body = r#"{"data":{"type":"kv","description":"application secrets","options":{"version":"2"}}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_kv2_mount("secret", Some("application secrets"))
+        .and_then(|builder| {
+            builder.issue_service_token(
+                "app",
+                openbao::auth::token::TokenCreateRequest {
+                    policies: vec!["app-read".to_owned()],
+                    no_default_policy: Some(true),
+                    ..Default::default()
+                },
+            )
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let preview = bootstrap
+        .preview(&client)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(preview.steps.len(), 2);
+    assert_eq!(
+        preview.steps[0].status,
+        openbao::bootstrap::BootstrapPreviewStatus::Unchanged
+    );
+    assert_eq!(
+        preview.steps[1].status,
+        openbao::bootstrap::BootstrapPreviewStatus::WouldIssue
+    );
+    assert!(!preview.is_converged());
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn admin_bootstrap_can_provision_approle_auth() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

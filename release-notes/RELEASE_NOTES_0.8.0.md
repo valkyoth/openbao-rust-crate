@@ -25,10 +25,11 @@
   and delete helpers; RADIUS auth login, method configuration, user policy
   mapping, user read/list/delete, paginated user-list helpers; system leader
   status, OpenAPI discovery, JSON telemetry metrics helpers, and typed
-  capability views for common access checks.
+  capability views for common access checks; read-only admin bootstrap preview
+  with would-create, would-update, and would-issue statuses.
 - Remaining `0.8.0` planned work: Kerberos auth coverage; quotas/namespaces
-  and additional system backend coverage; FIPS posture helper; bootstrap
-  dry-run preview; shared list ergonomics; optional timestamp parsing.
+  and additional system backend coverage; FIPS posture helper; shared list
+  ergonomics; optional timestamp parsing.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -56,6 +57,9 @@
 - Typed capability views keep the existing raw string lists available and
   preserve unknown future capability names instead of dropping or rejecting
   them.
+- Admin bootstrap preview performs read-side comparisons only and never writes
+  state or issues credentials. Credential operations are reported as
+  `WouldIssue`.
 
 ## Security And Stability Gate
 

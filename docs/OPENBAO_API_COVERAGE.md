@@ -172,6 +172,9 @@ Support plan:
   explicit scoped service-token issuance.
 - `0.7.0`: admin bootstrap now supports auth method enablement, AppRole role
   convergence, and explicit AppRole SecretID issuance.
+- `0.8.0`: admin bootstrap read-only preview is implemented for existing
+  bootstrap operations, including explicit `WouldIssue` reporting for
+  credential issuance steps.
 - `0.6.0`: production init, unseal, seal, legacy rekey, OpenBao key-share
   rotation, and keyring rotation are implemented only behind explicit
   `operator-ops` plus `operator-ops-acknowledged` feature gates.

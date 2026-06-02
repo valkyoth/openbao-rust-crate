@@ -32,6 +32,9 @@ async fn main() -> Result<()> {
         .ensure_kv2_secret_values("secret", "app/config", values)?
         .issue_service_token("app", token_request)?;
 
+    let preview = bootstrap.preview(&client).await?;
+    let _planned_changes = preview.changed_steps().count();
+
     let report = bootstrap.run(&client).await?;
     let _step_count = report.steps.len();
     Ok(())

@@ -106,7 +106,8 @@ Implemented now:
 - Environment-based client construction from common OpenBao/Vault variables.
 - Shared authenticated client and Rust `Duration` to OpenBao duration string
   helpers for async application ergonomics.
-- Bootstrap report lookup helpers for issued credentials and changed steps.
+- Bootstrap read-only preview, report lookup helpers for issued credentials,
+  and changed steps.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Typed custom plugin wrapper pattern documentation for application-specific
   OpenBao plugin APIs.
@@ -116,8 +117,7 @@ Implemented now:
 Planned next:
 
 - Remaining `0.8.0`: Kerberos auth, broader system backend automation, FIPS
-  posture reporting, bootstrap dry-run preview, shared list ergonomics, and
-  optional timestamp parsing.
+  posture reporting, shared list ergonomics, and optional timestamp parsing.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -302,7 +302,7 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
 | Policies and capabilities | Yes | ACL policy read/write/list/delete, bounded policy builder helpers, self/token/accessor capability checks, and typed capability views. |
-| Admin bootstrap | Yes | Idempotent plan builder for mounts, Transit keys, ACL policies, KV v2 string values, auth methods, AppRole roles, explicit token issuance, and explicit AppRole SecretID issuance. |
+| Admin bootstrap | Yes | Idempotent plan builder, read-only preview, mounts, Transit keys, ACL policies, KV v2 string values, auth methods, AppRole roles, explicit token issuance, and explicit AppRole SecretID issuance. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
@@ -901,7 +901,7 @@ async fn main() -> Result<()> {
     values.insert("API_KEY".to_owned(), SecretString::from(std::env::var("APP_API_KEY").unwrap_or_default()));
 
     let mut bootstrap = AdminBootstrap::new();
-    let report = bootstrap
+    bootstrap
         .ensure_kv2_mount("secret", Some("application secrets"))?
         .ensure_transit_mount("transit", Some("application crypto"))?
         .ensure_policy("app-read", &policy)?
@@ -913,9 +913,14 @@ async fn main() -> Result<()> {
                 .with_policies(["app-read"])
                 .without_default_policy()
                 .with_ttl("1h")?,
-        )?
-        .run(&client)
-        .await?;
+        )?;
+
+    let preview = bootstrap.preview(&client).await?;
+    for step in preview.changed_steps() {
+        println!("would change {} {}", step.target_type, step.target);
+    }
+
+    let report = bootstrap.run(&client).await?;
 
     println!("bootstrap steps: {}", report.steps.len());
     let _issued_token_is_not_logged = report.issued_tokens;
