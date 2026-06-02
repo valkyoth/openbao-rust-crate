@@ -124,8 +124,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: storage coverage and additional system backend
-  automation.
+- Remaining `0.8.0`: raw storage/snapshot transport coverage and additional
+  system backend automation.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -324,6 +324,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Namespaces | Yes | List, create, read, patch, and delete namespace helpers with local name validation. |
 | Rate-limit quotas | Yes | Global quota config plus named rate-limit quota list/create/read/delete helpers. |
 | Locked users | Yes | List all locked users, filter by mount accessor, and unlock aliases. |
+| Raft storage | Yes | Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON helpers. |
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
@@ -335,7 +336,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Lease helpers | Yes | Safe exact lookup, renew, and revoke; prefix/force/tidy operations are intentionally not exposed. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
-| Storage | Planned | Remaining operations coverage planned after the current `0.8.0` system helper slices. |
+| Storage | Partial | Integrated Storage Raft JSON helpers are implemented; binary snapshots and raw storage are deferred until raw-body transport is explicit. |
 
 ## Examples
 

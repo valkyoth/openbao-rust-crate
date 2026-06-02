@@ -198,6 +198,9 @@ Stop condition:
 - Namespace list, create, read, patch, and delete helpers are implemented.
 - Rate-limit quota config and named rate-limit quota helpers are implemented.
 - Host diagnostics and locked-user list/filter/unlock helpers are implemented.
+- Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON
+  helpers are implemented; binary snapshots and raw storage remain planned for
+  a raw-body transport slice.
 
 Publishable value:
 

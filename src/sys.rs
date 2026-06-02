@@ -296,6 +296,264 @@ pub struct LockedUsersMountAccessor {
     pub alias_identifiers: Vec<String>,
 }
 
+/// Integrated Storage Raft cluster configuration response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RaftConfiguration {
+    /// Raft configuration data.
+    #[serde(default)]
+    pub config: RaftConfigurationData,
+}
+
+/// Raft peer configuration data.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RaftConfigurationData {
+    /// Raft log index for the configuration.
+    #[serde(default)]
+    pub index: u64,
+    /// Raft servers in the cluster.
+    #[serde(default, deserialize_with = "deserialize_bounded_raft_server_vec")]
+    pub servers: Vec<RaftServer>,
+}
+
+/// One server in the Raft cluster configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RaftServer {
+    /// Server address.
+    #[serde(default)]
+    pub address: String,
+    /// Whether this server is the leader.
+    #[serde(default)]
+    pub leader: bool,
+    /// Raft node identifier.
+    #[serde(default)]
+    pub node_id: String,
+    /// Raft protocol version as returned by OpenBao.
+    #[serde(default)]
+    pub protocol_version: String,
+    /// Whether this server participates in quorum voting.
+    #[serde(default)]
+    pub voter: bool,
+}
+
+/// Request for joining a Raft cluster.
+#[derive(Clone, Default)]
+pub struct RaftJoinRequest {
+    /// Leader API address, such as `https://openbao-1.example.com:8200`.
+    pub leader_api_addr: String,
+    /// Retry joining the Raft cluster after failures.
+    pub retry: Option<bool>,
+    /// CA certificate used to verify the leader.
+    pub leader_ca_cert: Option<String>,
+    /// Client certificate presented to the leader.
+    pub leader_client_cert: Option<String>,
+    /// Client private key presented to the leader.
+    pub leader_client_key: Option<SecretString>,
+    /// TLS server name used when connecting to the leader.
+    pub leader_tls_servername: Option<String>,
+    /// Cloud auto-join metadata. Treat as secret because provider metadata can
+    /// contain deployment identifiers or credentials.
+    pub auto_join: Option<SecretString>,
+    /// URI scheme used for auto-join.
+    pub auto_join_scheme: Option<String>,
+    /// Port used for auto-join.
+    pub auto_join_port: Option<u16>,
+    /// Join as a non-voting server.
+    pub non_voter: Option<bool>,
+}
+
+impl RaftJoinRequest {
+    /// Creates a Raft join request with the required leader API address.
+    pub fn new(leader_api_addr: impl Into<String>) -> Self {
+        Self {
+            leader_api_addr: leader_api_addr.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Sets the leader client key.
+    #[must_use]
+    pub fn with_leader_client_key(mut self, key: SecretString) -> Self {
+        self.leader_client_key = Some(key);
+        self
+    }
+
+    /// Sets cloud auto-join metadata.
+    #[must_use]
+    pub fn with_auto_join(mut self, auto_join: SecretString) -> Self {
+        self.auto_join = Some(auto_join);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.leader_api_addr.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "Raft leader_api_addr must not be empty".into(),
+            ));
+        }
+        if let Some(scheme) = &self.auto_join_scheme
+            && !matches!(scheme.as_str(), "http" | "https")
+        {
+            return Err(Error::InvalidParameter(
+                "Raft auto_join_scheme must be http or https".into(),
+            ));
+        }
+        if let Some(port) = self.auto_join_port
+            && port == 0
+        {
+            return Err(Error::InvalidParameter(
+                "Raft auto_join_port must be greater than zero".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for RaftJoinRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RaftJoinRequest")
+            .field("leader_api_addr", &self.leader_api_addr)
+            .field("retry", &self.retry)
+            .field("leader_ca_cert", &self.leader_ca_cert)
+            .field("leader_client_cert", &self.leader_client_cert)
+            .field(
+                "leader_client_key",
+                &self.leader_client_key.as_ref().map(|_| "<redacted>"),
+            )
+            .field("leader_tls_servername", &self.leader_tls_servername)
+            .field("auto_join", &self.auto_join.as_ref().map(|_| "<redacted>"))
+            .field("auto_join_scheme", &self.auto_join_scheme)
+            .field("auto_join_port", &self.auto_join_port)
+            .field("non_voter", &self.non_voter)
+            .finish()
+    }
+}
+
+/// Response returned after a Raft join request.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RaftJoinResponse {
+    /// Whether the join request was accepted.
+    #[serde(default)]
+    pub joined: bool,
+}
+
+/// Request for Raft peer mutation operations.
+#[derive(Clone, Default)]
+pub struct RaftPeerRequest {
+    /// Raft server identifier.
+    pub server_id: String,
+    /// Disaster recovery operation token, when required.
+    pub dr_operation_token: Option<SecretString>,
+}
+
+impl RaftPeerRequest {
+    /// Creates a peer mutation request with the required server identifier.
+    pub fn new(server_id: impl Into<String>) -> Self {
+        Self {
+            server_id: server_id.into(),
+            dr_operation_token: None,
+        }
+    }
+
+    /// Sets the disaster recovery operation token.
+    #[must_use]
+    pub fn with_dr_operation_token(mut self, token: SecretString) -> Self {
+        self.dr_operation_token = Some(token);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_raft_server_id(&self.server_id)
+    }
+}
+
+impl fmt::Debug for RaftPeerRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RaftPeerRequest")
+            .field("server_id", &self.server_id)
+            .field(
+                "dr_operation_token",
+                &self.dr_operation_token.as_ref().map(|_| "<redacted>"),
+            )
+            .finish()
+    }
+}
+
+/// Integrated Storage Raft Autopilot configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct RaftAutopilotConfig {
+    /// Whether Autopilot should remove dead servers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cleanup_dead_servers: Option<bool>,
+    /// Threshold before a server is considered failed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dead_server_last_contact_threshold: Option<String>,
+    /// Threshold before a server is considered unhealthy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_contact_threshold: Option<String>,
+    /// Maximum trailing Raft logs before a server is unhealthy.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub max_trailing_logs: Option<String>,
+    /// Minimum voting quorum before pruning can occur.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub min_quorum: Option<String>,
+    /// Required stable time before adding a server.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub server_stabilization_time: Option<String>,
+}
+
+impl RaftAutopilotConfig {
+    /// Creates an empty Autopilot config patch.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the last-contact threshold.
+    #[must_use]
+    pub fn with_last_contact_threshold(mut self, threshold: impl Into<String>) -> Self {
+        self.last_contact_threshold = Some(threshold.into());
+        self
+    }
+
+    /// Sets the server stabilization time.
+    #[must_use]
+    pub fn with_server_stabilization_time(mut self, duration: impl Into<String>) -> Self {
+        self.server_stabilization_time = Some(duration.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_optional_duration_string(
+            &self.dead_server_last_contact_threshold,
+            "Raft Autopilot dead_server_last_contact_threshold",
+        )?;
+        validate_optional_duration_string(
+            &self.last_contact_threshold,
+            "Raft Autopilot last_contact_threshold",
+        )?;
+        validate_optional_duration_string(
+            &self.server_stabilization_time,
+            "Raft Autopilot server_stabilization_time",
+        )?;
+        validate_optional_positive_integer(
+            &self.max_trailing_logs,
+            "Raft Autopilot max_trailing_logs",
+        )?;
+        validate_optional_positive_integer(&self.min_quorum, "Raft Autopilot min_quorum")?;
+        Ok(())
+    }
+}
+
 /// Rate-limit quota list response.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct RateLimitQuotaList {
@@ -1789,6 +2047,36 @@ struct LockedUsersPayload<'a> {
 }
 
 #[derive(Serialize)]
+struct RaftJoinPayload<'a> {
+    leader_api_addr: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    retry: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    leader_ca_cert: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    leader_client_cert: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    leader_client_key: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    leader_tls_servername: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    auto_join: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    auto_join_scheme: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    auto_join_port: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    non_voter: Option<bool>,
+}
+
+#[derive(Serialize)]
+struct RaftPeerPayload<'a> {
+    server_id: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dr_operation_token: Option<&'a str>,
+}
+
+#[derive(Serialize)]
 struct CapabilitiesPayload<'a> {
     paths: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -2937,6 +3225,133 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Joins this node to an Integrated Storage Raft cluster.
+    ///
+    /// When using Shamir seal, OpenBao documents this call as happening before
+    /// initialization on the joining node, followed immediately by unseal with
+    /// leader shares.
+    pub async fn raft_join(&self, request: &RaftJoinRequest) -> Result<RaftJoinResponse> {
+        request.validate()?;
+        let payload = RaftJoinPayload {
+            leader_api_addr: &request.leader_api_addr,
+            retry: request.retry,
+            leader_ca_cert: request.leader_ca_cert.as_deref(),
+            leader_client_cert: request.leader_client_cert.as_deref(),
+            leader_client_key: request
+                .leader_client_key
+                .as_ref()
+                .map(SecretString::expose_secret),
+            leader_tls_servername: request.leader_tls_servername.as_deref(),
+            auto_join: request.auto_join.as_ref().map(SecretString::expose_secret),
+            auto_join_scheme: request.auto_join_scheme.as_deref(),
+            auto_join_port: request.auto_join_port,
+            non_voter: request.non_voter,
+        };
+        self.client
+            .request_json(Method::POST, "sys/storage/raft/join", Some(&payload))
+            .await
+    }
+
+    /// Reads Integrated Storage Raft cluster configuration.
+    pub async fn raft_configuration(&self) -> Result<RaftConfiguration> {
+        let envelope: ResponseEnvelope<RaftConfiguration> = self
+            .client
+            .request_json(
+                Method::GET,
+                "sys/storage/raft/configuration",
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Removes one server from the Raft cluster.
+    pub async fn raft_remove_peer(&self, request: &RaftPeerRequest) -> Result<Empty> {
+        self.raft_peer_operation("remove-peer", request).await
+    }
+
+    /// Promotes a permanent Raft non-voter to voter.
+    pub async fn raft_promote_peer(&self, request: &RaftPeerRequest) -> Result<Empty> {
+        self.raft_peer_operation("promote", request).await
+    }
+
+    /// Demotes a Raft voter to permanent non-voter.
+    pub async fn raft_demote_peer(&self, request: &RaftPeerRequest) -> Result<Empty> {
+        self.raft_peer_operation("demote", request).await
+    }
+
+    /// Bootstraps Raft when it is used exclusively for HA storage.
+    pub async fn raft_bootstrap(&self) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                "sys/storage/raft/bootstrap",
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Reads Raft Autopilot state as JSON.
+    ///
+    /// The state schema is mostly diagnostic and may grow with OpenBao, so this
+    /// helper returns JSON under the normal response-size protections.
+    pub async fn raft_autopilot_state_json(&self) -> Result<JsonValue> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/storage/raft/autopilot/state",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads Raft Autopilot configuration.
+    pub async fn raft_autopilot_config(&self) -> Result<RaftAutopilotConfig> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/storage/raft/autopilot/configuration",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Writes Raft Autopilot configuration.
+    pub async fn write_raft_autopilot_config(&self, config: &RaftAutopilotConfig) -> Result<Empty> {
+        config.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/storage/raft/autopilot/configuration",
+                Some(config),
+            )
+            .await
+    }
+
+    async fn raft_peer_operation(
+        &self,
+        operation: &str,
+        request: &RaftPeerRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        let payload = RaftPeerPayload {
+            server_id: &request.server_id,
+            dr_operation_token: request
+                .dr_operation_token
+                .as_ref()
+                .map(SecretString::expose_secret),
+        };
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                &format!("sys/storage/raft/{operation}"),
+                Some(&payload),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     /// Looks up a wrapping token.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
         let payload = WrappingTokenPayload {
@@ -3164,6 +3579,47 @@ fn locked_user_unlock_path(mount_accessor: &str, alias_identifier: &str) -> Resu
         &single_path_segment(alias_identifier, "alias identifier")?,
     ]
     .join("/"))
+}
+
+fn validate_raft_server_id(server_id: &str) -> Result<()> {
+    if server_id.is_empty() {
+        return Err(Error::InvalidParameter(
+            "Raft server_id must not be empty".into(),
+        ));
+    }
+    if server_id.len() > 256 {
+        return Err(Error::InvalidParameter(
+            "Raft server_id exceeds maximum length".into(),
+        ));
+    }
+    if server_id.as_bytes().iter().any(u8::is_ascii_control) {
+        return Err(Error::InvalidParameter(
+            "Raft server_id must not contain control characters".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_optional_duration_string(value: &Option<String>, field: &'static str) -> Result<()> {
+    if let Some(value) = value
+        && !crate::validation::validate_duration_string(value, false)
+    {
+        return Err(Error::InvalidParameter(format!(
+            "{field} must be a positive duration such as 30s, 5m, or 1h"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_optional_positive_integer(value: &Option<String>, field: &'static str) -> Result<()> {
+    if let Some(value) = value
+        && !value.parse::<u64>().is_ok_and(|number| number > 0)
+    {
+        return Err(Error::InvalidParameter(format!(
+            "{field} must be a positive integer"
+        )));
+    }
+    Ok(())
 }
 
 fn single_path_segment(value: &str, kind: &'static str) -> Result<String> {
@@ -3440,6 +3896,16 @@ where
     )
 }
 
+fn deserialize_bounded_raft_server_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<RaftServer>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_seq(BoundedRaftServerListVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
 fn deserialize_bounded_locked_namespace_vec<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Vec<LockedUsersNamespace>, D::Error>
@@ -3594,6 +4060,35 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedRateLimitQuotaMapVisitor<MAX
     }
 }
 
+struct BoundedRaftServerListVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedRaftServerListVisitor<MAX> {
+    type Value = Vec<RaftServer>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a list of at most {MAX} Raft servers")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<RaftServer>()? else {
+                return Ok(values);
+            };
+            values.push(value);
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao Raft server list exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedLockedNamespaceListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedLockedNamespaceListVisitor<MAX> {
@@ -3713,6 +4208,55 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedPluginDetailListVisitor<MAX>
     }
 }
 
+fn deserialize_optional_string_or_u64<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_any(OptionalStringOrU64Visitor)
+}
+
+struct OptionalStringOrU64Visitor;
+
+impl<'de> Visitor<'de> for OptionalStringOrU64Visitor {
+    type Value = Option<String>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("null, a string integer, or an integer")
+    }
+
+    fn visit_none<E>(self) -> core::result::Result<Self::Value, E> {
+        Ok(None)
+    }
+
+    fn visit_unit<E>(self) -> core::result::Result<Self::Value, E> {
+        Ok(None)
+    }
+
+    fn visit_some<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_optional_string_or_u64(deserializer)
+    }
+
+    fn visit_str<E>(self, value: &str) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        Ok(Some(value.to_owned()))
+    }
+
+    fn visit_string<E>(self, value: String) -> core::result::Result<Self::Value, E> {
+        Ok(Some(value))
+    }
+
+    fn visit_u64<E>(self, value: u64) -> core::result::Result<Self::Value, E> {
+        Ok(Some(value.to_string()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
@@ -3722,10 +4266,11 @@ mod tests {
     use super::{
         AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, LeaseDuration,
         LockedUsers, LoggerLevel, MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList,
-        PolicyWriteRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
+        PolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
+        RaftPeerRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
         VersionHistory, locked_user_unlock_path, namespace_path, rate_limit_quota_path, sys_path,
         validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
-        validate_namespace_request, validate_rate_limit_quota_config,
+        validate_namespace_request, validate_raft_server_id, validate_rate_limit_quota_config,
         validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
@@ -4099,6 +4644,83 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn raft_requests_validate_and_redact_secrets() {
+        let join = RaftJoinRequest::new("https://leader.example.com:8200")
+            .with_leader_client_key(SecretString::from(["leader-", "client-key"].concat()))
+            .with_auto_join(SecretString::from(["provider-", "metadata"].concat()));
+        assert!(join.validate().is_ok());
+        let debug = format!("{join:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("leader-client-key"));
+        assert!(!debug.contains("provider-metadata"));
+
+        let mut invalid_join = RaftJoinRequest::new("");
+        assert!(invalid_join.validate().is_err());
+        invalid_join.leader_api_addr = "https://leader.example.com:8200".to_owned();
+        invalid_join.auto_join_scheme = Some("ftp".to_owned());
+        assert!(invalid_join.validate().is_err());
+
+        let peer = RaftPeerRequest::new("raft-1")
+            .with_dr_operation_token(SecretString::from(["dr-", "operation-token"].concat()));
+        assert!(peer.validate().is_ok());
+        let debug = format!("{peer:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("dr-operation-token"));
+        assert!(validate_raft_server_id("").is_err());
+        assert!(validate_raft_server_id("raft\n1").is_err());
+    }
+
+    #[test]
+    fn raft_configuration_and_autopilot_are_bounded_and_validated() {
+        let config: RaftConfiguration = serde_json::from_value(serde_json::json!({
+            "config": {
+                "index": 24,
+                "servers": [{
+                    "address": "127.0.0.1:8201",
+                    "leader": true,
+                    "node_id": "raft1",
+                    "protocol_version": "\u{3}",
+                    "voter": true
+                }]
+            }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(config.config.index, 24);
+        assert!(config.config.servers[0].leader);
+
+        let mut servers = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            servers.push(serde_json::json!({
+                "address": format!("127.0.0.{index}:8201"),
+                "leader": false,
+                "node_id": format!("raft-{index}"),
+                "protocol_version": "\u{3}",
+                "voter": true
+            }));
+        }
+        let error = match serde_json::from_value::<RaftConfiguration>(serde_json::json!({
+            "config": { "index": 24, "servers": servers }
+        })) {
+            Ok(_) => panic!("oversized Raft server list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        let autopilot: RaftAutopilotConfig = serde_json::from_value(serde_json::json!({
+            "last_contact_threshold": "10s",
+            "max_trailing_logs": 1000,
+            "min_quorum": "3",
+            "server_stabilization_time": "10s"
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(autopilot.max_trailing_logs.as_deref(), Some("1000"));
+        assert!(autopilot.validate().is_ok());
+
+        let invalid = RaftAutopilotConfig::new().with_last_contact_threshold("0s");
+        assert!(invalid.validate().is_err());
     }
 
     #[test]

@@ -249,7 +249,8 @@ pub mod prelude {
     pub use crate::sys::{
         Capability, CapabilityView, Health, LeaderStatus, LockedUsers, LockedUsersMountAccessor,
         LockedUsersNamespace, LoggerLevel, LoggerLevels, NamespaceInfo, NamespaceList,
-        NamespaceRequest, RateLimitQuotaConfig, RateLimitQuotaInfo, RateLimitQuotaList,
-        RateLimitQuotaRequest, Sys, VersionHistory, VersionHistoryEntry,
+        NamespaceRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
+        RaftJoinResponse, RaftPeerRequest, RaftServer, RateLimitQuotaConfig, RateLimitQuotaInfo,
+        RateLimitQuotaList, RateLimitQuotaRequest, Sys, VersionHistory, VersionHistoryEntry,
     };
 }

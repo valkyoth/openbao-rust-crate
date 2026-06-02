@@ -22,6 +22,8 @@ All notable changes to this project are documented here.
 - Rate-limit quota config and named rate-limit quota list/create/read/delete
   helpers.
 - Locked-user list/filter and unlock helpers.
+- Integrated Storage Raft join, configuration, peer remove/promote/demote,
+  HA bootstrap, and Autopilot JSON helpers.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -57,6 +59,10 @@ All notable changes to this project are documented here.
 - Locked-user namespace, mount-accessor, and alias-identifier lists are bounded
   during deserialization, and unlock path parameters must be single path
   segments.
+- Raft join client keys, auto-join metadata, and DR operation tokens are
+  represented as secret material and redacted from debug output. Raft server
+  lists are bounded, peer IDs are validated, and Autopilot duration/integer
+  fields are checked before request dispatch.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

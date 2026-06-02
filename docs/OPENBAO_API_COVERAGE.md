@@ -49,6 +49,8 @@ Sources:
 - System rate-limit quotas: https://openbao.org/api-docs/2.4.x/system/rate-limit-quotas/
 - System host info: https://openbao.org/api-docs/system/host-info/
 - System locked users: https://openbao.org/api-docs/next/system/user-lockout/
+- System Raft storage: https://openbao.org/api-docs/system/storage/raft/
+- System Raft Autopilot: https://openbao.org/api-docs/system/storage/raftautopilot/
 
 ## Foundation
 
@@ -199,8 +201,10 @@ Support plan:
 - `0.8.0`: leader status, OpenAPI discovery, JSON metrics, host diagnostics,
   runtime logger read/set/reset, installed version history, namespace
   management, rate-limit quota management, and locked-user list/filter/unlock
-  helpers are implemented. Storage and broader diagnostic endpoints remain
-  planned.
+  helpers are implemented. Integrated Storage Raft join/configuration/peer
+  mutation/bootstrap helpers and Autopilot JSON helpers are implemented.
+  Binary Raft snapshots, raw storage, and broader diagnostic endpoints remain
+  planned until the crate has an explicit raw-body transport API.
 
 ## OpenBao-Specific Notes
 

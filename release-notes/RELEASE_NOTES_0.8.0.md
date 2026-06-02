@@ -30,13 +30,14 @@
   common access checks; runtime logger level helpers and installed
   version-history listing; namespace management helpers; rate-limit quota
   config and named quota helpers; locked-user list/filter/unlock helpers;
-  read-only admin bootstrap preview with would-create, would-update, and
-  would-issue statuses; advisory
+  Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON
+  helpers; read-only admin bootstrap preview with would-create, would-update,
+  and would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
   choices; shared `ListEntries` ergonomics for common string list responses;
   optional RFC3339 timestamp parsing helpers behind the `time` feature.
-- Remaining `0.8.0` planned work: storage and additional system backend
-  coverage.
+- Remaining `0.8.0` planned work: raw storage/snapshot transport coverage and
+  additional system backend coverage.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -74,6 +75,10 @@
   validated, quota names are single path segments, and exempt paths are bounded.
 - Locked-user namespace, mount-accessor, and alias-identifier lists are bounded
   during deserialization. Unlock path parameters must be single path segments.
+- Raft join client keys, auto-join metadata, and DR operation tokens are
+  secret-aware and redacted from debug output. Raft server lists are bounded,
+  peer IDs are validated, and Autopilot duration/integer fields are checked
+  before request dispatch.
 - Typed capability views keep the existing raw string lists available and
   preserve unknown future capability names instead of dropping or rejecting
   them.

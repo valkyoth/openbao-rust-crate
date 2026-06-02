@@ -1298,6 +1298,172 @@ async fn sys_locked_users_lifecycle_uses_documented_paths() {
 }
 
 #[tokio::test]
+async fn sys_raft_storage_helpers_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..9 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/sys/storage/raft/join HTTP/1.1"));
+                    assert!(
+                        request.contains(r#""leader_api_addr":"https://leader.example.com:8200""#)
+                    );
+                    assert!(request.contains(r#""leader_client_key":"leader-client-key""#));
+                    assert!(request.contains(r#""auto_join":"provider-metadata""#));
+                    r#"{"joined":true}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/sys/storage/raft/configuration HTTP/1.1"));
+                    r#"{"data":{"config":{"index":24,"servers":[{"address":"127.0.0.1:8201","leader":true,"node_id":"raft1","protocol_version":"3","voter":true},{"address":"127.0.0.2:8201","leader":false,"node_id":"raft2","protocol_version":"3","voter":false}]}}}"#.to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/sys/storage/raft/remove-peer HTTP/1.1"));
+                    assert!(request.contains(r#""server_id":"raft2""#));
+                    String::new()
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/sys/storage/raft/promote HTTP/1.1"));
+                    assert!(request.contains(r#""server_id":"raft2""#));
+                    assert!(request.contains(r#""dr_operation_token":"dr-operation-token""#));
+                    String::new()
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/sys/storage/raft/demote HTTP/1.1"));
+                    assert!(request.contains(r#""server_id":"raft2""#));
+                    String::new()
+                }
+                5 => {
+                    assert!(request.starts_with("POST /v1/sys/storage/raft/bootstrap HTTP/1.1"));
+                    String::new()
+                }
+                6 => {
+                    assert!(
+                        request.starts_with("GET /v1/sys/storage/raft/autopilot/state HTTP/1.1")
+                    );
+                    r#"{"healthy":true,"failure_tolerance":1,"servers":{"raft1":{"id":"raft1","name":"raft1","address":"127.0.0.1:8201","node_status":"alive","last_contact":"0s","last_term":3,"last_index":459,"healthy":true,"stable_since":"2026-06-02T00:00:00Z","status":"leader","meta":null}},"leader":"raft1","voters":["raft1"],"non_voters":null}"#.to_owned()
+                }
+                7 => {
+                    assert!(
+                        request.starts_with(
+                            "GET /v1/sys/storage/raft/autopilot/configuration HTTP/1.1"
+                        )
+                    );
+                    r#"{"cleanup_dead_servers":false,"dead_server_last_contact_threshold":"24h0m0s","last_contact_threshold":"10s","max_trailing_logs":1000,"min_quorum":3,"server_stabilization_time":"10s"}"#.to_owned()
+                }
+                8 => {
+                    assert!(
+                        request.starts_with(
+                            "POST /v1/sys/storage/raft/autopilot/configuration HTTP/1.1"
+                        )
+                    );
+                    assert!(request.contains(r#""cleanup_dead_servers":true"#));
+                    assert!(request.contains(r#""last_contact_threshold":"10s""#));
+                    assert!(request.contains(r#""min_quorum":"3""#));
+                    String::new()
+                }
+                _ => unreachable!(),
+            };
+            let response = if body.is_empty() {
+                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+            } else {
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            };
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let join = openbao::sys::RaftJoinRequest::new("https://leader.example.com:8200")
+        .with_leader_client_key(test_secret(&["leader", "-client-key"]))
+        .with_auto_join(test_secret(&["provider", "-metadata"]));
+    let join_response = client
+        .sys()
+        .raft_join(&join)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(join_response.joined);
+
+    let configuration = client
+        .sys()
+        .raft_configuration()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(configuration.config.index, 24);
+    assert_eq!(configuration.config.servers[0].node_id, "raft1");
+
+    client
+        .sys()
+        .raft_remove_peer(&openbao::sys::RaftPeerRequest::new("raft2"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .raft_promote_peer(
+            &openbao::sys::RaftPeerRequest::new("raft2")
+                .with_dr_operation_token(test_secret(&["dr", "-operation-token"])),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .raft_demote_peer(&openbao::sys::RaftPeerRequest::new("raft2"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .raft_bootstrap()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let state = client
+        .sys()
+        .raft_autopilot_state_json()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(state["leader"], "raft1");
+
+    let autopilot = client
+        .sys()
+        .raft_autopilot_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(autopilot.min_quorum.as_deref(), Some("3"));
+
+    let mut autopilot = openbao::sys::RaftAutopilotConfig::new()
+        .with_last_contact_threshold("10s")
+        .with_server_stabilization_time("10s");
+    autopilot.cleanup_dead_servers = Some(true);
+    autopilot.dead_server_last_contact_threshold = Some("24h".to_owned());
+    autopilot.max_trailing_logs = Some("1000".to_owned());
+    autopilot.min_quorum = Some("3".to_owned());
+    client
+        .sys()
+        .write_raft_autopilot_config(&autopilot)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_wrapping_wrap_sends_ttl_header() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
