@@ -34,8 +34,8 @@ use openbao::Client;
 ```
 
 This README documents the `0.8.0` development line. `0.8.0` builds on
-`0.7.0` with remaining auth method and system backend coverage planned for the
-release.
+`0.7.0` with remaining auth method and system backend coverage, plus optional
+timestamp parsing helpers, planned for the release.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -112,6 +112,7 @@ Implemented now:
   deployment assumptions; this is advisory and not a certification claim.
 - Shared `ListEntries` ergonomics for common list responses without changing
   their documented fields.
+- Optional RFC3339 timestamp parsing helpers behind the `time` feature.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Typed custom plugin wrapper pattern documentation for application-specific
   OpenBao plugin APIs.
@@ -121,7 +122,7 @@ Implemented now:
 Planned next:
 
 - Remaining `0.8.0`: Kerberos auth, broader system backend automation, and
-  optional timestamp parsing.
+  quota/namespace/logger/storage coverage.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -155,7 +156,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.7.0` development line tracks compatibility evidence across this supported
+The `0.8.0` development line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -199,6 +200,14 @@ uses:
 openbao = { version = "0.8", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
+Optional RFC3339 timestamp parsing is available behind the lightweight `time`
+feature:
+
+```toml
+[dependencies]
+openbao = { version = "0.8", features = ["time"] }
+```
+
 ## Features
 
 | Feature | Default | Purpose |
@@ -225,6 +234,7 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | `transit` | yes | Transit cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
 | `sys` | yes | System backend helpers. |
+| `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
@@ -243,6 +253,7 @@ openbao = { version = "0.8", default-features = false, features = ["kv2", "sys",
 | HTTPS by default | Yes | Plain HTTP is rejected unless loopback HTTP is explicitly enabled. |
 | Redirect protection | Yes | Redirect following is disabled to avoid forwarding token headers. |
 | Response size cap | Yes | 32 MiB default with per-client lowering for small-response workflows. |
+| Timestamp parsing | Optional | Enable `time` for RFC3339 parsing helpers without changing response field types. |
 | TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can opt down to TLS 1.2. |
 | Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
 | Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. |
@@ -529,6 +540,36 @@ async fn main() -> Result<()> {
     )
     .await?;
 
+    Ok(())
+}
+```
+
+Parse OpenBao timestamps when the `time` feature is enabled:
+
+```rust,no_run
+use openbao::{
+    Client, Result, SecretString, parse_optional_rfc3339_timestamp,
+    parse_rfc3339_timestamp,
+};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct AppConfig {
+    enabled: bool,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let secret = client.kv2("secret")?.read::<AppConfig>("services/api").await?;
+
+    let created_at = parse_rfc3339_timestamp(&secret.metadata.created_time)?;
+    let deleted_at =
+        parse_optional_rfc3339_timestamp(Some(secret.metadata.deletion_time.as_str()))?;
+
+    let _enabled = secret.data.enabled;
+    let _audit_times = (created_at, deleted_at);
     Ok(())
 }
 ```

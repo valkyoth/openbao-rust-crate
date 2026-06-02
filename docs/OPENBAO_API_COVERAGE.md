@@ -66,6 +66,9 @@ Sources:
 - Shared list ergonomics:
   common string list response structs implement `ListEntries`; secret accessor
   lists remain separate secret-aware types.
+- Timestamp ergonomics:
+  optional RFC3339 parsing helpers are available behind the `time` feature
+  while response structs keep OpenBao's original string fields.
 
 ## Auth Methods
 

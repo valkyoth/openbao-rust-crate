@@ -54,6 +54,8 @@ pub mod policy;
 #[cfg(feature = "transit")]
 pub mod posture;
 mod response;
+#[cfg(feature = "time")]
+pub mod timestamp;
 mod validation;
 
 #[cfg(any(
@@ -100,6 +102,12 @@ pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
 pub use response::{Empty, ListEntries, ResponseEnvelope};
 pub use secrecy::{self, ExposeSecret, SecretString};
 pub use serde_json::{self, Value as JsonValue};
+#[cfg(feature = "time")]
+pub use time::{self, OffsetDateTime};
+#[cfg(feature = "time")]
+pub use timestamp::{
+    OptionalTimestampExt, TimestampExt, parse_optional_rfc3339_timestamp, parse_rfc3339_timestamp,
+};
 
 /// Common imports for application code using the OpenBao SDK.
 pub mod prelude {
@@ -112,6 +120,11 @@ pub mod prelude {
     #[cfg(feature = "transit")]
     pub use crate::{
         FipsPosture, FipsPostureFinding, FipsPostureNote, FipsPostureReport, FipsPostureSeverity,
+    };
+    #[cfg(feature = "time")]
+    pub use crate::{
+        OffsetDateTime, OptionalTimestampExt, TimestampExt, parse_optional_rfc3339_timestamp,
+        parse_rfc3339_timestamp,
     };
 
     #[cfg(all(

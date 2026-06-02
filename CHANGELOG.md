@@ -20,6 +20,7 @@ All notable changes to this project are documented here.
 - Advisory `FipsPosture` report builder for crate-visible Transit key, hash,
   signature, and seal-assumption choices.
 - Shared `ListEntries` trait for common string list responses.
+- Optional RFC3339 timestamp parsing helpers behind the `time` feature.
 
 ### Security
 
@@ -44,6 +45,7 @@ All notable changes to this project are documented here.
   certified.
 - `ListEntries` is implemented only for regular string list responses; secret
   accessor lists keep their dedicated secret-aware types.
+- Timestamp parse errors do not echo caller-provided values.
 
 ## 0.7.0 - 2026-06-01
 

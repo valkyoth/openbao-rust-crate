@@ -28,9 +28,10 @@
   capability views for common access checks; read-only admin bootstrap preview
   with would-create, would-update, and would-issue statuses; advisory
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
-  choices; shared `ListEntries` ergonomics for common string list responses.
+  choices; shared `ListEntries` ergonomics for common string list responses;
+  optional RFC3339 timestamp parsing helpers behind the `time` feature.
 - Remaining `0.8.0` planned work: Kerberos auth coverage; quotas/namespaces
-  and additional system backend coverage; optional timestamp parsing.
+  and additional system backend coverage.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -66,6 +67,8 @@
   systems, or deployment processes.
 - `ListEntries` is limited to regular string lists. Secret accessor lists are
   intentionally excluded because their entries are sensitive.
+- Timestamp parse errors intentionally do not echo the provided timestamp value
+  so loggable errors stay value-free near secret-bearing response handling.
 
 ## Security And Stability Gate
 

@@ -10,6 +10,7 @@ cargo search base64-ng --limit 1
 cargo search secrecy --limit 1
 cargo search serde --limit 1
 cargo search serde_json --limit 1
+cargo search time --limit 1
 cargo search tokio --limit 1
 cargo search zeroize --limit 1
 

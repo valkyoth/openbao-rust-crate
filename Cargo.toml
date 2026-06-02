@@ -85,6 +85,7 @@ totp = []
 transit = []
 transit-bytes = ["dep:base64-ng"]
 sys = []
+time = ["dep:time"]
 # Production operator APIs for init/unseal/rekey/rotate. These endpoints can
 # expose or mutate root, unseal, recovery, and encryption-key material. They
 # are disabled by default and require operator-ops-acknowledged.
@@ -115,6 +116,7 @@ secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 subtle = "2.6.1"
+time = { version = "0.3.47", default-features = false, features = ["parsing"], optional = true }
 zeroize = "1.8.2"
 
 [dev-dependencies]

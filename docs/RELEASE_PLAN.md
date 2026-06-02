@@ -192,7 +192,8 @@ Stop condition:
   such as `can_read`, are implemented.
 - Shared `ListEntries` trait for structurally identical string list responses
   is implemented.
-- Optional timestamp parsing helpers behind a lightweight `time` feature.
+- Optional timestamp parsing helpers behind a lightweight `time` feature are
+  implemented.
 
 Publishable value:
 
