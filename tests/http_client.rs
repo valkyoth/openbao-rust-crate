@@ -3483,6 +3483,152 @@ async fn userpass_admin_user_lifecycle_uses_documented_paths() {
 }
 
 #[tokio::test]
+async fn radius_login_sends_documented_path_and_secret_password() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/auth/radius/login/alice HTTP/1.1"));
+        assert!(request.contains(r#""password":"p-value""#));
+        let body = r#"{"auth":{"client_token":"radius-token","accessor":"radius-accessor","policies":["default"],"metadata":{"username":"alice"},"lease_duration":3600,"renewable":true}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+    let (client, login) = client
+        .login_radius("alice", test_secret(&["p", "-value"]))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(login.accessor.expose_secret(), "radius-accessor");
+    assert_eq!(
+        login.metadata.get("username").map(String::as_str),
+        Some("alice")
+    );
+    assert_eq!(client.base_url().as_str(), format!("http://{addr}/"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn radius_admin_config_and_user_lifecycle_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body =
+                match step {
+                    0 => {
+                        assert!(request.starts_with("POST /v1/auth/radius/config HTTP/1.1"));
+                        assert!(request.contains("x-vault-token: root-token"));
+                        assert!(request.contains(r#""host":"radius.example.com""#));
+                        assert!(request.contains(r#""secret":"shared-secret""#));
+                        assert!(request.contains(r#""port":1812"#));
+                        assert!(request.contains(r#""token_policies":["web"]"#));
+                        "{}"
+                    }
+                    1 => {
+                        assert!(request.starts_with("POST /v1/auth/radius/users/alice HTTP/1.1"));
+                        assert!(request.contains(r#""policies":"dev,prod""#));
+                        "{}"
+                    }
+                    2 => {
+                        assert!(request.starts_with("GET /v1/auth/radius/users/alice HTTP/1.1"));
+                        r#"{"data":{"policies":"dev,prod"}}"#
+                    }
+                    3 => {
+                        assert!(request.starts_with(
+                            "LIST /v1/auth/radius/users?after=alice&limit=10 HTTP/1.1"
+                        ));
+                        r#"{"data":{"keys":["bob"]}}"#
+                    }
+                    4 => {
+                        assert!(request.starts_with("DELETE /v1/auth/radius/users/alice HTTP/1.1"));
+                        "{}"
+                    }
+                    _ => unreachable!(),
+                };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let admin = client
+        .radius_admin()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    admin
+        .configure(
+            &openbao::auth::radius::RadiusConfig::new(
+                "radius.example.com",
+                test_secret(&["shared", "-secret"]),
+            )
+            .with_port(1812)
+            .with_token_policy("web"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .write_user(
+            "alice",
+            &openbao::auth::radius::RadiusUserRequest::new("dev").with_policy("prod"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let user = admin
+        .read_user("alice")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(user.policies, "dev,prod");
+    let users = admin
+        .list_users_page(Some("alice"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(users.keys, ["bob"]);
+    admin
+        .delete_user("alice")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn cert_login_sends_documented_path_and_role_name() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

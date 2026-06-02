@@ -9,8 +9,8 @@
 //! - authentication state is represented in the type system.
 //!
 //! The public API covers environment-based client construction, AppRole login,
-//! direct token auth, token lifecycle helpers, Cubbyhole, Identity, KV v1/v2,
-//! Kubernetes secrets, RabbitMQ secrets, Transit, system
+//! direct token auth, RADIUS auth, token lifecycle helpers, Cubbyhole,
+//! Identity, KV v1/v2, Kubernetes secrets, RabbitMQ secrets, Transit, system
 //! health/seal status, dev-only bootstrap, mount management, audit devices,
 //! safe exact lease helpers, plugin catalog operations, SSH, TOTP, and raw
 //! JSON calls for advanced users.
@@ -59,6 +59,7 @@ mod validation;
     feature = "cert-auth",
     feature = "jwt-auth",
     feature = "kubernetes-auth",
+    feature = "radius-auth",
     feature = "userpass",
     feature = "token"
 ))]
@@ -125,6 +126,7 @@ pub mod prelude {
         feature = "cert-auth",
         feature = "jwt-auth",
         feature = "kubernetes-auth",
+        feature = "radius-auth",
         feature = "userpass",
         feature = "token"
     ))]
@@ -141,6 +143,10 @@ pub mod prelude {
     #[cfg(feature = "kubernetes-auth")]
     pub use crate::auth::kubernetes::{
         KubernetesAuth, KubernetesAuthAdmin, KubernetesLoginMetadata, KubernetesRole,
+    };
+    #[cfg(feature = "radius-auth")]
+    pub use crate::auth::radius::{
+        RadiusAuth, RadiusAuthAdmin, RadiusConfig, RadiusLoginMetadata, RadiusUserRequest,
     };
     #[cfg(feature = "token")]
     pub use crate::auth::token::{Token, TokenAuth, TokenCreateRequest, TokenInfo};

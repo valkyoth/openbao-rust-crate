@@ -1,6 +1,6 @@
 [package]
 name = "openbao"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -47,6 +47,7 @@ default = [
     "identity",
     "jwt-auth",
     "kubernetes-auth",
+    "radius-auth",
     "userpass",
     "token",
     "kv1",
@@ -68,6 +69,7 @@ database = []
 identity = []
 jwt-auth = []
 kubernetes-auth = []
+radius-auth = []
 userpass = []
 token = []
 kv1 = []

@@ -33,9 +33,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.7.0` development line. `0.7.0` builds on
-`0.6.0` with AppRole administration and the remaining identity/plugin-style
-engine coverage planned for the release.
+This README documents the `0.8.0` development line. `0.8.0` builds on
+`0.7.0` with remaining auth method and system backend coverage planned for the
+release.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -51,6 +51,7 @@ Implemented now:
 - TLS certificate auth login, method config, CA role, and CRL administration
   helpers.
 - JWT login plus JWT/OIDC auth method config and role administration helpers.
+- RADIUS login plus config and user policy mapping helpers.
 - Userpass login plus user create/read/list/delete, password update, and
   policy update helpers.
 - Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
@@ -112,8 +113,8 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.7.0`: none.
-- `0.8.0`: remaining auth methods and broader system backend automation.
+- Remaining `0.8.0`: LDAP and Kerberos auth, broader system backend
+  automation, FIPS posture reporting, and bootstrap dry-run preview.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -180,7 +181,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.7", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.8", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -188,7 +189,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.7", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.8", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 ## Features
@@ -202,6 +203,7 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | `identity` | yes | Identity entity, group, entity-alias, and group-alias helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
+| `radius-auth` | yes | RADIUS login/config/user mapping helpers. |
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
 | `rabbitmq` | yes | RabbitMQ secrets engine connection, lease, role, and credential helpers. |
@@ -256,6 +258,7 @@ openbao = { version = "0.7", default-features = false, features = ["kv2", "sys",
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
 | JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config and role administration helpers. Browser OIDC callback helpers are still planned. |
+| RADIUS auth | Yes | Login, method config, user create/read/list/delete, and paginated user list helpers. |
 | Userpass auth | Yes | Login and user create/read/list/delete, password update, and policy update helpers. |
 
 ### Secret Engines
@@ -1121,7 +1124,7 @@ scripts/checks.sh
 Run the current release gate:
 
 ```bash
-scripts/release_0_7_gate.sh
+scripts/release_0_8_gate.sh
 ```
 
 Set `OPENBAO_SKIP_INTEGRATION=1` only when Podman is unavailable; release

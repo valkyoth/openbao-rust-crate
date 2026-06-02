@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## 0.8.0 - Unreleased
+
+### Added
+
+- Started the `0.8.0` development line for remaining auth-method and system
+  backend coverage.
+- RADIUS auth login, method configuration, user policy mapping, user
+  read/list/delete, and paginated user-list helpers.
+
+### Security
+
+- RADIUS shared secrets, login passwords, returned tokens, and accessors are
+  represented as `SecretString` and redacted from debug output.
+- RADIUS user lists and login metadata maps use bounded deserializers, and
+  CIDR/duration request fields are validated before dispatch.
+
 ## 0.7.0 - 2026-06-01
 
 ### Added

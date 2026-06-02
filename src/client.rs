@@ -459,6 +459,7 @@ impl Client<Unauthenticated> {
         feature = "cert-auth",
         feature = "jwt-auth",
         feature = "kubernetes-auth",
+        feature = "radius-auth",
         feature = "userpass"
     ))]
     pub(crate) fn clone_without_state(&self) -> Client<Unauthenticated> {
