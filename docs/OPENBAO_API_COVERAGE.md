@@ -59,9 +59,10 @@ Sources:
   with required-key accessors, byte-oriented Transit helpers, JWS-oriented
   Transit sign/verify helpers, ACL policy builders, and idempotent admin
   bootstrap for common service setup.
-- Planned posture helpers:
-  best-effort FIPS profile validation for crate-controlled choices and a
-  future quantum-readiness profile once OpenBao exposes stable primitives.
+- Posture helpers:
+  best-effort FIPS-oriented reporting is implemented for crate-visible Transit
+  and seal-assumption choices. A future quantum-readiness profile remains
+  planned once OpenBao exposes stable primitives.
 
 ## Auth Methods
 

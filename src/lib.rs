@@ -51,6 +51,8 @@ pub mod duration;
 mod error;
 mod path;
 pub mod policy;
+#[cfg(feature = "transit")]
+pub mod posture;
 mod response;
 mod validation;
 
@@ -90,6 +92,10 @@ pub use client::{
 pub use duration::duration_to_bao_string;
 pub use error::{Error, Result};
 pub use policy::{AclCapability, AclPolicyBuilder};
+#[cfg(feature = "transit")]
+pub use posture::{
+    FipsPosture, FipsPostureFinding, FipsPostureNote, FipsPostureReport, FipsPostureSeverity,
+};
 pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
 pub use response::{Empty, ResponseEnvelope};
 pub use secrecy::{self, ExposeSecret, SecretString};
@@ -102,6 +108,10 @@ pub mod prelude {
         Error, ExposeSecret, HeaderMode, Identity, JsonValue, Method, OpenBao, OpenBaoConfig,
         ResponseEnvelope, Result, SecretString, SharedClient, StatusCode, Unauthenticated,
         duration_to_bao_string,
+    };
+    #[cfg(feature = "transit")]
+    pub use crate::{
+        FipsPosture, FipsPostureFinding, FipsPostureNote, FipsPostureReport, FipsPostureSeverity,
     };
 
     #[cfg(all(

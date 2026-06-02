@@ -17,6 +17,8 @@ All notable changes to this project are documented here.
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
   `WouldIssue` statuses before applying a plan.
+- Advisory `FipsPosture` report builder for crate-visible Transit key, hash,
+  signature, and seal-assumption choices.
 
 ### Security
 
@@ -36,6 +38,9 @@ All notable changes to this project are documented here.
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state
   or issues credentials.
+- `FipsPosture` is intentionally best-effort and records unverifiable
+  deployment assumptions instead of claiming OpenBao or the deployment is FIPS
+  certified.
 
 ## 0.7.0 - 2026-06-01
 

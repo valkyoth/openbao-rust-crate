@@ -26,10 +26,12 @@
   mapping, user read/list/delete, paginated user-list helpers; system leader
   status, OpenAPI discovery, JSON telemetry metrics helpers, and typed
   capability views for common access checks; read-only admin bootstrap preview
-  with would-create, would-update, and would-issue statuses.
+  with would-create, would-update, and would-issue statuses; advisory
+  `FipsPosture` reporting for crate-visible Transit and seal-assumption
+  choices.
 - Remaining `0.8.0` planned work: Kerberos auth coverage; quotas/namespaces
-  and additional system backend coverage; FIPS posture helper; shared list
-  ergonomics; optional timestamp parsing.
+  and additional system backend coverage; shared list ergonomics; optional
+  timestamp parsing.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -60,6 +62,9 @@
 - Admin bootstrap preview performs read-side comparisons only and never writes
   state or issues credentials. Credential operations are reported as
   `WouldIssue`.
+- `FipsPosture` is a best-effort helper over SDK-visible choices only. It does
+  not certify OpenBao, cryptographic providers, HSM/KMS use, TLS, operating
+  systems, or deployment processes.
 
 ## Security And Stability Gate
 

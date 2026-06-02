@@ -182,7 +182,8 @@ Stop condition:
   Transit choices against a conservative allowlist, warn on SHA-1, SHA-3,
   Ed25519, ChaCha20/XChaCha20, plaintext backup/exportable keys, convergent
   encryption, weak RSA sizes, and non-HSM/KMS seal assumptions, and produce a
-  machine-readable report of what the crate could and could not verify.
+  machine-readable report of what the crate could and could not verify is
+  implemented for crate-visible Transit and seal-assumption choices.
 - Bootstrap dry-run preview support for read-only change planning before
   applying state is implemented for current bootstrap operations.
 - Bootstrap convergence helpers for LDAP, RabbitMQ, Kubernetes secrets, and
