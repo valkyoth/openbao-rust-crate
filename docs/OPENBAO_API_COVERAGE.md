@@ -60,6 +60,7 @@ Sources:
 - System CORS config: https://openbao.org/api-docs/system/config-cors/
 - System step down: https://openbao.org/api-docs/system/step-down/
 - System remount: https://openbao.org/api-docs/system/remount/
+- System tools: https://openbao.org/api-docs/next/system/tools/
 
 ## Foundation
 
@@ -212,9 +213,10 @@ Support plan:
   config state, audited request-header configuration, CORS configuration,
   runtime logger read/set/reset, installed version history, namespace
   management, rate-limit quota management, remount/mount-migration
-  start/status, active-node step-down, and locked-user list/filter/unlock
-  helpers are implemented. Integrated Storage Raft join/configuration/peer
-  mutation/bootstrap helpers and Autopilot JSON helpers are implemented.
+  start/status, active-node step-down, system random/hash tools, and
+  locked-user list/filter/unlock helpers are implemented. Integrated Storage
+  Raft join/configuration/peer mutation/bootstrap helpers and Autopilot JSON
+  helpers are implemented.
   Binary Raft snapshots, raw storage, and broader diagnostic endpoints remain
   planned until the crate has an explicit raw-body transport API.
 

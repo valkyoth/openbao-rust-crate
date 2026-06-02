@@ -12,6 +12,8 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
+#[cfg(feature = "transit-bytes")]
+use zeroize::Zeroizing;
 
 use crate::{
     Authenticated, Client, Error, JsonValue, Result, Unauthenticated,
@@ -22,6 +24,8 @@ use crate::{
         deserialize_optional_bounded_string_map, deserialize_optional_bounded_string_vec,
     },
 };
+
+const MAX_SYS_RANDOM_BYTES: u64 = 1_048_576;
 
 /// System backend handle.
 #[derive(Debug)]
@@ -309,6 +313,209 @@ impl LoggerLevels {
     #[must_use]
     pub fn into_inner(self) -> BTreeMap<String, String> {
         self.0
+    }
+}
+
+/// OpenBao entropy source accepted by `/sys/tools/random`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SysRandomSource {
+    /// Use the platform entropy source.
+    Platform,
+    /// Mix bytes from all available OpenBao entropy sources.
+    All,
+}
+
+impl SysRandomSource {
+    /// Returns the OpenBao path segment for this random source.
+    #[must_use]
+    pub const fn as_path_segment(self) -> &'static str {
+        match self {
+            Self::Platform => "platform",
+            Self::All => "all",
+        }
+    }
+}
+
+/// Output encoding accepted by `/sys/tools/random` and `/sys/tools/hash`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub enum SysToolsOutputFormat {
+    /// Hexadecimal output.
+    #[serde(rename = "hex")]
+    Hex,
+    /// Base64 output.
+    #[serde(rename = "base64")]
+    Base64,
+}
+
+/// Hash algorithm accepted by `/sys/tools/hash`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SysHashAlgorithm {
+    /// SHA2-224.
+    Sha2_224,
+    /// SHA2-256.
+    Sha2_256,
+    /// SHA2-384.
+    Sha2_384,
+    /// SHA2-512.
+    Sha2_512,
+    /// SHA3-224. Not FIPS-certified in OpenBao FIPS mode.
+    Sha3_224,
+    /// SHA3-256. Not FIPS-certified in OpenBao FIPS mode.
+    Sha3_256,
+    /// SHA3-384. Not FIPS-certified in OpenBao FIPS mode.
+    Sha3_384,
+    /// SHA3-512. Not FIPS-certified in OpenBao FIPS mode.
+    Sha3_512,
+}
+
+impl SysHashAlgorithm {
+    /// Returns the OpenBao path segment for this hash algorithm.
+    #[must_use]
+    pub const fn as_path_segment(self) -> &'static str {
+        match self {
+            Self::Sha2_224 => "sha2-224",
+            Self::Sha2_256 => "sha2-256",
+            Self::Sha2_384 => "sha2-384",
+            Self::Sha2_512 => "sha2-512",
+            Self::Sha3_224 => "sha3-224",
+            Self::Sha3_256 => "sha3-256",
+            Self::Sha3_384 => "sha3-384",
+            Self::Sha3_512 => "sha3-512",
+        }
+    }
+}
+
+/// Request for `/sys/tools/random`.
+#[derive(Clone, Debug, Default)]
+pub struct SysRandomRequest {
+    /// Number of random bytes to return. OpenBao defaults to 32 when omitted.
+    pub bytes: Option<u64>,
+    /// Output encoding. OpenBao defaults to base64 when omitted.
+    pub format: Option<SysToolsOutputFormat>,
+}
+
+impl SysRandomRequest {
+    /// Creates a request that uses OpenBao's default byte count and format.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Requests an explicit byte count.
+    ///
+    /// The client rejects zero and unusually large values before dispatch.
+    #[must_use]
+    pub fn with_bytes(mut self, bytes: u64) -> Self {
+        self.bytes = Some(bytes);
+        self
+    }
+
+    /// Requests a specific output encoding.
+    #[must_use]
+    pub fn with_format(mut self, format: SysToolsOutputFormat) -> Self {
+        self.format = Some(format);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(bytes) = self.bytes {
+            validate_sys_random_bytes(bytes)?;
+        }
+        Ok(())
+    }
+}
+
+/// Random bytes returned by `/sys/tools/random`.
+#[derive(Clone, Deserialize)]
+pub struct SysRandomResponse {
+    /// Random bytes in the requested encoding.
+    pub random_bytes: SecretString,
+}
+
+impl fmt::Debug for SysRandomResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SysRandomResponse")
+            .field("random_bytes", &"<redacted>")
+            .finish()
+    }
+}
+
+impl SysRandomResponse {
+    /// Decodes base64 random bytes returned with `SysToolsOutputFormat::Base64`.
+    #[cfg(feature = "transit-bytes")]
+    pub fn random_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
+        decode_sys_base64_secret(&self.random_bytes)
+    }
+}
+
+/// Request for `/sys/tools/hash`.
+#[derive(Clone)]
+pub struct SysHashRequest {
+    /// Base64-encoded input data to hash.
+    pub input: SecretString,
+    /// Output encoding. OpenBao defaults to hex when omitted.
+    pub format: Option<SysToolsOutputFormat>,
+}
+
+impl fmt::Debug for SysHashRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SysHashRequest")
+            .field("input", &"<redacted>")
+            .field("format", &self.format)
+            .finish()
+    }
+}
+
+impl SysHashRequest {
+    /// Creates a hash request from base64-encoded input.
+    #[must_use]
+    pub fn from_base64_input(input: SecretString) -> Self {
+        Self {
+            input,
+            format: None,
+        }
+    }
+
+    /// Creates a hash request from raw input bytes.
+    #[cfg(feature = "transit-bytes")]
+    pub fn from_input_bytes(input: &[u8]) -> Result<Self> {
+        Ok(Self {
+            input: encode_sys_base64_secret(input)?,
+            format: None,
+        })
+    }
+
+    /// Requests a specific output encoding.
+    #[must_use]
+    pub fn with_format(mut self, format: SysToolsOutputFormat) -> Self {
+        self.format = Some(format);
+        self
+    }
+}
+
+/// Hash output returned by `/sys/tools/hash`.
+#[derive(Clone, Deserialize)]
+pub struct SysHashResponse {
+    /// Digest in the requested encoding.
+    pub sum: SecretString,
+}
+
+impl fmt::Debug for SysHashResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SysHashResponse")
+            .field("sum", &"<redacted>")
+            .finish()
+    }
+}
+
+impl SysHashResponse {
+    /// Decodes base64 output returned with `SysToolsOutputFormat::Base64`.
+    #[cfg(feature = "transit-bytes")]
+    pub fn sum_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
+        decode_sys_base64_secret(&self.sum)
     }
 }
 
@@ -2348,6 +2555,19 @@ struct CapabilitiesPayload<'a> {
 }
 
 #[derive(Serialize)]
+struct SysRandomPayload {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    format: Option<SysToolsOutputFormat>,
+}
+
+#[derive(Serialize)]
+struct SysHashPayload<'a> {
+    input: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    format: Option<SysToolsOutputFormat>,
+}
+
+#[derive(Serialize)]
 struct InitPayload {
     secret_shares: u8,
     secret_threshold: u8,
@@ -2692,6 +2912,64 @@ impl Sys<'_, Unauthenticated> {
 }
 
 impl Sys<'_, Authenticated> {
+    /// Generates random bytes through `/sys/tools/random`.
+    ///
+    /// OpenBao defaults to platform entropy, 32 bytes, and base64 output when
+    /// the request does not override those values.
+    pub async fn random(&self, request: &SysRandomRequest) -> Result<SysRandomResponse> {
+        request.validate()?;
+        let payload = SysRandomPayload {
+            format: request.format,
+        };
+        let envelope: ResponseEnvelope<SysRandomResponse> = self
+            .client
+            .request_json(
+                Method::POST,
+                &sys_random_path(None, request.bytes),
+                Some(&payload),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Generates random bytes through `/sys/tools/random/:source`.
+    pub async fn random_from_source(
+        &self,
+        source: SysRandomSource,
+        request: &SysRandomRequest,
+    ) -> Result<SysRandomResponse> {
+        request.validate()?;
+        let payload = SysRandomPayload {
+            format: request.format,
+        };
+        let envelope: ResponseEnvelope<SysRandomResponse> = self
+            .client
+            .request_json(
+                Method::POST,
+                &sys_random_path(Some(source), request.bytes),
+                Some(&payload),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Hashes base64-encoded input through `/sys/tools/hash/:algorithm`.
+    pub async fn hash(
+        &self,
+        algorithm: SysHashAlgorithm,
+        request: &SysHashRequest,
+    ) -> Result<SysHashResponse> {
+        let payload = SysHashPayload {
+            input: request.input.expose_secret(),
+            format: request.format,
+        };
+        let envelope: ResponseEnvelope<SysHashResponse> = self
+            .client
+            .request_json(Method::POST, &sys_hash_path(algorithm), Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Seals the active OpenBao node.
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
@@ -3983,6 +4261,60 @@ fn sys_logger_path(name: &str) -> Result<String> {
     Ok(["sys/loggers", &segments[0]].join("/"))
 }
 
+fn sys_random_path(source: Option<SysRandomSource>, bytes: Option<u64>) -> String {
+    let mut segments = vec!["sys/tools/random"];
+    let bytes = bytes.map(|value| value.to_string());
+    if let Some(source) = source {
+        segments.push(source.as_path_segment());
+    }
+    if let Some(bytes) = bytes.as_deref() {
+        segments.push(bytes);
+    }
+    segments.join("/")
+}
+
+fn sys_hash_path(algorithm: SysHashAlgorithm) -> String {
+    ["sys/tools/hash", algorithm.as_path_segment()].join("/")
+}
+
+fn validate_sys_random_bytes(bytes: u64) -> Result<()> {
+    if bytes == 0 {
+        return Err(Error::InvalidParameter(
+            "system random byte count must be greater than zero".into(),
+        ));
+    }
+    if bytes > MAX_SYS_RANDOM_BYTES {
+        return Err(Error::InvalidParameter(format!(
+            "system random byte count must not exceed {MAX_SYS_RANDOM_BYTES}"
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(feature = "transit-bytes")]
+fn encode_sys_base64_secret(input: &[u8]) -> Result<SecretString> {
+    let encoded = base64_ng::STANDARD
+        .encode_secret(input)
+        .map_err(|_| Error::InvalidParameter("base64 input is too large".into()))?;
+    let exposed = encoded.try_into_exposed_string().map_err(|_| {
+        Error::Internal("base64-ng produced non-UTF-8 text for standard base64 output")
+    })?;
+    Ok(SecretString::from(
+        exposed.into_exposed_unprotected_string_caller_must_zeroize(),
+    ))
+}
+
+#[cfg(feature = "transit-bytes")]
+fn decode_sys_base64_secret(input: &SecretString) -> Result<Zeroizing<Vec<u8>>> {
+    let decoded = base64_ng::STANDARD
+        .decode_secret(input.expose_secret().as_bytes())
+        .map_err(|_| Error::Decode("OpenBao response contained invalid base64".into()))?;
+    let exposed = decoded.into_exposed_vec();
+    Ok(Zeroizing::new(
+        exposed.into_exposed_unprotected_vec_caller_must_zeroize(),
+    ))
+}
+
 fn namespace_path(path: &str) -> Result<String> {
     let segments = validate_namespace_path(path)?;
     Ok(["sys/namespaces", &segments.join("/")].join("/"))
@@ -4929,11 +5261,13 @@ mod tests {
         CorsConfig, CorsConfigRequest, HaStatus, LeaseDuration, LockedUsers, LoggerLevel,
         MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest,
         RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest, RaftPeerRequest,
-        RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest, UiMounts,
-        UiNamespaces, VersionHistory, audited_request_header_path, internal_ui_mount_path,
-        locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
-        sys_path, validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
-        validate_namespace_request, validate_raft_server_id, validate_rate_limit_quota_config,
+        RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest,
+        SysHashAlgorithm, SysHashRequest, SysRandomRequest, SysRandomResponse, SysRandomSource,
+        UiMounts, UiNamespaces, VersionHistory, audited_request_header_path,
+        internal_ui_mount_path, locked_user_unlock_path, namespace_path, rate_limit_quota_path,
+        remount_status_path, sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
+        validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
+        validate_raft_server_id, validate_rate_limit_quota_config,
         validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
@@ -5131,6 +5465,46 @@ mod tests {
         assert_eq!(LoggerLevel::Info.as_str(), "info");
         assert_eq!(LoggerLevel::Warn.as_str(), "warn");
         assert_eq!(LoggerLevel::Error.as_str(), "error");
+    }
+
+    #[test]
+    fn system_tool_paths_validate_and_redact_secrets() {
+        assert_eq!(SysRandomSource::Platform.as_path_segment(), "platform");
+        assert_eq!(SysRandomSource::All.as_path_segment(), "all");
+        assert_eq!(
+            sys_random_path(None, Some(32)),
+            "sys/tools/random/32".to_owned()
+        );
+        assert_eq!(
+            sys_random_path(Some(SysRandomSource::All), Some(64)),
+            "sys/tools/random/all/64".to_owned()
+        );
+        assert_eq!(
+            sys_hash_path(SysHashAlgorithm::Sha2_256),
+            "sys/tools/hash/sha2-256".to_owned()
+        );
+        assert!(SysRandomRequest::new().with_bytes(1).validate().is_ok());
+        assert!(SysRandomRequest::new().with_bytes(0).validate().is_err());
+        assert!(
+            SysRandomRequest::new()
+                .with_bytes(super::MAX_SYS_RANDOM_BYTES + 1)
+                .validate()
+                .is_err()
+        );
+
+        let request = SysHashRequest::from_base64_input(SecretString::from(
+            ["base64-", "secret-input"].concat(),
+        ));
+        let debug = format!("{request:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("secret-input"));
+
+        let response = SysRandomResponse {
+            random_bytes: SecretString::from(["random-", "secret"].concat()),
+        };
+        let debug = format!("{response:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("random-secret"));
     }
 
     #[test]

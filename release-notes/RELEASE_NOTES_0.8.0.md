@@ -29,9 +29,10 @@
   namespace/mount discovery, JSON telemetry metrics helpers, HA status, key
   status, host diagnostics, sanitized config state JSON, audited request-header
   config helpers, CORS config helpers, active-node step-down, and typed
-  capability views for common access checks; runtime logger level helpers and
-  installed version-history listing; namespace management helpers; rate-limit
-  quota config and named quota helpers; locked-user list/filter/unlock helpers;
+  capability views for common access checks; system random byte and hash tool
+  helpers; runtime logger level helpers and installed version-history listing;
+  namespace management helpers; rate-limit quota config and named quota helpers;
+  locked-user list/filter/unlock helpers;
   Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON helpers;
   remount/mount-migration start and status helpers; read-only admin bootstrap
   preview with would-create, would-update, and would-issue statuses; advisory
@@ -88,6 +89,9 @@
   configured HTTP header names before request dispatch.
 - Audited request-header maps are bounded during deserialization, and request
   header names are validated with HTTP header parsing before request dispatch.
+- System tools random byte and hash outputs are secret-aware and redacted from
+  debug output. Random byte counts are rejected when zero or above the local
+  1 MiB helper limit.
 - Internal UI namespace lists and mount maps are bounded during
   deserialization. UI mount detail paths are validated before request dispatch.
 - Typed capability views keep the existing raw string lists available and

@@ -208,6 +208,9 @@ Stop condition:
   implemented.
 - Internal UI namespace and mount discovery helpers are implemented with an
   explicit note that OpenBao does not guarantee endpoint stability.
+- `/sys/tools/random` and `/sys/tools/hash` helpers are implemented with
+  documented source/algorithm allowlists, a local random-byte limit, and
+  secret-aware response fields.
 
 Publishable value:
 

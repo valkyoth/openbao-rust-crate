@@ -32,6 +32,8 @@ All notable changes to this project are documented here.
   HA bootstrap, and Autopilot JSON helpers.
 - Remount/mount-migration start and status helpers.
 - Active-node step-down helper for `/sys/step-down`.
+- System tools random byte and hash helpers for `/sys/tools/random` and
+  `/sys/tools/hash`.
 - Typed capability views and common `can_read`/`can_update`/`can_delete`/
   `can_list` helpers for system capability responses.
 - Read-only admin bootstrap preview with `WouldCreate`, `WouldUpdate`, and
@@ -79,6 +81,9 @@ All notable changes to this project are documented here.
   HTTP header parsing before request dispatch.
 - Internal UI namespace lists and mount maps are bounded; UI mount detail paths
   are validated before request dispatch.
+- System tools random responses and hash outputs are represented as
+  `SecretString` and redacted from debug output; random byte counts are rejected
+  when zero or above the local 1 MiB helper limit.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

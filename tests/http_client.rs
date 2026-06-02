@@ -128,7 +128,7 @@ async fn kv2_read_sends_documented_headers_and_path() {
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
-        .with_token(SecretString::from("test-token"));
+        .with_token(test_secret(&["test-", "token"]));
 
     let secret = client
         .kv2("secret")
@@ -941,6 +941,98 @@ async fn sys_internal_ui_helpers_use_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(details.backend_type, "kv");
     assert_eq!(details.path, "custom-secrets/");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_tool_helpers_use_documented_paths_and_redact_outputs() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/sys/tools/random/32 HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: test-token"));
+                    assert!(request.contains(r#""format":"base64""#));
+                    r#"{"data":{"random_bytes":"cmFuZG9t"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/tools/random/all/64 HTTP/1.1"));
+                    assert!(request.contains(r#""format":"hex""#));
+                    r#"{"data":{"random_bytes":"72616e646f6d"}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/sys/tools/hash/sha2-256 HTTP/1.1"));
+                    assert!(request.contains(r#""input":"cGF5bG9hZA==""#));
+                    assert!(request.contains(r#""format":"base64""#));
+                    r#"{"data":{"sum":"c2hhMjU2"}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let random = client
+        .sys()
+        .random(
+            &openbao::sys::SysRandomRequest::new()
+                .with_bytes(32)
+                .with_format(openbao::sys::SysToolsOutputFormat::Base64),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(random.random_bytes.expose_secret(), "cmFuZG9t");
+    let debug = format!("{random:?}");
+    assert!(debug.contains("<redacted>"));
+    assert!(!debug.contains("cmFuZG9t"));
+
+    let random = client
+        .sys()
+        .random_from_source(
+            openbao::sys::SysRandomSource::All,
+            &openbao::sys::SysRandomRequest::new()
+                .with_bytes(64)
+                .with_format(openbao::sys::SysToolsOutputFormat::Hex),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(random.random_bytes.expose_secret(), "72616e646f6d");
+
+    let hash = client
+        .sys()
+        .hash(
+            openbao::sys::SysHashAlgorithm::Sha2_256,
+            &openbao::sys::SysHashRequest::from_base64_input(test_secret(&["cGF5", "bG9hZA=="]))
+                .with_format(openbao::sys::SysToolsOutputFormat::Base64),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(hash.sum.expose_secret(), "c2hhMjU2");
+    let debug = format!("{hash:?}");
+    assert!(debug.contains("<redacted>"));
+    assert!(!debug.contains("c2hhMjU2"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

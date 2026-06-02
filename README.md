@@ -333,6 +333,7 @@ openbao = { version = "0.8", features = ["time"] }
 | Raft storage | Yes | Integrated Storage Raft join/configuration/peer/bootstrap and Autopilot JSON helpers. |
 | Remount | Yes | Start mount migrations and poll migration status. |
 | Step down | Yes | Authenticated `/sys/step-down` helper for active-node handoff. |
+| System tools | Yes | Random byte generation and hash helpers with bounded random requests and secret-aware outputs. |
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
