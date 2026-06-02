@@ -39,6 +39,8 @@ Sources:
 - Identity entity alias: https://openbao.org/api-docs/secret/identity/entity-alias/
 - Identity group alias: https://openbao.org/api-docs/secret/identity/group-alias/
 - LDAP secrets engine: https://openbao.org/api-docs/secret/ldap/
+- System loggers: https://openbao.org/api-docs/system/loggers/
+- System version history: https://openbao.org/api-docs/next/system/version-history/
 
 ## Foundation
 
@@ -185,9 +187,10 @@ Support plan:
 - `0.6.0`: production init, unseal, seal, legacy rekey, OpenBao key-share
   rotation, and keyring rotation are implemented only behind explicit
   `operator-ops` plus `operator-ops-acknowledged` feature gates.
-- `0.8.0`: leader status, OpenAPI discovery, and JSON metrics are
-  implemented. Quotas, namespaces, storage, loggers, locked users, version
-  history, and broader diagnostic endpoints remain planned.
+- `0.8.0`: leader status, OpenAPI discovery, JSON metrics, runtime logger
+  read/set/reset, and installed version history are implemented. Quotas,
+  namespaces, storage, locked users, and broader diagnostic endpoints remain
+  planned.
 
 ## OpenBao-Specific Notes
 

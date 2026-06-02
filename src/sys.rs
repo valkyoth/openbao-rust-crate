@@ -79,6 +79,95 @@ pub struct LeaderStatus {
     pub performance_standby_last_remote_wal: Option<u64>,
 }
 
+/// Runtime logger verbosity accepted by `/sys/loggers`.
+///
+/// OpenBao documents these changes as transient: they are not persisted and
+/// revert to configured log levels when the service reloads or restarts.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LoggerLevel {
+    /// Most verbose logging.
+    Trace,
+    /// Debug logging.
+    Debug,
+    /// Informational logging.
+    Info,
+    /// Warning logging.
+    Warn,
+    /// Error logging.
+    Error,
+}
+
+impl LoggerLevel {
+    /// Returns the OpenBao logger level value.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Trace => "trace",
+            Self::Debug => "debug",
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Error => "error",
+        }
+    }
+}
+
+/// Logger levels keyed by logger name.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct LoggerLevels(
+    #[serde(deserialize_with = "deserialize_bounded_logger_level_map")] BTreeMap<String, String>,
+);
+
+impl LoggerLevels {
+    /// Returns the logger level by logger name.
+    #[must_use]
+    pub fn get(&self, logger: &str) -> Option<&str> {
+        self.0.get(logger).map(String::as_str)
+    }
+
+    /// Returns all logger levels.
+    #[must_use]
+    pub fn as_map(&self) -> &BTreeMap<String, String> {
+        &self.0
+    }
+
+    /// Consumes this wrapper and returns the logger map.
+    #[must_use]
+    pub fn into_inner(self) -> BTreeMap<String, String> {
+        self.0
+    }
+}
+
+/// Installed OpenBao version history.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct VersionHistory {
+    /// Installed versions in chronological order.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Version metadata keyed by version string.
+    #[serde(default, deserialize_with = "deserialize_bounded_version_history_map")]
+    pub key_info: BTreeMap<String, VersionHistoryEntry>,
+}
+
+impl ListEntries for VersionHistory {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Metadata for one installed OpenBao version.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct VersionHistoryEntry {
+    /// Build timestamp, when OpenBao returned one.
+    #[serde(default)]
+    pub build_date: Option<String>,
+    /// Previous installed version, when known.
+    #[serde(default)]
+    pub previous_version: Option<String>,
+    /// Installation timestamp.
+    #[serde(default)]
+    pub timestamp_installed: Option<String>,
+}
+
 /// OpenBao seal status response.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SealStatus {
@@ -1458,6 +1547,11 @@ struct PluginReloadPayload<'a> {
 }
 
 #[derive(Serialize)]
+struct LoggerLevelPayload<'a> {
+    level: &'a str,
+}
+
+#[derive(Serialize)]
 struct CapabilitiesPayload<'a> {
     paths: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1584,6 +1678,20 @@ impl<State> Sys<'_, State> {
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
+            .await
+    }
+
+    /// Reads runtime logger levels from `/sys/loggers`.
+    pub async fn logger_levels(&self) -> Result<LoggerLevels> {
+        self.client
+            .request_json(Method::GET, "sys/loggers", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads one runtime logger level from `/sys/loggers/:name`.
+    pub async fn logger_level(&self, name: &str) -> Result<LoggerLevels> {
+        self.client
+            .request_json(Method::GET, &sys_logger_path(name)?, Option::<&Empty>::None)
             .await
     }
 }
@@ -2336,6 +2444,69 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Sets all runtime logger levels through `/sys/loggers`.
+    ///
+    /// OpenBao does not persist this change across reload or restart.
+    pub async fn set_logger_levels(&self, level: LoggerLevel) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/loggers",
+                Some(&LoggerLevelPayload {
+                    level: level.as_str(),
+                }),
+            )
+            .await
+    }
+
+    /// Sets one runtime logger level through `/sys/loggers/:name`.
+    ///
+    /// OpenBao does not persist this change across reload or restart.
+    pub async fn set_logger_level(&self, name: &str, level: LoggerLevel) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &sys_logger_path(name)?,
+                Some(&LoggerLevelPayload {
+                    level: level.as_str(),
+                }),
+            )
+            .await
+    }
+
+    /// Reverts all runtime logger levels to the configured level.
+    pub async fn reset_logger_levels(&self) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                "sys/loggers",
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Reverts one runtime logger level to the configured level.
+    pub async fn reset_logger_level(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &sys_logger_path(name)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Lists installed OpenBao versions through `/sys/version-history`.
+    pub async fn version_history(&self) -> Result<VersionHistory> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.client
+            .request_json(method, "sys/version-history", Option::<&Empty>::None)
+            .await
+    }
+
     /// Looks up a wrapping token.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
         let payload = WrappingTokenPayload {
@@ -2487,6 +2658,16 @@ fn sys_path(prefix: &str, mount_path: &str, suffix: Option<&str>) -> Result<Stri
         segments.push(suffix.to_owned());
     }
     Ok(segments.join("/"))
+}
+
+fn sys_logger_path(name: &str) -> Result<String> {
+    let segments = validate_mount_path(name)?;
+    if segments.len() != 1 {
+        return Err(Error::InvalidPath(
+            "logger name must be a single path segment".into(),
+        ));
+    }
+    Ok(["sys/loggers", &segments[0]].join("/"))
 }
 
 fn validate_wrapping_ttl(ttl: &str) -> Result<()> {
@@ -2670,6 +2851,26 @@ struct AuditDeviceMap(
     BTreeMap<String, AuditDevice>,
 );
 
+fn deserialize_bounded_logger_level_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserialize_bounded_string_map(deserializer)
+}
+
+fn deserialize_bounded_version_history_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, VersionHistoryEntry>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(
+        BoundedVersionHistoryMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
 fn deserialize_bounded_mount_info_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, MountInfo>, D::Error>
@@ -2746,6 +2947,35 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedAuditDeviceMapVisitor<MAX> {
     }
 }
 
+struct BoundedVersionHistoryMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionHistoryMapVisitor<MAX> {
+    type Value = BTreeMap<String, VersionHistoryEntry>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} version history entries")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, VersionHistoryEntry>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao version history map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedPluginDetailListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedPluginDetailListVisitor<MAX> {
@@ -2783,9 +3013,9 @@ mod tests {
 
     use super::{
         AuditEnableRequest, AuthEnableRequest, Capabilities, Capability, LeaseDuration,
-        MountEnableRequest, PolicyList, PolicyWriteRequest, sys_path, validate_capability_paths,
-        validate_dev_bootstrap_options, validate_lease_id, validate_sha256_hex,
-        validate_wrapping_ttl,
+        LoggerLevel, MountEnableRequest, PolicyList, PolicyWriteRequest, VersionHistory, sys_path,
+        validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
+        validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
     use super::{OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest};
@@ -2798,6 +3028,11 @@ mod tests {
             "sys/mounts/secret/tune"
         );
         assert!(sys_path("sys/mounts", "../secret", None).is_err());
+        assert_eq!(
+            super::sys_logger_path("core").unwrap_or_else(|error| panic!("{error}")),
+            "sys/loggers/core"
+        );
+        assert!(super::sys_logger_path("core/nested").is_err());
     }
 
     #[test]
@@ -2940,6 +3175,49 @@ mod tests {
         let value = serde_json::json!({ "policies": policies });
         let error = match serde_json::from_value::<PolicyList>(value) {
             Ok(_) => panic!("oversized policy list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn logger_level_values_are_stable() {
+        assert_eq!(LoggerLevel::Trace.as_str(), "trace");
+        assert_eq!(LoggerLevel::Debug.as_str(), "debug");
+        assert_eq!(LoggerLevel::Info.as_str(), "info");
+        assert_eq!(LoggerLevel::Warn.as_str(), "warn");
+        assert_eq!(LoggerLevel::Error.as_str(), "error");
+    }
+
+    #[test]
+    fn logger_and_version_history_maps_are_bounded() {
+        let mut loggers = serde_json::Map::new();
+        let mut key_info = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            loggers.insert(format!("logger-{index}"), serde_json::json!("info"));
+            key_info.insert(
+                format!("2.5.{index}"),
+                serde_json::json!({
+                    "build_date": null,
+                    "previous_version": null,
+                    "timestamp_installed": "2026-05-27T00:00:00Z"
+                }),
+            );
+        }
+
+        let error =
+            match serde_json::from_value::<super::LoggerLevels>(serde_json::Value::Object(loggers))
+            {
+                Ok(_) => panic!("oversized logger map unexpectedly decoded"),
+                Err(error) => error,
+            };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        let error = match serde_json::from_value::<VersionHistory>(serde_json::json!({
+            "keys": ["2.5.4"],
+            "key_info": key_info
+        })) {
+            Ok(_) => panic!("oversized version history map unexpectedly decoded"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

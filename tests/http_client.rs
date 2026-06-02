@@ -785,6 +785,145 @@ async fn sys_metrics_json_sends_documented_path() {
 }
 
 #[tokio::test]
+async fn sys_logger_helpers_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/loggers HTTP/1.1"));
+                    r#"{"audit":"trace","core":"info"}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/sys/loggers/core HTTP/1.1"));
+                    r#"{"core":"info"}"#.to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/sys/loggers HTTP/1.1"));
+                    assert!(request.contains(r#""level":"debug""#));
+                    String::new()
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/sys/loggers/core HTTP/1.1"));
+                    assert!(request.contains(r#""level":"warn""#));
+                    String::new()
+                }
+                4 => {
+                    assert!(request.starts_with("DELETE /v1/sys/loggers/core HTTP/1.1"));
+                    String::new()
+                }
+                _ => unreachable!(),
+            };
+            let response = if body.is_empty() {
+                "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n".to_owned()
+            } else {
+                format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            };
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let levels = client
+        .sys()
+        .logger_levels()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(levels.get("core"), Some("info"));
+    assert_eq!(levels.as_map().len(), 2);
+
+    let core = client
+        .sys()
+        .logger_level("core")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(core.get("core"), Some("info"));
+
+    client
+        .sys()
+        .set_logger_levels(openbao::sys::LoggerLevel::Debug)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .set_logger_level("core", openbao::sys::LoggerLevel::Warn)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .reset_logger_level("core")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_version_history_uses_documented_list_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("LIST /v1/sys/version-history HTTP/1.1"));
+        assert!(request.contains("x-vault-token: test-token"));
+        let body = r#"{"keys":["2.5.3","2.5.4"],"key_info":{"2.5.3":{"build_date":null,"previous_version":null,"timestamp_installed":"2026-05-01T00:00:00Z"},"2.5.4":{"build_date":"2026-05-26T00:00:00Z","previous_version":"2.5.3","timestamp_installed":"2026-05-27T00:00:00Z"}}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let history = client
+        .sys()
+        .version_history()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(history.keys.iter().any(|version| version == "2.5.4"));
+    assert_eq!(
+        history
+            .key_info
+            .get("2.5.4")
+            .and_then(|entry| entry.previous_version.as_deref()),
+        Some("2.5.3")
+    );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_wrapping_wrap_sends_ttl_header() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
