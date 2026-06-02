@@ -44,6 +44,8 @@ Sources:
 - LDAP secrets engine: https://openbao.org/api-docs/secret/ldap/
 - System audit config: https://openbao.org/api-docs/system/config-auditing/
 - System config state: https://openbao.org/api-docs/system/config-state/
+- System internal UI mounts: https://openbao.org/api-docs/next/system/internal-ui-mounts/
+- System internal UI namespaces: https://openbao.org/api-docs/system/internal-ui-namespaces/
 - System loggers: https://openbao.org/api-docs/system/loggers/
 - System version history: https://openbao.org/api-docs/next/system/version-history/
 - System namespaces: https://openbao.org/api-docs/system/namespaces/
@@ -205,16 +207,16 @@ Support plan:
 - `0.6.0`: production init, unseal, seal, legacy rekey, OpenBao key-share
   rotation, and keyring rotation are implemented only behind explicit
   `operator-ops` plus `operator-ops-acknowledged` feature gates.
-- `0.8.0`: leader status, HA status, key status, OpenAPI discovery, JSON
-  metrics, host diagnostics, sanitized config state, audited request-header
-  configuration, CORS configuration, runtime logger read/set/reset, installed
-  version history, namespace management, rate-limit quota management,
-  remount/mount-migration start/status, active-node step-down, and locked-user
-  list/filter/unlock helpers are implemented. Integrated Storage Raft
-  join/configuration/peer mutation/bootstrap helpers and Autopilot JSON helpers
-  are implemented. Binary Raft snapshots, raw storage, and broader diagnostic
-  endpoints remain planned until the crate has an explicit raw-body transport
-  API.
+- `0.8.0`: leader status, HA status, key status, OpenAPI discovery, internal
+  UI namespace/mount discovery, JSON metrics, host diagnostics, sanitized
+  config state, audited request-header configuration, CORS configuration,
+  runtime logger read/set/reset, installed version history, namespace
+  management, rate-limit quota management, remount/mount-migration
+  start/status, active-node step-down, and locked-user list/filter/unlock
+  helpers are implemented. Integrated Storage Raft join/configuration/peer
+  mutation/bootstrap helpers and Autopilot JSON helpers are implemented.
+  Binary Raft snapshots, raw storage, and broader diagnostic endpoints remain
+  planned until the crate has an explicit raw-body transport API.
 
 ## OpenBao-Specific Notes
 

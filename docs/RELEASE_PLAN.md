@@ -206,6 +206,8 @@ Stop condition:
   are implemented.
 - Sanitized config state and audited request-header configuration helpers are
   implemented.
+- Internal UI namespace and mount discovery helpers are implemented with an
+  explicit note that OpenBao does not guarantee endpoint stability.
 
 Publishable value:
 

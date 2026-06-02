@@ -15,6 +15,7 @@ All notable changes to this project are documented here.
 - Kerberos auth login with SPNEGO negotiate headers, service-account/keytab
   config, Kerberos LDAP config, and group policy mapping helpers.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
+- Internal UI namespace and mount discovery helpers.
 - HA status helper with bounded node lists.
 - Key status helper for barrier encryption key metadata.
 - Host diagnostics helper for `/sys/host-info`.
@@ -76,6 +77,8 @@ All notable changes to this project are documented here.
   before request dispatch.
 - Audited request-header maps are bounded, and header names are validated with
   HTTP header parsing before request dispatch.
+- Internal UI namespace lists and mount maps are bounded; UI mount detail paths
+  are validated before request dispatch.
 - Capability inspection preserves the existing raw string lists while keeping
   unknown future capability names visible through `Capability::Unknown`.
 - Bootstrap preview performs read-side comparisons only and never writes state

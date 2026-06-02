@@ -253,6 +253,7 @@ pub mod prelude {
         NamespaceList, NamespaceRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
         RaftJoinResponse, RaftPeerRequest, RaftServer, RateLimitQuotaConfig, RateLimitQuotaInfo,
         RateLimitQuotaList, RateLimitQuotaRequest, RemountMigrationInfo, RemountRequest,
-        RemountResponse, RemountStatus, Sys, VersionHistory, VersionHistoryEntry,
+        RemountResponse, RemountStatus, Sys, UiMountDetails, UiMountSummary, UiMounts,
+        UiNamespaces, VersionHistory, VersionHistoryEntry,
     };
 }

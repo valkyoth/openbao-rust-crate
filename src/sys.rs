@@ -180,6 +180,80 @@ impl CorsConfigRequest {
     }
 }
 
+/// Namespaces returned by `/sys/internal/ui/namespaces`.
+///
+/// OpenBao documents this endpoint as internal UI support without backwards
+/// compatibility guarantees.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct UiNamespaces {
+    /// Namespaces relevant to the UI.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub namespaces: Vec<String>,
+}
+
+/// Visible mounts returned by `/sys/internal/ui/mounts`.
+///
+/// OpenBao documents this endpoint as internal UI and CLI preflight support
+/// without backwards compatibility guarantees.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct UiMounts {
+    /// Visible auth method mounts.
+    #[serde(default, deserialize_with = "deserialize_bounded_ui_mount_summary_map")]
+    pub auth: BTreeMap<String, UiMountSummary>,
+    /// Visible secrets engine mounts.
+    #[serde(default, deserialize_with = "deserialize_bounded_ui_mount_summary_map")]
+    pub secret: BTreeMap<String, UiMountSummary>,
+}
+
+/// Summary for one UI-visible mount.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct UiMountSummary {
+    /// Mount description.
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Backend type, such as `kv`, `pki`, or `github`.
+    #[serde(default, rename = "type")]
+    pub backend_type: String,
+    /// Mount options, when returned.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_map")]
+    pub options: Option<BTreeMap<String, String>>,
+}
+
+/// Single UI mount details returned by `/sys/internal/ui/mounts/:path`.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct UiMountDetails {
+    /// Mount accessor, when returned. Treat as sensitive metadata.
+    #[serde(default)]
+    pub accessor: Option<SecretString>,
+    /// Backend configuration.
+    #[serde(default, deserialize_with = "deserialize_null_default")]
+    pub config: MountConfig,
+    /// Human-readable mount description.
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Whether external entropy access is enabled.
+    #[serde(default)]
+    pub external_entropy_access: bool,
+    /// Whether this mount is local to the node.
+    #[serde(default)]
+    pub local: bool,
+    /// Mount options, when returned.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_map")]
+    pub options: Option<BTreeMap<String, String>>,
+    /// Mount path returned by OpenBao.
+    #[serde(default)]
+    pub path: String,
+    /// Whether this mount is seal wrapped.
+    #[serde(default)]
+    pub seal_wrap: bool,
+    /// Backend type, such as `kv`, `pki`, or `github`.
+    #[serde(default, rename = "type")]
+    pub backend_type: String,
+    /// Mount UUID.
+    #[serde(default)]
+    pub uuid: Option<String>,
+}
+
 /// Runtime logger verbosity accepted by `/sys/loggers`.
 ///
 /// OpenBao documents these changes as transient: they are not persisted and
@@ -2392,6 +2466,34 @@ impl<State> Sys<'_, State> {
             .await
     }
 
+    /// Reads `/sys/internal/ui/namespaces`.
+    ///
+    /// OpenBao documents this endpoint as internal UI support without
+    /// backwards compatibility guarantees.
+    pub async fn ui_namespaces(&self) -> Result<UiNamespaces> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/internal/ui/namespaces",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads `/sys/internal/ui/mounts`.
+    ///
+    /// OpenBao documents this endpoint as internal UI and CLI preflight
+    /// support without backwards compatibility guarantees.
+    pub async fn ui_mounts(&self) -> Result<UiMounts> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/internal/ui/mounts",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
     /// Reads JSON telemetry metrics from `/sys/metrics`.
     ///
     /// The Prometheus text format is intentionally left to a future raw-body
@@ -2875,6 +2977,21 @@ impl Sys<'_, Authenticated> {
                 Method::POST,
                 &sys_path("sys/auth", mount_path, Some("tune"))?,
                 Some(config),
+            )
+            .await
+    }
+
+    /// Reads `/sys/internal/ui/mounts/:path`.
+    ///
+    /// OpenBao documents this endpoint as internal UI and CLI preflight
+    /// support without backwards compatibility guarantees. It accepts a mount
+    /// path or a path hosted by a mount.
+    pub async fn ui_mount_details(&self, path: &str) -> Result<UiMountDetails> {
+        self.client
+            .request_json(
+                Method::GET,
+                &internal_ui_mount_path(path)?,
+                Option::<&Empty>::None,
             )
             .await
     }
@@ -3981,6 +4098,17 @@ fn audited_request_header_path(name: &str) -> Result<String> {
     Ok(["sys/config/auditing/request-headers", name.as_str()].join("/"))
 }
 
+fn internal_ui_mount_path(path: &str) -> Result<String> {
+    if path.trim_matches('/').is_empty() {
+        return Err(Error::InvalidPath("UI mount path must not be empty".into()));
+    }
+    Ok([
+        "sys/internal/ui/mounts",
+        &validate_endpoint_path(path)?.join("/"),
+    ]
+    .join("/"))
+}
+
 fn remount_status_path(migration_id: &str) -> Result<String> {
     Ok([
         "sys/remount/status",
@@ -4470,6 +4598,46 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedAuditedHeaderMapVisitor<MAX>
     }
 }
 
+fn deserialize_bounded_ui_mount_summary_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, UiMountSummary>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(
+        BoundedUiMountSummaryMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
+struct BoundedUiMountSummaryMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedUiMountSummaryMapVisitor<MAX> {
+    type Value = BTreeMap<String, UiMountSummary>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} UI mount summaries")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, UiMountSummary>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao UI mount summary map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedNamespaceInfoMapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedNamespaceInfoMapVisitor<MAX> {
@@ -4761,11 +4929,11 @@ mod tests {
         CorsConfig, CorsConfigRequest, HaStatus, LeaseDuration, LockedUsers, LoggerLevel,
         MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest,
         RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest, RaftPeerRequest,
-        RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest,
-        VersionHistory, audited_request_header_path, locked_user_unlock_path, namespace_path,
-        rate_limit_quota_path, remount_status_path, sys_path, validate_capability_paths,
-        validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
-        validate_raft_server_id, validate_rate_limit_quota_config,
+        RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest, UiMounts,
+        UiNamespaces, VersionHistory, audited_request_header_path, internal_ui_mount_path,
+        locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
+        sys_path, validate_capability_paths, validate_dev_bootstrap_options, validate_lease_id,
+        validate_namespace_request, validate_raft_server_id, validate_rate_limit_quota_config,
         validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
@@ -5357,6 +5525,64 @@ mod tests {
         assert!(audited_request_header_path("").is_err());
         assert!(audited_request_header_path("Bad Header").is_err());
         assert!(audited_request_header_path("bad/header").is_err());
+    }
+
+    #[test]
+    fn ui_namespace_and_mount_lists_are_bounded_and_validated() {
+        let namespaces: UiNamespaces = serde_json::from_value(serde_json::json!({
+            "namespaces": ["team/", "team/app/"]
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(namespaces.namespaces, ["team/", "team/app/"]);
+
+        let mounts: UiMounts = serde_json::from_value(serde_json::json!({
+            "auth": {
+                "github/": {
+                    "description": "GitHub auth",
+                    "type": "github"
+                }
+            },
+            "secret": {
+                "custom-secrets/": {
+                    "description": "Custom secrets",
+                    "type": "kv",
+                    "options": { "version": "2" }
+                }
+            }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            mounts
+                .secret
+                .get("custom-secrets/")
+                .and_then(|mount| mount.options.as_ref())
+                .and_then(|options| options.get("version"))
+                .map(String::as_str),
+            Some("2")
+        );
+
+        let mut secret = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            secret.insert(
+                format!("secret-{index}/"),
+                serde_json::json!({"type": "kv"}),
+            );
+        }
+        let error = match serde_json::from_value::<UiMounts>(serde_json::json!({
+            "secret": secret
+        })) {
+            Ok(_) => panic!("oversized UI mount map unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        assert_eq!(
+            internal_ui_mount_path("secret/path/to/item").unwrap_or_else(|error| panic!("{error}")),
+            "sys/internal/ui/mounts/secret/path/to/item"
+        );
+        assert!(internal_ui_mount_path("").is_err());
+        assert!(internal_ui_mount_path("../secret").is_err());
+        assert!(internal_ui_mount_path("secret?x=1").is_err());
     }
 
     #[test]

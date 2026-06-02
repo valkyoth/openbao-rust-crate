@@ -319,6 +319,7 @@ openbao = { version = "0.8", features = ["time"] }
 | HA status | Yes | Typed `/sys/ha-status` helper with bounded node lists. |
 | Key status | Yes | Typed `/sys/key-status` helper. |
 | OpenAPI discovery | Yes | Typed JSON helper for `/sys/internal/specs/openapi`. |
+| Internal UI helpers | Yes | Internal UI namespace and mount discovery helpers with bounded maps; OpenBao does not guarantee endpoint stability. |
 | JSON metrics | Yes | Typed JSON helper for `/sys/metrics?format=json`; Prometheus text output is intentionally deferred. |
 | Host diagnostics | Yes | JSON helper for `/sys/host-info` platform diagnostics. |
 | Sanitized config state | Yes | JSON helper for `/sys/config/state/sanitized`. |

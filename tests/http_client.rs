@@ -867,6 +867,85 @@ async fn sys_openapi_document_sends_documented_path() {
 }
 
 #[tokio::test]
+async fn sys_internal_ui_helpers_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/internal/ui/namespaces HTTP/1.1"));
+                    r#"{"namespaces":["team/","team/app/"]}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/sys/internal/ui/mounts HTTP/1.1"));
+                    r#"{"auth":{"github/":{"description":"GitHub auth","type":"github"}},"secret":{"custom-secrets/":{"description":"Custom secrets","options":{"version":"2"},"type":"kv"}}}"#.to_owned()
+                }
+                2 => {
+                    assert!(request.starts_with(
+                        "GET /v1/sys/internal/ui/mounts/custom-secrets/app/config HTTP/1.1"
+                    ));
+                    assert!(request.contains("x-vault-token: test-token"));
+                    r#"{"accessor":"kv_1234","config":{"default_lease_ttl":0,"force_no_cache":false,"max_lease_ttl":0},"description":"Custom secrets","external_entropy_access":false,"local":false,"options":{"version":"2"},"path":"custom-secrets/","seal_wrap":false,"type":"kv","uuid":"4bb40403-d9ba-d2ee-087a-4c6d371db5f2"}"#.to_owned()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let unauthenticated = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+    let namespaces = unauthenticated
+        .sys()
+        .ui_namespaces()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(namespaces.namespaces, ["team/", "team/app/"]);
+
+    let mounts = unauthenticated
+        .sys()
+        .ui_mounts()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        mounts
+            .secret
+            .get("custom-secrets/")
+            .and_then(|mount| mount.options.as_ref())
+            .and_then(|options| options.get("version"))
+            .map(String::as_str),
+        Some("2")
+    );
+
+    let client = unauthenticated.with_token(SecretString::from("test-token"));
+    let details = client
+        .sys()
+        .ui_mount_details("custom-secrets/app/config")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(details.backend_type, "kv");
+    assert_eq!(details.path, "custom-secrets/");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_metrics_json_sends_documented_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
