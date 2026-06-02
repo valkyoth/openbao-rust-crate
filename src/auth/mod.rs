@@ -6,6 +6,8 @@ pub mod approle;
 pub mod cert;
 #[cfg(feature = "jwt-auth")]
 pub mod jwt;
+#[cfg(feature = "kerberos-auth")]
+pub mod kerberos;
 #[cfg(feature = "kubernetes-auth")]
 pub mod kubernetes;
 #[cfg(feature = "ldap-auth")]

@@ -53,6 +53,8 @@ Implemented now:
 - JWT login plus JWT/OIDC auth method config and role administration helpers.
 - LDAP auth login plus config and user/group policy mapping helpers.
 - RADIUS login plus config and user policy mapping helpers.
+- Kerberos login plus service-account, LDAP config, and group policy mapping
+  helpers.
 - Userpass login plus user create/read/list/delete, password update, and
   policy update helpers.
 - Token create, lookup, accessor lookup/list, renew, revoke, and revoke-self
@@ -219,6 +221,7 @@ openbao = { version = "0.8", features = ["time"] }
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
 | `identity` | yes | Identity entity, group, entity-alias, and group-alias helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config and role administration helpers. |
+| `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, and group mapping helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
 | `radius-auth` | yes | RADIUS login/config/user mapping helpers. |
@@ -280,6 +283,7 @@ openbao = { version = "0.8", features = ["time"] }
 | JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config and role administration helpers. Browser OIDC callback helpers are still planned. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
 | RADIUS auth | Yes | Login, method config, user create/read/list/delete, and paginated user list helpers. |
+| Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group create/read/list/delete mapping helpers. |
 | Userpass auth | Yes | Login and user create/read/list/delete, password update, and policy update helpers. |
 
 ### Secret Engines

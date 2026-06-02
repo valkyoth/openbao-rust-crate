@@ -13,6 +13,8 @@ RADIUS auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
 LDAP auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
+Kerberos auth coverage was refreshed against official `2.5.x` documentation on
+2026-06-02.
 
 Sources:
 
@@ -29,6 +31,7 @@ Sources:
 - Userpass auth: https://openbao.org/api-docs/auth/userpass/
 - LDAP auth: https://openbao.org/api-docs/auth/ldap/
 - RADIUS auth: https://openbao.org/api-docs/auth/radius/
+- Kerberos auth: https://openbao.org/api-docs/auth/kerberos/
 - Transit: https://openbao.org/api-docs/secret/transit/
 - PKI: https://openbao.org/api-docs/secret/pki/
 - SSH: https://openbao.org/api-docs/secret/ssh/
@@ -104,8 +107,9 @@ Support plan:
   convergence, and explicit SecretID issuance is implemented.
 - `0.8.0`: LDAP login, config, user mapping, group mapping, list, read, and
   delete helpers are implemented. RADIUS login, config, user mapping, user
-  deletion, and paginated user listing are implemented. Kerberos auth remains
-  planned.
+  deletion, and paginated user listing are implemented. Kerberos SPNEGO login,
+  service-account/keytab config, Kerberos LDAP config, and group policy mapping
+  helpers are implemented.
 
 ## Secret Engines
 

@@ -9,7 +9,7 @@
 //! - authentication state is represented in the type system.
 //!
 //! The public API covers environment-based client construction, AppRole login,
-//! direct token auth, LDAP/RADIUS auth, token lifecycle helpers, Cubbyhole,
+//! direct token auth, LDAP/RADIUS/Kerberos auth, token lifecycle helpers, Cubbyhole,
 //! Identity, KV v1/v2, Kubernetes secrets, RabbitMQ secrets, Transit, system
 //! health/seal status, dev-only bootstrap, mount management, audit devices,
 //! safe exact lease helpers, plugin catalog operations, SSH, TOTP, and raw
@@ -62,6 +62,7 @@ mod validation;
     feature = "approle",
     feature = "cert-auth",
     feature = "jwt-auth",
+    feature = "kerberos-auth",
     feature = "kubernetes-auth",
     feature = "ldap-auth",
     feature = "radius-auth",
@@ -150,6 +151,7 @@ pub mod prelude {
         feature = "approle",
         feature = "cert-auth",
         feature = "jwt-auth",
+        feature = "kerberos-auth",
         feature = "kubernetes-auth",
         feature = "ldap-auth",
         feature = "radius-auth",
@@ -166,6 +168,11 @@ pub mod prelude {
     pub use crate::auth::cert::{CertAuth, CertAuthAdmin, CertLoginMetadata, CertRole};
     #[cfg(feature = "jwt-auth")]
     pub use crate::auth::jwt::{JwtAuth, JwtAuthAdmin, JwtLoginMetadata, JwtRole};
+    #[cfg(feature = "kerberos-auth")]
+    pub use crate::auth::kerberos::{
+        KerberosAuth, KerberosAuthAdmin, KerberosConfig, KerberosGroupInfo, KerberosGroupList,
+        KerberosGroupRequest, KerberosLdapConfig, KerberosLoginMetadata,
+    };
     #[cfg(feature = "kubernetes-auth")]
     pub use crate::auth::kubernetes::{
         KubernetesAuth, KubernetesAuthAdmin, KubernetesLoginMetadata, KubernetesRole,

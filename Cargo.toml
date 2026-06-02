@@ -46,6 +46,7 @@ default = [
     "database",
     "identity",
     "jwt-auth",
+    "kerberos-auth",
     "kubernetes-auth",
     "ldap-auth",
     "radius-auth",
@@ -69,6 +70,7 @@ cubbyhole = []
 database = []
 identity = []
 jwt-auth = []
+kerberos-auth = []
 kubernetes-auth = []
 ldap-auth = []
 radius-auth = []

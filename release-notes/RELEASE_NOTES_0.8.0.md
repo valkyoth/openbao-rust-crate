@@ -23,8 +23,10 @@
 - New `0.8.0` work currently implemented: LDAP auth login, method
   configuration, group policy mapping, user policy/group mapping, list, read,
   and delete helpers; RADIUS auth login, method configuration, user policy
-  mapping, user read/list/delete, paginated user-list helpers; system leader
-  status, OpenAPI discovery, JSON telemetry metrics helpers, and typed
+  mapping, user read/list/delete, paginated user-list helpers; Kerberos auth
+  SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group
+  policy mapping helpers; system leader status, OpenAPI discovery, JSON
+  telemetry metrics helpers, and typed
   capability views for common access checks; runtime logger level helpers and
   installed version-history listing; namespace management helpers; rate-limit
   quota config and named quota helpers; read-only admin bootstrap preview with
@@ -32,8 +34,8 @@
   `FipsPosture` reporting for crate-visible Transit and seal-assumption
   choices; shared `ListEntries` ergonomics for common string list responses;
   optional RFC3339 timestamp parsing helpers behind the `time` feature.
-- Remaining `0.8.0` planned work: Kerberos auth coverage; storage and
-  additional system backend coverage.
+- Remaining `0.8.0` planned work: storage and additional system backend
+  coverage.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -55,6 +57,11 @@
   from debug output.
 - LDAP auth list responses, policy lists, and login metadata maps are bounded
   during deserialization. TLS version, token CIDR/duration, path-name, and
+  insecure LDAP TLS settings are validated before request dispatch.
+- Kerberos auth keytabs, SPNEGO tokens, LDAP bind passwords, returned tokens,
+  and token accessors are secret-aware and redacted from debug output.
+- Kerberos group list responses and login metadata maps are bounded during
+  deserialization. LDAP TLS version, token CIDR/duration, group-name, and
   insecure LDAP TLS settings are validated before request dispatch.
 - Metrics support is intentionally JSON-only in `0.8.0`; Prometheus text
   output is deferred until the crate has an explicit raw-body API.
@@ -92,6 +99,6 @@
 
 ## Known Limitations
 
-- Kerberos API coverage may require careful handling because the current
-  OpenBao API navigation links older Kerberos API documentation while the 2.5.x
-  auth overview still lists the method.
+- Kerberos SPNEGO token acquisition is intentionally left to platform Kerberos
+  tooling; the crate accepts the base64-encoded token required by the OpenBao
+  HTTP API.

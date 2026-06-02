@@ -4347,6 +4347,188 @@ async fn ldap_auth_admin_config_group_and_user_lifecycle_use_documented_paths() 
 }
 
 #[tokio::test]
+async fn kerberos_auth_login_sends_documented_negotiate_header() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("POST /v1/auth/kerberos/login HTTP/1.1"));
+        assert!(request.contains("authorization: Negotiate spnego-token"));
+        let body = r#"{"auth":{"client_token":"kerberos-token","accessor":"kerberos-accessor","policies":["default"],"metadata":{"username":"alice"},"lease_duration":3600,"renewable":true}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+    let (client, login) = client
+        .login_kerberos(test_secret(&["spnego", "-token"]))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        login.accessor.as_ref().map(SecretString::expose_secret),
+        Some("kerberos-accessor")
+    );
+    assert_eq!(
+        login.metadata.get("username").map(String::as_str),
+        Some("alice")
+    );
+    assert_eq!(client.base_url().as_str(), format!("http://{addr}/"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn kerberos_auth_admin_config_ldap_and_group_lifecycle_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..8 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/auth/kerberos/config HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: root-token"));
+                    assert!(request.contains(r#""keytab":"keytab-base64""#));
+                    assert!(request.contains(r#""service_account":"openbao_svc""#));
+                    "{}"
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/auth/kerberos/config HTTP/1.1"));
+                    r#"{"data":{"service_account":"openbao_svc","remove_instance_name":false,"add_group_aliases":true}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/auth/kerberos/config/ldap HTTP/1.1"));
+                    assert!(request.contains(r#""url":"ldaps://ldap.example.com:636""#));
+                    assert!(request.contains(r#""binddn":"cn=openbao,dc=example,dc=com""#));
+                    assert!(request.contains(r#""bindpass":"bind-pass""#));
+                    assert!(request.contains(r#""token_policies":["web"]"#));
+                    "{}"
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/auth/kerberos/config/ldap HTTP/1.1"));
+                    r#"{"data":{"url":"ldaps://ldap.example.com:636","binddn":"cn=openbao,dc=example,dc=com","bindpass":"","token_ttl":30,"tls_min_version":"tls12"}}"#
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/auth/kerberos/groups/admins HTTP/1.1"));
+                    assert!(request.contains(r#""policies":"admin,default""#));
+                    "{}"
+                }
+                5 => {
+                    assert!(request.starts_with("GET /v1/auth/kerberos/groups/admins HTTP/1.1"));
+                    r#"{"data":{"policies":["admin","default"]}}"#
+                }
+                6 => {
+                    assert!(request.starts_with(
+                        "LIST /v1/auth/kerberos/groups?after=admins&limit=10 HTTP/1.1"
+                    ));
+                    r#"{"data":{"keys":["engineers"]}}"#
+                }
+                7 => {
+                    assert!(request.starts_with("DELETE /v1/auth/kerberos/groups/admins HTTP/1.1"));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let admin = client
+        .kerberos_auth_admin()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    admin
+        .configure(
+            &openbao::auth::kerberos::KerberosConfig::new(
+                "openbao_svc",
+                test_secret(&["keytab", "-base64"]),
+            )
+            .add_group_aliases(true),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = admin
+        .read_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(config.service_account, "openbao_svc");
+    assert!(config.keytab.is_none());
+
+    admin
+        .configure_ldap(
+            &openbao::auth::kerberos::KerberosLdapConfig::new()
+                .with_url("ldaps://ldap.example.com:636")
+                .with_bind(
+                    "cn=openbao,dc=example,dc=com",
+                    test_secret(&["bind", "-pass"]),
+                )
+                .with_token_policy("web"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let ldap_config = admin
+        .read_ldap_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(ldap_config.token_ttl.as_deref(), Some("30"));
+
+    admin
+        .write_group(
+            "admins",
+            &openbao::auth::kerberos::KerberosGroupRequest::new("admin").with_policy("default"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let group = admin
+        .read_group("admins")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(group.policies, ["admin", "default"]);
+    let groups = admin
+        .list_groups_page(Some("admins"), Some(10))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(groups.keys, ["engineers"]);
+    admin
+        .delete_group("admins")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn cert_login_sends_documented_path_and_role_name() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

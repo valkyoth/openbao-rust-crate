@@ -173,7 +173,7 @@ Publishable value:
 
 Stop condition:
 
-- LDAP and RADIUS auth coverage implemented; Kerberos auth coverage remains;
+- LDAP, RADIUS, and Kerberos auth coverage implemented;
 - sys policies, capabilities, plugins catalog/reload, metrics, storage,
   leader, HA status, locked users;
 - OpenAPI discovery helper.

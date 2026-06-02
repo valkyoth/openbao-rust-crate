@@ -12,6 +12,8 @@ All notable changes to this project are documented here.
   policy/group mapping, list, read, and delete helpers.
 - RADIUS auth login, method configuration, user policy mapping, user
   read/list/delete, and paginated user-list helpers.
+- Kerberos auth login with SPNEGO negotiate headers, service-account/keytab
+  config, Kerberos LDAP config, and group policy mapping helpers.
 - System leader status, OpenAPI discovery, and JSON telemetry metrics helpers.
 - Runtime logger level read/set/reset helpers and installed OpenBao version
   history listing.
@@ -39,6 +41,10 @@ All notable changes to this project are documented here.
 - LDAP auth lists, policy lists, and login metadata maps use bounded
   deserializers, and TLS version, CIDR, duration, and insecure LDAP TLS
   settings are validated before dispatch.
+- Kerberos keytabs, SPNEGO tokens, LDAP bind passwords, returned tokens, and
+  accessors are secret-aware; Kerberos group lists and login metadata maps are
+  bounded, and LDAP TLS version, CIDR, duration, and insecure TLS settings are
+  validated before dispatch.
 - Metrics support is JSON-only in `0.8.0`; Prometheus text output remains
   outside the typed JSON transport boundary.
 - Logger and version-history responses use bounded map/list deserialization.
