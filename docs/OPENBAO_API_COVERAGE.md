@@ -327,10 +327,20 @@ Finalization work before `1.0.0`:
 - keep the optional `tracing` feature as the stable observability boundary,
   reject OpenTelemetry SDK dependencies and custom request hooks for stable
   scope, defer W3C `traceparent` propagation, add non-default `http2` support
-  without a runtime transport knob, reject HTTP/3 for stable scope, and decide
-  whether seal-status watcher/back-pressure helpers and application-side secret
-  wrappers are rejected or documented as explicit non-default stable
-  boundaries.
+  without a runtime transport knob, and reject HTTP/3 for stable scope.
+- implement a bounded `wait_until_unsealed` helper in `0.15.0` behind an
+  explicit Tokio helper feature; reject ongoing request-level seal
+  back-pressure as application retry-middleware policy.
+- implement typed response-wrapping ergonomics in `0.15.0` with redacted
+  wrapping tokens and typed unwrap; reject per-engine wrapped method
+  duplication.
+- implement selective `0.15.0` AdminBootstrap convergence for PKI mounts/roles,
+  database mounts/dynamic and static roles, and SSH mounts/roles; reject PKI CA
+  setup, database connection config, SSH CA setup, and KV v1 convergence in the
+  bootstrap layer.
+- implement ACL policy-builder wrapping-TTL constraints in `0.15.0`; reject
+  parameter-constraint generation because safe output requires a full HCL value
+  serializer.
 - reject leaf certificate and SPKI pinning for stable scope; use root-only
   trust with an internal OpenBao CA or self-signed OpenBao certificate instead.
 - use `0.10.0` through `0.14.0` for Identity/auth, Transit, PKI, and System

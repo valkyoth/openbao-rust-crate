@@ -312,9 +312,10 @@ Stop condition:
   dependency; OpenTelemetry SDK dependencies and custom request hooks are
   rejected for stable scope, W3C `traceparent` propagation is deferred, the
   non-default `http2` feature is implemented without a runtime transport knob,
-  HTTP/3 is rejected for stable scope, and seal-status watcher/back-pressure
-  and application-side secret-struct wrappers have deferral decisions recorded;
-  public response serde fixtures are added;
+  HTTP/3 is rejected for stable scope, and stable-scope ergonomics decisions
+  for bounded seal polling, response wrapping, bootstrap convergence, and ACL
+  policy-builder fields are recorded for `0.15.0`;
+- public response serde fixtures are added;
 - leaf certificate and SPKI pinning are rejected for stable scope; root-only
   trust with an internal CA or self-signed OpenBao certificate is documented as
   the supported server-identity assurance pattern;
@@ -490,6 +491,19 @@ Stop condition:
   documented as permanent boundaries;
 - public API names, constructors, feature flags, and module layout are frozen
   for `1.0.0`;
+- bounded `wait_until_unsealed` readiness polling is implemented behind an
+  explicit Tokio helper feature; request-level seal back-pressure is rejected
+  as application retry-middleware policy;
+- typed response-wrapping ergonomics are implemented through a wrapping
+  context and `WrappedResponse<T>` with redacted `SecretString` wrapping
+  tokens and typed unwrap; per-engine wrapped method variants are rejected;
+- AdminBootstrap convergence is expanded to PKI mounts/roles, database
+  mounts/dynamic and static roles, and SSH mounts/roles; PKI CA setup,
+  database connection configuration, SSH CA setup, and KV v1 convergence are
+  rejected for bootstrap scope;
+- ACL policy builder wrapping-TTL constraints and helper variants are
+  implemented; parameter-constraint generation is rejected because safe output
+  requires a complete HCL value serializer;
 - examples, migration guide, custom plugin pattern, security docs, and release
   notes reflect the final stable scope;
 - full release gate and pentest pass on the exact release candidate.

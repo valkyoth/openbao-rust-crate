@@ -64,6 +64,12 @@ All notable changes to this project are documented here.
   inspection are rejected for stable scope; root/recovery token ceremonies,
   decode-token, password policies, resultant ACL, and legacy recovery-key rekey
   are planned for `0.14.0`.
+- Recorded the `0.15.0` stable-scope ergonomics decisions: bounded
+  `wait_until_unsealed` polling, typed response-wrapping ergonomics, selective
+  PKI/database/SSH bootstrap convergence, and ACL wrapping-TTL policy builder
+  support are planned before `1.0.0`; request-level back-pressure, KV v1
+  bootstrap convergence, and ACL parameter-constraint HCL generation are
+  rejected for stable scope.
 
 ### Security
 
@@ -92,6 +98,12 @@ All notable changes to this project are documented here.
   tidy fields move to `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL
   work stays in `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol
   reads are external boundaries.
+- Stable response-wrapping ergonomics are planned as typed wrapping-token
+  handles with redacted `SecretString` fields; per-engine wrapped method
+  duplication is rejected to avoid API-surface sprawl.
+- ACL parameter constraints remain outside `AclPolicyBuilder` because safe
+  generation requires a complete HCL value serializer; callers should continue
+  using reviewed policy documents for those advanced rules.
 
 ## 0.8.0 - 2026-06-02
 

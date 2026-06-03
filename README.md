@@ -140,11 +140,15 @@ Planned next:
   non-secret pagination ergonomics, PKI role and Identity entity/group
   bootstrap convergence, fuzz/fixture hardening, quantum-readiness design
   notes, and explicit pre-`1.0` decisions for background renewal/tracking,
-  seal watchers, and application-side secret wrappers. Tracing and HTTP/2 are
+  seal readiness polling, typed response wrapping, selective bootstrap
+  convergence, and ACL policy-builder wrapping TTLs. Tracing and HTTP/2 are
   resolved as non-default features without runtime transport hooks.
 - `0.10.0` through `0.15.0`: close the endpoint matrix deliberately: Identity
   and auth, Transit advanced key management, PKI advanced/public/specialized
-  flows, remaining system backend rows, then final endpoint closure.
+  flows, remaining system backend rows, then final endpoint closure and stable
+  ergonomics. Request-level back-pressure, full OpenTelemetry SDK integration,
+  certificate pinning, KV v1 bootstrap convergence, and ACL parameter-constraint
+  HCL generation are rejected for stable scope.
 - `1.0.0`: stable API freeze after the endpoint matrix has zero `decision`
   rows; after `1.0.0`, only `1.0.x` maintenance and security fixes are
   planned.

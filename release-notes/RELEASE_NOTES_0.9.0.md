@@ -119,13 +119,20 @@
   sys/config/ui, sys/monitor streaming, and internal router inspection.
   In-flight request, internal counters, and internal request inspection still
   need final `0.14.0` decisions.
-- Decide before `0.15.0`: seal-status watchers, application-side secret-struct
-  wrappers, and advanced ACL policy-builder fields. Runtime HTTP/2 transport
-  knobs are rejected; use the non-default `http2` feature for TLS ALPN HTTP/2
-  negotiation, and keep default builds HTTP/1.1-only. HTTP/3 is rejected for
-  stable scope. Certificate and public-key pinning are rejected for stable scope;
-  use root-only trust with an internal CA or self-signed OpenBao certificate
-  instead. Tracing is resolved with a
+- Implement in `0.15.0`: a bounded `wait_until_unsealed` helper behind an
+  explicit Tokio helper feature, typed response-wrapping ergonomics with
+  redacted wrapping tokens and typed unwrap, selective AdminBootstrap
+  convergence for PKI mounts/roles, database mounts/dynamic and static roles,
+  and SSH mounts/roles, plus ACL policy-builder wrapping-TTL constraints.
+  Rejected for stable scope: request-level seal back-pressure, per-engine
+  wrapped method duplication, PKI CA setup in bootstrap, database connection
+  configuration in bootstrap, SSH CA setup in bootstrap, KV v1 bootstrap
+  convergence, and ACL parameter-constraint HCL generation.
+- Runtime HTTP/2 transport knobs are rejected; use the non-default `http2`
+  feature for TLS ALPN HTTP/2 negotiation, and keep default builds HTTP/1.1-only.
+  HTTP/3 is rejected for stable scope. Certificate and public-key pinning are
+  rejected for stable scope; use root-only trust with an internal CA or
+  self-signed OpenBao certificate instead. Tracing is resolved with a
   non-default `tracing` feature; OpenTelemetry SDK dependencies and custom
   request hooks are rejected for stable scope, and W3C `traceparent`
   propagation is deferred past `1.0.0`.
