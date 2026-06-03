@@ -285,6 +285,7 @@ openbao = { version = "0.10", features = ["time"] }
 | `totp` | yes | TOTP key and code helpers. |
 | `transit` | yes | Transit key lifecycle, batch cryptography, and single-operation cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
+| `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Uses `openssl` and `aes-kw`; not an HSM, FIPS, certification, or post-quantum claim. |
 | `sys` | yes | System backend, readiness, leases, quotas, storage, diagnostics, and operator-gated helpers. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
@@ -954,6 +955,61 @@ async fn main() -> Result<()> {
 
     let plaintext = decrypted.plaintext_bytes()?;
     println!("plaintext length: {}", plaintext.len());
+    Ok(())
+}
+```
+
+Import externally wrapped Transit key material:
+
+```rust,no_run
+use openbao::secrets::transit::{
+    TransitImportHashFunction, TransitImportRequest, TransitKeyType,
+};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let transit = client.transit("transit")?;
+
+    let wrapping_key = transit.wrapping_key().await?;
+    println!("wrapping key PEM length: {}", wrapping_key.public_key.len());
+
+    let request = TransitImportRequest::new(
+        SecretString::from(std::env::var("BAO_WRAPPED_KEY").unwrap_or_default()),
+        TransitKeyType::Aes256Gcm96,
+    )?
+    .with_hash_function(TransitImportHashFunction::Sha256);
+
+    transit.import_key("imported-app-key", &request).await?;
+    Ok(())
+}
+```
+
+Prepare a wrapped import blob with the optional `transit-import` feature:
+
+```rust,ignore
+use openbao::secrets::transit::{
+    TransitImportHashFunction, TransitKeyType, TransitWrappedImportKey,
+};
+use openbao::{Client, Result, SecretString, Zeroizing};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let transit = client.transit("transit")?;
+
+    let wrapping_key = transit.wrapping_key().await?;
+    let wrapped = TransitWrappedImportKey::wrap_key_material(
+        &wrapping_key.public_key,
+        Zeroizing::new(b"32-byte-import-key-material-here".to_vec()),
+        TransitImportHashFunction::Sha256,
+    )?;
+
+    let request = wrapped.into_import_request(TransitKeyType::Aes256Gcm96)?;
+    transit.import_key("imported-app-key", &request).await?;
     Ok(())
 }
 ```

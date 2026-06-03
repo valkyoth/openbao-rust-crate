@@ -3257,6 +3257,20 @@ mod tests {
         assert!(public_version.ciphertext.is_none());
         assert!(public_version.public_key.is_some());
         assert!(super::TransitImportVersionRequest::from_public_key("").is_err());
+
+        let mut conflicting_request = super::TransitImportRequest::new(
+            SecretString::from("wrapped-secret"),
+            super::TransitKeyType::Aes256Gcm96,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        conflicting_request.public_key = Some("-----BEGIN PUBLIC KEY-----".to_owned());
+        assert!(conflicting_request.validate().is_err());
+
+        let mut missing_material =
+            super::TransitImportVersionRequest::new(SecretString::from("wrapped-version"))
+                .unwrap_or_else(|error| panic!("{error}"));
+        missing_material.ciphertext = None;
+        assert!(missing_material.validate().is_err());
     }
 
     #[cfg(feature = "transit-import")]
