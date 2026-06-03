@@ -1,0 +1,627 @@
+area,method,path,status,doc_page,note
+auth,LIST,/auth/approle/role,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/role/:role_name,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET,/auth/approle/role/:role_name,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,DELETE,/auth/approle/role/:role_name,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET,/auth/approle/role/:role_name/role-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/role/:role_name/role-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/role/:role_name/secret-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,LIST,/auth/approle/role/:role_name/secret-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/role/:role_name/secret-id/lookup,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/role/:role_name/secret-id/destroy,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/role/:role_name/secret-id-accessor/lookup,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/role/:role_name/secret-id-accessor/destroy,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/role/:role_name/custom-secret-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/approle/login,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/policies,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-num-uses,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-ttl,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-ttl,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-max-ttl,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/bind-secret-id,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-bound-cidrs,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-bound-cidrs,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/period,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,POST,/auth/approle/tidy/secret-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,POST,/auth/jwt/config,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,GET,/auth/jwt/config,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,POST,/auth/jwt/role/:name,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,GET,/auth/jwt/role/:name,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,LIST,/auth/jwt/role,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,DELETE,/auth/jwt/role/:name,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,POST,/auth/jwt/oidc/auth_url,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,GET,/auth/jwt/oidc/callback,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,GET,/auth/jwt/oidc/poll,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,POST,/auth/jwt/login,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
+auth,POST,/auth/kerberos/config,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,GET,/auth/kerberos/config,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,POST,/auth/kerberos/config/ldap,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,GET,/auth/kerberos/config/ldap,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,LIST,/auth/kerberos/groups,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,GET,/auth/kerberos/groups/:name,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,POST,/auth/kerberos/groups/:name,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,DELETE,/auth/kerberos/groups/:name,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,POST,/auth/kerberos/login,typed,https://openbao.org/api-docs/auth/kerberos/,Typed auth helper exists.
+auth,POST,/auth/kubernetes/config,typed,https://openbao.org/api-docs/auth/kubernetes/,Typed auth helper exists.
+auth,GET,/auth/kubernetes/config,typed,https://openbao.org/api-docs/auth/kubernetes/,Typed auth helper exists.
+auth,POST,/auth/kubernetes/role/:name,typed,https://openbao.org/api-docs/auth/kubernetes/,Typed auth helper exists.
+auth,GET,/auth/kubernetes/role/:name,typed,https://openbao.org/api-docs/auth/kubernetes/,Typed auth helper exists.
+auth,LIST,/auth/kubernetes/role,typed,https://openbao.org/api-docs/auth/kubernetes/,Typed auth helper exists.
+auth,GET,/auth/kubernetes/role?list=true,typed,https://openbao.org/api-docs/auth/kubernetes/,Typed auth helper exists.
+auth,DELETE,/auth/kubernetes/role/:role,typed,https://openbao.org/api-docs/auth/kubernetes/,Typed auth helper exists.
+auth,POST,/auth/kubernetes/login,typed,https://openbao.org/api-docs/auth/kubernetes/,Typed auth helper exists.
+auth,POST,/auth/ldap/config,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,GET,/auth/ldap/config,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,LIST,/auth/ldap/groups,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,GET,/auth/ldap/groups/:name,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,POST,/auth/ldap/groups/:name,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,DELETE,/auth/ldap/groups/:name,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,LIST,/auth/ldap/users,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,GET,/auth/ldap/users/:username,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,POST,/auth/ldap/users/:username,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,DELETE,/auth/ldap/users/:username,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,POST,/auth/ldap/login/:username,typed,https://openbao.org/api-docs/auth/ldap/,Typed auth helper exists.
+auth,POST,/auth/radius/config,typed,https://openbao.org/api-docs/auth/radius/,Typed auth helper exists.
+auth,POST,/auth/radius/users/:username,typed,https://openbao.org/api-docs/auth/radius/,Typed auth helper exists.
+auth,GET,/auth/radius/users/:username,typed,https://openbao.org/api-docs/auth/radius/,Typed auth helper exists.
+auth,DELETE,/auth/radius/users/:username,typed,https://openbao.org/api-docs/auth/radius/,Typed auth helper exists.
+auth,LIST,/auth/radius/users,typed,https://openbao.org/api-docs/auth/radius/,Typed auth helper exists.
+auth,POST,/auth/radius/login,typed,https://openbao.org/api-docs/auth/radius/,Typed auth helper exists.
+auth,POST,/auth/radius/login/:username,typed,https://openbao.org/api-docs/auth/radius/,Typed auth helper exists.
+auth,POST,/auth/cert/certs/:name,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,GET,/auth/cert/certs/:name,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,LIST,/auth/cert/certs,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,DELETE,/auth/cert/certs/:name,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,LIST,/auth/cert/crls,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,POST,/auth/cert/crls/:name,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,GET,/auth/cert/crls/:name,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,DELETE,/auth/cert/crls/:name,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,POST,/auth/cert/config,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,POST,/auth/cert/login,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
+auth,LIST,/auth/token/accessors,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/create,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/create-orphan,decision,https://openbao.org/api-docs/auth/token/,Token endpoint needs a dedicated helper decision.
+auth,POST,/auth/token/create/:role_name,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/lookup,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,GET,/auth/token/lookup-self,partial,https://openbao.org/api-docs/auth/token/,"Typed helper exists, but uses OpenBao-compatible POST while this row documents GET."
+auth,POST,/auth/token/lookup-accessor,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/renew,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/renew-self,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/renew-accessor,decision,https://openbao.org/api-docs/auth/token/,Token endpoint needs a dedicated helper decision.
+auth,POST,/auth/token/revoke,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/revoke-self,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/revoke-accessor,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/revoke-orphan,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,GET,/auth/token/roles/:role_name,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,LIST,/auth/token/roles,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/roles/:role_name,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,DELETE,/auth/token/roles/:role_name,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/token/tidy,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
+auth,POST,/auth/userpass/users/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
+auth,GET,/auth/userpass/users/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
+auth,DELETE,/auth/userpass/users/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
+auth,POST,/auth/userpass/users/:username/password,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
+auth,POST,/auth/userpass/users/:username/policies,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
+auth,LIST,/auth/userpass/users,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
+auth,POST,/auth/userpass/login/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
+secret,POST,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/keys/:name/import,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,POST,/transit/keys/:name/import_version,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,GET,/transit/wrapping_key,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,GET,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,LIST,/transit/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,DELETE,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/keys/:name/config,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/keys/:name/rotate,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,DELETE,/transit/keys/:name/soft-delete,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,POST,/transit/keys/:name/soft-delete-restore,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,GET,/transit/byok-export/:destination/:source(/:version),decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,GET,/transit/export/:key_type/:name(/:version),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,GET,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,POST,/transit/encrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/decrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/rewrap/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/datakey/:type/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/random(/:source)(/:bytes),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/hash(/:algorithm),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/hmac/:name(/:algorithm),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/sign/:name(/:hash_algorithm),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/verify/:name(/:hash_algorithm),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,GET,/transit/backup/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/restore(/:name),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/keys/:name/trim,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
+secret,POST,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,GET,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,POST,/transit/keys/:name/csr,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,POST,/transit/keys/:name/set-certificate,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,GET,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
+secret,LIST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
+secret,POST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
+secret,DELETE,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
+secret,POST,/database/config/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,GET,/database/config/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,LIST,/database/config,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,DELETE,/database/config/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,POST,/database/reset/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,POST,/database/rotate-root/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,POST,/database/roles/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,GET,/database/roles/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,LIST,/database/roles,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,DELETE,/database/roles/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,GET,/database/creds/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,POST,/database/static-roles/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,GET,/database/static-roles/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,LIST,/database/static-roles,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,DELETE,/database/static-roles/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,GET,/database/static-creds/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,POST,/database/rotate-role/:name,typed,https://openbao.org/api-docs/secret/databases/,Typed secrets-engine helper exists.
+secret,POST,/kubernetes/config,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,GET,/kubernetes/config,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,DELETE,/kubernetes/config,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,POST,/kubernetes/roles/:name,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,GET,/kubernetes/roles/:name,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,LIST,/kubernetes/roles,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,GET,/kubernetes/roles?list=true,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,DELETE,/kubernetes/roles/:role,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,POST,/kubernetes/creds/:role,typed,https://openbao.org/api-docs/secret/kubernetes/,Typed secrets-engine helper exists.
+secret,POST,/ldap/config,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,GET,/ldap/config,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,DELETE,/ldap/config,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,POST,/ldap/rotate-root,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,GET,/ldap/static-role,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,GET,/ldap/static-role/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,POST,/ldap/static-role/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,DELETE,/ldap/static-role/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,GET,/ldap/static-cred/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,POST,/ldap/rotate-role/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,POST,/ldap/role/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,DELETE,/ldap/role/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,GET,/ldap/role/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,GET,/ldap/creds/:role_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,LIST,/ldap/library,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,POST,/ldap/library/:set_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,GET,/ldap/library/:set_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,DELETE,/ldap/library/:set_name,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,GET,/ldap/library/:set_name/status,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,POST,/ldap/library/:set_name/check-out,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,POST,/ldap/library/:set_name/check-in,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,POST,/ldap/library/manage/:set_name/check-in,typed,https://openbao.org/api-docs/secret/ldap/,Typed secrets-engine helper exists.
+secret,ACME,/pki/acme/directory,external,https://openbao.org/api-docs/secret/pki/,ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL helpers.
+secret,ACME,/pki/issuer/:issuer_ref/acme/directory,external,https://openbao.org/api-docs/secret/pki/,ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL helpers.
+secret,ACME,/pki/roles/:role/acme/directory,external,https://openbao.org/api-docs/secret/pki/,ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL helpers.
+secret,ACME,/pki/issuer/:issuer_ref/roles/:role/acme/directory,external,https://openbao.org/api-docs/secret/pki/,ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL helpers.
+secret,POST,/pki/acme/new-eab,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuer/:issuer_ref/acme/new-eab,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/roles/:role/acme/new-eab,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuer/:issuer_ref/roles/:role/acme/new-eab,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,LIST,/pki/eab,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,DELETE,/pki/eab/:key_id,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/config/acme,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/config/acme,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,LIST,/pki/roles,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issue/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuer/:issuer_ref/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/sign/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuer/:issuer_ref/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/root/sign-intermediate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/root/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,LIST,/pki/cel/roles,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/cel/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/cel/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/revoke,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/revoke-with-key,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,LIST,/certs/revoked,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,LIST,/certs/revocation-queue,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,LIST,/pki/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/cert/ca,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/ca,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/ca/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/json,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/ca_chain,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/cert/ca_chain,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/cert/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/crl/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/cert/delta-crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/crl/delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/crl/delta/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/delta/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/delta/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/ocsp/<base 64+URL encoded ocsp DER request>,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/ocsp,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,LIST,/pki/certs,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,LIST,/pki/certs/detailed?detailed=true,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/cert/:serial,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/cert/:serial/raw,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/cert/:serial/raw/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,LIST,/pki/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/keys/generate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/root/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuers/generate/root/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/root/rotate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/intermediate/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuers/generate/intermediate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/intermediate/cross-sign,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/config/ca,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuers/import/bundle,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuers/import/cert,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/intermediate/set-signed,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/issuer/:issuer_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuer/:issuer_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,PATCH,/pki/issuer/:issuer_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/issuer/:issuer_ref/revoke,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,DELETE,/pki/issuer/:issuer_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/keys/import,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,DELETE,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,DELETE,/pki/root,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,PATCH,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,DELETE,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,PATCH,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,DELETE,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/root/replace,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/crl/rotate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/crl/rotate-delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/resign-crls,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/sign-revocation-list,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/tidy,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,GET,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/tidy-status,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/tidy-cancel,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/rabbitmq/config/connection,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
+secret,POST,/rabbitmq/config/lease,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
+secret,LIST,/rabbitmq/roles,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
+secret,POST,/rabbitmq/roles/:name,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
+secret,GET,/rabbitmq/roles/:name,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
+secret,DELETE,/rabbitmq/roles/:name,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
+secret,GET,/rabbitmq/creds/:name,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
+secret,LIST,/ssh/roles,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/lookup,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/roles/:name,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,GET,/ssh/roles/:name,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,DELETE,/ssh/roles/:name,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,GET,/ssh/config/zeroaddress,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/config/zeroaddress,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,DELETE,/ssh/config/zeroaddress,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/creds/:name,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,GET,/ssh/config/issuers,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/config/issuers,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,DELETE,/ssh/tidy/dynamic-keys,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,LIST,/ssh/issuers,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/config/ca,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/issuers/import/:issuer_name,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,GET,/ssh/issuer/:issuer_ref,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,GET,/ssh/issuer/:issuer_ref/public_key,external,https://openbao.org/api-docs/secret/ssh/,Unauthenticated text/plain SSH public key reads stay outside the typed JSON client.
+secret,GET,/ssh/config/ca,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,GET,/ssh/public_key,external,https://openbao.org/api-docs/secret/ssh/,Unauthenticated text/plain SSH public key reads stay outside the typed JSON client.
+secret,DELETE,/ssh/config/ca,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,DELETE,/ssh/issuer/:issuer_ref,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/sign/:name,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/issue/:name,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/ssh/verify,typed,https://openbao.org/api-docs/secret/ssh/,Typed SSH helper exists.
+secret,POST,/totp/keys/:name,typed,https://openbao.org/api-docs/secret/totp/,Typed secrets-engine helper exists.
+secret,GET,/totp/keys/:name,typed,https://openbao.org/api-docs/secret/totp/,Typed secrets-engine helper exists.
+secret,LIST,/totp/keys,typed,https://openbao.org/api-docs/secret/totp/,Typed secrets-engine helper exists.
+secret,DELETE,/totp/keys/:name,typed,https://openbao.org/api-docs/secret/totp/,Typed secrets-engine helper exists.
+secret,GET,/totp/code/:name,typed,https://openbao.org/api-docs/secret/totp/,Typed secrets-engine helper exists.
+secret,POST,/totp/code/:name,typed,https://openbao.org/api-docs/secret/totp/,Typed secrets-engine helper exists.
+system,GET,/sys/audit,typed,https://openbao.org/api-docs/system/audit/,Typed system helper exists.
+system,POST,/sys/audit/:path,typed,https://openbao.org/api-docs/system/audit/,Typed system helper exists.
+system,DELETE,/sys/audit/:path,typed,https://openbao.org/api-docs/system/audit/,Typed system helper exists.
+system,POST,/sys/audit-hash/:path,typed,https://openbao.org/api-docs/system/audit-hash/,Typed system helper exists.
+system,GET,/sys/auth,typed,https://openbao.org/api-docs/system/auth/,Typed system helper exists.
+system,POST,/sys/auth/:path,typed,https://openbao.org/api-docs/system/auth/,Typed system helper exists.
+system,GET,/sys/auth/:path,typed,https://openbao.org/api-docs/system/auth/,Typed system helper exists.
+system,DELETE,/sys/auth/:path,typed,https://openbao.org/api-docs/system/auth/,Typed system helper exists.
+system,GET,/sys/auth/:path/tune,typed,https://openbao.org/api-docs/system/auth/,Typed system helper exists.
+system,POST,/sys/auth/:path/tune,typed,https://openbao.org/api-docs/system/auth/,Typed system helper exists.
+system,POST,/sys/capabilities,typed,https://openbao.org/api-docs/system/capabilities/,Typed system helper exists.
+system,POST,/sys/capabilities-accessor,typed,https://openbao.org/api-docs/system/capabilities-accessor/,Typed system helper exists.
+system,POST,/sys/capabilities-self,typed,https://openbao.org/api-docs/system/capabilities-self/,Typed system helper exists.
+system,GET,/sys/config/auditing/request-headers,typed,https://openbao.org/api-docs/system/config-auditing/,Typed system helper exists.
+system,GET,/sys/config/auditing/request-headers/:name,typed,https://openbao.org/api-docs/system/config-auditing/,Typed system helper exists.
+system,POST,/sys/config/auditing/request-headers/:name,typed,https://openbao.org/api-docs/system/config-auditing/,Typed system helper exists.
+system,DELETE,/sys/config/auditing/request-headers/:name,typed,https://openbao.org/api-docs/system/config-auditing/,Typed system helper exists.
+system,GET,/sys/config/cors,typed,https://openbao.org/api-docs/system/config-cors/,Typed system helper exists.
+system,POST,/sys/config/cors,typed,https://openbao.org/api-docs/system/config-cors/,Typed system helper exists.
+system,DELETE,/sys/config/cors,typed,https://openbao.org/api-docs/system/config-cors/,Typed system helper exists.
+system,GET,/sys/config/state/sanitized,typed,https://openbao.org/api-docs/system/config-state/,Typed system helper exists.
+system,GET,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,DELETE,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,LIST,/sys/config/ui/headers,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,DELETE,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/generate-recovery-token/update,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,DELETE,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/generate-root/update,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,HEAD,/sys/health,typed,https://openbao.org/api-docs/system/health/,Typed system helper exists.
+system,GET,/sys/health,typed,https://openbao.org/api-docs/system/health/,Typed system helper exists.
+system,GET,/sys/host-info,typed,https://openbao.org/api-docs/system/host-info/,Typed system helper exists.
+system,GET,/sys/in-flight-req,decision,https://openbao.org/api-docs/system/in-flight-req/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/init,typed,https://openbao.org/api-docs/system/init/,Typed system helper exists.
+system,POST,/sys/init,typed,https://openbao.org/api-docs/system/init/,Typed system helper exists.
+system,GET,/sys/internal/counters/entities,decision,https://openbao.org/api-docs/system/internal-counters/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/counters/tokens,decision,https://openbao.org/api-docs/system/internal-counters/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/specs/openapi,typed,https://openbao.org/api-docs/system/internal-specs-openapi/,Typed system helper exists.
+system,GET,/sys/internal/ui/mounts,typed,https://openbao.org/api-docs/system/internal-ui-mounts/,Typed system helper exists.
+system,GET,/sys/internal/ui/mounts/:path,typed,https://openbao.org/api-docs/system/internal-ui-mounts/,Typed system helper exists.
+system,GET,/sys/internal/ui/namespaces,typed,https://openbao.org/api-docs/system/internal-ui-namespaces/,Typed system helper exists.
+system,GET,/sys/internal/ui/resultant-acl,decision,https://openbao.org/api-docs/system/internal-ui-resultant-acl/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/key-status,typed,https://openbao.org/api-docs/system/key-status/,Typed system helper exists.
+system,GET,/sys/ha-status,typed,https://openbao.org/api-docs/system/ha-status/,Typed system helper exists.
+system,GET,/sys/leader,typed,https://openbao.org/api-docs/system/leader/,Typed system helper exists.
+system,POST,/sys/leases/lookup,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
+system,LIST,/sys/leases/lookup/:prefix,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
+system,POST,/sys/leases/renew,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
+system,POST,/sys/leases/revoke,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
+system,POST,/sys/leases/revoke-force/:prefix,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
+system,POST,/sys/leases/revoke-prefix/:prefix,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
+system,POST,/sys/leases/tidy,decision,https://openbao.org/api-docs/system/leases/,Lease tidy needs pre-1.0 decision.
+system,GET,/sys/leases/count,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
+system,GET,/sys/leases,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
+system,POST,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
+system,POST,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
+system,GET,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
+system,GET,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
+system,DELETE,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
+system,DELETE,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
+system,GET,/sys/metrics,typed,https://openbao.org/api-docs/system/metrics/,Typed system helper exists.
+system,POST,/sys/mfa/validate,decision,https://openbao.org/api-docs/system/mfa-validate/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/monitor,decision,https://openbao.org/api-docs/system/monitor/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/mounts,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
+system,POST,/sys/mounts/:path,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
+system,DELETE,/sys/mounts/:path,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
+system,GET,/sys/mounts/:path,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
+system,GET,/sys/mounts/:path/tune,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
+system,POST,/sys/mounts/:path/tune,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
+system,LIST,/sys/namespaces,typed,https://openbao.org/api-docs/system/namespaces/,Typed system helper exists.
+system,POST,/sys/namespaces/:path,typed,https://openbao.org/api-docs/system/namespaces/,Typed system helper exists.
+system,PATCH,/sys/namespaces/:path,typed,https://openbao.org/api-docs/system/namespaces/,Typed system helper exists.
+system,DELETE,/sys/namespaces/:path,typed,https://openbao.org/api-docs/system/namespaces/,Typed system helper exists.
+system,GET,/sys/namespaces/:path,typed,https://openbao.org/api-docs/system/namespaces/,Typed system helper exists.
+system,POST,/sys/plugins/reload/backend,typed,https://openbao.org/api-docs/system/plugins-reload-backend/,Typed system helper exists.
+system,GET,/sys/plugins/catalog,typed,https://openbao.org/api-docs/system/plugins-catalog/,Typed system helper exists.
+system,LIST,/sys/plugins/catalog/auth,typed,https://openbao.org/api-docs/system/plugins-catalog/,Typed system helper exists.
+system,LIST,/sys/plugins/catalog/database,typed,https://openbao.org/api-docs/system/plugins-catalog/,Typed system helper exists.
+system,LIST,/sys/plugins/catalog/secret,typed,https://openbao.org/api-docs/system/plugins-catalog/,Typed system helper exists.
+system,POST,/sys/plugins/catalog/:type/:name,typed,https://openbao.org/api-docs/system/plugins-catalog/,Typed system helper exists.
+system,GET,/sys/plugins/catalog/:type/:name?version=:version,typed,https://openbao.org/api-docs/system/plugins-catalog/,Typed system helper exists.
+system,DELETE,/sys/plugins/catalog/:type/:name?version=:version,typed,https://openbao.org/api-docs/system/plugins-catalog/,Typed system helper exists.
+system,GET,/sys/policy,typed,https://openbao.org/api-docs/system/policy/,Typed system helper exists.
+system,LIST,/sys/policy/:prefix,typed,https://openbao.org/api-docs/system/policy/,Typed system helper exists.
+system,GET,/sys/policy/:name,typed,https://openbao.org/api-docs/system/policy/,Typed system helper exists.
+system,POST,/sys/policy/:name,typed,https://openbao.org/api-docs/system/policy/,Typed system helper exists.
+system,DELETE,/sys/policy/:name,typed,https://openbao.org/api-docs/system/policy/,Typed system helper exists.
+system,LIST,/sys/policies/acl,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
+system,LIST,/sys/policies/acl/:prefix,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
+system,LIST,/sys/policies/detailed/acl,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
+system,LIST,/sys/policies/detailed/acl/:prefix,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
+system,GET,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
+system,POST,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
+system,DELETE,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
+system,POST,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,LIST,/sys/policies/password,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/policies/password?list=true,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,DELETE,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/policies/password/:name/generate,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/pprof/,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/allocs,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/block,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/cmdline,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/goroutine,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/heap,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/mutex,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/profile,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/symbol,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/threadcreate,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/pprof/trace,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/quotas/config,typed,https://openbao.org/api-docs/system/quotas-config/,Typed system helper exists.
+system,GET,/sys/quotas/config,typed,https://openbao.org/api-docs/system/quotas-config/,Typed system helper exists.
+system,POST,/sys/quotas/rate-limit/:name,typed,https://openbao.org/api-docs/system/rate-limit-quotas/,Typed system helper exists.
+system,DELETE,/sys/quotas/rate-limit/:name,typed,https://openbao.org/api-docs/system/rate-limit-quotas/,Typed system helper exists.
+system,GET,/sys/quotas/rate-limit/:name,typed,https://openbao.org/api-docs/system/rate-limit-quotas/,Typed system helper exists.
+system,LIST,/sys/quotas/rate-limit,typed,https://openbao.org/api-docs/system/rate-limit-quotas/,Typed system helper exists.
+system,GET,/sys/raw/:path,typed-gated,https://openbao.org/api-docs/system/raw/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/raw/:path,typed-gated,https://openbao.org/api-docs/system/raw/,Typed helper exists behind operator-operation gates where needed.
+system,LIST,/sys/raw/:prefix,typed-gated,https://openbao.org/api-docs/system/raw/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/raw/:prefix?list=true,typed-gated,https://openbao.org/api-docs/system/raw/,Typed helper exists behind operator-operation gates where needed.
+system,DELETE,/sys/raw/:path,typed-gated,https://openbao.org/api-docs/system/raw/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/rekey/init,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rekey/init,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,DELETE,/sys/rekey/init,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/rekey/backup,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,DELETE,/sys/rekey/backup,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rekey/update,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,DELETE,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,DELETE,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/rekey/recovery-key-backup,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,DELETE,/sys/rekey/recovery-key-backup,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/rekey-recovery-key/update,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,DELETE,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/remount,typed,https://openbao.org/api-docs/system/remount/,Typed system helper exists.
+system,GET,/sys/remount/status/:migration_id,typed,https://openbao.org/api-docs/system/remount/,Typed system helper exists.
+system,POST,/sys/seal,typed-gated,https://openbao.org/api-docs/system/seal/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/seal-status,typed,https://openbao.org/api-docs/system/seal-status/,Typed system helper exists.
+system,POST,/sys/step-down,typed-gated,https://openbao.org/api-docs/system/step-down/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/tools/random(/:source)(/:bytes),typed,https://openbao.org/api-docs/system/tools/,Typed system helper exists.
+system,POST,/sys/tools/hash(/:algorithm),typed,https://openbao.org/api-docs/system/tools/,Typed system helper exists.
+system,POST,/sys/unseal,typed-gated,https://openbao.org/api-docs/system/unseal/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/locked-users,typed,https://openbao.org/api-docs/system/user-lockout/,Typed system helper exists.
+system,POST,/sys/locked-users/:mount_accessor/unlock/:alias-identifier,typed,https://openbao.org/api-docs/system/user-lockout/,Typed system helper exists.
+system,LIST,/sys/version-history,typed,https://openbao.org/api-docs/system/version-history/,Typed system helper exists.
+system,POST,/sys/wrapping/lookup,typed,https://openbao.org/api-docs/system/wrapping-lookup/,Typed system helper exists.
+system,POST,/sys/wrapping/rewrap,typed,https://openbao.org/api-docs/system/wrapping-rewrap/,Typed system helper exists.
+system,POST,/sys/wrapping/unwrap,typed,https://openbao.org/api-docs/system/wrapping-unwrap/,Typed system helper exists.
+system,POST,/sys/wrapping/wrap,typed,https://openbao.org/api-docs/system/wrapping-wrap/,Typed system helper exists.
+secret,POST,/identity/entity-alias,typed,https://openbao.org/api-docs/secret/identity/entity-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/entity-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/entity-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/entity-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/entity-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,DELETE,/identity/entity-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/entity-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,LIST,/identity/entity-alias/id,typed,https://openbao.org/api-docs/secret/identity/entity-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/entity-alias/id?list=true,typed,https://openbao.org/api-docs/secret/identity/entity-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/entity,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/entity/id/:id,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/entity/id/:id,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,DELETE,/identity/entity/id/:id,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/entity/batch-delete,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,LIST,/identity/entity/id,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/entity/id?list=true,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/entity/name/:name,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/entity/name/:name,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,DELETE,/identity/entity/name/:name,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,LIST,/identity/entity/name,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/entity/name?list=true,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/entity/merge,typed,https://openbao.org/api-docs/secret/identity/entity/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/group,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/group/id/:id,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/group/id/:id,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,DELETE,/identity/group/id/:id,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,LIST,/identity/group/id,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/group/id?list=true,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/group/name/:name,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/group/name/:name,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,DELETE,/identity/group/name/:name,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,LIST,/identity/group/name,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/group/name?list=true,typed,https://openbao.org/api-docs/secret/identity/group/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/group-alias,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,DELETE,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,LIST,/identity/group-alias/id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/group-alias/id?list=true,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/lookup/entity,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/lookup/group,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
+secret,GET,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/oidc/provider,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/oidc/scope,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/oidc/client,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/oidc/assignment,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/oidc/provider/:name/.well-known/keys,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET/POST,/identity/oidc/provider/:name/authorize,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/oidc/provider/:name/token,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/oidc/provider/:name/userinfo,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
+secret,LIST,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
+secret,SCAN,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
+secret,POST,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
+secret,DELETE,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
+secret,POST,/:secret-mount-path/config,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,GET,/:secret-mount-path/config,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,GET,/:secret-mount-path/data/:path?version=:version-number,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,POST,/:secret-mount-path/data/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,PATCH,/:secret-mount-path/data/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,GET,/:secret-mount-path/subkeys/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,DELETE,/:secret-mount-path/data/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,POST,/:secret-mount-path/delete/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,POST,/:secret-mount-path/undelete/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,PUT,/:secret-mount-path/destroy/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,LIST,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,SCAN,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,LIST,/:secret-mount-path/detailed-metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,SCAN,/:secret-mount-path/detailed-metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,GET,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,POST,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,PATCH,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,DELETE,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
+secret,POST,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/mfa/login-enforcement,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+system,GET,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
+system,DELETE,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/internal/inspect/request/root,decision,https://openbao.org/api-docs/system/inspect/request/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/router/root,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/router/uuid,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/router/accessor,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/router/storage,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/rotate/keyring,typed-gated,https://openbao.org/api-docs/system/rotate/keyring/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rotate,typed-gated,https://openbao.org/api-docs/system/rotate/keyring/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rotate/keyring/config,typed-gated,https://openbao.org/api-docs/system/rotate/keyring-config/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rotate/config,typed-gated,https://openbao.org/api-docs/system/rotate/keyring-config/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/rotate/keyring/config,typed-gated,https://openbao.org/api-docs/system/rotate/keyring-config/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/rotate/config,typed-gated,https://openbao.org/api-docs/system/rotate/keyring-config/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rotate/root,typed-gated,https://openbao.org/api-docs/system/rotate/root/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rotate/(root|recovery)/update,typed-gated,https://openbao.org/api-docs/system/rotate/update/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/rotate/(root|recovery)/verify,typed-gated,https://openbao.org/api-docs/system/rotate/verify/,Typed helper exists behind operator-operation gates where needed.
+system,DELETE,/sys/rotation/(root|recovery)/verify,typed-gated,https://openbao.org/api-docs/system/rotate/verify/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/rotate/(root|recovery)/verify,typed-gated,https://openbao.org/api-docs/system/rotate/verify/,Typed helper exists behind operator-operation gates where needed.
+system,GET,/sys/rotate/(root|recovery)/backup,typed-gated,https://openbao.org/api-docs/system/rotate/backup/,Typed helper exists behind operator-operation gates where needed.
+system,DELETE,/sys/rotate/(root|recovery)/backup,typed-gated,https://openbao.org/api-docs/system/rotate/backup/,Typed helper exists behind operator-operation gates where needed.
+system,POST,/sys/storage/raft/join,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,GET,/sys/storage/raft/configuration,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,POST,/sys/storage/raft/remove-peer,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,POST,/sys/storage/raft/promote,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,POST,/sys/storage/raft/demote,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,GET,/sys/storage/raft/snapshot,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,POST,/sys/storage/raft/snapshot,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,POST,/sys/storage/raft/snapshot-force,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,POST,/sys/storage/raft/bootstrap,typed,https://openbao.org/api-docs/system/storage/raft/,Typed system helper exists.
+system,GET,/sys/storage/raft/autopilot/state,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
+system,GET,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
+system,POST,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
+secret,POST,/identity/mfa/method/duo/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/mfa/method/duo,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/mfa/method/okta/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/mfa/method/okta,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/mfa/method/pingid/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/mfa/method/pingid,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/mfa/method/totp/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,DELETE,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,LIST,/identity/mfa/method/totp,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/mfa/method/totp/generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/mfa/method/totp/admin-generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/mfa/method/totp/admin-destroy,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.

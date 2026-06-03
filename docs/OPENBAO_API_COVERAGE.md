@@ -15,6 +15,10 @@ LDAP auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
 Kerberos auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
+Endpoint-by-endpoint coverage was generated from the official rendered
+OpenBao `2.5.x` API documentation on 2026-06-03 and is tracked in
+`docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` with the full CSV source in
+`docs/openbao-2.5-endpoint-matrix.csv`.
 
 Sources:
 
@@ -62,6 +66,21 @@ Sources:
 - System step down: https://openbao.org/api-docs/system/step-down/
 - System remount: https://openbao.org/api-docs/system/remount/
 - System tools: https://openbao.org/api-docs/next/system/tools/
+
+## Endpoint Matrix
+
+The `0.9.0` stabilization line now uses a mechanical endpoint matrix instead
+of only area-level estimates:
+
+- documented endpoint rows extracted from OpenBao `2.5.x`: `626`;
+- strict typed coverage: `457/626` (`73.0%`);
+- typed plus partial coverage: `458/626` (`73.2%`);
+- addressed by typed, partial, raw, or external policy: `473/626` (`75.6%`);
+- rows needing a pre-`1.0.0` implementation/rejection/deferral decision:
+  `153`.
+
+See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
+`docs/openbao-2.5-endpoint-matrix.csv` for each method/path row.
 
 ## Foundation
 

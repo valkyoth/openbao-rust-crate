@@ -266,6 +266,11 @@ openbao = { version = "0.9", features = ["time"] }
 
 ## Support Matrix
 
+The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
+in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
+For the current `0.9.0` line it records `626` documented endpoint rows, with
+`457/626` (`73.0%`) strict typed or operator-gated coverage.
+
 ### Client, Transport, And TLS
 
 | Capability | Status | Notes |

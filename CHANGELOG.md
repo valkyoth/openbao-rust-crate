@@ -14,6 +14,9 @@ All notable changes to this project are documented here.
   documentation review, intentional deferral, or permanent external boundary.
 - Added migration guidance for users upgrading from earlier `openbao` releases,
   `vaultrs`, or bespoke `reqwest` OpenBao/Vault wrappers.
+- Added a generated OpenBao `2.5.x` endpoint-by-endpoint coverage matrix with
+  `626` documented endpoint rows, `73.0%` strict typed or operator-gated
+  coverage, and explicit pre-`1.0.0` decision rows.
 - Added a `0.9.0` release-note skeleton and release gate script.
 - Updated the release strategy to treat `1.0.0` as the final planned feature
   release, with optional `0.10.0` only as a pre-`1.0` completion buffer and
