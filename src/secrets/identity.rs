@@ -10,7 +10,7 @@ use std::fmt;
 use reqwest::{Method, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
 use serde::ser::SerializeMap;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value as JsonValue;
 
 use crate::{
@@ -18,7 +18,7 @@ use crate::{
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
-        deserialize_bounded_string_vec, deserialize_optional_bounded_string_vec,
+        deserialize_bounded_string_vec,
     },
     validation::validate_duration_parameter,
 };
@@ -1026,52 +1026,92 @@ impl fmt::Debug for IdentityOidcIntrospectRequest {
 }
 
 /// Identity OIDC introspection response.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default)]
 pub struct IdentityOidcIntrospection {
     /// Whether OpenBao considers the token active.
-    #[serde(default)]
     pub active: bool,
     /// Additional RFC 7662/OpenBao claims returned by the endpoint.
-    #[serde(flatten)]
     pub extra: BTreeMap<String, JsonValue>,
 }
 
+impl<'de> Deserialize<'de> for IdentityOidcIntrospection {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut extra = deserialize_bounded_json_map(deserializer)?;
+        let active = extra
+            .remove("active")
+            .map(serde_json::from_value::<bool>)
+            .transpose()
+            .map_err(serde::de::Error::custom)?
+            .unwrap_or(false);
+        Ok(Self { active, extra })
+    }
+}
+
 /// OIDC discovery metadata returned by OpenBao.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default)]
 pub struct IdentityOidcDiscovery {
     /// Issuer URL.
-    #[serde(default)]
     pub issuer: Option<String>,
     /// Authorization endpoint.
-    #[serde(default)]
     pub authorization_endpoint: Option<String>,
     /// Token endpoint.
-    #[serde(default)]
     pub token_endpoint: Option<String>,
     /// JWKS URI.
-    #[serde(default)]
     pub jwks_uri: Option<String>,
     /// Supported response types.
-    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
     pub response_types_supported: Option<Vec<String>>,
     /// Supported subject types.
-    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
     pub subject_types_supported: Option<Vec<String>>,
     /// Supported ID-token signing algorithms.
-    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
     pub id_token_signing_alg_values_supported: Option<Vec<String>>,
     /// Supported scopes.
-    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
     pub scopes_supported: Option<Vec<String>>,
     /// Supported token endpoint authentication methods.
-    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
     pub token_endpoint_auth_methods_supported: Option<Vec<String>>,
     /// Supported claims.
-    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
     pub claims_supported: Option<Vec<String>>,
     /// Additional provider metadata claims.
-    #[serde(flatten)]
     pub extra: BTreeMap<String, JsonValue>,
+}
+
+impl<'de> Deserialize<'de> for IdentityOidcDiscovery {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut extra = deserialize_bounded_json_map(deserializer)?;
+        Ok(Self {
+            issuer: take_optional_string::<D::Error>(&mut extra, "issuer")?,
+            authorization_endpoint: take_optional_string::<D::Error>(
+                &mut extra,
+                "authorization_endpoint",
+            )?,
+            token_endpoint: take_optional_string::<D::Error>(&mut extra, "token_endpoint")?,
+            jwks_uri: take_optional_string::<D::Error>(&mut extra, "jwks_uri")?,
+            response_types_supported: take_optional_string_vec::<D::Error>(
+                &mut extra,
+                "response_types_supported",
+            )?,
+            subject_types_supported: take_optional_string_vec::<D::Error>(
+                &mut extra,
+                "subject_types_supported",
+            )?,
+            id_token_signing_alg_values_supported: take_optional_string_vec::<D::Error>(
+                &mut extra,
+                "id_token_signing_alg_values_supported",
+            )?,
+            scopes_supported: take_optional_string_vec::<D::Error>(&mut extra, "scopes_supported")?,
+            token_endpoint_auth_methods_supported: take_optional_string_vec::<D::Error>(
+                &mut extra,
+                "token_endpoint_auth_methods_supported",
+            )?,
+            claims_supported: take_optional_string_vec::<D::Error>(&mut extra, "claims_supported")?,
+            extra,
+        })
+    }
 }
 
 /// OIDC JSON Web Key Set returned by OpenBao.
@@ -3217,6 +3257,43 @@ where
     Ok(())
 }
 
+fn take_optional_string<E>(
+    map: &mut BTreeMap<String, JsonValue>,
+    key: &'static str,
+) -> core::result::Result<Option<String>, E>
+where
+    E: serde::de::Error,
+{
+    match map.remove(key) {
+        None | Some(JsonValue::Null) => Ok(None),
+        Some(value) => serde_json::from_value::<String>(value)
+            .map(Some)
+            .map_err(E::custom),
+    }
+}
+
+fn take_optional_string_vec<E>(
+    map: &mut BTreeMap<String, JsonValue>,
+    key: &'static str,
+) -> core::result::Result<Option<Vec<String>>, E>
+where
+    E: serde::de::Error,
+{
+    let Some(value) = map.remove(key) else {
+        return Ok(None);
+    };
+    if value.is_null() {
+        return Ok(None);
+    }
+    let values = serde_json::from_value::<Vec<String>>(value).map_err(E::custom)?;
+    if values.len() > IDENTITY_LIST_LIMIT {
+        return Err(E::custom(
+            "identity OIDC discovery string list exceeds item limit",
+        ));
+    }
+    Ok(Some(values))
+}
+
 #[derive(Serialize)]
 struct IdentityOidcIntrospectPayload<'a> {
     token: &'a str,
@@ -3271,14 +3348,51 @@ where
                 };
                 values.push(value);
             }
-            while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
-            Err(serde::de::Error::custom(
-                "identity OIDC JWKS key list exceeds item limit",
-            ))
+            if seq.next_element::<serde::de::IgnoredAny>()?.is_some() {
+                return Err(serde::de::Error::custom(
+                    "identity OIDC JWKS key list exceeds item limit",
+                ));
+            }
+            Ok(values)
         }
     }
 
     deserializer.deserialize_option(Visitor)
+}
+
+fn deserialize_bounded_json_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, JsonValue>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for Visitor {
+        type Value = BTreeMap<String, JsonValue>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a bounded JSON object")
+        }
+
+        fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            let mut values = BTreeMap::new();
+            while let Some((key, value)) = map.next_entry::<String, JsonValue>()? {
+                if values.len() >= IDENTITY_LIST_LIMIT {
+                    return Err(serde::de::Error::custom(
+                        "identity OIDC JSON object exceeds item limit",
+                    ));
+                }
+                values.insert(key, value);
+            }
+            Ok(values)
+        }
+    }
+
+    deserializer.deserialize_map(Visitor)
 }
 
 fn deserialize_bounded_oidc_provider_info_map<'de, D>(
@@ -3422,8 +3536,9 @@ mod tests {
         IdentityMfaLoginEnforcementRequest, IdentityMfaMethodList, IdentityMfaOktaMethodInfo,
         IdentityMfaOktaMethodRequest, IdentityMfaPingIdMethodRequest, IdentityMfaTotpSecret,
         IdentityOidcAssignmentList, IdentityOidcClientInfo, IdentityOidcClientList,
-        IdentityOidcIntrospectRequest, IdentityOidcJwks, IdentityOidcKeyList,
-        IdentityOidcProviderList, IdentityOidcRoleList, IdentityOidcScopeList, IdentityOidcToken,
+        IdentityOidcDiscovery, IdentityOidcIntrospectRequest, IdentityOidcIntrospection,
+        IdentityOidcJwks, IdentityOidcKeyList, IdentityOidcProviderList, IdentityOidcRoleList,
+        IdentityOidcScopeList, IdentityOidcToken,
     };
 
     #[test]
@@ -3620,6 +3735,30 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[test]
+    fn identity_oidc_extra_maps_are_bounded() {
+        let mut extra = serde_json::Map::new();
+        extra.insert("active".to_owned(), serde_json::json!(true));
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            extra.insert(format!("claim-{index}"), serde_json::json!("value"));
+        }
+        assert!(serde_json::from_value::<IdentityOidcIntrospection>(extra.clone().into()).is_err());
+        assert!(serde_json::from_value::<IdentityOidcDiscovery>(extra.into()).is_err());
+    }
+
+    #[test]
+    fn identity_oidc_jwks_exact_limit_is_accepted() {
+        let mut keys = Vec::new();
+        for index in 0..crate::response::MAX_RESPONSE_STRINGS {
+            keys.push(serde_json::json!({ "kid": format!("key-{index}") }));
+        }
+        let jwks = serde_json::from_value::<IdentityOidcJwks>(serde_json::json!({
+            "keys": keys
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(jwks.keys.len(), crate::response::MAX_RESPONSE_STRINGS);
     }
 
     #[test]

@@ -6,6 +6,7 @@ use crate::{Error, Result};
 
 /// Loose client-side sanity cap. OpenBao deployment TTL limits still apply.
 const MAX_DURATION_COMPONENT: u64 = 8_760_000;
+pub(crate) const MAX_JSON_OBJECT_BYTES: usize = 4 * 1024;
 
 pub(crate) fn validate_duration_parameter(value: &str, field: &'static str) -> Result<()> {
     if validate_duration_string(value, false) {
@@ -140,6 +141,11 @@ pub(crate) fn validate_cidr(value: &str, field: &'static str) -> Result<()> {
 }
 
 pub(crate) fn validate_json_object_string(value: &str, field: &'static str) -> Result<()> {
+    if value.len() > MAX_JSON_OBJECT_BYTES {
+        return Err(Error::InvalidParameter(format!(
+            "{field} JSON object string exceeds maximum allowed size"
+        )));
+    }
     let value = serde_json::from_str::<serde_json::Value>(value).map_err(|_| {
         Error::InvalidParameter(format!("{field} must be a valid JSON object string"))
     })?;
@@ -153,7 +159,9 @@ pub(crate) fn validate_json_object_string(value: &str, field: &'static str) -> R
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_cidr, validate_duration_string, validate_json_object_string};
+    use super::{
+        MAX_JSON_OBJECT_BYTES, validate_cidr, validate_duration_string, validate_json_object_string,
+    };
 
     #[test]
     fn duration_strings_are_validated() {
@@ -188,5 +196,7 @@ mod tests {
         assert!(validate_json_object_string(r#"{"service":"payments"}"#, "metadata").is_ok());
         assert!(validate_json_object_string(r#"["not","object"]"#, "metadata").is_err());
         assert!(validate_json_object_string("{not-json", "metadata").is_err());
+        let oversized = format!(r#"{{"value":"{}"}}"#, "a".repeat(MAX_JSON_OBJECT_BYTES));
+        assert!(validate_json_object_string(&oversized, "metadata").is_err());
     }
 }

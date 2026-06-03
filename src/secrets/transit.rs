@@ -1560,8 +1560,11 @@ impl Transit<'_> {
     /// Encrypts base64-encoded plaintext with a Transit key.
     ///
     /// The plaintext is wrapped in `SecretString` and the crate zeroizes its
-    /// serialization buffer, but the HTTP stack can retain transient body
-    /// copies outside this crate's control during request transmission.
+    /// serialization buffer, but serde, reqwest, TLS, kernel, and device
+    /// buffers can retain transient body copies outside this crate's control
+    /// during request transmission. Callers that use raw plaintext buffers
+    /// should zeroize their own buffers immediately after constructing the
+    /// request.
     pub async fn encrypt(
         &self,
         name: &str,
@@ -1742,6 +1745,9 @@ impl Transit<'_> {
     }
 
     /// Encrypts multiple base64-encoded plaintext values in one Transit request.
+    ///
+    /// The same residual-memory warning as [`Transit::encrypt`] applies to
+    /// every plaintext item in the batch.
     pub async fn batch_encrypt(
         &self,
         name: &str,

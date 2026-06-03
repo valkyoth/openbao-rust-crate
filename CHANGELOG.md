@@ -30,9 +30,22 @@ All notable changes to this project are documented here.
 - Added bounded deserialization for Identity OIDC signing-key lists, role lists,
   provider/client metadata maps, nullable discovery metadata lists, and JWKS key
   arrays.
+- Added bounded deserialization for Identity OIDC introspection/discovery extra
+  claim maps, accepted exact-limit JWKS key lists, and fail-early oversized JWKS
+  handling.
 - Added mock HTTP coverage for the documented Identity OIDC token backend paths.
 - Added mock HTTP coverage for the documented Identity OIDC provider admin and
   Identity MFA management paths.
+
+### Changed
+
+- Documented admin bootstrap read-compare-write race scope at the top-level
+  `AdminBootstrap` API.
+- Capped JSON object string validation before parsing and escaped HCL template
+  interpolation starts in generated ACL policy strings.
+- Clarified deprecated `Client::with_token`, Transit plaintext residual-memory,
+  tracing path sensitivity, AppRole `bind_secret_id`, and KV v2 metadata policy
+  helper documentation.
 
 ## 0.9.0 - 2026-06-03
 

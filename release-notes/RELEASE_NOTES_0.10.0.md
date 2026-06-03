@@ -48,6 +48,14 @@ bounded.
   stored as `SecretString` and redacted from `Debug`.
 - JWKS, list, and provider/client metadata map responses are bounded during
   deserialization.
+- Identity OIDC introspection/discovery extra claim maps are bounded during
+  deserialization, and oversized JWKS key lists now fail without draining the
+  full sequence.
+- JSON object string validation now rejects oversized inputs before parsing, and
+  ACL policy string generation escapes HCL template interpolation starts.
+- Bootstrap convergence docs now warn at the top-level API that `ensure_*`
+  operations require external serialization when concurrent runners target the
+  same cluster.
 
 ## Release Readiness
 

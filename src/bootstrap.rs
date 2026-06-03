@@ -29,6 +29,13 @@ use crate::{
 const MAX_BOOTSTRAP_OPERATIONS: usize = 512;
 
 /// Builder for a small, idempotent OpenBao admin bootstrap plan.
+///
+/// All `ensure_*` operations use read-compare-write convergence without
+/// distributed locking. If multiple bootstrap runners execute concurrently
+/// against the same OpenBao cluster, serialize them with an external lock.
+/// This is especially important for ACL policies and secret values, where a
+/// concurrent write can overwrite security-critical configuration between the
+/// read and write phases.
 #[derive(Clone, Debug, Default)]
 pub struct AdminBootstrap {
     operations: Vec<BootstrapOperation>,

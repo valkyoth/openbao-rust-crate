@@ -95,7 +95,10 @@ impl AclPolicyBuilder {
     /// Allows KV v2 read/list access below a literal prefix.
     ///
     /// For `mount = "secret"` and `prefix = "app"`, this emits rules for
-    /// `secret/data/app/*` and `secret/metadata/app/*`.
+    /// `secret/data/app/*` and `secret/metadata/app/*`. The metadata rule is
+    /// list-only so read-only secret policies do not automatically expose
+    /// version history or custom metadata; add an explicit metadata `Read`
+    /// rule with [`AclPolicyBuilder::allow_path`] when that is desired.
     pub fn allow_kv2_read_prefix(
         &mut self,
         mount: impl AsRef<str>,
@@ -277,10 +280,19 @@ fn push_rule(document: &mut String, rule: &AclRule) {
 }
 
 fn push_hcl_string(output: &mut String, value: &str) {
-    for character in value.chars() {
+    let mut characters = value.chars().peekable();
+    while let Some(character) = characters.next() {
         match character {
             '"' => output.push_str("\\\""),
             '\\' => output.push_str("\\\\"),
+            '$' if characters.peek() == Some(&'{') => {
+                characters.next();
+                output.push_str("$${");
+            }
+            '%' if characters.peek() == Some(&'{') => {
+                characters.next();
+                output.push_str("%%{");
+            }
             _ => output.push(character),
         }
     }
@@ -307,6 +319,17 @@ mod tests {
         assert!(policy.contains("path \"secret/metadata/app/*\""));
         assert!(policy.contains("capabilities = [\"read\"]"));
         assert!(policy.contains("capabilities = [\"list\"]"));
+    }
+
+    #[test]
+    fn policy_hcl_strings_escape_template_sequences() {
+        let mut builder = AclPolicyBuilder::new();
+        let policy = builder
+            .allow_path("secret/data/app-${env}/%{literal}", [AclCapability::Read])
+            .and_then(|builder| builder.build())
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        assert!(policy.contains(r#"secret/data/app-$${env}/%%{literal}"#));
     }
 
     #[test]

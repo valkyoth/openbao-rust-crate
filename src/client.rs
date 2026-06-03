@@ -539,7 +539,7 @@ impl Client<Unauthenticated> {
     /// header-invalid tokens are rejected before the first request.
     #[deprecated(
         since = "0.6.0",
-        note = "use try_with_token to catch invalid token values at construction; with_token defers header validation errors to the first request"
+        note = "use try_with_token to reject invalid token values at construction; with_token defers header validation and returns an error on the first request for tokens containing control characters"
     )]
     pub fn with_token(self, token: SecretString) -> Client<Authenticated> {
         self.with_token_deferred_validation(token)

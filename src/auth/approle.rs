@@ -33,6 +33,11 @@ pub struct AppRoleAdmin<'a> {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct AppRoleRoleRequest {
     /// Require a SecretID during login.
+    ///
+    /// Security: setting this to `false` allows login using only the RoleID.
+    /// RoleIDs are often distributed more broadly than SecretIDs. Disable
+    /// SecretID binding only when the RoleID is itself protected and other
+    /// controls, such as CIDR binding, provide equivalent restriction.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_secret_id: Option<bool>,
     /// CIDRs allowed to use generated SecretIDs.
