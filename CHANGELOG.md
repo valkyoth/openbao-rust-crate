@@ -23,7 +23,7 @@ All notable changes to this project are documented here.
 
 - Documented the Transit BYOK wrapper boundary: default endpoint wrappers
   accept only externally wrapped ciphertext or public-key-only import material
-  and do not accept raw private key bytes.
+  and do not accept raw private or symmetric key bytes.
 
 ## 0.10.0 - 2026-06-03
 

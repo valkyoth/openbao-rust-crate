@@ -202,7 +202,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         if path in ("/transit/keys/:name/import", "/transit/keys/:name/import_version"):
             return (
                 "typed",
-                "Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString or public-key-only import material, rejects empty import constructors, and documents that raw private key bytes stay outside default endpoint wrappers.",
+                "Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString or public-key-only import material, rejects empty import constructors, and documents that raw private or symmetric key bytes stay outside default endpoint wrappers.",
             )
         if path.startswith("/transit/byok-export/"):
             return (

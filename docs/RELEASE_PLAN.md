@@ -367,11 +367,12 @@ Stop condition:
 - Transit BYOK export is implemented with response types that carry the
   destination-wrapped ciphertext blob as `SecretString` and use custom
   redacted `Debug`;
-- every import method documents the boundary explicitly: raw key bytes must
-  not be passed to the default endpoint wrappers; callers fetch the wrapping
-  key, wrap key material externally through their HSM, OpenSSL, or chosen
-  crypto library, and pass only the base64 ciphertext blob to the crate unless
-  they explicitly enable the software `transit-import` helper;
+- every import method documents the boundary explicitly: raw private or
+  symmetric key bytes must not be passed to the default endpoint wrappers;
+  callers fetch the wrapping key, wrap key material externally through their
+  HSM, OpenSSL, or chosen crypto library, and pass only the base64 ciphertext
+  blob to the crate unless they explicitly enable the software
+  `transit-import` helper;
 - Transit soft-delete and soft-delete-restore helpers are implemented;
 - Transit cache config and global key config helpers are implemented;
 - Transit CSR generation and certificate install helpers are implemented with
@@ -382,10 +383,11 @@ Stop condition:
 - an optional `transit-import` wrapping helper is implemented in this `0.11.0`
   line, with optional `openssl` and `aes-kw` dependencies only when the
   feature is enabled;
-- the `transit-import` helper accepts raw key bytes through zeroizing or
-  secret-aware inputs, returns the OpenBao wrapped-key blob as `SecretString`,
-  has redacted `Debug`, and is documented as an ergonomic client-side helper
-  rather than an OpenBao, FIPS, HSM, or post-quantum security guarantee;
+- the `transit-import` helper accepts raw private or symmetric key bytes
+  through zeroizing inputs, returns the OpenBao wrapped-key blob as
+  `SecretString`, has redacted `Debug`, and is documented as an ergonomic
+  client-side helper rather than an OpenBao, FIPS, HSM, or post-quantum
+  security guarantee;
 - `transit-bytes` remains optional and no default dependency growth is added;
 - endpoint matrix is regenerated and Transit planned rows are implemented or
   reclassified.

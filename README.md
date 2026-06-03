@@ -159,7 +159,8 @@ Current `0.11.0` line:
 - Transit advanced key management: BYOK wrapping-key, import/import-version,
   BYOK export, soft-delete/restore, cache/global config, CSR generation, and
   certificate-chain install helpers. Endpoint wrappers accept externally
-  wrapped ciphertext or public-key-only import material; raw key bytes remain
+  wrapped ciphertext or public-key-only import material; raw private or
+  symmetric key bytes remain
   outside the default wrapper APIs. The non-default `transit-import` feature
   adds a software AES-KWP/RSA-OAEP wrapping helper.
 
