@@ -13,7 +13,10 @@ use serde::{
 use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
     path::validate_mount_path,
-    response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default},
+    response::{
+        Empty, ListEntries, ListPageOptions, ResponseEnvelope,
+        deserialize_bounded_string_map_or_default,
+    },
 };
 
 /// Handle for TLS certificate auth login at a configured mount.
@@ -384,13 +387,7 @@ impl CertAuthAdmin<'_> {
     ) -> Result<CertRoleList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        let mut query = Vec::new();
-        if let Some(after) = after {
-            query.push(("after", validate_mount_path(after)?.join("/")));
-        }
-        if let Some(limit) = limit {
-            query.push(("limit", limit.to_string()));
-        }
+        let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<CertRoleList> = self
             .client
             .request_json_query_accepting(
@@ -447,13 +444,7 @@ impl CertAuthAdmin<'_> {
     pub async fn list_crls(&self, after: Option<&str>, limit: Option<u64>) -> Result<CertCrlList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        let mut query = Vec::new();
-        if let Some(after) = after {
-            query.push(("after", validate_mount_path(after)?.join("/")));
-        }
-        if let Some(limit) = limit {
-            query.push(("limit", limit.to_string()));
-        }
+        let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<CertCrlList> = self
             .client
             .request_json_query_accepting(

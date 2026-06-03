@@ -26,12 +26,13 @@
   optional HTTP/2 transport support, token `create-orphan` and
   `renew-accessor` helpers, AppRole delegated role-property helpers, and the
   operator-gated PKI default root deletion helper, plus explicit
-  `RetryPolicy`/`request_json_with_retry` exponential-backoff ergonomics; the
+  `RetryPolicy`/`request_json_with_retry` exponential-backoff ergonomics and
+  shared `ListPageOptions` pagination for non-secret string-list endpoints; the
   `0.9.0` release gate script is also present.
 - Remaining `0.9.0` planned work: public API audit, migration guide
-  completion, non-secret pagination ergonomics, PKI role and Identity
-  entity/group bootstrap convergence, PKI named-issuer scope review, response
-  fixtures, fuzz targets, and quantum-readiness posture design.
+  completion, PKI role and Identity entity/group bootstrap convergence, PKI
+  named-issuer scope review, response fixtures, fuzz targets, and
+  quantum-readiness posture design.
 - Finalization rule: the OpenBao `2.5.x` endpoint matrix expanded the
   pre-`1.0` plan through `0.15.0`. `0.9.0` handles stabilization foundations;
   `0.10.0` through `0.14.0` handle Identity/auth, Transit, PKI, and System
@@ -49,8 +50,9 @@
   unless the application owns the duplicate-operation risk.
 - Token and lease renewal helpers avoid background tasks that silently keep
   secret material alive longer than caller-owned handles require.
-- Pagination helpers must preserve bounded allocation behavior and keep secret
-  accessor lists out of generic string-list ergonomics.
+- `ListPageOptions` bounds list page size and validates cursors. Token
+  accessors, lease IDs, and other secret-bearing lists stay out of generic
+  pagination ergonomics.
 - Optional tracing emits only method, validated path, and response status. It
   must never emit full URLs, headers, request bodies, response bodies, tokens,
   namespaces, or raw transport-error strings.

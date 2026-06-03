@@ -317,7 +317,8 @@ Finalization work before `1.0.0`:
 
 - explicit opt-in retry policy with exponential backoff is implemented in
   `0.9.0` through `RetryPolicy` and `Client::request_json_with_retry`;
-- implement a shared non-secret paginated-list abstraction in `0.9.0`;
+- shared non-secret paginated-list abstraction is implemented in `0.9.0`
+  through `ListPageOptions`;
 - implement admin bootstrap convergence for PKI roles and Identity
   entities/groups in `0.9.0`;
 - add representative serde response fixtures before `1.0.0`;

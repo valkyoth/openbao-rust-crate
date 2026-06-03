@@ -109,7 +109,7 @@ pub use posture::{
 };
 pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
 pub use response::{
-    BoundedStringList, Empty, ListEntries, MAX_RESPONSE_STRINGS, ResponseEnvelope,
+    BoundedStringList, Empty, ListEntries, ListPageOptions, MAX_RESPONSE_STRINGS, ResponseEnvelope,
     deserialize_bounded_string_vec,
 };
 pub use secrecy::{self, ExposeSecret, SecretString};
@@ -127,10 +127,10 @@ pub mod prelude {
     pub use crate::{
         AclCapability, AclPolicyBuilder, Authenticated, BoundedStringList, Certificate, Client,
         ClientBuilder, Empty, Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries,
-        MAX_RESPONSE_STRINGS, Method, OpenBao, OpenBaoConfig, PluginMount, RenewalHint,
-        ResponseEnvelope, Result, SecretString, SharedClient, StatusCode, Unauthenticated, Zeroize,
-        Zeroizing, deserialize_bounded_string_vec, duration_to_bao_string, validate_endpoint_path,
-        validate_mount_path,
+        ListPageOptions, MAX_RESPONSE_STRINGS, Method, OpenBao, OpenBaoConfig, PluginMount,
+        RenewalHint, ResponseEnvelope, Result, SecretString, SharedClient, StatusCode,
+        Unauthenticated, Zeroize, Zeroizing, deserialize_bounded_string_vec,
+        duration_to_bao_string, validate_endpoint_path, validate_mount_path,
     };
     #[cfg(feature = "transit")]
     pub use crate::{

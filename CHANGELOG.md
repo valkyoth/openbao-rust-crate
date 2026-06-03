@@ -62,6 +62,9 @@ All notable changes to this project are documented here.
   an explicit destructive-operation call site.
 - Added `RetryPolicy` and `Client::request_json_with_retry` for explicit,
   caller-approved exponential backoff on temporary OpenBao failures.
+- Added `ListPageOptions` as the shared pagination request shape for
+  non-secret string-list endpoints and routed existing paginated list helpers
+  through the shared validation/bounds logic.
 - Added explicit `planned` and `rejected` endpoint-matrix statuses and recorded
   system backend decisions: config-ui, sys/monitor streaming, internal router
   inspection, internal counters, and internal request inspection are rejected
@@ -96,6 +99,8 @@ All notable changes to this project are documented here.
   HTTP/3 is rejected for stable scope.
 - Retry/backoff remains opt-in and call-site explicit; default typed helpers
   stay single-shot so non-idempotent writes are not retried by accident.
+- Generic pagination intentionally excludes token accessors, lease IDs, and
+  other secret-bearing list values so secret-specific handling is preserved.
 - Full ACME account/order/authorization/challenge flows remain external to the
   crate; typed ACME config, EAB provisioning, and directory URL helpers are the
   supported handoff to dedicated ACME clients.

@@ -15,8 +15,8 @@ use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
     path::validate_mount_path,
     response::{
-        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
-        deserialize_bounded_string_vec,
+        Empty, ListEntries, ListPageOptions, ResponseEnvelope,
+        deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
     },
     validation::{validate_duration_string, validate_optional_ldap_tls_version},
 };
@@ -677,14 +677,10 @@ impl KerberosAuthAdmin<'_> {
     ) -> Result<KerberosGroupList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        let mut query = Vec::new();
         if let Some(after) = after {
             validate_kerberos_group_name(after)?;
-            query.push(("after", after.to_owned()));
         }
-        if let Some(limit) = limit {
-            query.push(("limit", limit.to_string()));
-        }
+        let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<KerberosGroupList> = self
             .client
             .request_json_query_accepting(

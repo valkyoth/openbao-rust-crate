@@ -15,7 +15,9 @@ use zeroize::Zeroizing;
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
-    response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec},
+    response::{
+        Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_vec,
+    },
 };
 
 /// Handle for a mounted Transit secrets engine.
@@ -1413,13 +1415,7 @@ impl Transit<'_> {
     ) -> Result<TransitKeyList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        let mut query = Vec::new();
-        if let Some(after) = after {
-            query.push(("after", validate_key_name(after)?.join("/")));
-        }
-        if let Some(limit) = limit {
-            query.push(("limit", limit.to_string()));
-        }
+        let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<TransitKeyList> = self
             .client
             .request_json_query_accepting(

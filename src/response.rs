@@ -11,6 +11,8 @@ use serde::{
 
 use std::collections::BTreeMap;
 
+use crate::{Error, Result, path::validate_endpoint_path};
+
 const MAX_API_ERRORS: usize = 16;
 /// Maximum number of strings accepted by the crate's bounded list helpers.
 pub const MAX_RESPONSE_STRINGS: usize = 4096;
@@ -46,6 +48,94 @@ pub trait ListEntries {
     /// Returns true when the primary entry list contains `entry`.
     fn contains(&self, entry: &str) -> bool {
         self.entries().iter().any(|candidate| candidate == entry)
+    }
+}
+
+/// Shared pagination options for non-secret OpenBao string-list endpoints.
+///
+/// This type is intentionally not used for token accessors, lease IDs, or
+/// other secret-bearing list values. Those endpoints keep dedicated helpers so
+/// secret-specific handling is not erased by generic list ergonomics.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ListPageOptions {
+    after: Option<String>,
+    limit: Option<u64>,
+}
+
+impl ListPageOptions {
+    /// Creates empty pagination options.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the OpenBao `after` cursor.
+    ///
+    /// The cursor is validated as an endpoint path fragment so it cannot inject
+    /// query strings, fragments, relative segments, empty segments, or control
+    /// characters.
+    pub fn after(mut self, after: impl AsRef<str>) -> Result<Self> {
+        let segments = validate_endpoint_path(after.as_ref())?;
+        if segments.is_empty() {
+            return Err(Error::InvalidPath(
+                "pagination cursor must not be empty".into(),
+            ));
+        }
+        self.after = Some(segments.join("/"));
+        Ok(self)
+    }
+
+    /// Sets the OpenBao `limit` value.
+    ///
+    /// The bound matches [`MAX_RESPONSE_STRINGS`], the maximum string-list
+    /// allocation this crate accepts while decoding list responses.
+    pub fn limit(mut self, limit: u64) -> Result<Self> {
+        if limit == 0 {
+            return Err(Error::InvalidParameter(
+                "pagination limit must be greater than zero".into(),
+            ));
+        }
+        if limit > MAX_RESPONSE_STRINGS as u64 {
+            return Err(Error::InvalidParameter(
+                "pagination limit exceeds maximum allowed value".into(),
+            ));
+        }
+        self.limit = Some(limit);
+        Ok(self)
+    }
+
+    /// Returns the validated `after` cursor.
+    #[must_use]
+    pub fn after_cursor(&self) -> Option<&str> {
+        self.after.as_deref()
+    }
+
+    /// Returns the requested page size.
+    #[must_use]
+    pub fn limit_value(&self) -> Option<u64> {
+        self.limit
+    }
+
+    pub(crate) fn from_after_limit(after: Option<&str>, limit: Option<u64>) -> Result<Self> {
+        let mut options = Self::new();
+        if let Some(after) = after {
+            options = options.after(after)?;
+        }
+        if let Some(limit) = limit {
+            options = options.limit(limit)?;
+        }
+        Ok(options)
+    }
+
+    pub(crate) fn query_pairs(&self) -> Vec<(&'static str, String)> {
+        let mut query = Vec::new();
+        if let Some(after) = self.after.as_ref() {
+            query.push(("after", after.clone()));
+        }
+        if let Some(limit) = self.limit {
+            query.push(("limit", limit.to_string()));
+        }
+        query
     }
 }
 
@@ -358,7 +448,7 @@ mod tests {
 
     use secrecy::SecretString;
 
-    use super::{BoundedStringList, ListEntries, ResponseEnvelope};
+    use super::{BoundedStringList, ListEntries, ListPageOptions, ResponseEnvelope};
 
     #[test]
     fn response_debug_redacts_lease_id() {
@@ -437,6 +527,30 @@ mod tests {
         assert_eq!(list.entries(), ["alpha", "beta"]);
         assert!(list.contains("beta"));
         assert_eq!(list.into_vec(), ["alpha".to_owned(), "beta".to_owned()]);
+    }
+
+    #[test]
+    fn list_page_options_validate_and_build_query() {
+        let options = ListPageOptions::new()
+            .after("team/app")
+            .unwrap_or_else(|error| panic!("{error}"))
+            .limit(10)
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(options.after_cursor(), Some("team/app"));
+        assert_eq!(options.limit_value(), Some(10));
+        assert_eq!(
+            options.query_pairs(),
+            vec![("after", "team/app".to_owned()), ("limit", "10".to_owned())]
+        );
+
+        assert!(ListPageOptions::new().after("../secret").is_err());
+        assert!(ListPageOptions::new().after("").is_err());
+        assert!(ListPageOptions::new().limit(0).is_err());
+        assert!(
+            ListPageOptions::new()
+                .limit(super::MAX_RESPONSE_STRINGS as u64 + 1)
+                .is_err()
+        );
     }
 
     #[test]
