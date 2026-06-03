@@ -9,7 +9,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
     de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
 };
-#[cfg(any(feature = "transit-import", feature = "transit-bytes"))]
+#[cfg(feature = "transit-import")]
 use zeroize::Zeroize;
 #[cfg(any(feature = "transit-bytes", feature = "transit-import"))]
 use zeroize::Zeroizing;
@@ -2955,11 +2955,9 @@ fn base64_encode_secret(input: &[u8]) -> Result<SecretString> {
     let exposed = encoded.try_into_exposed_string().map_err(|_| {
         Error::Internal("base64-ng produced non-UTF-8 text for standard base64 output")
     })?;
-    let mut plaintext =
-        Zeroizing::new(exposed.into_exposed_unprotected_string_caller_must_zeroize());
-    let secret = SecretString::from(plaintext.as_str().to_owned());
-    plaintext.zeroize();
-    Ok(secret)
+    Ok(SecretString::from(
+        exposed.into_exposed_unprotected_string_caller_must_zeroize(),
+    ))
 }
 
 #[cfg(feature = "transit-bytes")]

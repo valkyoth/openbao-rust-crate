@@ -115,13 +115,13 @@ pub enum RetryableMethod {
 }
 
 impl RetryableMethod {
-    fn as_method(self) -> Method {
-        match self {
+    fn as_method(self) -> Result<Method> {
+        Ok(match self {
             Self::Get => Method::GET,
             Self::Head => Method::HEAD,
             Self::List => Method::from_bytes(b"LIST")
-                .unwrap_or_else(|error| unreachable!("LIST is a valid HTTP method: {error}")),
-        }
+                .map_err(|error| Error::InvalidHeader(error.to_string()))?,
+        })
     }
 }
 
@@ -666,7 +666,7 @@ impl<State> Client<State> {
         let mut attempt = 1;
         let mut retry_index = 0;
         loop {
-            match self.request_json(method.as_method(), path, body).await {
+            match self.request_json(method.as_method()?, path, body).await {
                 Ok(response) => return Ok(response),
                 Err(error) if attempt < policy.max_attempts && error.is_temporary() => {
                     delay(policy.delay_for_retry(retry_index)).await;

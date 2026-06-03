@@ -12,8 +12,6 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
-#[cfg(feature = "transit-bytes")]
-use zeroize::Zeroize;
 use zeroize::Zeroizing;
 
 use crate::{
@@ -5134,11 +5132,9 @@ fn encode_sys_base64_secret(input: &[u8]) -> Result<SecretString> {
     let exposed = encoded.try_into_exposed_string().map_err(|_| {
         Error::Internal("base64-ng produced non-UTF-8 text for standard base64 output")
     })?;
-    let mut plaintext =
-        Zeroizing::new(exposed.into_exposed_unprotected_string_caller_must_zeroize());
-    let secret = SecretString::from(plaintext.as_str().to_owned());
-    plaintext.zeroize();
-    Ok(secret)
+    Ok(SecretString::from(
+        exposed.into_exposed_unprotected_string_caller_must_zeroize(),
+    ))
 }
 
 #[cfg(feature = "transit-bytes")]

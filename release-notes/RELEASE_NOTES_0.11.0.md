@@ -61,8 +61,13 @@ waiting for external pentest feedback and GitHub CI validation before the
   while keeping signatures secret-aware and redacted.
 - TOTP SHA-1 remains available for legacy RFC 4226 compatibility but is
   deprecated; use SHA-256 or SHA-512 for new deployments.
-- Base64 secret helpers now explicitly zeroize intermediate exposed strings
-  before returning `SecretString` values.
+- Base64 secret helpers now move the single exposed base64 allocation directly
+  into `SecretString`, avoiding an unnecessary duplicate plaintext copy while
+  relying on `SecretString` zeroization on drop.
+- Retryable LIST request conversion no longer uses an impossible
+  `unreachable!` panic path.
+- Policy HCL string escaping removed the now-dead `%{` branch because policy
+  path validation rejects percent characters before serialization.
 - Raw private or symmetric key bytes must not be passed to the default endpoint
   wrappers. For private/symmetric imports, callers fetch the wrapping key, wrap
   key material externally through an HSM, OpenSSL, or a reviewed crypto

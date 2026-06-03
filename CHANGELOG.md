@@ -35,8 +35,13 @@ All notable changes to this project are documented here.
   keys as public `String` data while keeping signatures secret-aware.
 - Added local validation for Transit export/BYOK version `0` and changed BYOK
   export version selection to `Option<u64>`.
-- Explicitly zeroized intermediate base64 strings before returning
-  `SecretString` wrappers from Transit/System raw-byte helpers.
+- Kept Transit/System base64 secret helper output to a single allocation that
+  is moved directly into `SecretString`, avoiding duplicate plaintext copies
+  while relying on `SecretString` zeroization on drop.
+- Removed an impossible `unreachable!` conversion path from retryable LIST
+  request handling.
+- Removed the now-dead `%{` HCL escaping branch after policy path validation
+  began rejecting percent characters.
 - Deprecated TOTP SHA-1 selection for new deployments while retaining legacy
   RFC 4226 compatibility.
 

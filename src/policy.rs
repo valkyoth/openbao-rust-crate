@@ -289,10 +289,6 @@ fn push_hcl_string(output: &mut String, value: &str) {
                 characters.next();
                 output.push_str("$${");
             }
-            '%' if characters.peek() == Some(&'{') => {
-                characters.next();
-                output.push_str("%%{");
-            }
             _ => output.push(character),
         }
     }
