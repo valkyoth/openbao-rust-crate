@@ -47,9 +47,9 @@ Keep these `0.8` patterns:
   bytes are more natural than OpenBao's base64 strings.
 - Use `AclPolicyBuilder` and `AdminBootstrap` for common service setup instead
   of assembling ACL HCL and mount requests with ad hoc strings.
-- Keep production init/unseal/rekey/rotate behind `operator-ops` and
-  `operator-ops-acknowledged`; default builds intentionally cannot call those
-  APIs.
+- Keep production init/unseal/rekey/rotate and destructive PKI root deletion
+  behind `operator-ops` and `operator-ops-acknowledged`; default builds
+  intentionally cannot call those APIs.
 
 ### 0.7 To 0.8
 

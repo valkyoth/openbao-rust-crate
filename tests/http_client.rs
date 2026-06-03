@@ -6091,6 +6091,45 @@ async fn pki_authority_crl_and_tidy_paths_are_documented() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
+async fn pki_delete_root_is_operator_gated_and_uses_documented_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("DELETE /v1/pki/root HTTP/1.1"));
+        assert!(request.contains("x-vault-token: root-token"));
+        let body = "{}";
+        let response = format!(
+            "HTTP/1.1 204 No Content\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    pki.delete_root(openbao::secrets::pki::PkiRootDeletion::confirm())
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[tokio::test]
 async fn pki_issuer_and_key_lifecycle_paths_are_documented() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));

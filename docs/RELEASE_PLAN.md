@@ -2,8 +2,8 @@
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
-`643` documented endpoint rows, `468` strict typed or operator-gated rows, and
-`141` rows still needing an implementation, rejection, raw-wrapper policy, or
+`643` documented endpoint rows, `469` strict typed or operator-gated rows, and
+`140` rows still needing an implementation, rejection, raw-wrapper policy, or
 external-client policy decision. Because there is no rush to force stability,
 the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
 deliberately.
@@ -402,6 +402,9 @@ Stop condition:
   generation, and intermediate issuer generation helpers are implemented;
 - sign-verbatim helpers are implemented behind `operator-ops` plus
   `operator-ops-acknowledged` because they bypass normal role constraints;
+- destructive `DELETE /pki/root` is already resolved in `0.9.0` as a dedicated
+  `Pki::delete_root` method behind `operator-ops` plus
+  `operator-ops-acknowledged`, requiring `PkiRootDeletion::confirm()`;
 - revoke-with-key is implemented for certificate-owner proof-of-possession
   revocation without broad PKI admin access;
 - cluster config and auto-tidy config helpers are implemented because they are
@@ -412,9 +415,6 @@ Stop condition:
 - unauthenticated public CA/certificate/CRL endpoints are documented as
   external protocol/public-distribution reads for TLS stacks, CRL checkers, or
   an external HTTP client;
-- destructive `DELETE /pki/root` is resolved explicitly; if implemented, it
-  must be a dedicated named method with strong warnings behind
-  `operator-ops` plus `operator-ops-acknowledged`, never a generic delete;
 - endpoint matrix is regenerated and the PKI Tier 1 rows are resolved.
 
 Publishable value:

@@ -305,8 +305,8 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         }
         if path == "/pki/root" and method == "DELETE":
             return (
-                "decision",
-                "Resolve explicitly in 0.12.0; if implemented, use a dedicated destructive method behind operator gates.",
+                "typed-gated",
+                "Dedicated destructive PKI root deletion helper exists behind operator-operation gates and requires an explicit confirmation type.",
             )
         if path in pki_0_12_paths:
             return (

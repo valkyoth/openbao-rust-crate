@@ -268,7 +268,7 @@ secret,POST,/pki/keys/import,typed,https://openbao.org/api-docs/secret/pki/,Type
 secret,GET,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,DELETE,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,DELETE,/pki/root,decision,https://openbao.org/api-docs/secret/pki/,"Resolve explicitly in 0.12.0; if implemented, use a dedicated destructive method behind operator gates."
+secret,DELETE,/pki/root,typed-gated,https://openbao.org/api-docs/secret/pki/,Dedicated destructive PKI root deletion helper exists behind operator-operation gates and requires an explicit confirmation type.
 secret,POST,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,PATCH,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,DELETE,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."

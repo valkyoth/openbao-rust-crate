@@ -29,6 +29,24 @@ pub struct Pki<'a> {
     mount: Vec<String>,
 }
 
+/// Confirmation token required by [`Pki::delete_root`].
+///
+/// Construct this at the call site with [`PkiRootDeletion::confirm`]. The
+/// explicit construction is intentional: deleting a PKI root permanently
+/// destroys the default root key material for the mount.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PkiRootDeletion(());
+
+#[cfg(feature = "operator-ops")]
+impl PkiRootDeletion {
+    /// Confirms intentional default root CA deletion.
+    #[must_use]
+    pub fn confirm() -> Self {
+        Self(())
+    }
+}
+
 /// PKI role configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct PkiRole {
@@ -793,6 +811,33 @@ impl Pki<'_> {
             Some(request),
         )
         .await
+    }
+
+    /// Permanently deletes the default root key material for this PKI mount.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    ///
+    /// This is an irreversible mount-scope operator operation. It destroys the
+    /// current default root key material and leaves the mount unable to issue
+    /// new certificates until a new root is generated or imported. Already
+    /// issued certificates are not deleted by this call, and named issuers or
+    /// keys not backed by the deleted default root key are not its target.
+    ///
+    /// This is distinct from [`Pki::revoke_issuer`], which revokes issuer
+    /// metadata without destroying key material, and [`Pki::delete_issuer`],
+    /// which targets one named issuer record. Use [`PkiRootDeletion::confirm`]
+    /// at the call site so reviews can identify every intentional root
+    /// deletion.
+    #[cfg(feature = "operator-ops")]
+    pub async fn delete_root(&self, _confirmation: PkiRootDeletion) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &self.path(&["root"])?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
     }
 
     /// Generates an intermediate CA CSR and key material.

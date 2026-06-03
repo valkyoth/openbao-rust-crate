@@ -22,26 +22,26 @@ Sources:
 ## Summary
 
 - Total documented endpoint rows: `643`
-- Strict typed coverage: `468/643` (72.8%)
-- Typed plus partial coverage: `469/643` (72.9%)
-- Addressed by typed, partial, raw, or external policy: `502/643` (78.1%)
-- Open decisions before `1.0.0`: `141`
+- Strict typed coverage: `469/643` (72.9%)
+- Typed plus partial coverage: `470/643` (73.1%)
+- Addressed by typed, partial, raw, or external policy: `503/643` (78.2%)
+- Open decisions before `1.0.0`: `140`
 
 | Status | Count |
 | --- | ---: |
 | `typed` | 424 |
-| `typed-gated` | 44 |
+| `typed-gated` | 45 |
 | `partial` | 1 |
 | `raw` | 0 |
 | `external` | 33 |
-| `decision` | 141 |
+| `decision` | 140 |
 
 ## Area Totals
 
 | Area | Total | Typed | Typed gated | Partial | Raw | External | Decision | Strict % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 99.0% |
-| `secret` | 347 | 211 | 0 | 0 | 0 | 33 | 103 | 60.8% |
+| `secret` | 347 | 211 | 1 | 0 | 0 | 33 | 102 | 61.1% |
 | `system` | 191 | 109 | 44 | 0 | 0 | 0 | 38 | 80.1% |
 
 ## Pages With Non-Typed Rows
@@ -56,7 +56,7 @@ Sources:
 | [/api-docs/secret/identity/mfa/totp/](https://openbao.org/api-docs/secret/identity/mfa/totp/) | 0 | 0 | 0 | 0 | 0 | 7 |
 | [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 0 | 0 | 0 | 0 | 3 | 18 |
 | [/api-docs/secret/identity/tokens/](https://openbao.org/api-docs/secret/identity/tokens/) | 0 | 0 | 0 | 0 | 0 | 14 |
-| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 0 | 0 | 0 | 28 | 36 |
+| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 1 | 0 | 0 | 28 | 35 |
 | [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 |
 | [/api-docs/secret/transit/](https://openbao.org/api-docs/secret/transit/) | 19 | 0 | 0 | 0 | 0 | 12 |
 | [/api-docs/system/config-ui/](https://openbao.org/api-docs/system/config-ui/) | 0 | 0 | 0 | 0 | 0 | 4 |

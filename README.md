@@ -267,7 +267,7 @@ openbao = { version = "0.9", features = ["time"] }
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
 | `native-tls-acknowledged` | no | Explicit acknowledgment for audited native TLS builds. |
-| `operator-ops` | no | Production init, unseal, seal, rekey, key-share rotate, keyring rotate, and raw storage APIs. Requires `operator-ops-acknowledged`. |
+| `operator-ops` | no | Production init, unseal, seal, rekey, key-share rotate, keyring rotate, raw storage, and destructive PKI root deletion APIs. Requires `operator-ops-acknowledged`. |
 | `operator-ops-acknowledged` | no | Explicit acknowledgment for audited operator-operation builds. |
 
 ## Support Matrix
@@ -275,7 +275,7 @@ openbao = { version = "0.9", features = ["time"] }
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
 For the current `0.9.0` line it records `643` documented endpoint rows, with
-`468/643` (`72.8%`) strict typed or operator-gated coverage.
+`469/643` (`72.9%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
 
@@ -333,7 +333,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, and optional raw-byte helpers. Import/BYOK endpoint wrappers are planned for `0.11.0` with pre-wrapped `SecretString` ciphertext only; no raw key bytes enter those wrappers. Soft-delete/restore, cache/global config, CSR, certificate-install, and optional `transit-import` wrapping-helper work are planned before `1.0.0`. |
-| PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, tidy, tidy status, and tidy cancel are implemented. Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and struct field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads stay external. |
+| PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, operator-gated default root deletion with explicit confirmation, CA/key import, ACME config/EAB/directory URL, CRL rotate, tidy, tidy status, and tidy cancel are implemented. Tier 1 multi-issuer/config/root rotation/sign-verbatim/revoke-with-key and struct field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads stay external. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
 | Custom plugin patterns | Yes | Documented wrapper pattern for typed plugin-specific APIs over `Client::request_json`. |
@@ -375,7 +375,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, count, tidy, and `RenewalHint` timing helpers for caller-owned renewal loops. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
-| Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
+| Production init, unseal, rekey, rotate, PKI root deletion | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. PKI root deletion also requires `PkiRootDeletion::confirm()` at the call site. |
 | Storage | Partial | Integrated Storage Raft JSON, capped snapshot helpers, and operator-gated raw storage helpers are implemented; unstable internal inspect endpoints remain deferred. |
 
 ## Examples

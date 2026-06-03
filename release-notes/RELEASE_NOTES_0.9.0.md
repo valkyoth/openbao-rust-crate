@@ -25,10 +25,11 @@
   custom plugin wrapper building blocks, optional `tracing` instrumentation,
   optional HTTP/2 transport support, token `create-orphan` and
   `renew-accessor` helpers, AppRole delegated role-property helpers, and the
-  `0.9.0` release gate script.
+  operator-gated PKI default root deletion helper; the `0.9.0` release gate
+  script is also present.
 - Remaining `0.9.0` planned work: public API audit, migration guide
   completion, opt-in retry/backoff, non-secret pagination ergonomics, PKI role
-  and Identity entity/group bootstrap convergence, PKI root/named-issuer scope
+  and Identity entity/group bootstrap convergence, PKI named-issuer scope
   review, response fixtures, fuzz targets, and quantum-readiness posture
   design.
 - Finalization rule: the OpenBao `2.5.x` endpoint matrix expanded the
@@ -103,9 +104,10 @@
 - Implement in `0.12.0`: PKI default issuer/key config, named-issuer
   issue/sign, root rotate/replace, standalone key generation, sign-verbatim
   behind operator gates, revoke-with-key, cluster/auto-tidy config, and
-  current-doc field expansion for role/generation/CRL/tidy structs.
-  Destructive `DELETE /pki/root` must be resolved explicitly and, if
-  implemented, stay behind `operator-ops` plus `operator-ops-acknowledged`.
+  current-doc field expansion for role/generation/CRL/tidy structs. Destructive
+  `DELETE /pki/root` is resolved in `0.9.0` as `Pki::delete_root` behind
+  `operator-ops` plus `operator-ops-acknowledged`, requiring
+  `PkiRootDeletion::confirm()` at the call site.
 - Implement in `0.13.0`: PKI revocation/CRL management, CEL roles and
   issue/sign, named-issuer sign-intermediate/sign-self-issued, delta CRL
   rotation, and cross-sign rows. Unauthenticated public CA/certificate/CRL

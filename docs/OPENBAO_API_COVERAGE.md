@@ -73,11 +73,11 @@ The `0.9.0` stabilization line now uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `468/643` (`72.8%`);
-- typed plus partial coverage: `469/643` (`72.9%`);
-- addressed by typed, partial, raw, or external policy: `502/643` (`78.1%`);
+- strict typed coverage: `469/643` (`72.9%`);
+- typed plus partial coverage: `470/643` (`73.1%`);
+- addressed by typed, partial, raw, or external policy: `503/643` (`78.2%`);
 - rows needing a pre-`1.0.0` implementation/rejection/deferral decision:
-  `141`.
+  `140`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
 `docs/openbao-2.5-endpoint-matrix.csv` for each method/path row.
@@ -198,12 +198,13 @@ Support plan:
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer
   revocation, CA/key import, ACME config/EAB/directory URL helpers, CRL
-  rotation, tidy, tidy status, tidy cancel, and role merge-patch are
-  implemented. Default issuer/key config, named-issuer issue/sign, root
-  rotate/replace, standalone key generation, sign-verbatim behind operator
-  gates, revoke-with-key, cluster config, auto-tidy config, and current-doc
-  field expansion for PKI role/generation/CRL/tidy structs are planned for
-  `0.12.0`. Revocation/CRL management, CEL roles, named-issuer
+  rotation, tidy, tidy status, tidy cancel, role merge-patch, and
+  operator-gated default root deletion with explicit `PkiRootDeletion`
+  confirmation are implemented. Default issuer/key config, named-issuer
+  issue/sign, root rotate/replace, standalone key generation, sign-verbatim
+  behind operator gates, revoke-with-key, cluster config, auto-tidy config, and
+  current-doc field expansion for PKI role/generation/CRL/tidy structs are
+  planned for `0.12.0`. Revocation/CRL management, CEL roles, named-issuer
   sign-intermediate/sign-self-issued, delta CRL rotation, and cross-sign rows
   are planned for `0.13.0`. Unauthenticated public CA/certificate/CRL reads and
   OCSP responder endpoints are external protocol/public-distribution
