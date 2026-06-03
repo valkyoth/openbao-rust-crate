@@ -73,11 +73,11 @@ The `0.9.0` stabilization line now uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `456/643` (`70.9%`);
-- typed plus partial coverage: `457/643` (`71.1%`);
-- addressed by typed, partial, raw, or external policy: `475/643` (`73.9%`);
+- strict typed coverage: `457/643` (`71.1%`);
+- typed plus partial coverage: `458/643` (`71.2%`);
+- addressed by typed, partial, raw, or external policy: `476/643` (`74.0%`);
 - rows needing a pre-`1.0.0` implementation/rejection/deferral decision:
-  `168`.
+  `167`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
 `docs/openbao-2.5-endpoint-matrix.csv` for each method/path row.
@@ -256,9 +256,9 @@ Support plan:
   addresses and HTTPS auto-join schemes. Raw storage read/write/list/delete
   helpers and pprof diagnostic byte helpers are implemented behind explicit
   operator-operation feature gates. Lease prefix revoke, force prefix revoke,
-  and lease count helpers are implemented. CORS wildcard origins are rejected
-  locally; streaming monitor and unstable internal inspect endpoints remain
-  deferred.
+  lease count, lease tidy, and `RenewalHint` timing helpers are implemented.
+  CORS wildcard origins are rejected locally; streaming monitor and unstable
+  internal inspect endpoints remain deferred.
 
 ## Ergonomics And Capability Roadmap
 
@@ -286,9 +286,11 @@ Finalization work before `1.0.0`:
 - add representative serde response fixtures before `1.0.0`;
 - add fuzz coverage for path validation, error decoding, and response
   envelopes before `1.0.0`;
-- decide whether background token auto-renewal, background lease tracking,
-  tracing/OpenTelemetry hooks, seal-status watcher/back-pressure helpers,
-  optional HTTP/2 transport configuration, and application-side secret
+- reject background token auto-renewal, background lease tracking, and
+  `LeaseHandle` wrappers for stable scope; use `RenewalHint` for caller-owned
+  renewal timing;
+- decide whether tracing/OpenTelemetry hooks, seal-status watcher/back-pressure
+  helpers, optional HTTP/2 transport configuration, and application-side secret
   wrappers are rejected or documented as explicit non-default stable
   boundaries.
 - use `0.10.0` through `0.14.0` for Identity/auth, Transit, PKI, and System

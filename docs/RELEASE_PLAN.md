@@ -2,8 +2,8 @@
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
-`643` documented endpoint rows, `456` strict typed or operator-gated rows, and
-`168` rows still needing an implementation, rejection, raw-wrapper policy, or
+`643` documented endpoint rows, `457` strict typed or operator-gated rows, and
+`167` rows still needing an implementation, rejection, raw-wrapper policy, or
 external-client policy decision. Because there is no rush to force stability,
 the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
 deliberately.
@@ -295,7 +295,10 @@ Stop condition:
 - migration guide from `0.1` through `0.9` exists and is completed;
 - migration guide from `vaultrs` and bespoke `reqwest` OpenBao wrappers exists
   and is completed;
-- background token auto-renewal and lease tracking are deferred with API notes;
+- background token auto-renewal, background lease tracking, and `LeaseHandle`
+  wrappers are rejected with API notes; `RenewalHint` covers caller-owned
+  timing for token and lease renewal loops;
+- system lease tidy is implemented;
 - explicit retry policy with exponential backoff is implemented;
 - a shared non-secret paginated-list abstraction is implemented;
 - admin bootstrap convergence for PKI roles and Identity entities/groups is
@@ -412,8 +415,8 @@ Stop condition:
 - generate-root and generate-recovery-token ceremony helpers are implemented
   behind explicit operator gates or rejected in favor of OpenBao CLI/operator
   process documentation;
-- decode-token, password policy CRUD/generate, and lease tidy helpers are
-  implemented or rejected;
+- decode-token and password policy CRUD/generate helpers are implemented or
+  rejected;
 - monitor streaming, in-flight request, internal counters, internal inspect,
   resultant ACL, and legacy recovery-key rekey rows are implemented, rejected,
   or classified as permanent internal/streaming/operator boundaries;

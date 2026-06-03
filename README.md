@@ -272,7 +272,7 @@ openbao = { version = "0.9", features = ["time"] }
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
 For the current `0.9.0` line it records `643` documented endpoint rows, with
-`456/643` (`70.9%`) strict typed or operator-gated coverage.
+`457/643` (`71.1%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
 
@@ -369,7 +369,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | FIPS posture helper | Advisory | Best-effort report for crate-visible Transit choices and deployment assumptions. Does not certify OpenBao or the deployment. |
 | List ergonomics | Yes | `ListEntries` exposes `entries`, `iter`, `len`, `is_empty`, and `contains` for common string list responses. |
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
-| Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, and lease counts; tidy remains intentionally deferred. |
+| Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, count, tidy, and `RenewalHint` timing helpers for caller-owned renewal loops. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. |
 | Storage | Partial | Integrated Storage Raft JSON, capped snapshot helpers, and operator-gated raw storage helpers are implemented; unstable internal inspect endpoints remain deferred. |
@@ -379,8 +379,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 Create a client from an existing token:
 
 ```rust,no_run
-use openbao::{Client, Result};
-use openbao::SecretString;
+use openbao::{Client, Result, SecretString};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -441,8 +440,7 @@ async fn main() -> Result<()> {
 Authenticate with AppRole:
 
 ```rust,no_run
-use openbao::{Client, Result};
-use openbao::SecretString;
+use openbao::{Client, Result, SecretString};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -1249,8 +1247,7 @@ async fn main() -> Result<()> {
 Look up and renew one exact lease:
 
 ```rust,no_run
-use openbao::{Client, Result};
-use openbao::SecretString;
+use openbao::{Client, RenewalHint, Result, SecretString};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -1259,8 +1256,13 @@ async fn main() -> Result<()> {
     let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
     let lease = client.sys().lookup_lease(&lease_id).await?;
-    if lease.renewable {
-        let renewed = client.sys().renew_lease(&lease_id, Some(1800)).await?;
+    let hint = RenewalHint::from_ttl(lease.ttl, lease.renewable);
+
+    if let (Some(sleep_for), Some(increment)) =
+        (hint.sleep_before_renew, hint.increment_seconds)
+    {
+        println!("renew after roughly {} seconds", sleep_for.as_secs());
+        let renewed = client.sys().renew_lease(&lease_id, Some(increment)).await?;
         println!("renewed lease seconds: {}", renewed.lease_duration);
     }
 

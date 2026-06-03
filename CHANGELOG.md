@@ -15,7 +15,7 @@ All notable changes to this project are documented here.
 - Added migration guidance for users upgrading from earlier `openbao` releases,
   `vaultrs`, or bespoke `reqwest` OpenBao/Vault wrappers.
 - Added a generated OpenBao `2.5.x` endpoint-by-endpoint coverage matrix with
-  `643` documented endpoint rows, `70.9%` strict typed or operator-gated
+  `643` documented endpoint rows, `71.1%` strict typed or operator-gated
   coverage, and explicit pre-`1.0.0` decision rows.
 - Added a `0.9.0` release-note skeleton and release gate script.
 - Expanded the pre-`1.0` release strategy through `0.15.0` so Identity/auth,
@@ -25,6 +25,8 @@ All notable changes to this project are documented here.
 - Recorded the Identity OIDC and MFA scope decision: admin CRUD, discovery,
   token generation, introspection, and MFA login validation are planned for
   `0.10.0`, while named-provider browser protocol flows remain external.
+- Added `RenewalHint` for caller-owned token and lease renewal loops and typed
+  `/sys/leases/tidy` maintenance support.
 
 ### Security
 
@@ -33,8 +35,8 @@ All notable changes to this project are documented here.
   auto-renewal, lease tracking, retries, pagination, tracing, quantum-ready
   posture, or production bootstrap convergence.
 - Background token auto-renewal and background lease tracking are explicitly
-  deferred until their secret lifetime and runtime policy can be designed
-  without hidden tasks.
+  rejected for stable scope; applications own renewal loops, failure policy,
+  and shutdown ordering.
 
 ## 0.8.0 - 2026-06-02
 

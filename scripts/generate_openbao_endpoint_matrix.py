@@ -291,9 +291,6 @@ def classify_system(page: str, path: str) -> tuple[str, str]:
     ):
         return ("decision", "System endpoint is planned for 0.14.0 decision or explicit rejection.")
 
-    if page.startswith("/api-docs/system/leases/") and "/sys/leases/tidy" in path:
-        return ("decision", "Lease tidy is planned for 0.14.0 decision or implementation.")
-
     gated_pages = (
         "raw",
         "pprof",
@@ -449,7 +446,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.",
             "- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows are planned for `0.11.0`.",
             "- PKI advanced issuer/root/public-read rows are planned for `0.12.0`; PKI specialized CEL/sign-verbatim/OCSP/ACME-boundary rows are planned for `0.13.0`.",
-            "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, legacy recovery rekey, and lease tidy are planned for `0.14.0`.",
+            "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, and legacy recovery rekey are planned for `0.14.0`.",
             "- `0.15.0` is the closure release where no endpoint row may remain `decision`.",
             "",
             "Regenerate with:",

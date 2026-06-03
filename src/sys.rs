@@ -4059,6 +4059,22 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Starts OpenBao lease tidy maintenance.
+    ///
+    /// OpenBao scans and cleans expired leases asynchronously. This is an
+    /// administrative maintenance operation; applications should still manage
+    /// their own active dynamic credential lease lifecycle explicitly.
+    pub async fn tidy_leases(&self) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::POST,
+                "sys/leases/tidy",
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     /// Counts active leases, optionally filtered by OpenBao lease type.
     pub async fn count_leases(&self, lease_type: Option<&str>) -> Result<LeaseCount> {
         let query = lease_type

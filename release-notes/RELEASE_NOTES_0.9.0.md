@@ -21,8 +21,8 @@
   parsing, and advisory FIPS posture helpers.
 - New `0.9.0` work currently implemented: release-line version bump,
   stabilization audit documentation, migration guidance, release-note skeleton,
-  the known-limitations decision register, and the `0.9.0` release gate
-  script.
+  the known-limitations decision register, `RenewalHint`, lease tidy, and the
+  `0.9.0` release gate script.
 - Remaining `0.9.0` planned work: public API audit, migration guide
   completion, opt-in retry/backoff, non-secret pagination ergonomics, PKI role
   and Identity entity/group bootstrap convergence, PKI root/named-issuer scope
@@ -42,8 +42,8 @@
   notes clearly document why it remains experimental.
 - Retry helpers must avoid retrying non-idempotent writes by default and must
   not hide token or lease revocation failures.
-- Token and lease renewal helpers must avoid background tasks that silently
-  keep secret material alive longer than caller-owned handles require.
+- Token and lease renewal helpers avoid background tasks that silently keep
+  secret material alive longer than caller-owned handles require.
 - Pagination helpers must preserve bounded allocation behavior and keep secret
   accessor lists out of generic string-list ergonomics.
 - Migration guidance must not recommend disabling TLS verification, using
@@ -73,6 +73,10 @@
   convergence, public response fixtures, fuzz targets for path validation/API
   error decoding/response envelopes, public API audit, migration guide
   completion, and an advisory quantum-readiness design note.
+- Rejected for stable scope: background token auto-renewal, background lease
+  tracking, and `LeaseHandle` wrappers. Applications own the renewal loop,
+  renewal-failure policy, and shutdown ordering; use `RenewalHint` for timing
+  and increment guidance.
 - Implement in `0.10.0`: Identity OIDC admin/discovery/token/introspection
   rows, MFA method and login-enforcement rows, and `sys/mfa/validate`; classify
   named-provider OIDC `/authorize`, `/token`, and `/userinfo` as external
@@ -84,12 +88,11 @@
 - Implement or decide in `0.12.0`/`0.13.0`: PKI named issuer/root/public-read,
   CEL, sign-verbatim, OCSP, revocation-list, and ACME-boundary rows.
 - Implement or decide in `0.14.0`: system generate-root/recovery-token,
-  decode-token, password policies, monitor/internal rows, resultant ACL, legacy
-  recovery-key rekey, and lease tidy.
-- Decide before `0.15.0`: background token auto-renewal, background lease
-  tracking, tracing/OpenTelemetry hooks, seal-status watchers, HTTP/2
-  transport knobs, application-side secret-struct wrappers, certificate or
-  public-key pinning, and advanced ACL policy-builder fields.
+  decode-token, password policies, monitor/internal rows, resultant ACL, and
+  legacy recovery-key rekey.
+- Decide before `0.15.0`: tracing/OpenTelemetry hooks, seal-status watchers,
+  HTTP/2 transport knobs, application-side secret-struct wrappers, certificate
+  or public-key pinning, and advanced ACL policy-builder fields.
 - Reject for stable feature scope unless a pentest or downstream integration
   proves otherwise before `1.0.0`: generic custom-plugin traits, full ACME
   protocol flows, full JOSE/JWKS construction, and raw unauthenticated SSH

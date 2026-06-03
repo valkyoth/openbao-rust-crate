@@ -97,7 +97,7 @@ pub use client::{
     Authenticated, Client, ClientBuilder, HeaderMode, HttpPolicy, OpenBao, OpenBaoConfig,
     RootCertificateMode, SharedClient, Unauthenticated,
 };
-pub use duration::duration_to_bao_string;
+pub use duration::{RenewalHint, duration_to_bao_string};
 pub use error::{Error, Result};
 pub use policy::{AclCapability, AclPolicyBuilder};
 #[cfg(feature = "transit")]
@@ -121,8 +121,8 @@ pub mod prelude {
     pub use crate::{
         AclCapability, AclPolicyBuilder, Authenticated, Certificate, Client, ClientBuilder, Empty,
         Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries, Method, OpenBao,
-        OpenBaoConfig, ResponseEnvelope, Result, SecretString, SharedClient, StatusCode,
-        Unauthenticated, Zeroize, Zeroizing, duration_to_bao_string,
+        OpenBaoConfig, RenewalHint, ResponseEnvelope, Result, SecretString, SharedClient,
+        StatusCode, Unauthenticated, Zeroize, Zeroizing, duration_to_bao_string,
     };
     #[cfg(feature = "transit")]
     pub use crate::{

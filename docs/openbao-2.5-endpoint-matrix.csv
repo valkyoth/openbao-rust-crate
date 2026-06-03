@@ -386,7 +386,7 @@ system,POST,/sys/leases/renew,typed,https://openbao.org/api-docs/system/leases/,
 system,POST,/sys/leases/revoke,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,POST,/sys/leases/revoke-force/:prefix,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,POST,/sys/leases/revoke-prefix/:prefix,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
-system,POST,/sys/leases/tidy,decision,https://openbao.org/api-docs/system/leases/,Lease tidy is planned for 0.14.0 decision or implementation.
+system,POST,/sys/leases/tidy,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,GET,/sys/leases/count,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,GET,/sys/leases,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,POST,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
