@@ -193,9 +193,9 @@ Support plan:
   `SecretString` and reject empty ciphertext constructors; optional derivation
   context is also secret-aware. BYOK export returns a wrapped ciphertext blob
   as `SecretString`. Raw key bytes are never accepted by these endpoint
-  wrappers. A pre-`1.0.0` optional `transit-import` helper is still planned
-  for callers who want the crate to prepare OpenBao's wrapped-key blob behind
-  feature-gated `rsa` and `aes-gcm` dependencies.
+  wrappers. The optional `transit-import` feature prepares OpenBao's
+  wrapped-key blob with AES-KWP/RSA-OAEP behind feature-gated `openssl` and
+  `aes-kw` dependencies.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer

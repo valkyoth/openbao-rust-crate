@@ -361,25 +361,27 @@ Stop condition:
 - Transit wrapping-key is implemented and returns the RSA wrapping public key
   PEM as a non-secret `String`;
 - Transit key import and import-version are implemented with request types
-  that accept only pre-wrapped ciphertext as `SecretString`, optional
-  derivation context as `SecretString`, custom redacted `Debug`, and
-  constructors that reject empty ciphertext;
+  that accept pre-wrapped ciphertext as `SecretString` or public-key-only
+  import material, optional derivation context as `SecretString`, custom
+  redacted `Debug`, and constructors that reject empty import material;
 - Transit BYOK export is implemented with response types that carry the
   destination-wrapped ciphertext blob as `SecretString` and use custom
   redacted `Debug`;
 - every import method documents the boundary explicitly: raw key bytes must
-  not be passed to the endpoint wrappers; callers fetch the wrapping key, wrap
-  key material externally through their HSM, OpenSSL, or chosen crypto library,
-  and pass only the base64 ciphertext blob to the crate;
+  not be passed to the default endpoint wrappers; callers fetch the wrapping
+  key, wrap key material externally through their HSM, OpenSSL, or chosen
+  crypto library, and pass only the base64 ciphertext blob to the crate unless
+  they explicitly enable the software `transit-import` helper;
 - Transit soft-delete and soft-delete-restore helpers are implemented;
 - Transit cache config and global key config helpers are implemented;
 - Transit CSR generation and certificate install helpers are implemented with
   PEM strings documented as public certificate material;
 - the endpoint-wrapper boundary is documented clearly: the core wrappers do
-  not perform client-side RSA-OAEP/AES-GCM wrapping;
-- an optional `transit-import` wrapping helper is implemented before `1.0.0`,
-  preferably in this `0.11.0` line, with optional `rsa` and `aes-gcm`
-  dependencies only when the feature is enabled;
+  not perform client-side AES-KWP/RSA-OAEP wrapping unless the non-default
+  `transit-import` helper is explicitly enabled;
+- an optional `transit-import` wrapping helper is implemented in this `0.11.0`
+  line, with optional `openssl` and `aes-kw` dependencies only when the
+  feature is enabled;
 - the `transit-import` helper accepts raw key bytes through zeroizing or
   secret-aware inputs, returns the OpenBao wrapped-key blob as `SecretString`,
   has redacted `Debug`, and is documented as an ergonomic client-side helper

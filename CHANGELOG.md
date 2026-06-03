@@ -105,9 +105,10 @@ All notable changes to this project are documented here.
 - Recorded the Transit import/BYOK boundary: wrapping-key, import and
   import-version, BYOK export, soft-delete/restore, cache/global config, CSR,
   and certificate-install rows are planned for `0.11.0`; core wrappers accept
-  already-wrapped `SecretString` material and do not perform client-side
-  RSA-OAEP/AES-GCM wrapping. A pre-`1.0.0` optional `transit-import` helper is
-  planned with feature-gated `rsa` and `aes-gcm` dependencies.
+  already-wrapped `SecretString` material or public-key-only import material.
+  The optional `transit-import` helper is implemented with feature-gated
+  `openssl` and `aes-kw` dependencies and follows OpenBao's documented
+  AES-KWP/RSA-OAEP software wrapping flow.
 - Tightened the Transit import/BYOK implementation contract: wrapping-key
   returns public PEM, import constructors must reject empty pre-wrapped
   ciphertext, BYOK export returns redacted `SecretString` ciphertext, and raw

@@ -86,6 +86,7 @@ ssh = []
 totp = []
 transit = []
 transit-bytes = ["dep:base64-ng"]
+transit-import = ["dep:aes-kw", "dep:base64-ng", "dep:openssl", "dep:rand"]
 sys = []
 http2 = ["reqwest/http2"]
 time = ["dep:time"]
@@ -115,8 +116,11 @@ insecure-ldap-tls-acknowledged = []
 sensitive-http-test-only = []
 
 [dependencies]
+aes-kw = { version = "0.3.1", default-features = false, features = ["zeroize"], optional = true }
 base64-ng = { version = "1.0.6", default-features = false, features = ["alloc"], optional = true }
+rand = { version = "0.10.1", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
+openssl = { version = "0.10.80", optional = true }
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"

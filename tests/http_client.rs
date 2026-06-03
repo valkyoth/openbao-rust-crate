@@ -3480,7 +3480,7 @@ async fn transit_advanced_key_management_uses_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for index in 0..12 {
+        for index in 0..14 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match index {
@@ -3499,55 +3499,74 @@ async fn transit_advanced_key_management_uses_documented_paths() {
                 2 => {
                     assert!(
                         request
+                            .starts_with("POST /v1/transit/keys/imported-public/import HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""public_key":"-----BEGIN PUBLIC KEY-----""#));
+                    assert!(request.contains(r#""type":"rsa-2048""#));
+                    assert!(!request.contains(r#""ciphertext""#));
+                    "{}"
+                }
+                3 => {
+                    assert!(request.starts_with(
+                        "POST /v1/transit/keys/imported-public/import_version HTTP/1.1"
+                    ));
+                    assert!(request.contains(r#""public_key":"-----BEGIN PUBLIC KEY-----""#));
+                    assert!(request.contains(r#""version":3"#));
+                    assert!(!request.contains(r#""ciphertext""#));
+                    "{}"
+                }
+                4 => {
+                    assert!(
+                        request
                             .starts_with("POST /v1/transit/keys/imported/import_version HTTP/1.1")
                     );
                     assert!(request.contains(r#""ciphertext":"wrapped-version-blob""#));
                     assert!(request.contains(r#""version":2"#));
                     "{}"
                 }
-                3 => {
+                5 => {
                     assert!(
                         request
                             .starts_with("DELETE /v1/transit/keys/imported/soft-delete HTTP/1.1")
                     );
                     "{}"
                 }
-                4 => {
+                6 => {
                     assert!(request.starts_with(
                         "POST /v1/transit/keys/imported/soft-delete-restore HTTP/1.1"
                     ));
                     "{}"
                 }
-                5 => {
+                7 => {
                     assert!(request.starts_with(
                         "GET /v1/transit/byok-export/destination/source/3?hash=SHA512 HTTP/1.1"
                     ));
                     r#"{"data":{"name":"source","keys":{"3":"wrapped-for-destination"}}}"#
                 }
-                6 => {
+                8 => {
                     assert!(request.starts_with("POST /v1/transit/config/keys HTTP/1.1"));
                     assert!(request.contains(r#""disable_upsert":true"#));
                     r#"{"data":{"disable_upsert":true}}"#
                 }
-                7 => {
+                9 => {
                     assert!(request.starts_with("GET /v1/transit/config/keys HTTP/1.1"));
                     r#"{"data":{"disable_upsert":true}}"#
                 }
-                8 => {
+                10 => {
                     assert!(request.starts_with("POST /v1/transit/cache-config HTTP/1.1"));
                     assert!(request.contains(r#""size":128"#));
                     r#"{"data":{"size":128}}"#
                 }
-                9 => {
+                11 => {
                     assert!(request.starts_with("GET /v1/transit/cache-config HTTP/1.1"));
                     r#"{"data":{"size":128}}"#
                 }
-                10 => {
+                12 => {
                     assert!(request.starts_with("POST /v1/transit/keys/signing/csr HTTP/1.1"));
                     assert!(request.contains(r#""version":1"#));
                     r#"{"data":{"name":"signing","type":"rsa-2048","csr":"-----BEGIN CERTIFICATE REQUEST-----"}}"#
                 }
-                11 => {
+                13 => {
                     assert!(
                         request
                             .starts_with("POST /v1/transit/keys/signing/set-certificate HTTP/1.1")
@@ -3604,6 +3623,31 @@ async fn transit_advanced_key_management_uses_documented_paths() {
             .exportable()
             .allow_plaintext_backup()
             .with_auto_rotate_period("24h")
+            .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    transit
+        .import_key(
+            "imported-public",
+            &openbao::secrets::transit::TransitImportRequest::from_public_key(
+                "-----BEGIN PUBLIC KEY-----",
+                openbao::secrets::transit::TransitKeyType::Rsa2048,
+            )
+            .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    transit
+        .import_key_version(
+            "imported-public",
+            &openbao::secrets::transit::TransitImportVersionRequest::from_public_key(
+                "-----BEGIN PUBLIC KEY-----",
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_version(3)
             .unwrap_or_else(|error| panic!("{error}")),
         )
         .await

@@ -9,7 +9,9 @@ use serde::{
     Deserialize, Deserializer, Serialize,
     de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
 };
-#[cfg(feature = "transit-bytes")]
+#[cfg(feature = "transit-import")]
+use zeroize::Zeroize;
+#[cfg(any(feature = "transit-bytes", feature = "transit-import"))]
 use zeroize::Zeroizing;
 
 use crate::{
@@ -19,6 +21,13 @@ use crate::{
         Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_vec,
     },
 };
+
+#[cfg(feature = "transit-import")]
+const TRANSIT_WRAPPING_KEY_BYTES: usize = 512;
+#[cfg(feature = "transit-import")]
+const TRANSIT_IMPORT_EPHEMERAL_AES_KEY_BYTES: usize = 32;
+#[cfg(feature = "transit-import")]
+const MAX_TRANSIT_IMPORT_KEY_MATERIAL_BYTES: usize = 16 * 1024;
 
 /// Handle for a mounted Transit secrets engine.
 #[derive(Debug)]
@@ -384,7 +393,9 @@ pub struct TransitWrappingKey {
 #[derive(Clone)]
 pub struct TransitImportRequest {
     /// Base64 BYOK ciphertext produced outside this crate.
-    pub ciphertext: SecretString,
+    pub ciphertext: Option<SecretString>,
+    /// Plaintext PEM public key for public-key-only import.
+    pub public_key: Option<String>,
     /// Transit key type to create.
     pub key_type: TransitKeyType,
     /// RSA-OAEP hash function used when producing `ciphertext`.
@@ -407,7 +418,11 @@ impl fmt::Debug for TransitImportRequest {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("TransitImportRequest")
-            .field("ciphertext", &"<redacted>")
+            .field(
+                "ciphertext",
+                &self.ciphertext.as_ref().map(|_| "<redacted>"),
+            )
+            .field("public_key", &self.public_key)
             .field("key_type", &self.key_type)
             .field("hash_function", &self.hash_function)
             .field("allow_rotation", &self.allow_rotation)
@@ -431,7 +446,33 @@ impl TransitImportRequest {
     pub fn new(ciphertext: SecretString, key_type: TransitKeyType) -> Result<Self> {
         validate_non_empty_secret(&ciphertext, "Transit import ciphertext")?;
         Ok(Self {
-            ciphertext,
+            ciphertext: Some(ciphertext),
+            public_key: None,
+            key_type,
+            hash_function: None,
+            allow_rotation: None,
+            derived: None,
+            context: None,
+            exportable: None,
+            allow_plaintext_backup: None,
+            auto_rotate_period: None,
+        })
+    }
+
+    /// Creates a public-key-only import request.
+    ///
+    /// Public-key-only Transit keys can support verification and encryption
+    /// operations, depending on key type and OpenBao policy, but no private key
+    /// material is imported.
+    pub fn from_public_key(
+        public_key: impl Into<String>,
+        key_type: TransitKeyType,
+    ) -> Result<Self> {
+        let public_key = public_key.into();
+        validate_non_empty_public_key(&public_key, "Transit import public_key")?;
+        Ok(Self {
+            ciphertext: None,
+            public_key: Some(public_key),
             key_type,
             hash_function: None,
             allow_rotation: None,
@@ -488,7 +529,11 @@ impl TransitImportRequest {
     }
 
     fn validate(&self) -> Result<()> {
-        validate_non_empty_secret(&self.ciphertext, "Transit import ciphertext")?;
+        validate_import_material(
+            self.ciphertext.as_ref(),
+            self.public_key.as_deref(),
+            "Transit import",
+        )?;
         if let Some(period) = &self.auto_rotate_period {
             crate::validation::validate_duration_parameter(period, "Transit auto_rotate_period")?;
         }
@@ -500,7 +545,9 @@ impl TransitImportRequest {
 #[derive(Clone)]
 pub struct TransitImportVersionRequest {
     /// Base64 BYOK ciphertext produced outside this crate.
-    pub ciphertext: SecretString,
+    pub ciphertext: Option<SecretString>,
+    /// Plaintext PEM public key for public-key-only import.
+    pub public_key: Option<String>,
     /// RSA-OAEP hash function used when producing `ciphertext`.
     pub hash_function: Option<TransitImportHashFunction>,
     /// Base64 derivation context for derived keys.
@@ -513,7 +560,11 @@ impl fmt::Debug for TransitImportVersionRequest {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("TransitImportVersionRequest")
-            .field("ciphertext", &"<redacted>")
+            .field(
+                "ciphertext",
+                &self.ciphertext.as_ref().map(|_| "<redacted>"),
+            )
+            .field("public_key", &self.public_key)
             .field("hash_function", &self.hash_function)
             .field("context", &self.context.as_ref().map(|_| "<redacted>"))
             .field("version", &self.version)
@@ -529,7 +580,21 @@ impl TransitImportVersionRequest {
     pub fn new(ciphertext: SecretString) -> Result<Self> {
         validate_non_empty_secret(&ciphertext, "Transit import ciphertext")?;
         Ok(Self {
-            ciphertext,
+            ciphertext: Some(ciphertext),
+            public_key: None,
+            hash_function: None,
+            context: None,
+            version: None,
+        })
+    }
+
+    /// Creates a public-key-only import-version request.
+    pub fn from_public_key(public_key: impl Into<String>) -> Result<Self> {
+        let public_key = public_key.into();
+        validate_non_empty_public_key(&public_key, "Transit import public_key")?;
+        Ok(Self {
+            ciphertext: None,
+            public_key: Some(public_key),
             hash_function: None,
             context: None,
             version: None,
@@ -562,7 +627,86 @@ impl TransitImportVersionRequest {
     }
 
     fn validate(&self) -> Result<()> {
-        validate_non_empty_secret(&self.ciphertext, "Transit import ciphertext")
+        validate_import_material(
+            self.ciphertext.as_ref(),
+            self.public_key.as_deref(),
+            "Transit import",
+        )
+    }
+}
+
+/// Client-side BYOK ciphertext prepared for Transit import.
+///
+/// This type is available only with the `transit-import` feature. It is an
+/// ergonomic software wrapping helper for development and audited automation;
+/// it is not an HSM, FIPS, certification, or post-quantum claim. Prefer
+/// OpenBao-generated Transit keys or HSM-backed wrapping workflows for
+/// high-assurance production deployments.
+#[cfg(feature = "transit-import")]
+#[derive(Clone)]
+pub struct TransitWrappedImportKey {
+    /// Base64 BYOK ciphertext accepted by OpenBao import endpoints.
+    pub ciphertext: SecretString,
+    /// RSA-OAEP hash function used to wrap the ephemeral AES key.
+    pub hash_function: TransitImportHashFunction,
+}
+
+#[cfg(feature = "transit-import")]
+impl fmt::Debug for TransitWrappedImportKey {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitWrappedImportKey")
+            .field("ciphertext", &"<redacted>")
+            .field("hash_function", &self.hash_function)
+            .finish()
+    }
+}
+
+#[cfg(feature = "transit-import")]
+impl TransitWrappedImportKey {
+    /// Wraps raw key material for OpenBao Transit import using OS randomness.
+    ///
+    /// The implementation follows OpenBao's documented BYOK software flow:
+    /// generate a 256-bit ephemeral AES key, wrap `key_material` with
+    /// AES-KWP, wrap the ephemeral AES key with the 4096-bit Transit RSA
+    /// wrapping key using RSA-OAEP, concatenate the two binary blobs, and
+    /// base64 encode the result.
+    pub fn wrap_key_material(
+        wrapping_key_pem: &str,
+        key_material: Zeroizing<Vec<u8>>,
+        hash_function: TransitImportHashFunction,
+    ) -> Result<Self> {
+        let mut rng = rand::rng();
+        Self::wrap_key_material_with_rng(&mut rng, wrapping_key_pem, key_material, hash_function)
+    }
+
+    /// Wraps raw key material for OpenBao Transit import with caller-provided randomness.
+    ///
+    /// This variant exists for tests and deployments that inject a reviewed
+    /// cryptographic RNG. Production callers that do not need custom RNG
+    /// policy should use [`TransitWrappedImportKey::wrap_key_material`].
+    pub fn wrap_key_material_with_rng<R>(
+        rng: &mut R,
+        wrapping_key_pem: &str,
+        key_material: Zeroizing<Vec<u8>>,
+        hash_function: TransitImportHashFunction,
+    ) -> Result<Self>
+    where
+        R: rand::CryptoRng + ?Sized,
+    {
+        wrap_import_key_material(rng, wrapping_key_pem, key_material, hash_function)
+    }
+
+    /// Converts this wrapped blob into a new-key import request.
+    pub fn into_import_request(self, key_type: TransitKeyType) -> Result<TransitImportRequest> {
+        Ok(TransitImportRequest::new(self.ciphertext, key_type)?
+            .with_hash_function(self.hash_function))
+    }
+
+    /// Converts this wrapped blob into an import-version request.
+    pub fn into_import_version_request(self) -> Result<TransitImportVersionRequest> {
+        Ok(TransitImportVersionRequest::new(self.ciphertext)?
+            .with_hash_function(self.hash_function))
     }
 }
 
@@ -1738,7 +1882,10 @@ struct TransitRestorePayload<'a> {
 
 #[derive(Serialize)]
 struct TransitImportPayload<'a> {
-    ciphertext: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ciphertext: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    public_key: Option<&'a str>,
     #[serde(rename = "type")]
     key_type: TransitKeyType,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1759,7 +1906,10 @@ struct TransitImportPayload<'a> {
 
 #[derive(Serialize)]
 struct TransitImportVersionPayload<'a> {
-    ciphertext: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ciphertext: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    public_key: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     hash_function: Option<TransitImportHashFunction>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1886,13 +2036,17 @@ impl Transit<'_> {
     /// Imports a new Transit key from pre-wrapped BYOK ciphertext.
     ///
     /// This endpoint wrapper never accepts raw key bytes and does not perform
-    /// RSA-OAEP/AES-GCM wrapping. Fetch [`Transit::wrapping_key`], wrap key
+    /// RSA-OAEP/AES-KWP wrapping. Fetch [`Transit::wrapping_key`], wrap key
     /// material externally through an HSM, OpenSSL, or reviewed crypto
     /// library, and pass only the base64 ciphertext blob in `request`.
     pub async fn import_key(&self, name: &str, request: &TransitImportRequest) -> Result<Empty> {
         request.validate()?;
         let payload = TransitImportPayload {
-            ciphertext: request.ciphertext.expose_secret(),
+            ciphertext: request
+                .ciphertext
+                .as_ref()
+                .map(|secret| secret.expose_secret()),
+            public_key: request.public_key.as_deref(),
             key_type: request.key_type,
             hash_function: request.hash_function,
             allow_rotation: request.allow_rotation,
@@ -1926,7 +2080,11 @@ impl Transit<'_> {
     ) -> Result<Empty> {
         request.validate()?;
         let payload = TransitImportVersionPayload {
-            ciphertext: request.ciphertext.expose_secret(),
+            ciphertext: request
+                .ciphertext
+                .as_ref()
+                .map(|secret| secret.expose_secret()),
+            public_key: request.public_key.as_deref(),
             hash_function: request.hash_function,
             context: request
                 .context
@@ -2562,6 +2720,36 @@ fn validate_non_empty_secret(secret: &SecretString, label: &'static str) -> Resu
     Ok(())
 }
 
+fn validate_non_empty_public_key(public_key: &str, label: &'static str) -> Result<()> {
+    if public_key.trim().is_empty() {
+        return Err(Error::InvalidParameter(format!(
+            "{label} must not be empty"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_import_material(
+    ciphertext: Option<&SecretString>,
+    public_key: Option<&str>,
+    label: &'static str,
+) -> Result<()> {
+    match (ciphertext, public_key) {
+        (Some(ciphertext), None) => {
+            validate_non_empty_secret(ciphertext, "Transit import ciphertext")
+        }
+        (None, Some(public_key)) => {
+            validate_non_empty_public_key(public_key, "Transit import public_key")
+        }
+        (Some(_), Some(_)) => Err(Error::InvalidParameter(format!(
+            "{label} must use either ciphertext or public_key, not both"
+        ))),
+        (None, None) => Err(Error::InvalidParameter(format!(
+            "{label} requires ciphertext or public_key"
+        ))),
+    }
+}
+
 fn encrypt_payload(request: &TransitEncryptRequest) -> TransitEncryptPayload<'_> {
     TransitEncryptPayload {
         plaintext: request.plaintext.expose_secret(),
@@ -2639,7 +2827,117 @@ fn verify_payload(request: &TransitVerifyRequest) -> TransitVerifyPayload<'_> {
     }
 }
 
-#[cfg(feature = "transit-bytes")]
+#[cfg(feature = "transit-import")]
+fn wrap_import_key_material<R>(
+    rng: &mut R,
+    wrapping_key_pem: &str,
+    mut key_material: Zeroizing<Vec<u8>>,
+    hash_function: TransitImportHashFunction,
+) -> Result<TransitWrappedImportKey>
+where
+    R: rand::CryptoRng + ?Sized,
+{
+    if key_material.is_empty() {
+        return Err(Error::InvalidParameter(
+            "Transit import key material must not be empty".into(),
+        ));
+    }
+    if key_material.len() > MAX_TRANSIT_IMPORT_KEY_MATERIAL_BYTES {
+        return Err(Error::InvalidParameter(
+            "Transit import key material exceeds local helper limit".into(),
+        ));
+    }
+
+    use aes_kw::{KeyInit, KwpAes256};
+
+    let mut ephemeral_aes_key = Zeroizing::new([0_u8; TRANSIT_IMPORT_EPHEMERAL_AES_KEY_BYTES]);
+    rng.fill_bytes(&mut ephemeral_aes_key[..]);
+
+    let kwp = KwpAes256::new((&*ephemeral_aes_key).into());
+    let wrapped_target_len = (key_material.len().div_ceil(8) + 1) * 8;
+    let mut wrapped_target = Zeroizing::new(vec![0_u8; wrapped_target_len]);
+    let wrapped_target_len = kwp
+        .wrap_key(&key_material, &mut wrapped_target)
+        .map_err(|_| {
+            Error::InvalidParameter("Transit import key material could not be wrapped".into())
+        })?
+        .len();
+    wrapped_target.truncate(wrapped_target_len);
+    key_material.zeroize();
+
+    let wrapped_aes_key = Zeroizing::new(rsa_oaep_wrap_aes_key(
+        wrapping_key_pem,
+        &ephemeral_aes_key[..],
+        hash_function,
+    )?);
+
+    let mut combined = Zeroizing::new(Vec::with_capacity(
+        wrapped_aes_key.len() + wrapped_target.len(),
+    ));
+    combined.extend_from_slice(&wrapped_aes_key);
+    combined.extend_from_slice(&wrapped_target);
+    let ciphertext = base64_encode_secret(&combined)?;
+
+    Ok(TransitWrappedImportKey {
+        ciphertext,
+        hash_function,
+    })
+}
+
+#[cfg(feature = "transit-import")]
+fn rsa_oaep_wrap_aes_key(
+    wrapping_key_pem: &str,
+    ephemeral_aes_key: &[u8],
+    hash_function: TransitImportHashFunction,
+) -> Result<Vec<u8>> {
+    use openssl::{
+        md::Md,
+        pkey::{PKey, Public},
+        pkey_ctx::PkeyCtx,
+        rsa::Padding,
+    };
+
+    let wrapping_key: PKey<Public> = PKey::public_key_from_pem(wrapping_key_pem.as_bytes())
+        .map_err(|_| Error::InvalidParameter("Transit wrapping key PEM is invalid".into()))?;
+    if wrapping_key.size() != TRANSIT_WRAPPING_KEY_BYTES {
+        return Err(Error::InvalidParameter(
+            "Transit wrapping key must be a 4096-bit RSA public key".into(),
+        ));
+    }
+
+    let digest = match hash_function {
+        #[cfg(feature = "allow-sha1")]
+        #[allow(deprecated)]
+        TransitImportHashFunction::Sha1 => Md::sha1(),
+        TransitImportHashFunction::Sha224 => Md::sha224(),
+        TransitImportHashFunction::Sha256 => Md::sha256(),
+        TransitImportHashFunction::Sha384 => Md::sha384(),
+        TransitImportHashFunction::Sha512 => Md::sha512(),
+    };
+
+    let mut context = PkeyCtx::new(&wrapping_key)
+        .map_err(|_| Error::InvalidParameter("Transit wrapping key is invalid".into()))?;
+    context
+        .encrypt_init()
+        .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
+    context
+        .set_rsa_padding(Padding::PKCS1_OAEP)
+        .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
+    context
+        .set_rsa_oaep_md(digest)
+        .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
+    context
+        .set_rsa_mgf1_md(digest)
+        .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
+
+    let mut encrypted = Vec::new();
+    context
+        .encrypt_to_vec(ephemeral_aes_key, &mut encrypted)
+        .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
+    Ok(encrypted)
+}
+
+#[cfg(any(feature = "transit-bytes", feature = "transit-import"))]
 fn base64_encode_secret(input: &[u8]) -> Result<SecretString> {
     let encoded = base64_ng::STANDARD
         .encode_secret(input)
@@ -2940,6 +3238,73 @@ mod tests {
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("wrapped-secret"));
         assert!(!debug.contains("secret-context"));
+
+        let public_request = super::TransitImportRequest::from_public_key(
+            "-----BEGIN PUBLIC KEY-----",
+            super::TransitKeyType::Rsa2048,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(public_request.ciphertext.is_none());
+        assert!(public_request.public_key.is_some());
+        assert!(
+            super::TransitImportRequest::from_public_key("", super::TransitKeyType::Rsa2048)
+                .is_err()
+        );
+
+        let public_version =
+            super::TransitImportVersionRequest::from_public_key("-----BEGIN PUBLIC KEY-----")
+                .unwrap_or_else(|error| panic!("{error}"));
+        assert!(public_version.ciphertext.is_none());
+        assert!(public_version.public_key.is_some());
+        assert!(super::TransitImportVersionRequest::from_public_key("").is_err());
+    }
+
+    #[cfg(feature = "transit-import")]
+    #[test]
+    fn transit_import_helper_wraps_key_material_without_leaking_debug() {
+        use openssl::rsa::Rsa;
+        use secrecy::ExposeSecret;
+        use zeroize::Zeroizing;
+
+        let mut rng = rand::rng();
+        let public_key_pem = Rsa::generate(4096)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .public_key_to_pem()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let public_key_pem =
+            String::from_utf8(public_key_pem).unwrap_or_else(|error| panic!("{error}"));
+
+        let wrapped = super::TransitWrappedImportKey::wrap_key_material_with_rng(
+            &mut rng,
+            &public_key_pem,
+            Zeroizing::new(b"key-material-for-import".to_vec()),
+            super::TransitImportHashFunction::Sha256,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+
+        assert!(!wrapped.ciphertext.expose_secret().is_empty());
+        let debug = format!("{wrapped:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains(wrapped.ciphertext.expose_secret()));
+
+        let request = wrapped
+            .clone()
+            .into_import_request(super::TransitKeyType::Aes256Gcm96)
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(request.ciphertext.is_some());
+        assert_eq!(
+            request.hash_function,
+            Some(super::TransitImportHashFunction::Sha256)
+        );
+
+        let version_request = wrapped
+            .into_import_version_request()
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(version_request.ciphertext.is_some());
+        assert_eq!(
+            version_request.hash_function,
+            Some(super::TransitImportHashFunction::Sha256)
+        );
     }
 
     #[test]

@@ -126,7 +126,7 @@ Pentest remediations in this candidate:
   that raw key bytes must not be passed to endpoint wrappers. BYOK export
   returns wrapped ciphertext as `SecretString`. A pre-`1.0.0` optional
   client-side wrapping helper is planned behind `transit-import` with
-  feature-gated `rsa` and `aes-gcm` dependencies, secret-aware inputs, redacted
+  feature-gated `openssl` and `aes-kw` dependencies, secret-aware inputs, redacted
   output handling, and no security-certification claims.
 - Implement in `0.12.0`: PKI default issuer/key config, named-issuer
   issue/sign, root rotate/replace, standalone key generation, sign-verbatim

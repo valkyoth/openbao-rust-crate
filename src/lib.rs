@@ -12,8 +12,8 @@
 //! direct token auth, LDAP/RADIUS/Kerberos auth, JWT/OIDC browser-flow helpers,
 //! token lifecycle and token-role helpers, Cubbyhole, Identity lifecycle,
 //! lookup, and merge helpers, KV v1/v2, Kubernetes secrets, RabbitMQ secrets,
-//! Transit lifecycle, batch, and single-operation cryptography helpers, PKI
-//! import/BYOK helpers, issue/sign/revoke/tidy helpers, system health/readiness, dev-only
+//! Transit lifecycle, batch, single-operation cryptography, import/BYOK, and
+//! PKI issue/sign/revoke/tidy helpers, system health/readiness, dev-only
 //! bootstrap, mount management, audit devices, exact and prefix lease helpers,
 //! plugin catalog operations, SSH, TOTP, and raw JSON calls for advanced users.
 //! Selected system endpoints that return non-JSON data, such as Prometheus
@@ -269,6 +269,8 @@ pub mod prelude {
     pub use crate::secrets::ssh::{Ssh, SshRoleInfo, SshRoleRequest};
     #[cfg(feature = "totp")]
     pub use crate::secrets::totp::{Totp, TotpKeyCreateRequest, TotpKeyInfo};
+    #[cfg(all(feature = "transit", feature = "transit-import"))]
+    pub use crate::secrets::transit::TransitWrappedImportKey;
     #[cfg(feature = "transit")]
     pub use crate::secrets::transit::{
         Transit, TransitBackup, TransitBatchDecryptItem, TransitBatchDecryptRequest,
@@ -276,11 +278,14 @@ pub mod prelude {
         TransitBatchEncryptResponse, TransitBatchRewrapItem, TransitBatchRewrapRequest,
         TransitBatchRewrapResponse, TransitBatchSignItem, TransitBatchSignRequest,
         TransitBatchSignResponse, TransitBatchVerifyItem, TransitBatchVerifyRequest,
-        TransitBatchVerifyResponse, TransitCreateKeyRequest, TransitDecryptRequest,
-        TransitDecryptResponse, TransitEncryptRequest, TransitEncryptResponse,
-        TransitExportKeyType, TransitExportResponse, TransitKeyInfo, TransitKeyList,
-        TransitKeyType, TransitRestoreRequest, TransitSignRequest, TransitSignResponse,
-        TransitTrimRequest, TransitUpdateKeyRequest, TransitVerifyRequest, TransitVerifyResponse,
+        TransitBatchVerifyResponse, TransitByokExport, TransitCacheConfig, TransitCreateKeyRequest,
+        TransitCsrRequest, TransitCsrResponse, TransitDecryptRequest, TransitDecryptResponse,
+        TransitEncryptRequest, TransitEncryptResponse, TransitExportKeyType, TransitExportResponse,
+        TransitGlobalKeyConfig, TransitImportHashFunction, TransitImportRequest,
+        TransitImportVersionRequest, TransitKeyInfo, TransitKeyList, TransitKeyType,
+        TransitRestoreRequest, TransitSetCertificateRequest, TransitSignRequest,
+        TransitSignResponse, TransitTrimRequest, TransitUpdateKeyRequest, TransitVerifyRequest,
+        TransitVerifyResponse, TransitWrappingKey,
     };
     #[cfg(feature = "sys")]
     pub use crate::sys::{
