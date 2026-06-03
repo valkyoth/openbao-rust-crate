@@ -139,9 +139,11 @@ Planned next:
 - `0.9.0`: public API audit, migration guides, opt-in retry/backoff,
   non-secret pagination ergonomics, PKI role and Identity entity/group
   bootstrap convergence, fuzz/fixture hardening, quantum-readiness design
-  notes, and explicit deferral notes for background renewal/tracking,
-  tracing, seal watchers, HTTP/2 knobs, and application-side secret wrappers
-  before `1.0`.
+  notes, and explicit pre-`1.0` decisions for background renewal/tracking,
+  tracing, seal watchers, HTTP/2 knobs, and application-side secret wrappers.
+  If one of these is too large for `0.9.0`, it may move to an optional
+  `0.10.0` completion buffer; after `1.0.0`, only `1.0.x` maintenance and
+  security fixes are planned.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.

@@ -1,8 +1,11 @@
 # Release Plan
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
-Every release must be functional enough to publish for external testing. No tag
-is cut until the owner provides a pentest report for the exact release commit.
+Treat `1.0.0` as the final planned feature release: after it, the expected
+line is `1.0.x` maintenance, security fixes, compatibility fixes, and
+documentation corrections only. Every pre-`1.0` release must be functional
+enough to publish for external testing. No tag is cut until the owner provides
+a pentest report for the exact release commit.
 
 ## Standing Release Gates
 
@@ -20,6 +23,17 @@ Every release:
 - generates an SBOM;
 - validates release metadata;
 - records pentest report status before tag.
+
+## Finalization Policy
+
+- Anything valuable enough for the stable crate must land in `0.9.0`,
+  `0.10.0`, or `1.0.0`.
+- `0.10.0` is reserved as an optional final completion buffer for work that is
+  too large or too risky to finish inside `0.9.0`.
+- Items that do not fit before `1.0.0` are rejected for the stable feature
+  scope, not left as open-ended roadmap promises.
+- After `1.0.0`, new feature work is not planned. Only `1.0.x` security,
+  correctness, compatibility, and documentation updates are assumed.
 
 ## Downstream Ergonomics Backlog
 
@@ -43,8 +57,8 @@ reimplemented in applications:
 - best-effort FIPS posture helpers that validate crate request options against
   FIPS-oriented allowlists and emit an audit report, without claiming OpenBao,
   the host, TLS backend, or HSM/KMS module is certified;
-- quantum-readiness helpers that inventory algorithms and prefer hybrid or
-  post-quantum-safe choices when OpenBao exposes stable support;
+- quantum-readiness design notes that inventory algorithms and clearly state
+  that current helpers are advisory only until OpenBao exposes stable support;
 - migration examples for projects currently using `vaultrs` or bespoke
   `reqwest` wrappers.
 
@@ -280,11 +294,35 @@ Publishable value:
 
 - downstream users can trial the near-stable API.
 
+### 0.10.0 - Optional Final Completion Buffer
+
+This release is used only if `0.9.0` discovers work that is too large or too
+risky to safely finish before a pentested `0.9.0` tag. If all mandatory work
+fits in `0.9.0`, skip directly to `1.0.0`.
+
+Stop condition:
+
+- no unresolved `Known Limitations` item remains classified as "planned";
+- every remaining item is implemented, rejected for the stable feature scope,
+  or documented as a permanent external boundary;
+- any PKI root rotate/replace, named issuer issue/sign, Transit BYOK/import,
+  Identity OIDC/MFA, tracing, HTTP/2, seal watcher, certificate pinning,
+  advanced ACL-builder, AppRole delegated-property, and app-side secret-wrapper
+  decision is finalized;
+- full release gate and pentest pass on the exact release candidate.
+
+Publishable value:
+
+- downstream users can trial the final API shape before `1.0.0`.
+
 ### 1.0.0 - First Stable Release
 
 Stop condition:
 
 - complete documented support for selected stable API surface;
+- no unresolved pre-`1.0` feature backlog remains;
+- all rejected or permanently out-of-scope items are documented with stable
+  reasons and safe alternatives where applicable;
 - no known high or critical findings from pentest;
 - `cargo audit` clean or documented non-exploitable exceptions;
 - `cargo deny check` clean;
@@ -295,4 +333,6 @@ Stop condition:
 
 Publishable value:
 
-- production-ready stable OpenBao SDK for Rust.
+- production-ready stable OpenBao SDK for Rust. After `1.0.0`, planned work is
+  limited to `1.0.x` security, correctness, compatibility, and documentation
+  updates.

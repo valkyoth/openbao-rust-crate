@@ -15,6 +15,9 @@ All notable changes to this project are documented here.
 - Added migration guidance for users upgrading from earlier `openbao` releases,
   `vaultrs`, or bespoke `reqwest` OpenBao/Vault wrappers.
 - Added a `0.9.0` release-note skeleton and release gate script.
+- Updated the release strategy to treat `1.0.0` as the final planned feature
+  release, with optional `0.10.0` only as a pre-`1.0` completion buffer and
+  `1.0.x` reserved for maintenance and security fixes.
 
 ### Security
 

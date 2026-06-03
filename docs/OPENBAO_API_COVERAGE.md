@@ -165,9 +165,10 @@ Support plan:
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer
   revocation, CA/key import, ACME config/EAB/directory URL helpers, CRL
   rotation, tidy, tidy status, tidy cancel, and role merge-patch are
-  implemented. Root rotate/replace and named issuer issue/sign flows remain
-  planned. Full ACME account/order/challenge client flows are intentionally
-  left to dedicated ACME clients.
+  implemented. Root rotate/replace and named issuer issue/sign flows require
+  `0.9.0` documentation review before implementation, rejection, or movement
+  to the optional `0.10.0` buffer. Full ACME account/order/challenge client
+  flows are intentionally left to dedicated ACME clients.
 - `0.5.0`: database connection config/list/read/delete/reset, root rotation,
   dynamic role list/write/read/delete, dynamic credentials, static role
   list/write/read/delete, static credentials, and static role rotation are
@@ -255,17 +256,20 @@ Implemented in `0.8.0`:
 - KV v2 historical reads were already covered by `read_version` and
   `read_data_version`.
 
-Planned for later releases:
+Finalization work before `1.0.0`:
 
-- token auto-renewal and lease tracking wrappers;
-- retry policy with exponential backoff;
-- a shared paginated-list abstraction;
-- admin bootstrap convergence for PKI roles and Identity entities/groups;
-- optional tracing/OpenTelemetry request spans;
-- seal-status watcher/back-pressure helpers;
-- optional HTTP/2 transport configuration;
-- full serde fixture coverage for every public response type;
-- application-side secret struct wrappers or derive macro design.
+- implement explicit opt-in retry policy with exponential backoff in `0.9.0`;
+- implement a shared non-secret paginated-list abstraction in `0.9.0`;
+- implement admin bootstrap convergence for PKI roles and Identity
+  entities/groups in `0.9.0`;
+- add representative serde response fixtures before `1.0.0`;
+- add fuzz coverage for path validation, error decoding, and response
+  envelopes before `1.0.0`;
+- decide whether background token auto-renewal, background lease tracking,
+  tracing/OpenTelemetry hooks, seal-status watcher/back-pressure helpers,
+  optional HTTP/2 transport configuration, and application-side secret
+  wrappers move to optional `0.10.0` or are rejected for the stable feature
+  scope.
 
 ## OpenBao-Specific Notes
 

@@ -28,6 +28,10 @@
   and Identity entity/group bootstrap convergence, PKI root/named-issuer scope
   review, response fixtures, fuzz targets, and quantum-readiness posture
   design.
+- Finalization rule: `1.0.0` is treated as the final planned feature release.
+  Any feature not completed in `0.9.0` must either fit in an optional `0.10.0`
+  buffer, land before `1.0.0`, be rejected for stable scope, or be documented
+  as a permanent external boundary.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -70,14 +74,18 @@
 - Decide after current OpenBao documentation review in `0.9.0`: PKI root
   rotate/replace helpers, named issuer issue/sign helpers, and Transit BYOK or
   import-style helpers.
-- Defer from `0.9.0` with documented reasons: background token auto-renewal,
-  background lease tracking, Identity OIDC provider/key/role/token management,
-  MFA management/enforcement, tracing/OpenTelemetry, seal-status watchers,
-  HTTP/2 transport knobs, application-side secret-struct wrappers, certificate
-  or public-key pinning, generic custom-plugin traits, full ACME protocol
-  flows, full JOSE/JWKS construction, raw unauthenticated SSH public-key reads,
+- Decide before `1.0.0` or move to the optional `0.10.0` buffer: background
+  token auto-renewal, background lease tracking, Identity OIDC
+  provider/key/role/token management, MFA management/enforcement,
+  tracing/OpenTelemetry hooks, seal-status watchers, HTTP/2 transport knobs,
+  application-side secret-struct wrappers, certificate or public-key pinning,
   AppRole delegated per-property endpoints, and advanced ACL policy-builder
   fields.
+- Reject for stable feature scope unless a pentest or downstream integration
+  proves otherwise before `1.0.0`: generic custom-plugin traits, full ACME
+  protocol flows, full JOSE/JWKS construction, and raw unauthenticated SSH
+  public-key reads. The crate keeps safe lower-level helpers or documented
+  alternatives for those workflows.
 - Permanent boundary: request-body bytes can be zeroized by this crate before
   handoff, but buffers owned by `reqwest`, TLS providers, the operating system,
   allocator, or network devices remain outside this crate's control.
