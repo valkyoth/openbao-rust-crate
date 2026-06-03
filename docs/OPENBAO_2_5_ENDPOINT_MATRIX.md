@@ -24,24 +24,24 @@ Sources:
 - Total documented endpoint rows: `643`
 - Strict typed coverage: `457/643` (71.1%)
 - Typed plus partial coverage: `458/643` (71.2%)
-- Addressed by typed, partial, raw, or external policy: `478/643` (74.3%)
-- Open decisions before `1.0.0`: `165`
+- Addressed by typed, partial, raw, or external policy: `500/643` (77.8%)
+- Open decisions before `1.0.0`: `143`
 
 | Status | Count |
 | --- | ---: |
 | `typed` | 413 |
 | `typed-gated` | 44 |
 | `partial` | 1 |
-| `raw` | 11 |
-| `external` | 9 |
-| `decision` | 165 |
+| `raw` | 9 |
+| `external` | 33 |
+| `decision` | 143 |
 
 ## Area Totals
 
 | Area | Total | Typed | Typed gated | Partial | Raw | External | Decision | Strict % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `auth` | 105 | 93 | 0 | 1 | 9 | 0 | 2 | 88.6% |
-| `secret` | 347 | 211 | 0 | 0 | 2 | 9 | 125 | 60.8% |
+| `secret` | 347 | 211 | 0 | 0 | 0 | 33 | 103 | 60.8% |
 | `system` | 191 | 109 | 44 | 0 | 0 | 0 | 38 | 80.1% |
 
 ## Pages With Non-Typed Rows
@@ -57,7 +57,7 @@ Sources:
 | [/api-docs/secret/identity/mfa/totp/](https://openbao.org/api-docs/secret/identity/mfa/totp/) | 0 | 0 | 0 | 0 | 0 | 7 |
 | [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 0 | 0 | 0 | 0 | 3 | 18 |
 | [/api-docs/secret/identity/tokens/](https://openbao.org/api-docs/secret/identity/tokens/) | 0 | 0 | 0 | 0 | 0 | 14 |
-| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 0 | 0 | 2 | 4 | 58 |
+| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 0 | 0 | 0 | 28 | 36 |
 | [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 |
 | [/api-docs/secret/transit/](https://openbao.org/api-docs/secret/transit/) | 19 | 0 | 0 | 0 | 0 | 12 |
 | [/api-docs/system/config-ui/](https://openbao.org/api-docs/system/config-ui/) | 0 | 0 | 0 | 0 | 0 | 4 |
@@ -81,7 +81,7 @@ Sources:
 - Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
 - `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.
 - Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.
-- PKI named-issuer, root lifecycle, public CA/CRL/cert reads, and config rows are planned for `0.12.0`; PKI revocation/CRL management, CEL, sign-verbatim, and cross-sign rows are planned for `0.13.0`; OCSP rows are classified as `raw`.
+- PKI Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and current-doc struct-field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
 - System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, and legacy recovery rekey are planned for `0.14.0`.
 - `0.15.0` is the closure release where no endpoint row may remain `decision`.
 

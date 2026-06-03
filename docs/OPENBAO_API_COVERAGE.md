@@ -75,9 +75,9 @@ of only area-level estimates:
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
 - strict typed coverage: `457/643` (`71.1%`);
 - typed plus partial coverage: `458/643` (`71.2%`);
-- addressed by typed, partial, raw, or external policy: `478/643` (`74.3%`);
+- addressed by typed, partial, raw, or external policy: `500/643` (`77.8%`);
 - rows needing a pre-`1.0.0` implementation/rejection/deferral decision:
-  `165`.
+  `143`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
 `docs/openbao-2.5-endpoint-matrix.csv` for each method/path row.
@@ -196,45 +196,23 @@ Support plan:
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer
   revocation, CA/key import, ACME config/EAB/directory URL helpers, CRL
   rotation, tidy, tidy status, tidy cancel, and role merge-patch are
-  implemented. Named-issuer issue/sign, root lifecycle, public CA/CRL/cert
-  reads, and PKI config rows are planned for `0.12.0`. Revocation/CRL
-  management, CEL roles, sign-verbatim, and cross-sign rows are planned for
-  `0.13.0`. OCSP rows are classified as raw binary protocol support. Full ACME
+  implemented. Default issuer/key config, named-issuer issue/sign, root
+  rotate/replace, standalone key generation, sign-verbatim behind operator
+  gates, revoke-with-key, cluster config, auto-tidy config, and current-doc
+  field expansion for PKI role/generation/CRL/tidy structs are planned for
+  `0.12.0`. Revocation/CRL management, CEL roles, named-issuer
+  sign-intermediate/sign-self-issued, delta CRL rotation, and cross-sign rows
+  are planned for `0.13.0`. Unauthenticated public CA/certificate/CRL reads and
+  OCSP responder endpoints are external protocol/public-distribution
+  boundaries. Full ACME
   account/order/authorization/challenge client flows are permanently external:
   use the typed ACME config, EAB, and directory URL helpers to hand off to a
   dedicated ACME client.
 
-OCSP raw boundary example:
-
-```rust,no_run
-use openbao::{Client, Method, Result, SecretString, StatusCode};
-use openbao::reqwest::header::{ACCEPT, CONTENT_TYPE, HeaderValue};
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
-    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
-    let ocsp_request_der = std::fs::read("request.der")
-        .map_err(|_| openbao::Error::InvalidParameter("failed to read OCSP request".into()))?;
-
-    let ocsp_response_der = client
-        .request_bytes_headers_accepting(
-            Method::POST,
-            "pki/ocsp",
-            &[],
-            &[
-                (ACCEPT, HeaderValue::from_static("application/ocsp-response")),
-                (CONTENT_TYPE, HeaderValue::from_static("application/ocsp-request")),
-            ],
-            Some(&ocsp_request_der),
-            &[StatusCode::OK],
-        )
-        .await?;
-
-    println!("OCSP response bytes: {}", ocsp_response_der.len());
-    Ok(())
-}
-```
+OCSP and public CA/CRL/certificate distribution endpoints are intentionally
+left to OCSP/TLS clients, CRL checkers, or external HTTP tooling. They do not
+need OpenBao token handling and should not force binary protocol dependencies
+into this SDK.
 - `0.5.0`: database connection config/list/read/delete/reset, root rotation,
   dynamic role list/write/read/delete, dynamic credentials, static role
   list/write/read/delete, static credentials, and static role rotation are

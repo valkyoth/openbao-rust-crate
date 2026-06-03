@@ -202,59 +202,59 @@ secret,POST,/pki/config/acme,typed,https://openbao.org/api-docs/secret/pki/,Type
 secret,LIST,/pki/roles,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issue/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
+secret,POST,/pki/issuer/:issuer_ref/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/sign/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
+secret,POST,/pki/issuer/:issuer_ref/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/root/sign-intermediate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/root/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,LIST,/pki/cel/roles,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,GET,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,POST,/pki/cel/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,POST,/pki/cel/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/root/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,LIST,/pki/cel/roles,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,GET,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/cel/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/cel/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/revoke,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/revoke-with-key,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,LIST,/certs/revoked,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,LIST,/certs/revocation-queue,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
+secret,POST,/pki/revoke-with-key,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,LIST,/certs/revoked,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,LIST,/certs/revocation-queue,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,LIST,/pki/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/cert/ca,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/ca,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/ca/pem,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/json,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/der,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/pem,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/ca_chain,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/cert/ca_chain,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/cert/crl,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/crl,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/crl/pem,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/cert/delta-crl,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/crl/delta,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/crl/delta/pem,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/crl,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/crl/der,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/crl/pem,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/crl/delta,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/crl/delta/der,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/issuer/:issuer_ref/crl/delta/pem,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/ocsp/<base 64+URL encoded ocsp DER request>,raw,https://openbao.org/api-docs/secret/pki/,OCSP is binary ASN.1; use raw byte helpers with a dedicated OCSP encoder/decoder.
-secret,POST,/pki/ocsp,raw,https://openbao.org/api-docs/secret/pki/,OCSP is binary ASN.1; use raw byte helpers with a dedicated OCSP encoder/decoder.
+secret,GET,/pki/cert/ca,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/ca,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/ca/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/json,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/der,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/ca_chain,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/cert/ca_chain,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/cert/crl,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/crl,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/crl/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/cert/delta-crl,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/crl/delta,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/crl/delta/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/crl,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/crl/der,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/crl/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/crl/delta,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/crl/delta/der,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/issuer/:issuer_ref/crl/delta/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/ocsp/<base 64+URL encoded ocsp DER request>,external,https://openbao.org/api-docs/secret/pki/,"OCSP responder protocol endpoint is handled by OCSP/TLS clients, not this SDK."
+secret,POST,/pki/ocsp,external,https://openbao.org/api-docs/secret/pki/,"OCSP responder protocol endpoint is handled by OCSP/TLS clients, not this SDK."
 secret,LIST,/pki/certs,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,LIST,/pki/certs/detailed?detailed=true,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
+secret,LIST,/pki/certs/detailed?detailed=true,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,GET,/pki/cert/:serial,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/cert/:serial/raw,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/cert/:serial/raw/pem,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
+secret,GET,/pki/cert/:serial/raw,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
+secret,GET,/pki/cert/:serial/raw/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
 secret,LIST,/pki/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/keys/generate/:type,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
+secret,POST,/pki/keys/generate/:type,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/root/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuers/generate/root/:type,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/root/rotate/:type,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
+secret,POST,/pki/issuers/generate/root/:type,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/root/rotate/:type,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/intermediate/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuers/generate/intermediate/:type,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/intermediate/cross-sign,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
+secret,POST,/pki/issuers/generate/intermediate/:type,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/intermediate/cross-sign,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/config/ca,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issuers/import/bundle,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issuers/import/cert,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
@@ -268,31 +268,31 @@ secret,POST,/pki/keys/import,typed,https://openbao.org/api-docs/secret/pki/,Type
 secret,GET,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,DELETE,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,DELETE,/pki/root,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 behind operator-ops; deleting a PKI root is destructive.
-secret,POST,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,PATCH,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,DELETE,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
+secret,DELETE,/pki/root,decision,https://openbao.org/api-docs/secret/pki/,"Resolve explicitly in 0.12.0; if implemented, use a dedicated destructive method behind operator gates."
+secret,POST,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,PATCH,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,DELETE,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,PATCH,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,DELETE,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/root/replace,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,GET,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
+secret,GET,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/root/replace,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,GET,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/crl/rotate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/crl/rotate-delta,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/issuer/:issuer_ref/resign-crls,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
-secret,POST,/pki/issuer/:issuer_ref/sign-revocation-list,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage."
+secret,GET,/pki/crl/rotate-delta,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/issuer/:issuer_ref/resign-crls,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign-revocation-list,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/tidy,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
-secret,POST,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.
+secret,GET,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,GET,/pki/tidy-status,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/tidy-cancel,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/rabbitmq/config/connection,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.

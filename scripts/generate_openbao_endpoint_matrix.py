@@ -241,8 +241,37 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
             )
         if "/pki/ocsp" in path:
             return (
-                "raw",
-                "OCSP is binary ASN.1; use raw byte helpers with a dedicated OCSP encoder/decoder.",
+                "external",
+                "OCSP responder protocol endpoint is handled by OCSP/TLS clients, not this SDK.",
+            )
+        public_pki_read_paths = {
+            "/pki/cert/ca",
+            "/pki/ca",
+            "/pki/ca/pem",
+            "/pki/issuer/:issuer_ref/json",
+            "/pki/issuer/:issuer_ref/der",
+            "/pki/issuer/:issuer_ref/pem",
+            "/pki/ca_chain",
+            "/pki/cert/ca_chain",
+            "/pki/cert/crl",
+            "/pki/crl",
+            "/pki/crl/pem",
+            "/pki/cert/delta-crl",
+            "/pki/crl/delta",
+            "/pki/crl/delta/pem",
+            "/pki/issuer/:issuer_ref/crl",
+            "/pki/issuer/:issuer_ref/crl/der",
+            "/pki/issuer/:issuer_ref/crl/pem",
+            "/pki/issuer/:issuer_ref/crl/delta",
+            "/pki/issuer/:issuer_ref/crl/delta/der",
+            "/pki/issuer/:issuer_ref/crl/delta/pem",
+            "/pki/cert/:serial/raw",
+            "/pki/cert/:serial/raw/pem",
+        }
+        if path in public_pki_read_paths:
+            return (
+                "external",
+                "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
             )
         typed_pki_paths = {
             "/pki/acme/new-eab",
@@ -284,71 +313,49 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         pki_0_12_paths = {
             "/pki/issuer/:issuer_ref/issue/:name",
             "/pki/issuer/:issuer_ref/sign/:name",
-            "/pki/issuer/:issuer_ref/sign-intermediate",
-            "/pki/root/sign-self-issued",
-            "/pki/issuer/:issuer_ref/sign-self-issued",
+            "/pki/sign-verbatim(/:name)",
+            "/pki/issuer/:issuer_ref/sign-verbatim(/:name)",
+            "/pki/revoke-with-key",
             "/pki/root/rotate/:type",
             "/pki/issuers/generate/root/:type",
             "/pki/root/replace",
             "/pki/keys/generate/:type",
             "/pki/issuers/generate/intermediate/:type",
-            "/pki/cert/ca",
-            "/pki/ca",
-            "/pki/ca/pem",
-            "/pki/issuer/:issuer_ref/json",
-            "/pki/issuer/:issuer_ref/der",
-            "/pki/issuer/:issuer_ref/pem",
-            "/pki/ca_chain",
-            "/pki/cert/ca_chain",
-            "/pki/cert/crl",
-            "/pki/crl",
-            "/pki/crl/pem",
-            "/pki/cert/delta-crl",
-            "/pki/crl/delta",
-            "/pki/crl/delta/pem",
-            "/pki/issuer/:issuer_ref/crl",
-            "/pki/issuer/:issuer_ref/crl/der",
-            "/pki/issuer/:issuer_ref/crl/pem",
-            "/pki/issuer/:issuer_ref/crl/delta",
-            "/pki/issuer/:issuer_ref/crl/delta/der",
-            "/pki/issuer/:issuer_ref/crl/delta/pem",
-            "/pki/cert/:serial/raw",
-            "/pki/cert/:serial/raw/pem",
             "/pki/config/issuers",
             "/pki/config/keys",
             "/pki/config/cluster",
             "/pki/config/auto-tidy",
-            "/pki/crl/rotate-delta",
         }
         if path == "/pki/root" and method == "DELETE":
             return (
                 "decision",
-                "Implement in 0.12.0 behind operator-ops; deleting a PKI root is destructive.",
+                "Resolve explicitly in 0.12.0; if implemented, use a dedicated destructive method behind operator gates.",
             )
         if path in pki_0_12_paths:
             return (
                 "decision",
-                "Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.",
+                "Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage.",
             )
         pki_0_13_paths = {
-            "/pki/revoke-with-key",
+            "/pki/issuer/:issuer_ref/sign-intermediate",
+            "/pki/root/sign-self-issued",
+            "/pki/issuer/:issuer_ref/sign-self-issued",
             "/certs/revoked",
             "/certs/revocation-queue",
             "/pki/certs/detailed?detailed=true",
             "/pki/issuer/:issuer_ref/resign-crls",
             "/pki/issuer/:issuer_ref/sign-revocation-list",
+            "/pki/crl/rotate-delta",
             "/pki/cel/roles",
             "/pki/cel/roles/:name",
             "/pki/cel/issue/:name",
             "/pki/cel/sign/:name",
-            "/pki/sign-verbatim(/:name)",
-            "/pki/issuer/:issuer_ref/sign-verbatim(/:name)",
             "/pki/intermediate/cross-sign",
         }
         if path in pki_0_13_paths:
             return (
                 "decision",
-                "Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage.",
+                "Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage.",
             )
         return (
             "decision",
@@ -537,7 +544,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",
             "- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.",
             "- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.",
-            "- PKI named-issuer, root lifecycle, public CA/CRL/cert reads, and config rows are planned for `0.12.0`; PKI revocation/CRL management, CEL, sign-verbatim, and cross-sign rows are planned for `0.13.0`; OCSP rows are classified as `raw`.",
+            "- PKI Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and current-doc struct-field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.",
             "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, and legacy recovery rekey are planned for `0.14.0`.",
             "- `0.15.0` is the closure release where no endpoint row may remain `decision`.",
             "",

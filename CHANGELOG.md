@@ -30,10 +30,12 @@ All notable changes to this project are documented here.
 - Added safe custom plugin wrapper building blocks: `PluginMount`, public path
   validators, `BoundedStringList`, and the public bounded string-list
   deserializer.
-- Recorded the PKI advanced issuer/root decision: named-issuer, root
-  lifecycle, public CA/CRL/cert read, and PKI config rows are planned for
-  `0.12.0`; revocation/CRL management, CEL, sign-verbatim, and cross-sign rows
-  are planned for `0.13.0`; OCSP is classified as raw binary protocol support.
+- Recorded the PKI advanced issuer/root decision: Tier 1 multi-issuer config,
+  root lifecycle, sign-verbatim, revoke-with-key, and current-doc struct-field
+  completion are planned for `0.12.0`; Tier 2 revocation/CRL management, CEL,
+  named-issuer hierarchy, delta-CRL, and cross-sign rows are planned for
+  `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are
+  external boundaries.
 - Recorded the Transit import/BYOK boundary: wrapping-key, import and
   import-version, BYOK export, soft-delete/restore, cache/global config, CSR,
   and certificate-install rows are planned for `0.11.0`; core wrappers accept
@@ -71,6 +73,11 @@ All notable changes to this project are documented here.
 - Full ACME account/order/authorization/challenge flows remain external to the
   crate; typed ACME config, EAB provisioning, and directory URL helpers are the
   supported handoff to dedicated ACME clients.
+- Refined the PKI roadmap from the current OpenBao docs: Tier 1 multi-issuer
+  config/root/sign-verbatim/revoke-with-key and missing role/generation/CRL/
+  tidy fields move to `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL
+  work stays in `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol
+  reads are external boundaries.
 
 ## 0.8.0 - 2026-06-02
 

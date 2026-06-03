@@ -100,13 +100,17 @@
   client-side wrapping helper is planned behind `transit-import` with
   feature-gated `rsa` and `aes-gcm` dependencies, secret-aware inputs, redacted
   output handling, and no security-certification claims.
-- Implement in `0.12.0`: PKI named-issuer issue/sign/sign-intermediate,
-  root lifecycle, public CA/CRL/cert reads, and PKI config rows. Destructive
-  root deletion must stay behind `operator-ops` plus
-  `operator-ops-acknowledged`.
-- Implement in `0.13.0`: PKI revoke-with-key, revocation/CRL management, CEL
-  roles and issue/sign, sign-verbatim, and cross-sign rows. OCSP GET/POST rows
-  are classified as raw binary ASN.1 protocol support.
+- Implement in `0.12.0`: PKI default issuer/key config, named-issuer
+  issue/sign, root rotate/replace, standalone key generation, sign-verbatim
+  behind operator gates, revoke-with-key, cluster/auto-tidy config, and
+  current-doc field expansion for role/generation/CRL/tidy structs.
+  Destructive `DELETE /pki/root` must be resolved explicitly and, if
+  implemented, stay behind `operator-ops` plus `operator-ops-acknowledged`.
+- Implement in `0.13.0`: PKI revocation/CRL management, CEL roles and
+  issue/sign, named-issuer sign-intermediate/sign-self-issued, delta CRL
+  rotation, and cross-sign rows. Unauthenticated public CA/certificate/CRL
+  reads and OCSP responder endpoints are external protocol/public-distribution
+  boundaries.
 - Implement or decide in `0.14.0`: system generate-root/recovery-token,
   decode-token, password policies, monitor/internal rows, resultant ACL, and
   legacy recovery-key rekey.

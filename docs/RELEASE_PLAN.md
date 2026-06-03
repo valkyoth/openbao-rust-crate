@@ -3,7 +3,7 @@
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
 `643` documented endpoint rows, `457` strict typed or operator-gated rows, and
-`165` rows still needing an implementation, rejection, raw-wrapper policy, or
+`143` rows still needing an implementation, rejection, raw-wrapper policy, or
 external-client policy decision. Because there is no rush to force stability,
 the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
 deliberately.
@@ -394,42 +394,54 @@ Publishable value:
 - operators can automate advanced Transit key lifecycle work without bespoke
   request wrappers, while keeping key-material handling explicit.
 
-### 0.12.0 - PKI Advanced Issuer, Root, And Public Read Coverage
+### 0.12.0 - PKI Tier 1 Multi-Issuer And Authority Lifecycle
 
 Stop condition:
 
-- named issuer issue/sign/sign-intermediate and sign-self-issued variants are
-  implemented as explicit-issuer extensions of the existing typed PKI helpers;
-- root rotate, multi-issuer root generation, root replace, key generation,
-  intermediate issuer generation, and issuer/key config helpers are
-  implemented; destructive root deletion is implemented only behind
-  `operator-ops` plus `operator-ops-acknowledged`;
-- CA, certificate, CRL, delta-CRL, issuer JSON/DER/PEM, and raw certificate
-  read helpers are implemented with documented binary/PEM handling;
-- cluster config, auto-tidy config, config issuers, config keys, and CRL delta
-  rotation helpers are implemented;
-- response-size caps and binary/text handling are documented for public
-  certificate and CRL endpoints;
-- endpoint matrix is regenerated and the main PKI administrative/public-read
-  rows are resolved.
+- default issuer/key configuration read/write helpers are implemented for
+  `/pki/config/issuers` and `/pki/config/keys`;
+- named-issuer issue and sign helpers are implemented as explicit-issuer
+  extensions of the existing `issue` and `sign` methods;
+- root rotate, multi-issuer root generation, root replace, standalone key
+  generation, and intermediate issuer generation helpers are implemented;
+- sign-verbatim helpers are implemented behind `operator-ops` plus
+  `operator-ops-acknowledged` because they bypass normal role constraints;
+- revoke-with-key is implemented for certificate-owner proof-of-possession
+  revocation without broad PKI admin access;
+- cluster config and auto-tidy config helpers are implemented because they are
+  current OpenBao PKI management rows not covered by the Tier 1 user list;
+- `PkiRole`, root/intermediate generation requests, `PkiCrlConfig`, and
+  tidy request/status structs are expanded with the current OpenBao fields
+  identified in the `0.9.0` PKI review;
+- unauthenticated public CA/certificate/CRL endpoints are documented as
+  external protocol/public-distribution reads for TLS stacks, CRL checkers, or
+  an external HTTP client;
+- destructive `DELETE /pki/root` is resolved explicitly; if implemented, it
+  must be a dedicated named method with strong warnings behind
+  `operator-ops` plus `operator-ops-acknowledged`, never a generic delete;
+- endpoint matrix is regenerated and the PKI Tier 1 rows are resolved.
 
 Publishable value:
 
-- PKI operators can manage multi-issuer OpenBao PKI deployments and public CA
-  material through typed helpers.
+- PKI operators can manage multi-issuer defaults, issuer-specific issuance,
+  authority rotation, key generation, and complex role/config fields through
+  typed helpers.
 
 ### 0.13.0 - PKI Specialized Flows
 
 Stop condition:
 
-- revoke-with-key, revoked-cert list, revocation-queue list, detailed cert list,
-  issuer CRL resign, and sign-revocation-list helpers are implemented;
+- revoked-cert list, revocation-queue list, detailed cert list, issuer CRL
+  resign, and sign-revocation-list helpers are implemented;
 - CEL role list/read/write/patch/delete plus CEL issue/sign helpers are
   implemented with a version-stability note for this newer OpenBao feature;
-- sign-verbatim and intermediate cross-sign helpers are implemented behind
-  `operator-ops` plus `operator-ops-acknowledged`;
-- OCSP GET/POST rows are documented as raw binary ASN.1 protocol calls that
-  should be paired with a dedicated OCSP encoder/decoder;
+- named-issuer sign-intermediate and sign-self-issued variants are implemented
+  for multi-issuer hierarchy and cross-signed trust-anchor workflows;
+- intermediate cross-sign helpers are implemented behind `operator-ops` plus
+  `operator-ops-acknowledged`;
+- delta CRL rotation is implemented to complete the CRL rotation surface;
+- OCSP GET/POST rows are documented as external OCSP responder protocol
+  endpoints that should be handled by OCSP/TLS client tooling;
 - full ACME account/order/authorization/challenge flows remain permanently
   classified as `external`; typed ACME config, EAB provisioning, and directory
   URL helpers are documented as the supported SDK boundary;
