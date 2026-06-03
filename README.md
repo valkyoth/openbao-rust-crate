@@ -287,7 +287,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | Timestamp parsing | Optional | Enable `time` for RFC3339 parsing helpers without changing response field types. |
 | TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can opt down to TLS 1.2. |
 | Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
-| Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. |
+| Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. This is the supported alternative to leaf certificate or SPKI pinning. |
 | Client TLS identity | Yes | Optional mutual TLS client identity for TLS certificate auth. |
 | Connection timeout | Yes | 5-second connection timeout by default; caller overrides are bounded. |
 | User agent fingerprinting | Yes | Default user agent omits the exact crate version. |
@@ -411,6 +411,12 @@ async fn main() -> Result<()> {
 
 Configure a stricter client with a namespace and root-only trust store:
 
+Use `only_root_certificates` when you want to trust only your internal OpenBao
+CA and reject every platform or public CA root. This is intentionally preferred
+over leaf certificate or public-key pinning because your CA can rotate server
+certificates without requiring every client to update a pin. For a self-signed
+OpenBao listener certificate, pass that certificate as the sole trusted root.
+
 ```rust,no_run
 use openbao::{Client, OpenBaoConfig, Result};
 use openbao::Certificate;
@@ -437,6 +443,9 @@ async fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+The environment equivalent is `OPENBAO_CACERT=/path/to/ca.pem` together with
+`OPENBAO_TLS_ROOTS_ONLY=true`.
 
 Authenticate with AppRole:
 

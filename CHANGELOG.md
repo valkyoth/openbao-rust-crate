@@ -57,6 +57,9 @@ All notable changes to this project are documented here.
   public plugin building blocks instead.
 - OpenTelemetry SDK dependencies and custom request hooks are rejected for
   stable scope; W3C `traceparent` propagation is deferred past `1.0.0`.
+- Leaf certificate and SPKI pinning are rejected for stable scope; root-only
+  trust with an internal CA or self-signed OpenBao certificate is documented as
+  the supported pattern.
 
 ## 0.8.0 - 2026-06-02
 

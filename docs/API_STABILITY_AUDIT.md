@@ -83,7 +83,7 @@ must now have an explicit current decision.
 | Source | Limitation | Current Decision |
 | --- | --- | --- |
 | `0.1.0` | KV v2 metadata, token lifecycle, and Transit were incomplete. | Resolved by later releases. No `0.9.0` action. |
-| `0.1.0` to `0.5.0` | Exact certificate/public-key pinning was not implemented. | Decide before `1.0.0`; likely reject for stable scope because custom CA roots and root-only trust stores are safer rotation controls. |
+| `0.1.0` to `0.5.0` | Exact certificate/public-key pinning was not implemented. | Rejected for stable scope. Use `OpenBaoConfig::only_root_certificates` or `OPENBAO_CACERT` plus `OPENBAO_TLS_ROOTS_ONLY=true` with an internal CA or self-signed OpenBao certificate. Leaf and SPKI pinning are operationally brittle and `reqwest` has no portable pinning API across TLS backends. |
 | `0.2.0` and `0.3.0` | HTTP/TLS/kernel/device buffers are outside crate zeroization control after handoff to `reqwest`. | Permanent documented boundary. No crate can guarantee zeroization for external transport buffers. |
 | `0.3.0` | Transit batch/export/backup/restore were not typed. | Resolved in `0.8.0`. BYOK/import HTTP wrappers are planned for `0.11.0`; client-side wrapping remains outside core scope. |
 | `0.3.0` | Plugin OCI initialization and reload-status endpoints were not typed. | Defer; plugin schemas and OCI deployment workflows are operator-specific. Keep `Client::request_json` and documented custom wrapper pattern. |

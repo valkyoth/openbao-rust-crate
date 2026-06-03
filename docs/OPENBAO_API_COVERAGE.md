@@ -338,6 +338,8 @@ Finalization work before `1.0.0`:
   watcher/back-pressure helpers, optional HTTP/2 transport configuration, and
   application-side secret wrappers are rejected or documented as explicit
   non-default stable boundaries.
+- reject leaf certificate and SPKI pinning for stable scope; use root-only
+  trust with an internal OpenBao CA or self-signed OpenBao certificate instead.
 - use `0.10.0` through `0.14.0` for Identity/auth, Transit, PKI, and System
   endpoint-family completion;
 - use `0.15.0` as the endpoint-closure release where no matrix row may remain

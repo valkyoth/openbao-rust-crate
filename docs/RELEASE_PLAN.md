@@ -313,6 +313,9 @@ Stop condition:
   seal-status watcher/back-pressure, HTTP/2 transport configuration, and
   application-side secret-struct wrappers have deferral decisions recorded;
   public response serde fixtures are added;
+- leaf certificate and SPKI pinning are rejected for stable scope; root-only
+  trust with an internal CA or self-signed OpenBao certificate is documented as
+  the supported server-identity assurance pattern;
 - quantum-readiness design note that tracks OpenBao support, avoids premature
   API promises, and defines how hybrid/post-quantum profiles will be exposed
   once stable upstream primitives exist;

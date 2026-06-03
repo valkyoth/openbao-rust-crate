@@ -142,6 +142,12 @@ impl OpenBaoConfig {
     /// - local HTTP opt-in: `OPENBAO_ALLOW_LOCALHOST_HTTP`,
     ///   `BAO_ALLOW_LOCALHOST_HTTP`, `VAULT_ALLOW_LOCALHOST_HTTP`.
     ///
+    /// `OPENBAO_CACERT` together with `OPENBAO_TLS_ROOTS_ONLY=true` is the
+    /// environment equivalent of [`OpenBaoConfig::only_root_certificates`].
+    /// Use that pattern when you want the client to trust only your internal
+    /// OpenBao CA or a self-signed OpenBao certificate and reject every
+    /// platform/public CA root.
+    ///
     /// Plain HTTP still requires an explicit local HTTP opt-in and a numeric
     /// loopback host in the `127.0.0.0/8` range or `::1`.
     pub fn from_env() -> Result<Self> {
@@ -271,6 +277,17 @@ impl OpenBaoConfig {
     }
 
     /// Uses only the provided root certificates and disables system roots.
+    ///
+    /// This is the crate's supported answer for deployments that would
+    /// otherwise ask for certificate or public-key pinning. Supplying your
+    /// internal OpenBao CA as the only trusted root rejects every platform or
+    /// public CA while still allowing ordinary server-certificate rotation
+    /// under that CA. If the OpenBao listener uses a self-signed certificate,
+    /// pass that certificate directly as the sole trusted root.
+    ///
+    /// Leaf-certificate and SPKI pinning are intentionally not exposed because
+    /// they are brittle during certificate or key rotation and `reqwest` does
+    /// not provide a portable pinning API across TLS backends.
     pub fn only_root_certificates(mut self, certificates: Vec<Certificate>) -> Result<Self> {
         if certificates.is_empty() {
             return Err(Error::InvalidTlsConfig(

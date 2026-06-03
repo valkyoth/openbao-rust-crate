@@ -108,8 +108,10 @@
   decode-token, password policies, monitor/internal rows, resultant ACL, and
   legacy recovery-key rekey.
 - Decide before `0.15.0`: seal-status watchers, HTTP/2 transport knobs,
-  application-side secret-struct wrappers, certificate or public-key pinning,
-  and advanced ACL policy-builder fields. Tracing is resolved with a
+  application-side secret-struct wrappers, and advanced ACL policy-builder
+  fields. Certificate and public-key pinning are rejected for stable scope;
+  use root-only trust with an internal CA or self-signed OpenBao certificate
+  instead. Tracing is resolved with a
   non-default `tracing` feature; OpenTelemetry SDK dependencies and custom
   request hooks are rejected for stable scope, and W3C `traceparent`
   propagation is deferred past `1.0.0`.
