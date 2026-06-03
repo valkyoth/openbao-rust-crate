@@ -183,12 +183,14 @@ Support plan:
   trim, and batch encrypt/decrypt/rewrap/sign/verify helpers are implemented.
 - `0.11.0`: Transit wrapping-key, import/import-version, BYOK export,
   soft-delete/restore, cache config, global key config, CSR generation, and
-  certificate install rows are planned. The crate will carry already-wrapped
-  key material as `SecretString`; callers own client-side RSA-OAEP/AES-GCM
-  wrapping through their HSM, OpenSSL, or chosen crypto library. A pre-`1.0.0`
-  optional `transit-import` helper is also planned for callers who want the
-  crate to prepare OpenBao's wrapped-key blob behind feature-gated `rsa` and
-  `aes-gcm` dependencies.
+  certificate install rows are planned. `wrapping_key` returns a public PEM
+  string. Import requests carry only pre-wrapped ciphertext as `SecretString`
+  and reject empty ciphertext constructors; optional derivation context is also
+  secret-aware. BYOK export returns a wrapped ciphertext blob as
+  `SecretString`. Raw key bytes are never accepted by these endpoint wrappers.
+  A pre-`1.0.0` optional `transit-import` helper is also planned for callers
+  who want the crate to prepare OpenBao's wrapped-key blob behind feature-gated
+  `rsa` and `aes-gcm` dependencies.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer

@@ -92,11 +92,14 @@
   AppRole delegated per-property rows.
 - Implement in `0.11.0`: Transit wrapping-key, import/import-version, BYOK
   export, soft-delete/restore, cache/global config, CSR generation, and
-  certificate install rows. Core wrappers accept already-wrapped
-  `SecretString` material. A pre-`1.0.0` optional client-side wrapping helper
-  is planned behind `transit-import` with feature-gated `rsa` and `aes-gcm`
-  dependencies, secret-aware inputs, redacted output handling, and no
-  security-certification claims.
+  certificate install rows. `wrapping_key` returns a public PEM string; import
+  wrappers accept only pre-wrapped `SecretString` ciphertext, reject empty
+  ciphertext constructors, redact ciphertext/context in `Debug`, and document
+  that raw key bytes must not be passed to endpoint wrappers. BYOK export
+  returns wrapped ciphertext as `SecretString`. A pre-`1.0.0` optional
+  client-side wrapping helper is planned behind `transit-import` with
+  feature-gated `rsa` and `aes-gcm` dependencies, secret-aware inputs, redacted
+  output handling, and no security-certification claims.
 - Implement in `0.12.0`: PKI named-issuer issue/sign/sign-intermediate,
   root lifecycle, public CA/CRL/cert reads, and PKI config rows. Destructive
   root deletion must stay behind `operator-ops` plus

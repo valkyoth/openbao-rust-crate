@@ -360,16 +360,25 @@ Publishable value:
 
 Stop condition:
 
-- Transit wrapping-key, key import, import-version, and BYOK export rows are
-  implemented; request types accept already-wrapped blobs as `SecretString`
-  and response types that carry wrapped blobs use custom redacted `Debug`;
+- Transit wrapping-key is implemented and returns the RSA wrapping public key
+  PEM as a non-secret `String`;
+- Transit key import and import-version are implemented with request types
+  that accept only pre-wrapped ciphertext as `SecretString`, optional
+  derivation context as `SecretString`, custom redacted `Debug`, and
+  constructors that reject empty ciphertext;
+- Transit BYOK export is implemented with response types that carry the
+  destination-wrapped ciphertext blob as `SecretString` and use custom
+  redacted `Debug`;
+- every import method documents the boundary explicitly: raw key bytes must
+  not be passed to the endpoint wrappers; callers fetch the wrapping key, wrap
+  key material externally through their HSM, OpenSSL, or chosen crypto library,
+  and pass only the base64 ciphertext blob to the crate;
 - Transit soft-delete and soft-delete-restore helpers are implemented;
 - Transit cache config and global key config helpers are implemented;
 - Transit CSR generation and certificate install helpers are implemented with
   PEM strings documented as public certificate material;
-- the boundary is documented clearly: the core crate does not implement
-  client-side RSA-OAEP/AES-GCM wrapping; callers own that step through their
-  HSM, OpenSSL, or chosen crypto library;
+- the endpoint-wrapper boundary is documented clearly: the core wrappers do
+  not perform client-side RSA-OAEP/AES-GCM wrapping;
 - an optional `transit-import` wrapping helper is implemented before `1.0.0`,
   preferably in this `0.11.0` line, with optional `rsa` and `aes-gcm`
   dependencies only when the feature is enabled;

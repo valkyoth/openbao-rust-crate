@@ -198,15 +198,20 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         return ("typed", "Typed SSH helper exists.")
 
     if page.startswith("/api-docs/secret/transit/"):
-        import_paths = (
-            "/transit/wrapping_key",
-            "/transit/keys/:name/import",
-            "/transit/keys/:name/import_version",
-        )
-        if path in import_paths or path.startswith("/transit/byok-export/"):
+        if path == "/transit/wrapping_key":
             return (
                 "decision",
-                "Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.",
+                "Implement in 0.11.0; returns the Transit mount RSA wrapping public key PEM as non-secret String.",
+            )
+        if path in ("/transit/keys/:name/import", "/transit/keys/:name/import_version"):
+            return (
+                "decision",
+                "Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed.",
+            )
+        if path.startswith("/transit/byok-export/"):
+            return (
+                "decision",
+                "Implement in 0.11.0; returns a destination-wrapped ciphertext blob as SecretString with redacted Debug.",
             )
         if path in (
             "/transit/keys/:name/soft-delete",

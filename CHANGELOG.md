@@ -40,6 +40,10 @@ All notable changes to this project are documented here.
   already-wrapped `SecretString` material and do not perform client-side
   RSA-OAEP/AES-GCM wrapping. A pre-`1.0.0` optional `transit-import` helper is
   planned with feature-gated `rsa` and `aes-gcm` dependencies.
+- Tightened the Transit import/BYOK implementation contract: wrapping-key
+  returns public PEM, import constructors must reject empty pre-wrapped
+  ciphertext, BYOK export returns redacted `SecretString` ciphertext, and raw
+  key bytes must never be passed to endpoint wrappers.
 - Added a non-default `tracing` feature that instruments the shared HTTP
   dispatch point with method, validated path, and response status events.
 - Added a non-default `http2` feature that enables reqwest HTTP/2 support and

@@ -105,9 +105,9 @@ auth,POST,/auth/userpass/users/:username/policies,typed,https://openbao.org/api-
 auth,LIST,/auth/userpass/users,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 auth,POST,/auth/userpass/login/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 secret,POST,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/keys/:name/import,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.
-secret,POST,/transit/keys/:name/import_version,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.
-secret,GET,/transit/wrapping_key,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.
+secret,POST,/transit/keys/:name/import,decision,https://openbao.org/api-docs/secret/transit/,"Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
+secret,POST,/transit/keys/:name/import_version,decision,https://openbao.org/api-docs/secret/transit/,"Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
+secret,GET,/transit/wrapping_key,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; returns the Transit mount RSA wrapping public key PEM as non-secret String.
 secret,GET,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,LIST,/transit/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,DELETE,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
@@ -115,7 +115,7 @@ secret,POST,/transit/keys/:name/config,typed,https://openbao.org/api-docs/secret
 secret,POST,/transit/keys/:name/rotate,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,DELETE,/transit/keys/:name/soft-delete,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
 secret,POST,/transit/keys/:name/soft-delete-restore,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
-secret,GET,/transit/byok-export/:destination/:source(/:version),decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.
+secret,GET,/transit/byok-export/:destination/:source(/:version),decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; returns a destination-wrapped ciphertext blob as SecretString with redacted Debug.
 secret,GET,/transit/export/:key_type/:name(/:version),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
 secret,GET,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
