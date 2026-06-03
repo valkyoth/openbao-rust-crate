@@ -35,6 +35,23 @@ the crate useful for production trials.
   raw storage values, and backup/export material must not be converted into
   ordinary loggable strings.
 
+## Committed `0.9.0` Work
+
+The following `0.9.0` items are implementation commitments and do not need an
+owner decision unless a pentest or implementation blocker changes their risk:
+
+- explicit opt-in retry/backoff with single-shot requests as the default;
+- shared pagination for non-secret string list endpoints only;
+- bootstrap convergence for PKI roles and Identity entities/groups;
+- representative serde response fixtures for public API responses;
+- fuzz targets for path validation, API error decoding, and response envelope
+  parsing;
+- public API audit covering names, constructors, feature gates, secret
+  handling, docs, examples, and semver expectations;
+- migration docs from older `openbao` versions, `vaultrs`, and raw `reqwest`
+  wrappers;
+- advisory quantum-readiness design note without post-quantum safety claims.
+
 ## API Areas
 
 | Area | Current Posture | Planned Decision |

@@ -267,6 +267,23 @@ Publishable value:
 
 ### 0.9.0 - API Stabilization Candidate
 
+Committed implementation items for `0.9.0` that do not require an owner
+decision:
+
+- explicit opt-in retry/backoff; default requests remain single-shot so
+  non-idempotent writes are not retried by accident;
+- shared pagination for non-secret string list endpoints; token accessors and
+  secret-bearing lists remain separate;
+- bootstrap convergence for PKI roles and Identity entities/groups;
+- representative serde response fixtures for public API responses;
+- fuzz targets for path validation, API error decoding, and response envelope
+  parsing;
+- public API audit for names, constructors, feature gates, secret handling,
+  docs, examples, and semver expectations;
+- migration docs from older `openbao` versions, `vaultrs`, and raw `reqwest`
+  wrappers;
+- advisory quantum-readiness design note with no post-quantum safety claims.
+
 Stop condition:
 
 - generated OpenBao `2.5.x` endpoint matrix exists and is the coverage source

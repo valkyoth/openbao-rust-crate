@@ -67,11 +67,12 @@
 
 ## Known Limitations And Decisions
 
-- Implement in `0.9.0`: an explicit opt-in retry policy, a shared pagination
-  shape for non-secret string lists, PKI role and Identity entity/group
-  bootstrap convergence, public response fixtures, fuzz targets for path
-  validation/error decoding/response envelopes, and a quantum-readiness design
-  note.
+- Committed `0.9.0` work, no owner decision required unless implementation or
+  pentest risk changes: explicit opt-in retry policy, shared pagination for
+  non-secret string lists, PKI role and Identity entity/group bootstrap
+  convergence, public response fixtures, fuzz targets for path validation/API
+  error decoding/response envelopes, public API audit, migration guide
+  completion, and an advisory quantum-readiness design note.
 - Implement or decide in `0.10.0`: Identity OIDC provider/token rows, MFA
   management/enforcement, token `create-orphan`/`renew-accessor`, and AppRole
   delegated per-property rows.
