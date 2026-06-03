@@ -28,11 +28,12 @@
   operator-gated PKI default root deletion helper, plus explicit
   `RetryPolicy`/`request_json_with_retry` exponential-backoff ergonomics and
   shared `ListPageOptions` pagination for non-secret string-list endpoints,
-  plus AdminBootstrap convergence for PKI roles and Identity entities/groups;
-  the `0.9.0` release gate script is also present.
-- Remaining `0.9.0` planned work: public API audit, migration guide
-  completion, PKI named-issuer scope review, response fixtures, fuzz targets,
-  and quantum-readiness posture design.
+  AdminBootstrap convergence for PKI roles and Identity entities/groups,
+  representative serde response fixtures, fuzz target scaffolding, and the
+  advisory quantum-readiness design note; the `0.9.0` release gate script is
+  also present.
+- Remaining `0.9.0` planned work: final local and GitHub release gates,
+  package inspection, pentest review, and tag preparation.
 - Finalization rule: the OpenBao `2.5.x` endpoint matrix expanded the
   pre-`1.0` plan through `0.15.0`. `0.9.0` handles stabilization foundations;
   `0.10.0` through `0.14.0` handle Identity/auth, Transit, PKI, and System
@@ -61,7 +62,7 @@
   loopback-only dev bootstrap outside fresh local development instances.
 - Quantum-readiness guidance is advisory only until OpenBao exposes stable
   upstream primitives. It must not claim post-quantum safety for current
-  OpenBao deployments.
+  OpenBao deployments. See `docs/QUANTUM_READINESS.md`.
 
 ## Security And Stability Gate
 

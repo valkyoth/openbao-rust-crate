@@ -1,0 +1,18 @@
+{
+  "data": {
+    "id": "entity-fixture-id",
+    "name": "payments-service",
+    "metadata": {
+      "owner": "platform"
+    },
+    "policies": [
+      "default",
+      "payments-read"
+    ],
+    "direct_group_ids": [
+      "group-fixture-id"
+    ],
+    "inherited_group_ids": [],
+    "disabled": false
+  }
+}

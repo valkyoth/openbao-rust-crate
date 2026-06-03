@@ -39,7 +39,8 @@ use openbao::Client;
 
 This README documents the `0.9.0` development line. `0.9.0` builds on the
 released `0.8.0` API with stabilization work for migration guidance, public API
-audit evidence, and near-`1.0` ergonomics decisions.
+audit evidence, retry and pagination ergonomics, bootstrap convergence, fixture
+and fuzz hardening, and near-`1.0` decisions.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -137,12 +138,12 @@ Implemented now:
 Planned next:
 
 - `0.9.0`: public API audit, migration guides, fuzz/fixture hardening,
-  quantum-readiness design notes, and explicit pre-`1.0` decisions for
-  background renewal/tracking, seal readiness polling, typed response wrapping,
-  selective bootstrap convergence, and ACL policy-builder wrapping TTLs.
-  Retry/backoff, non-secret pagination ergonomics, and PKI/Identity bootstrap
-  convergence are implemented; tracing and HTTP/2 are resolved as non-default
-  features without runtime transport hooks.
+  quantum-readiness design notes, explicit retry/backoff, shared non-secret
+  pagination, PKI/Identity bootstrap convergence, and explicit pre-`1.0`
+  decisions for background renewal/tracking, seal readiness polling, typed
+  response wrapping, selective bootstrap convergence, and ACL policy-builder
+  wrapping TTLs. Tracing and HTTP/2 are resolved as non-default features
+  without runtime transport hooks.
 - `0.10.0` through `0.15.0`: close the endpoint matrix deliberately: Identity
   and auth, Transit advanced key management, PKI advanced/public/specialized
   flows, remaining system backend rows, then final endpoint closure and stable

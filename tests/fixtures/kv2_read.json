@@ -1,0 +1,19 @@
+{
+  "data": {
+    "data": {
+      "username": "app",
+      "password": "fixture-password"
+    },
+    "metadata": {
+      "created_time": "2026-06-03T00:00:00Z",
+      "deletion_time": "",
+      "destroyed": false,
+      "version": 3
+    }
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "warnings": [
+    "fixture warning"
+  ]
+}

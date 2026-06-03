@@ -106,8 +106,9 @@ See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
   bootstrap for common service setup.
 - Posture helpers:
   best-effort FIPS-oriented reporting is implemented for crate-visible Transit
-  and seal-assumption choices. A `0.9.0` quantum-readiness design note must
-  track OpenBao support without claiming current post-quantum safety.
+  and seal-assumption choices. `docs/QUANTUM_READINESS.md` tracks the
+  advisory-only quantum-readiness posture without claiming current
+  post-quantum safety.
 - Shared list ergonomics:
   common string list response structs implement `ListEntries`; secret accessor
   lists remain separate secret-aware types.
@@ -321,9 +322,9 @@ Finalization work before `1.0.0`:
   through `ListPageOptions`;
 - admin bootstrap convergence for PKI roles and Identity entities/groups is
   implemented in `0.9.0`;
-- add representative serde response fixtures before `1.0.0`;
-- add fuzz coverage for path validation, error decoding, and response
-  envelopes before `1.0.0`;
+- representative serde response fixtures are added in `0.9.0`;
+- fuzz target scaffolding for path validation, error decoding, and response
+  envelopes is added in `0.9.0`;
 - reject background token auto-renewal, background lease tracking, and
   `LeaseHandle` wrappers for stable scope; use `RenewalHint` for caller-owned
   renewal timing;

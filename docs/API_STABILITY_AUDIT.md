@@ -8,7 +8,8 @@ the crate useful for production trials.
 
 - Release line: `0.9.0`
 - Started: 2026-06-03
-- Audit status: decision register started
+- Audit status: `0.9.0` stabilization audit completed; remaining endpoint
+  implementation work is assigned to `0.10.0` through `0.15.0`
 - Stable target: `1.0.0`
 - Planning assumption: the endpoint matrix expanded the pre-`1.0` plan through
   `0.15.0`. Use `0.9.0` for stabilization foundations, `0.10.0` through
@@ -56,8 +57,8 @@ owner decision unless a pentest or implementation blocker changes their risk:
 
 | Area | Current Posture | Planned Decision |
 | --- | --- | --- |
-| Client construction | Typestate client, env construction, shared client, strict TLS defaults. | Audit names in `0.9.0`; no compatibility aliases until a concrete downstream migration issue is found. |
-| Error handling | Sanitized API errors and common predicates. | Audit predicates in `0.9.0`; add only value-free helpers that do not expose raw response bodies. |
+| Client construction | Typestate client, env construction, shared client, strict TLS defaults. | Reviewed for `0.9.0`; no compatibility aliases are needed before `1.0.0` unless a concrete downstream migration issue is found. |
+| Error handling | Sanitized API errors and common predicates. | Reviewed for `0.9.0`; keep helpers value-free and do not expose raw response bodies. |
 | Retry/backoff | `RetryPolicy` and `Client::request_json_with_retry` provide explicit exponential backoff for caller-approved idempotent raw JSON requests. | Keep default typed helpers single-shot to avoid retrying non-idempotent writes by accident. Do not add global/background retry middleware before `1.0.0`. |
 | Token lifecycle | Typed create/create-orphan, lookup, accessor lookup/list, renew/renew-accessor, revoke/revoke-accessor, role, tidy helpers, plus `RenewalHint` timing guidance. | Reject background auto-renewal for stable scope. No remaining token endpoint decision rows. |
 | AppRole | Login, role CRUD, delegated documented role-property read/write/delete, RoleID, SecretID, SecretID accessor, custom SecretID, and tidy helpers are typed. | No remaining AppRole endpoint decision rows in the OpenBao `2.5.x` matrix. The current docs do not publish delegated paths for `local_secret_ids`, `token_explicit_max_ttl`, `token_num_uses`, or `token_type`; those remain full-role fields unless upstream documents narrow endpoints. |
@@ -74,8 +75,8 @@ owner decision unless a pentest or implementation blocker changes their risk:
 | Response wrapping | Sys wrapping lookup/wrap/unwrap/rewrap helpers exist, but callers do not yet have typed wrapping ergonomics for ordinary endpoint responses. | Implement `WrappingContext` and `WrappedResponse<T>` in `0.15.0`: wrapping tokens are `SecretString`, typed unwrap deserializes the original response shape, and per-engine wrapped method duplication is rejected. |
 | ACL policy builder | Narrow typed path-rule builder exists for known OpenBao capabilities; advanced parameter constraints remain raw policy-document work. | Add wrapping-TTL constraints to path rules and helper variants in `0.15.0`. Reject `allowed_parameters`, `denied_parameters`, and `required_parameters` generation because correct output requires a full HCL value serializer. |
 | HTTP/2 | Default builds are HTTP/1.1-only because reqwest default features are disabled. | Reject a runtime `OpenBaoConfig` knob. Add non-default `http2 = ["reqwest/http2"]`; when enabled, TLS ALPN negotiates HTTP/2 where OpenBao supports it and falls back to HTTP/1.1. Reject HTTP/3 for stable scope. |
-| Fuzz/fixtures | Unit and HTTP mock coverage are broad. | Add `0.9.0` fuzz targets for path validation, API error decoding, and response envelopes; add serde fixtures for representative public responses. |
-| Quantum readiness | Advisory roadmap only. | Add a design note in `0.9.0`; no API may claim post-quantum safety until OpenBao exposes stable primitives. |
+| Fuzz/fixtures | Unit and HTTP mock coverage are broad; `0.9.0` adds representative serde fixtures and fuzz targets for path validation, API error decoding, and response envelope parsing. | Keep fixtures and fuzz targets updated when new public response families are added. |
+| Quantum readiness | `docs/QUANTUM_READINESS.md` records the advisory-only posture. | No API may claim post-quantum safety until OpenBao exposes stable primitives. |
 
 ## Known Limitations Decision Register
 
@@ -120,8 +121,8 @@ When moving a feature out of `0.9.0`, record:
 
 - All public modules have been reviewed for secret handling, builder
   consistency, feature gates, and semver expectations.
-- Migration guide covers `0.1` through `0.9`, `vaultrs`, and bespoke
-  `reqwest` wrappers.
+- Migration guide covers `0.1` through `0.9`, `vaultrs`, bespoke `reqwest`
+  wrappers, and the `0.9.0` retry/pagination/bootstrap additions.
 - Retry, token auto-renewal, lease tracking, pagination, Identity OIDC/MFA,
   Transit advanced key management, PKI advanced scope, system completion,
   tracing, HTTP/2, fuzzing, fixtures, and quantum-readiness have explicit

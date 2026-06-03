@@ -80,6 +80,13 @@ All notable changes to this project are documented here.
   support are planned before `1.0.0`; request-level back-pressure, KV v1
   bootstrap convergence, and ACL parameter-constraint HCL generation are
   rejected for stable scope.
+- Added representative public response serde fixtures for health, KV v2, PKI,
+  Identity, and token auth response shapes.
+- Added cargo-fuzz target scaffolding for path validation, API error decoding,
+  and response envelope parsing.
+- Added `docs/QUANTUM_READINESS.md` to define the crate's advisory-only
+  quantum-readiness posture and the rules for future hybrid/post-quantum
+  primitive exposure.
 
 ### Security
 
@@ -118,6 +125,9 @@ All notable changes to this project are documented here.
 - ACL parameter constraints remain outside `AclPolicyBuilder` because safe
   generation requires a complete HCL value serializer; callers should continue
   using reviewed policy documents for those advanced rules.
+- Quantum-readiness documentation avoids post-quantum safety claims for current
+  OpenBao deployments and treats crate-visible posture helpers as advisory
+  evidence only.
 
 ## 0.8.0 - 2026-06-02
 

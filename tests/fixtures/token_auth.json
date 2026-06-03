@@ -1,0 +1,22 @@
+{
+  "auth": {
+    "client_token": "bao-token-fixture",
+    "accessor": "bao-accessor-fixture",
+    "policies": [
+      "default",
+      "service"
+    ],
+    "token_policies": [
+      "default",
+      "service"
+    ],
+    "metadata": {
+      "role": "fixture"
+    },
+    "lease_duration": 3600,
+    "renewable": true,
+    "entity_id": "entity-fixture-id",
+    "token_type": "service",
+    "orphan": false
+  }
+}

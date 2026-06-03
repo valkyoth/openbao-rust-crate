@@ -1,13 +1,12 @@
 # Migration Guide
 
-This guide tracks migration work for the `0.9.0` stabilization line. It is a
-living document until `v0.9.0` is tagged.
+This guide tracks migration work for the `0.9.0` stabilization line before the
+pre-`1.0.0` endpoint-completion releases.
 
 ## From `openbao` 0.8 To 0.9
 
-At the start of `0.9.0`, the public API is intentionally compatible with
-`0.8.0`. The initial change is the crate version plus release-line
-documentation.
+`0.9.0` remains source-compatible with normal `0.8.0` application code and adds
+stabilization helpers that are intended to survive into `1.0.0`.
 
 Update `Cargo.toml`:
 
@@ -26,6 +25,26 @@ Keep these `0.8` patterns:
 - use `read_optional` or `Error::is_not_found()` for absent secret handling;
 - use `Sys::wait_ready_with_delay` for startup polling instead of ad hoc
   retry loops.
+
+Adopt these `0.9` additions where they fit:
+
+- use `RetryPolicy` and `Client::request_json_with_retry` only for
+  caller-approved idempotent raw JSON requests. Typed helpers remain
+  single-shot by default so non-idempotent writes are not retried accidentally;
+- keep existing paginated list helper calls. Internally they now share
+  `ListPageOptions`, which validates the `after` cursor and bounds `limit`.
+  Token accessors, lease IDs, and other secret-bearing lists intentionally stay
+  on dedicated helpers;
+- use `AdminBootstrap::ensure_pki_role`,
+  `AdminBootstrap::ensure_identity_entity`, and
+  `AdminBootstrap::ensure_identity_group` for idempotent service setup. These
+  compare only fields set in the desired request and do not perform PKI CA
+  setup or database connection configuration;
+- use `docs/API_STABILITY_AUDIT.md` and
+  `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` as the pre-`1.0.0` source of truth for
+  planned, rejected, external, raw, and gated endpoint boundaries;
+- read `docs/QUANTUM_READINESS.md` for the crate's advisory-only posture. It
+  does not claim post-quantum safety for current OpenBao deployments.
 
 ## From Earlier `openbao` Releases
 
@@ -104,6 +123,11 @@ Replace hand-written wrappers in layers:
    wrapper around `Client::request_json`.
 6. Add tests that assert documented HTTP method, path, headers, and redaction
    behavior for each local wrapper.
+
+For custom plugin wrappers, prefer `PluginMount`, `validate_mount_path`,
+`validate_endpoint_path`, `BoundedStringList`, and
+`deserialize_bounded_string_vec` instead of local path concatenation or
+unbounded list response types.
 
 ## Security Checklist
 

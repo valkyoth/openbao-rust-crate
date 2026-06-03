@@ -1,0 +1,35 @@
+[package]
+name = "openbao-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+openbao = { path = "..", features = ["sys"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[[bin]]
+name = "path_validation"
+path = "fuzz_targets/path_validation.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "api_error_decode"
+path = "fuzz_targets/api_error_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "response_envelope"
+path = "fuzz_targets/response_envelope.rs"
+test = false
+doc = false
+bench = false

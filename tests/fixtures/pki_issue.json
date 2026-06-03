@@ -1,0 +1,16 @@
+{
+  "data": {
+    "certificate": "-----BEGIN CERTIFICATE-----\nMIIBfixture\n-----END CERTIFICATE-----\n",
+    "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIBissuer\n-----END CERTIFICATE-----\n",
+    "ca_chain": [
+      "-----BEGIN CERTIFICATE-----\nMIIBissuer\n-----END CERTIFICATE-----\n"
+    ],
+    "private_key": "-----BEGIN PRIVATE KEY-----\nfixture\n-----END PRIVATE KEY-----\n",
+    "private_key_type": "rsa",
+    "serial_number": "01:02:03",
+    "expiration": 1800000000
+  },
+  "lease_id": "pki/issue/web/fixture",
+  "lease_duration": 3600,
+  "renewable": false
+}
