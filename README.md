@@ -135,15 +135,18 @@ Implemented now:
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
-Planned next:
+Delivered in `0.9.0`:
 
-- `0.9.0`: public API audit, migration guides, fuzz/fixture hardening,
+- Public API audit, migration guides, fuzz/fixture hardening,
   quantum-readiness design notes, explicit retry/backoff, shared non-secret
   pagination, PKI/Identity bootstrap convergence, and explicit pre-`1.0`
   decisions for background renewal/tracking, seal readiness polling, typed
   response wrapping, selective bootstrap convergence, and ACL policy-builder
   wrapping TTLs. Tracing and HTTP/2 are resolved as non-default features
   without runtime transport hooks.
+
+Planned next:
+
 - `0.10.0` through `0.15.0`: close the endpoint matrix deliberately: Identity
   and auth, Transit advanced key management, PKI advanced/public/specialized
   flows, remaining system backend rows, then final endpoint closure and stable

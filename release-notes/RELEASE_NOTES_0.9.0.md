@@ -3,9 +3,9 @@
 ## Version
 
 - Version: 0.9.0
-- Release date: Unreleased
-- Git tag: `v0.9.0` planned
-- Git commit: tag target for `v0.9.0`
+- Release date: 2026-06-03
+- Git tag: `v0.9.0`
+- Git commit: see the signed `v0.9.0` tag object
 - License: MIT OR Apache-2.0
 
 ## Scope
@@ -32,8 +32,9 @@
   representative serde response fixtures, fuzz target scaffolding, and the
   advisory quantum-readiness design note; the `0.9.0` release gate script is
   also present.
-- Remaining `0.9.0` planned work: final local and GitHub release gates,
-  package inspection, pentest review, and tag preparation.
+- Remaining `0.9.0` planned work: none. GitHub is green, local release checks
+  passed, the pentest report was reviewed, and this candidate is ready for the
+  `v0.9.0` tag.
 - Finalization rule: the OpenBao `2.5.x` endpoint matrix expanded the
   pre-`1.0` plan through `0.15.0`. `0.9.0` handles stabilization foundations;
   `0.10.0` through `0.14.0` handle Identity/auth, Transit, PKI, and System
@@ -74,7 +75,7 @@
   remediated, and the temporary `PENTEST.md` file was deleted before commit.
 - `cargo audit` result: passed locally on 2026-06-03.
 - `cargo deny check` result: passed locally on 2026-06-03.
-- CodeQL result: pending.
+- CodeQL result: passed in GitHub on 2026-06-03.
 - Podman OpenBao integration result: passed locally on 2026-06-03.
 - SBOM generation result: passed locally on 2026-06-03.
 - Reproducible package result: passed locally on 2026-06-03.
