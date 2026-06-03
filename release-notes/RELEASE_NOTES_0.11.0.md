@@ -5,12 +5,25 @@ Status: in development.
 Readiness: implementation complete locally and local release gates pass; wait
 for external pentest and CI validation before tagging.
 
+## Version
+
+- Version: 0.11.0
+- Release date: pending
+- Git tag: pending
+- Git commit: pending
+- License: MIT OR Apache-2.0
+
 ## Summary
 
 `0.11.0` is the Transit advanced key-management line. It focuses on BYOK/import
 endpoint wrappers, reversible Transit key soft deletion, global/cache
 configuration, and certificate/CSR helpers while keeping raw private or
 symmetric key material out of the default endpoint wrappers.
+
+Remaining `0.11.0` planned work: none. The local release-gate components and
+the OpenBao `2.5.4` integration smoke test pass locally; this candidate is
+waiting for external pentest feedback and GitHub CI validation before the
+`v0.11.0` tag.
 
 ## Added
 
@@ -43,3 +56,14 @@ symmetric key material out of the default endpoint wrappers.
   values because leakage may enable unintended import workflows.
 - PEM CSRs and certificate chains are documented as public certificate material;
   private key material remains inside Transit.
+
+## Security And Stability Gate
+
+- Gate command: `OPENBAO_SKIP_INTEGRATION=1 scripts/release_0_11_gate.sh`
+- OpenBao integration command: `scripts/openbao_integration.sh`
+- Local validation completed for dependency freshness, formatting, release
+  metadata, clippy default/all-features, tests default/all-features, doctests,
+  docs, package verification, dependency policy, RustSec audit, SBOM
+  generation, and the pinned OpenBao `2.5.4` dev instance smoke test.
+- Do not tag until external pentest feedback is reviewed and GitHub CI is
+  green.
