@@ -88,8 +88,13 @@
   AppRole delegated per-property rows.
 - Implement or decide in `0.11.0`: Transit BYOK/import, wrapping-key,
   cache/config, CSR/certificate, and soft-delete rows.
-- Implement or decide in `0.12.0`/`0.13.0`: PKI named issuer/root/public-read,
-  CEL, sign-verbatim, OCSP, revocation-list, and ACME-boundary rows.
+- Implement in `0.12.0`: PKI named-issuer issue/sign/sign-intermediate,
+  root lifecycle, public CA/CRL/cert reads, and PKI config rows. Destructive
+  root deletion must stay behind `operator-ops` plus
+  `operator-ops-acknowledged`.
+- Implement in `0.13.0`: PKI revoke-with-key, revocation/CRL management, CEL
+  roles and issue/sign, sign-verbatim, and cross-sign rows. OCSP GET/POST rows
+  are classified as raw binary ASN.1 protocol support.
 - Implement or decide in `0.14.0`: system generate-root/recovery-token,
   decode-token, password policies, monitor/internal rows, resultant ACL, and
   legacy recovery-key rekey.

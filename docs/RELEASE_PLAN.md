@@ -3,7 +3,7 @@
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
 `643` documented endpoint rows, `457` strict typed or operator-gated rows, and
-`167` rows still needing an implementation, rejection, raw-wrapper policy, or
+`165` rows still needing an implementation, rejection, raw-wrapper policy, or
 external-client policy decision. Because there is no rush to force stability,
 the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
 deliberately.
@@ -372,13 +372,16 @@ Publishable value:
 
 Stop condition:
 
-- named issuer issue/sign/sign-intermediate helpers;
-- root rotate, root replace, root delete, issuers/key generation, intermediate
-  issuer generation, and issuer/key config helpers;
-- CA, certificate, CRL, delta-CRL, issuer JSON/DER/PEM, raw certificate, and
-  detailed certificate list read helpers;
-- cluster config, auto-tidy config, config issuers, config keys, CRL delta
-  rotation, issuer CRL resign, and sign-revocation-list helpers;
+- named issuer issue/sign/sign-intermediate and sign-self-issued variants are
+  implemented as explicit-issuer extensions of the existing typed PKI helpers;
+- root rotate, multi-issuer root generation, root replace, key generation,
+  intermediate issuer generation, and issuer/key config helpers are
+  implemented; destructive root deletion is implemented only behind
+  `operator-ops` plus `operator-ops-acknowledged`;
+- CA, certificate, CRL, delta-CRL, issuer JSON/DER/PEM, and raw certificate
+  read helpers are implemented with documented binary/PEM handling;
+- cluster config, auto-tidy config, config issuers, config keys, and CRL delta
+  rotation helpers are implemented;
 - response-size caps and binary/text handling are documented for public
   certificate and CRL endpoints;
 - endpoint matrix is regenerated and the main PKI administrative/public-read
@@ -393,11 +396,14 @@ Publishable value:
 
 Stop condition:
 
+- revoke-with-key, revoked-cert list, revocation-queue list, detailed cert list,
+  issuer CRL resign, and sign-revocation-list helpers are implemented;
 - CEL role list/read/write/patch/delete plus CEL issue/sign helpers are
-  implemented or rejected;
-- sign-self-issued, sign-verbatim, revoke-with-key, revoked-cert list,
-  revocation-queue list, OCSP GET/POST, and intermediate cross-sign helpers
-  are implemented or rejected;
+  implemented with a version-stability note for this newer OpenBao feature;
+- sign-verbatim and intermediate cross-sign helpers are implemented behind
+  `operator-ops` plus `operator-ops-acknowledged`;
+- OCSP GET/POST rows are documented as raw binary ASN.1 protocol calls that
+  should be paired with a dedicated OCSP encoder/decoder;
 - full ACME account/order/authorization/challenge flows are either implemented
   or, more likely, permanently classified as `external` with directory URL and
   EAB helpers documented as the supported SDK boundary;

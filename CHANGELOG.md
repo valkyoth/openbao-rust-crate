@@ -30,6 +30,10 @@ All notable changes to this project are documented here.
 - Added safe custom plugin wrapper building blocks: `PluginMount`, public path
   validators, `BoundedStringList`, and the public bounded string-list
   deserializer.
+- Recorded the PKI advanced issuer/root decision: named-issuer, root
+  lifecycle, public CA/CRL/cert read, and PKI config rows are planned for
+  `0.12.0`; revocation/CRL management, CEL, sign-verbatim, and cross-sign rows
+  are planned for `0.13.0`; OCSP is classified as raw binary protocol support.
 
 ### Security
 

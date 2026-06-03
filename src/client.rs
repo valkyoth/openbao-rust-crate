@@ -559,12 +559,44 @@ impl<State> Client<State> {
             .await
     }
 
-    pub(crate) async fn request_bytes_accepting(
+    /// Sends a raw byte request and returns a capped zeroizing byte buffer.
+    ///
+    /// `path` is relative to `/v1` and is validated like [`Self::request_json`].
+    /// This escape hatch is intended for OpenBao endpoints whose payloads are
+    /// binary protocols or non-JSON documents, such as OCSP, certificates, CRLs,
+    /// snapshots, or diagnostic output. Prefer typed helpers where this crate
+    /// provides them.
+    ///
+    /// When `body` is present and no explicit `Content-Type` header is supplied,
+    /// OpenBao receives `application/octet-stream`.
+    pub async fn request_bytes_accepting(
         &self,
         method: Method,
         path: &str,
         query: &[(&str, String)],
         accept: Option<HeaderValue>,
+        body: Option<&[u8]>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<Zeroizing<Vec<u8>>> {
+        let mut headers = Vec::new();
+        if let Some(accept) = accept {
+            headers.push((ACCEPT, accept));
+        }
+        self.request_bytes_headers_accepting(method, path, query, &headers, body, accepted_statuses)
+            .await
+    }
+
+    /// Sends a raw byte request with explicit headers.
+    ///
+    /// Use this for binary protocols that require a specific request or
+    /// response MIME type. Header values are validated by `reqwest`; token and
+    /// namespace headers are still managed by the client.
+    pub async fn request_bytes_headers_accepting(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        headers: &[(HeaderName, HeaderValue)],
         body: Option<&[u8]>,
         accepted_statuses: &[StatusCode],
     ) -> Result<Zeroizing<Vec<u8>>> {
@@ -577,7 +609,7 @@ impl<State> Client<State> {
         }
 
         let response = self
-            .send_sensitive_bytes_request(method, url, accept, body)
+            .send_sensitive_bytes_request(method, url, headers, body)
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
@@ -729,15 +761,15 @@ impl<State> Client<State> {
         &self,
         method: Method,
         url: Url,
-        accept: Option<HeaderValue>,
+        headers: &[(HeaderName, HeaderValue)],
         body: Option<&[u8]>,
     ) -> Result<reqwest::Response> {
         self.require_encrypted_transport_for_sensitive_request(&url, true)?;
         let http = self.http_for_sensitive_request();
 
         let mut request = reqwest::Request::new(method, url);
-        if let Some(accept) = accept {
-            request.headers_mut().insert(ACCEPT, accept);
+        for (name, value) in headers {
+            request.headers_mut().insert(name.clone(), value.clone());
         }
         request.headers_mut().insert(
             HeaderName::from_static("x-vault-request"),
@@ -755,10 +787,12 @@ impl<State> Client<State> {
             request.headers_mut().insert(name, value);
         }
         if let Some(body) = body {
-            request.headers_mut().insert(
-                CONTENT_TYPE,
-                HeaderValue::from_static("application/octet-stream"),
-            );
+            if !request.headers().contains_key(CONTENT_TYPE) {
+                request.headers_mut().insert(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/octet-stream"),
+                );
+            }
             // SECURITY: reqwest takes ownership of a normal body buffer. The
             // caller-provided slice is not retained by this crate, but lower
             // transport layers may hold transient copies during the request.

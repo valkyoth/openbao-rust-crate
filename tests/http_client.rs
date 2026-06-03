@@ -222,6 +222,68 @@ async fn kv2_read_optional_maps_not_found_to_none() {
 }
 
 #[tokio::test]
+async fn raw_byte_request_sends_custom_protocol_headers() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let mut buffer = [0_u8; 4096];
+        let bytes = stream
+            .read(&mut buffer)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = String::from_utf8_lossy(&buffer[..bytes]);
+        assert!(request.starts_with("POST /v1/pki/ocsp HTTP/1.1"));
+        assert!(request.contains("accept: application/ocsp-response"));
+        assert!(request.contains("content-type: application/ocsp-request"));
+        assert!(request.ends_with("ocsp-request-der"));
+
+        let body = "ocsp-response-der";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/ocsp-response\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let response = client
+        .request_bytes_headers_accepting(
+            openbao::Method::POST,
+            "pki/ocsp",
+            &[],
+            &[
+                (
+                    openbao::reqwest::header::ACCEPT,
+                    openbao::reqwest::header::HeaderValue::from_static("application/ocsp-response"),
+                ),
+                (
+                    openbao::reqwest::header::CONTENT_TYPE,
+                    openbao::reqwest::header::HeaderValue::from_static("application/ocsp-request"),
+                ),
+            ],
+            Some(b"ocsp-request-der"),
+            &[openbao::StatusCode::OK],
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(&response[..], b"ocsp-response-der");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn cubbyhole_lifecycle_uses_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

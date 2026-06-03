@@ -221,6 +221,11 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
                 "external",
                 "ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL helpers.",
             )
+        if "/pki/ocsp" in path:
+            return (
+                "raw",
+                "OCSP is binary ASN.1; use raw byte helpers with a dedicated OCSP encoder/decoder.",
+            )
         typed_pki_paths = {
             "/pki/acme/new-eab",
             "/pki/issuer/:issuer_ref/acme/new-eab",
@@ -258,9 +263,78 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         }
         if path in typed_pki_paths:
             return ("typed", "Typed PKI helper exists.")
+        pki_0_12_paths = {
+            "/pki/issuer/:issuer_ref/issue/:name",
+            "/pki/issuer/:issuer_ref/sign/:name",
+            "/pki/issuer/:issuer_ref/sign-intermediate",
+            "/pki/root/sign-self-issued",
+            "/pki/issuer/:issuer_ref/sign-self-issued",
+            "/pki/root/rotate/:type",
+            "/pki/issuers/generate/root/:type",
+            "/pki/root/replace",
+            "/pki/keys/generate/:type",
+            "/pki/issuers/generate/intermediate/:type",
+            "/pki/cert/ca",
+            "/pki/ca",
+            "/pki/ca/pem",
+            "/pki/issuer/:issuer_ref/json",
+            "/pki/issuer/:issuer_ref/der",
+            "/pki/issuer/:issuer_ref/pem",
+            "/pki/ca_chain",
+            "/pki/cert/ca_chain",
+            "/pki/cert/crl",
+            "/pki/crl",
+            "/pki/crl/pem",
+            "/pki/cert/delta-crl",
+            "/pki/crl/delta",
+            "/pki/crl/delta/pem",
+            "/pki/issuer/:issuer_ref/crl",
+            "/pki/issuer/:issuer_ref/crl/der",
+            "/pki/issuer/:issuer_ref/crl/pem",
+            "/pki/issuer/:issuer_ref/crl/delta",
+            "/pki/issuer/:issuer_ref/crl/delta/der",
+            "/pki/issuer/:issuer_ref/crl/delta/pem",
+            "/pki/cert/:serial/raw",
+            "/pki/cert/:serial/raw/pem",
+            "/pki/config/issuers",
+            "/pki/config/keys",
+            "/pki/config/cluster",
+            "/pki/config/auto-tidy",
+            "/pki/crl/rotate-delta",
+        }
+        if path == "/pki/root" and method == "DELETE":
+            return (
+                "decision",
+                "Implement in 0.12.0 behind operator-ops; deleting a PKI root is destructive.",
+            )
+        if path in pki_0_12_paths:
+            return (
+                "decision",
+                "Implement in 0.12.0 as advanced issuer/root/config or public PKI read coverage.",
+            )
+        pki_0_13_paths = {
+            "/pki/revoke-with-key",
+            "/certs/revoked",
+            "/certs/revocation-queue",
+            "/pki/certs/detailed?detailed=true",
+            "/pki/issuer/:issuer_ref/resign-crls",
+            "/pki/issuer/:issuer_ref/sign-revocation-list",
+            "/pki/cel/roles",
+            "/pki/cel/roles/:name",
+            "/pki/cel/issue/:name",
+            "/pki/cel/sign/:name",
+            "/pki/sign-verbatim(/:name)",
+            "/pki/issuer/:issuer_ref/sign-verbatim(/:name)",
+            "/pki/intermediate/cross-sign",
+        }
+        if path in pki_0_13_paths:
+            return (
+                "decision",
+                "Implement in 0.13.0 as specialized PKI revocation, CEL, sign-verbatim, or cross-sign coverage.",
+            )
         return (
             "decision",
-            "PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.",
+            "PKI row needs explicit 0.12.0/0.13.0 implementation or boundary classification.",
         )
 
     return ("decision", "Secret-engine endpoint is not classified yet.")
@@ -445,7 +519,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",
             "- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.",
             "- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows are planned for `0.11.0`.",
-            "- PKI advanced issuer/root/public-read rows are planned for `0.12.0`; PKI specialized CEL/sign-verbatim/OCSP/ACME-boundary rows are planned for `0.13.0`.",
+            "- PKI named-issuer, root lifecycle, public CA/CRL/cert reads, and config rows are planned for `0.12.0`; PKI revocation/CRL management, CEL, sign-verbatim, and cross-sign rows are planned for `0.13.0`; OCSP rows are classified as `raw`.",
             "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, and legacy recovery rekey are planned for `0.14.0`.",
             "- `0.15.0` is the closure release where no endpoint row may remain `decision`.",
             "",
