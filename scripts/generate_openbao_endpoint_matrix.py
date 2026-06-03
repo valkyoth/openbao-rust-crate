@@ -159,11 +159,30 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
                 "external",
                 "OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.",
             )
-        if any(segment in page for segment in ("/mfa", "/oidc-provider", "/tokens")):
+        if "/mfa/login-enforcement/" in page:
+            return ("typed", "Typed Identity MFA login-enforcement helper exists.")
+        if "/mfa/duo/" in page:
             return (
-                "planned",
-                "Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.",
+                "typed",
+                "Typed Identity MFA Duo helper exists with secret-aware provider credentials.",
             )
+        if "/mfa/okta/" in page:
+            return (
+                "typed",
+                "Typed Identity MFA Okta helper exists with secret-aware provider credentials.",
+            )
+        if "/mfa/pingid/" in page:
+            return (
+                "typed",
+                "Typed Identity MFA PingID helper exists with secret-aware settings-file payload.",
+            )
+        if "/mfa/totp/" in page:
+            return (
+                "typed",
+                "Typed Identity MFA TOTP helper exists with secret-aware generated QR and URL output.",
+            )
+        if any(segment in page for segment in ("/oidc-provider", "/tokens")):
+            return ("typed", "Typed Identity OIDC helper exists.")
         return ("typed", "Typed Identity entity/group/alias/lookup helper exists.")
 
     if page.startswith("/api-docs/secret/ssh/"):
@@ -576,7 +595,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "## Required Follow-Up",
             "",
-            "- Identity OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed token generation, token introspection, discovery metadata, default JWKS reads, OIDC provider/scope/client/assignment admin, named-provider discovery, and named-provider JWKS helpers are implemented in `0.10.0`. MFA management remains planned for `0.10.0`.",
+            "- Identity OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed token generation, token introspection, discovery metadata, default JWKS reads, OIDC provider/scope/client/assignment admin, named-provider discovery, named-provider JWKS, MFA method management, MFA TOTP generation/admin actions, and MFA login enforcement helpers are implemented in `0.10.0`.",
             "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",
             "- `sys/mfa/validate` is implemented in `0.10.0` because MFA-enforced login flows cannot complete without it.",
             "- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.",

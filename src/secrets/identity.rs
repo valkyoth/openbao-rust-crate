@@ -9,6 +9,7 @@ use std::fmt;
 
 use reqwest::{Method, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
+use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
@@ -1482,6 +1483,700 @@ impl ListEntries for IdentityOidcAssignmentList {
     }
 }
 
+/// Request to create or update a Duo MFA method.
+#[derive(Clone)]
+pub struct IdentityMfaDuoMethodRequest {
+    /// Unique method name.
+    pub method_name: String,
+    /// Identity username template.
+    pub username_format: Option<String>,
+    /// Duo secret key.
+    pub secret_key: SecretString,
+    /// Duo integration key.
+    pub integration_key: SecretString,
+    /// Duo API hostname.
+    pub api_hostname: String,
+    /// Duo push information.
+    pub push_info: Option<String>,
+    /// Whether passcode validation is used.
+    pub use_passcode: Option<bool>,
+}
+
+impl IdentityMfaDuoMethodRequest {
+    /// Creates a Duo MFA method request.
+    pub fn new(
+        method_name: impl Into<String>,
+        secret_key: SecretString,
+        integration_key: SecretString,
+        api_hostname: impl Into<String>,
+    ) -> Self {
+        Self {
+            method_name: method_name.into(),
+            username_format: None,
+            secret_key,
+            integration_key,
+            api_hostname: api_hostname.into(),
+            push_info: None,
+            use_passcode: None,
+        }
+    }
+
+    /// Sets the Identity username template.
+    #[must_use]
+    pub fn with_username_format(mut self, username_format: impl Into<String>) -> Self {
+        self.username_format = Some(username_format.into());
+        self
+    }
+
+    /// Sets Duo push information.
+    #[must_use]
+    pub fn with_push_info(mut self, push_info: impl Into<String>) -> Self {
+        self.push_info = Some(push_info.into());
+        self
+    }
+
+    /// Sets whether passcode validation is used.
+    #[must_use]
+    pub fn with_use_passcode(mut self, use_passcode: bool) -> Self {
+        self.use_passcode = Some(use_passcode);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_required(&self.method_name, "identity MFA Duo method_name")?;
+        validate_required(&self.api_hostname, "identity MFA Duo api_hostname")
+    }
+}
+
+impl fmt::Debug for IdentityMfaDuoMethodRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityMfaDuoMethodRequest")
+            .field("method_name", &self.method_name)
+            .field("username_format", &self.username_format)
+            .field("secret_key", &"<redacted>")
+            .field("integration_key", &"<redacted>")
+            .field("api_hostname", &self.api_hostname)
+            .field("push_info", &self.push_info)
+            .field("use_passcode", &self.use_passcode)
+            .finish()
+    }
+}
+
+impl Serialize for IdentityMfaDuoMethodRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("method_name", &self.method_name)?;
+        serialize_optional_entry(&mut map, "username_format", self.username_format.as_deref())?;
+        map.serialize_entry("secret_key", self.secret_key.expose_secret())?;
+        map.serialize_entry("integration_key", self.integration_key.expose_secret())?;
+        map.serialize_entry("api_hostname", &self.api_hostname)?;
+        serialize_optional_entry(&mut map, "push_info", self.push_info.as_deref())?;
+        if let Some(use_passcode) = self.use_passcode {
+            map.serialize_entry("use_passcode", &use_passcode)?;
+        }
+        map.end()
+    }
+}
+
+/// Duo MFA method information.
+#[derive(Clone, Deserialize)]
+pub struct IdentityMfaDuoMethodInfo {
+    /// Method ID.
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Method name.
+    #[serde(default, alias = "name")]
+    pub method_name: Option<String>,
+    /// Identity username template.
+    #[serde(default)]
+    pub username_format: Option<String>,
+    /// Duo secret key.
+    #[serde(default)]
+    pub secret_key: Option<SecretString>,
+    /// Duo integration key.
+    #[serde(default)]
+    pub integration_key: Option<SecretString>,
+    /// Duo API hostname.
+    #[serde(default)]
+    pub api_hostname: Option<String>,
+    /// Duo push information.
+    #[serde(default, alias = "pushinfo")]
+    pub push_info: Option<String>,
+    /// Whether passcode validation is used.
+    #[serde(default)]
+    pub use_passcode: Option<bool>,
+    /// Method type.
+    #[serde(default, rename = "type")]
+    pub method_type: Option<String>,
+}
+
+impl fmt::Debug for IdentityMfaDuoMethodInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityMfaDuoMethodInfo")
+            .field("id", &self.id)
+            .field("method_name", &self.method_name)
+            .field("username_format", &self.username_format)
+            .field(
+                "secret_key",
+                &self.secret_key.as_ref().map(|_| "<redacted>"),
+            )
+            .field(
+                "integration_key",
+                &self.integration_key.as_ref().map(|_| "<redacted>"),
+            )
+            .field("api_hostname", &self.api_hostname)
+            .field("push_info", &self.push_info)
+            .field("use_passcode", &self.use_passcode)
+            .field("method_type", &self.method_type)
+            .finish()
+    }
+}
+
+/// Request to create or update an Okta MFA method.
+#[derive(Clone)]
+pub struct IdentityMfaOktaMethodRequest {
+    /// Unique method name.
+    pub method_name: String,
+    /// Identity username template.
+    pub username_format: Option<String>,
+    /// Okta organization name.
+    pub org_name: String,
+    /// Okta API token.
+    pub api_token: SecretString,
+    /// Okta base URL.
+    pub base_url: Option<String>,
+    /// Whether usernames must match primary email.
+    pub primary_email: Option<bool>,
+}
+
+impl IdentityMfaOktaMethodRequest {
+    /// Creates an Okta MFA method request.
+    pub fn new(
+        method_name: impl Into<String>,
+        org_name: impl Into<String>,
+        api_token: SecretString,
+    ) -> Self {
+        Self {
+            method_name: method_name.into(),
+            username_format: None,
+            org_name: org_name.into(),
+            api_token,
+            base_url: None,
+            primary_email: None,
+        }
+    }
+
+    /// Sets the Identity username template.
+    #[must_use]
+    pub fn with_username_format(mut self, username_format: impl Into<String>) -> Self {
+        self.username_format = Some(username_format.into());
+        self
+    }
+
+    /// Sets the Okta base URL.
+    #[must_use]
+    pub fn with_base_url(mut self, base_url: impl Into<String>) -> Self {
+        self.base_url = Some(base_url.into());
+        self
+    }
+
+    /// Sets whether primary email matching is required.
+    #[must_use]
+    pub fn with_primary_email(mut self, primary_email: bool) -> Self {
+        self.primary_email = Some(primary_email);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_required(&self.method_name, "identity MFA Okta method_name")?;
+        validate_required(&self.org_name, "identity MFA Okta org_name")
+    }
+}
+
+impl fmt::Debug for IdentityMfaOktaMethodRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityMfaOktaMethodRequest")
+            .field("method_name", &self.method_name)
+            .field("username_format", &self.username_format)
+            .field("org_name", &self.org_name)
+            .field("api_token", &"<redacted>")
+            .field("base_url", &self.base_url)
+            .field("primary_email", &self.primary_email)
+            .finish()
+    }
+}
+
+impl Serialize for IdentityMfaOktaMethodRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("method_name", &self.method_name)?;
+        serialize_optional_entry(&mut map, "username_format", self.username_format.as_deref())?;
+        map.serialize_entry("org_name", &self.org_name)?;
+        map.serialize_entry("api_token", self.api_token.expose_secret())?;
+        serialize_optional_entry(&mut map, "base_url", self.base_url.as_deref())?;
+        if let Some(primary_email) = self.primary_email {
+            map.serialize_entry("primary_email", &primary_email)?;
+        }
+        map.end()
+    }
+}
+
+/// Okta MFA method information.
+#[derive(Clone, Deserialize)]
+pub struct IdentityMfaOktaMethodInfo {
+    /// Method ID.
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Method name.
+    #[serde(default, alias = "name")]
+    pub method_name: Option<String>,
+    /// Identity username template.
+    #[serde(default)]
+    pub username_format: Option<String>,
+    /// Okta organization name.
+    #[serde(default)]
+    pub org_name: Option<String>,
+    /// Okta API token.
+    #[serde(default)]
+    pub api_token: Option<SecretString>,
+    /// Okta base URL.
+    #[serde(default)]
+    pub base_url: Option<String>,
+    /// Whether usernames must match primary email.
+    #[serde(default)]
+    pub primary_email: Option<bool>,
+    /// Method type.
+    #[serde(default, rename = "type")]
+    pub method_type: Option<String>,
+}
+
+impl fmt::Debug for IdentityMfaOktaMethodInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityMfaOktaMethodInfo")
+            .field("id", &self.id)
+            .field("method_name", &self.method_name)
+            .field("username_format", &self.username_format)
+            .field("org_name", &self.org_name)
+            .field("api_token", &self.api_token.as_ref().map(|_| "<redacted>"))
+            .field("base_url", &self.base_url)
+            .field("primary_email", &self.primary_email)
+            .field("method_type", &self.method_type)
+            .finish()
+    }
+}
+
+/// Request to create or update a PingID MFA method.
+#[derive(Clone)]
+pub struct IdentityMfaPingIdMethodRequest {
+    /// Unique method name.
+    pub method_name: String,
+    /// Identity username template.
+    pub username_format: Option<String>,
+    /// Base64-encoded PingID settings file.
+    pub settings_file_base64: SecretString,
+}
+
+impl IdentityMfaPingIdMethodRequest {
+    /// Creates a PingID MFA method request.
+    pub fn new(method_name: impl Into<String>, settings_file_base64: SecretString) -> Self {
+        Self {
+            method_name: method_name.into(),
+            username_format: None,
+            settings_file_base64,
+        }
+    }
+
+    /// Sets the Identity username template.
+    #[must_use]
+    pub fn with_username_format(mut self, username_format: impl Into<String>) -> Self {
+        self.username_format = Some(username_format.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_required(&self.method_name, "identity MFA PingID method_name")
+    }
+}
+
+impl fmt::Debug for IdentityMfaPingIdMethodRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityMfaPingIdMethodRequest")
+            .field("method_name", &self.method_name)
+            .field("username_format", &self.username_format)
+            .field("settings_file_base64", &"<redacted>")
+            .finish()
+    }
+}
+
+impl Serialize for IdentityMfaPingIdMethodRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("method_name", &self.method_name)?;
+        serialize_optional_entry(&mut map, "username_format", self.username_format.as_deref())?;
+        map.serialize_entry(
+            "settings_file_base64",
+            self.settings_file_base64.expose_secret(),
+        )?;
+        map.end()
+    }
+}
+
+/// PingID MFA method information.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityMfaPingIdMethodInfo {
+    /// Method ID.
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Method name.
+    #[serde(default, alias = "name")]
+    pub method_name: Option<String>,
+    /// Identity username template.
+    #[serde(default)]
+    pub username_format: Option<String>,
+    /// PingID identity provider URL.
+    #[serde(default)]
+    pub idp_url: Option<String>,
+    /// PingID admin URL.
+    #[serde(default)]
+    pub admin_url: Option<String>,
+    /// PingID authenticator URL.
+    #[serde(default)]
+    pub authenticator_url: Option<String>,
+    /// PingID organization alias.
+    #[serde(default)]
+    pub org_alias: Option<String>,
+    /// Whether signatures are used.
+    #[serde(default)]
+    pub use_signature: Option<bool>,
+    /// Method type.
+    #[serde(default, rename = "type")]
+    pub method_type: Option<String>,
+}
+
+/// Request to create or update a TOTP MFA method.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityMfaTotpMethodRequest {
+    /// Unique method name.
+    pub method_name: String,
+    /// TOTP issuer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer: Option<String>,
+    /// TOTP period in seconds.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub period: Option<u64>,
+    /// Generated key size.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_size: Option<u64>,
+    /// QR code size.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub qr_size: Option<u64>,
+    /// Hash algorithm.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub algorithm: Option<String>,
+    /// Number of TOTP digits.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub digits: Option<u64>,
+    /// Accepted skew.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skew: Option<u64>,
+    /// Maximum validation attempts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_validation_attempts: Option<u64>,
+}
+
+impl IdentityMfaTotpMethodRequest {
+    /// Creates a TOTP MFA method request.
+    pub fn new(method_name: impl Into<String>) -> Self {
+        Self {
+            method_name: method_name.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Sets the TOTP issuer.
+    #[must_use]
+    pub fn with_issuer(mut self, issuer: impl Into<String>) -> Self {
+        self.issuer = Some(issuer.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_required(&self.method_name, "identity MFA TOTP method_name")
+    }
+}
+
+/// TOTP MFA method information.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityMfaTotpMethodInfo {
+    /// Method ID.
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Method name.
+    #[serde(default, alias = "name")]
+    pub method_name: Option<String>,
+    /// TOTP issuer.
+    #[serde(default)]
+    pub issuer: Option<String>,
+    /// TOTP period in seconds.
+    #[serde(default)]
+    pub period: Option<u64>,
+    /// Generated key size.
+    #[serde(default)]
+    pub key_size: Option<u64>,
+    /// QR code size.
+    #[serde(default)]
+    pub qr_size: Option<u64>,
+    /// Hash algorithm.
+    #[serde(default)]
+    pub algorithm: Option<String>,
+    /// Number of TOTP digits.
+    #[serde(default)]
+    pub digits: Option<u64>,
+    /// Accepted skew.
+    #[serde(default)]
+    pub skew: Option<u64>,
+    /// Maximum validation attempts.
+    #[serde(default)]
+    pub max_validation_attempts: Option<u64>,
+    /// Method type.
+    #[serde(default, rename = "type")]
+    pub method_type: Option<String>,
+}
+
+/// Identity MFA method list response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct IdentityMfaMethodList {
+    /// MFA method IDs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for IdentityMfaMethodList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Request to generate a TOTP MFA secret.
+#[derive(Clone, Debug, Serialize)]
+pub struct IdentityMfaTotpGenerateRequest {
+    /// TOTP MFA method ID.
+    pub method_id: String,
+}
+
+impl IdentityMfaTotpGenerateRequest {
+    /// Creates a TOTP generation request.
+    pub fn new(method_id: impl Into<String>) -> Self {
+        Self {
+            method_id: method_id.into(),
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_required(&self.method_id, "identity MFA TOTP method_id")
+    }
+}
+
+/// Request to administratively generate or destroy a TOTP MFA secret.
+#[derive(Clone, Debug, Serialize)]
+pub struct IdentityMfaTotpAdminRequest {
+    /// TOTP MFA method ID.
+    pub method_id: String,
+    /// Entity ID whose TOTP secret is managed.
+    pub entity_id: String,
+}
+
+impl IdentityMfaTotpAdminRequest {
+    /// Creates an administrative TOTP request.
+    pub fn new(method_id: impl Into<String>, entity_id: impl Into<String>) -> Self {
+        Self {
+            method_id: method_id.into(),
+            entity_id: entity_id.into(),
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_required(&self.method_id, "identity MFA TOTP method_id")?;
+        validate_required(&self.entity_id, "identity MFA TOTP entity_id")
+    }
+}
+
+/// Generated TOTP MFA secret material.
+#[derive(Clone, Deserialize)]
+pub struct IdentityMfaTotpSecret {
+    /// Base64-encoded QR barcode image. This embeds the generated TOTP secret.
+    pub barcode: SecretString,
+    /// otpauth URL. This embeds the generated TOTP secret.
+    pub url: SecretString,
+}
+
+impl fmt::Debug for IdentityMfaTotpSecret {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityMfaTotpSecret")
+            .field("barcode", &"<redacted>")
+            .field("url", &"<redacted>")
+            .finish()
+    }
+}
+
+/// Request to create or update an MFA login enforcement.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityMfaLoginEnforcementRequest {
+    /// MFA method IDs. Any one listed method can satisfy this enforcement.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mfa_method_ids: Vec<String>,
+    /// Auth mount accessors to which this enforcement applies.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub auth_method_accessors: Vec<String>,
+    /// Auth method types to which this enforcement applies.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub auth_method_types: Vec<String>,
+    /// Identity group IDs to which this enforcement applies.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub identity_group_ids: Vec<String>,
+    /// Identity entity IDs to which this enforcement applies.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub identity_entity_ids: Vec<String>,
+}
+
+impl IdentityMfaLoginEnforcementRequest {
+    /// Creates an empty login-enforcement request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds an MFA method ID.
+    #[must_use]
+    pub fn with_mfa_method_id(mut self, method_id: impl Into<String>) -> Self {
+        self.mfa_method_ids.push(method_id.into());
+        self
+    }
+
+    /// Adds an auth method accessor condition.
+    #[must_use]
+    pub fn with_auth_method_accessor(mut self, accessor: impl Into<String>) -> Self {
+        self.auth_method_accessors.push(accessor.into());
+        self
+    }
+
+    /// Adds an auth method type condition.
+    #[must_use]
+    pub fn with_auth_method_type(mut self, method_type: impl Into<String>) -> Self {
+        self.auth_method_types.push(method_type.into());
+        self
+    }
+
+    /// Adds an identity group ID condition.
+    #[must_use]
+    pub fn with_identity_group_id(mut self, group_id: impl Into<String>) -> Self {
+        self.identity_group_ids.push(group_id.into());
+        self
+    }
+
+    /// Adds an identity entity ID condition.
+    #[must_use]
+    pub fn with_identity_entity_id(mut self, entity_id: impl Into<String>) -> Self {
+        self.identity_entity_ids.push(entity_id.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.mfa_method_ids.is_empty() {
+            return Err(Error::InvalidParameter(
+                "identity MFA login enforcement requires at least one MFA method ID".into(),
+            ));
+        }
+        if self.auth_method_accessors.is_empty()
+            && self.auth_method_types.is_empty()
+            && self.identity_group_ids.is_empty()
+            && self.identity_entity_ids.is_empty()
+        {
+            return Err(Error::InvalidParameter(
+                "identity MFA login enforcement requires at least one auth or identity condition"
+                    .into(),
+            ));
+        }
+        validate_string_count(
+            self.mfa_method_ids.len(),
+            "identity MFA login enforcement method IDs",
+        )?;
+        validate_string_count(
+            self.auth_method_accessors.len(),
+            "identity MFA login enforcement auth method accessors",
+        )?;
+        validate_string_count(
+            self.auth_method_types.len(),
+            "identity MFA login enforcement auth method types",
+        )?;
+        validate_string_count(
+            self.identity_group_ids.len(),
+            "identity MFA login enforcement group IDs",
+        )?;
+        validate_string_count(
+            self.identity_entity_ids.len(),
+            "identity MFA login enforcement entity IDs",
+        )
+    }
+}
+
+/// MFA login enforcement information.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityMfaLoginEnforcementInfo {
+    /// Enforcement ID.
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Enforcement name.
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Namespace ID.
+    #[serde(default)]
+    pub namespace_id: Option<String>,
+    /// MFA method IDs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub mfa_method_ids: Vec<String>,
+    /// Auth mount accessors.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub auth_method_accessors: Vec<String>,
+    /// Auth method types.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub auth_method_types: Vec<String>,
+    /// Identity group IDs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub identity_group_ids: Vec<String>,
+    /// Identity entity IDs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub identity_entity_ids: Vec<String>,
+}
+
+/// Identity MFA login enforcement list response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct IdentityMfaLoginEnforcementList {
+    /// Login-enforcement names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for IdentityMfaLoginEnforcementList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
 impl Client<Authenticated> {
     /// Uses the identity engine mounted at `identity`.
     pub fn identity(&self) -> Result<Identity<'_>> {
@@ -2197,6 +2892,237 @@ impl Identity<'_> {
             .await
     }
 
+    /// Creates a Duo MFA method with a generated method ID.
+    pub async fn create_mfa_duo_method(
+        &self,
+        request: &IdentityMfaDuoMethodRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "duo"], request).await
+    }
+
+    /// Creates or updates a Duo MFA method by method ID.
+    pub async fn write_mfa_duo_method(
+        &self,
+        method_id: &str,
+        request: &IdentityMfaDuoMethodRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "duo", method_id], request)
+            .await
+    }
+
+    /// Reads a Duo MFA method by ID.
+    pub async fn read_mfa_duo_method(&self, id: &str) -> Result<IdentityMfaDuoMethodInfo> {
+        self.read_at(&["mfa", "method", "duo", id]).await
+    }
+
+    /// Deletes a Duo MFA method by ID.
+    pub async fn delete_mfa_duo_method(&self, id: &str) -> Result<Empty> {
+        self.delete_at(&["mfa", "method", "duo", id]).await
+    }
+
+    /// Lists Duo MFA methods.
+    pub async fn list_mfa_duo_methods(&self) -> Result<IdentityMfaMethodList> {
+        self.list_at(&["mfa", "method", "duo"]).await
+    }
+
+    /// Creates an Okta MFA method with a generated method ID.
+    pub async fn create_mfa_okta_method(
+        &self,
+        request: &IdentityMfaOktaMethodRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "okta"], request).await
+    }
+
+    /// Creates or updates an Okta MFA method by method ID.
+    pub async fn write_mfa_okta_method(
+        &self,
+        method_id: &str,
+        request: &IdentityMfaOktaMethodRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "okta", method_id], request)
+            .await
+    }
+
+    /// Reads an Okta MFA method by ID.
+    pub async fn read_mfa_okta_method(&self, id: &str) -> Result<IdentityMfaOktaMethodInfo> {
+        self.read_at(&["mfa", "method", "okta", id]).await
+    }
+
+    /// Deletes an Okta MFA method by ID.
+    pub async fn delete_mfa_okta_method(&self, id: &str) -> Result<Empty> {
+        self.delete_at(&["mfa", "method", "okta", id]).await
+    }
+
+    /// Lists Okta MFA methods.
+    pub async fn list_mfa_okta_methods(&self) -> Result<IdentityMfaMethodList> {
+        self.list_at(&["mfa", "method", "okta"]).await
+    }
+
+    /// Creates a PingID MFA method with a generated method ID.
+    pub async fn create_mfa_pingid_method(
+        &self,
+        request: &IdentityMfaPingIdMethodRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "pingid"], request).await
+    }
+
+    /// Creates or updates a PingID MFA method by method ID.
+    pub async fn write_mfa_pingid_method(
+        &self,
+        method_id: &str,
+        request: &IdentityMfaPingIdMethodRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "pingid", method_id], request)
+            .await
+    }
+
+    /// Reads a PingID MFA method by ID.
+    pub async fn read_mfa_pingid_method(&self, id: &str) -> Result<IdentityMfaPingIdMethodInfo> {
+        self.read_at(&["mfa", "method", "pingid", id]).await
+    }
+
+    /// Deletes a PingID MFA method by ID.
+    pub async fn delete_mfa_pingid_method(&self, id: &str) -> Result<Empty> {
+        self.delete_at(&["mfa", "method", "pingid", id]).await
+    }
+
+    /// Lists PingID MFA methods.
+    pub async fn list_mfa_pingid_methods(&self) -> Result<IdentityMfaMethodList> {
+        self.list_at(&["mfa", "method", "pingid"]).await
+    }
+
+    /// Creates a TOTP MFA method with a generated method ID.
+    pub async fn create_mfa_totp_method(
+        &self,
+        request: &IdentityMfaTotpMethodRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "totp"], request).await
+    }
+
+    /// Creates or updates a TOTP MFA method by method ID.
+    pub async fn write_mfa_totp_method(
+        &self,
+        method_id: &str,
+        request: &IdentityMfaTotpMethodRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "totp", method_id], request)
+            .await
+    }
+
+    /// Reads a TOTP MFA method by ID.
+    pub async fn read_mfa_totp_method(&self, id: &str) -> Result<IdentityMfaTotpMethodInfo> {
+        self.read_at(&["mfa", "method", "totp", id]).await
+    }
+
+    /// Deletes a TOTP MFA method by ID.
+    pub async fn delete_mfa_totp_method(&self, id: &str) -> Result<Empty> {
+        self.delete_at(&["mfa", "method", "totp", id]).await
+    }
+
+    /// Lists TOTP MFA methods.
+    pub async fn list_mfa_totp_methods(&self) -> Result<IdentityMfaMethodList> {
+        self.list_at(&["mfa", "method", "totp"]).await
+    }
+
+    /// Generates a TOTP MFA secret for the calling token entity.
+    pub async fn generate_mfa_totp_secret(
+        &self,
+        request: &IdentityMfaTotpGenerateRequest,
+    ) -> Result<IdentityMfaTotpSecret> {
+        request.validate()?;
+        self.post_data(&["mfa", "method", "totp", "generate"], request)
+            .await
+    }
+
+    /// Administratively generates a TOTP MFA secret for an entity.
+    pub async fn admin_generate_mfa_totp_secret(
+        &self,
+        request: &IdentityMfaTotpAdminRequest,
+    ) -> Result<IdentityMfaTotpSecret> {
+        request.validate()?;
+        self.post_data(&["mfa", "method", "totp", "admin-generate"], request)
+            .await
+    }
+
+    /// Administratively destroys a TOTP MFA secret for an entity.
+    pub async fn admin_destroy_mfa_totp_secret(
+        &self,
+        request: &IdentityMfaTotpAdminRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "method", "totp", "admin-destroy"], request)
+            .await
+    }
+
+    /// Creates or updates an MFA login enforcement.
+    pub async fn write_mfa_login_enforcement(
+        &self,
+        name: &str,
+        request: &IdentityMfaLoginEnforcementRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.post_empty(&["mfa", "login-enforcement", name], request)
+            .await
+    }
+
+    /// Reads an MFA login enforcement by name.
+    pub async fn read_mfa_login_enforcement(
+        &self,
+        name: &str,
+    ) -> Result<IdentityMfaLoginEnforcementInfo> {
+        self.read_at(&["mfa", "login-enforcement", name]).await
+    }
+
+    /// Deletes an MFA login enforcement by name.
+    pub async fn delete_mfa_login_enforcement(&self, name: &str) -> Result<Empty> {
+        self.delete_at(&["mfa", "login-enforcement", name]).await
+    }
+
+    /// Lists MFA login enforcements.
+    pub async fn list_mfa_login_enforcements(&self) -> Result<IdentityMfaLoginEnforcementList> {
+        self.list_at(&["mfa", "login-enforcement"]).await
+    }
+
+    async fn read_at<T>(&self, tail: &[&str]) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let envelope: ResponseEnvelope<T> = self
+            .client
+            .request_json(Method::GET, &self.path(tail)?, Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    async fn post_empty<T>(&self, tail: &[&str], request: &T) -> Result<Empty>
+    where
+        T: Serialize + ?Sized,
+    {
+        self.client
+            .request_json(Method::POST, &self.path(tail)?, Some(request))
+            .await
+    }
+
+    async fn post_data<T, U>(&self, tail: &[&str], request: &T) -> Result<U>
+    where
+        T: Serialize + ?Sized,
+        U: serde::de::DeserializeOwned,
+    {
+        let envelope: ResponseEnvelope<U> = self
+            .client
+            .request_json(Method::POST, &self.path(tail)?, Some(request))
+            .await?;
+        Ok(envelope.data)
+    }
+
     async fn list_at<T>(&self, tail: &[&str]) -> Result<T>
     where
         T: serde::de::DeserializeOwned,
@@ -2266,6 +3192,29 @@ fn validate_string_count(count: usize, field: &'static str) -> Result<()> {
     Err(Error::InvalidParameter(format!(
         "{field} exceeds maximum item count"
     )))
+}
+
+fn validate_required(value: &str, field: &'static str) -> Result<()> {
+    if value.trim().is_empty() {
+        return Err(Error::InvalidParameter(format!(
+            "{field} must not be empty"
+        )));
+    }
+    Ok(())
+}
+
+fn serialize_optional_entry<S>(
+    map: &mut S,
+    key: &'static str,
+    value: Option<&str>,
+) -> core::result::Result<(), S::Error>
+where
+    S: SerializeMap,
+{
+    if let Some(value) = value {
+        map.serialize_entry(key, value)?;
+    }
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -2468,10 +3417,13 @@ mod tests {
 
     use super::{
         IdentityAliasList, IdentityEntityBatchDeleteRequest, IdentityEntityList,
-        IdentityEntityRequest, IdentityGroupList, IdentityGroupRequest, IdentityOidcAssignmentList,
-        IdentityOidcClientInfo, IdentityOidcClientList, IdentityOidcIntrospectRequest,
-        IdentityOidcJwks, IdentityOidcKeyList, IdentityOidcProviderList, IdentityOidcRoleList,
-        IdentityOidcScopeList, IdentityOidcToken,
+        IdentityEntityRequest, IdentityGroupList, IdentityGroupRequest, IdentityMfaDuoMethodInfo,
+        IdentityMfaDuoMethodRequest, IdentityMfaLoginEnforcementList,
+        IdentityMfaLoginEnforcementRequest, IdentityMfaMethodList, IdentityMfaOktaMethodInfo,
+        IdentityMfaOktaMethodRequest, IdentityMfaPingIdMethodRequest, IdentityMfaTotpSecret,
+        IdentityOidcAssignmentList, IdentityOidcClientInfo, IdentityOidcClientList,
+        IdentityOidcIntrospectRequest, IdentityOidcJwks, IdentityOidcKeyList,
+        IdentityOidcProviderList, IdentityOidcRoleList, IdentityOidcScopeList, IdentityOidcToken,
     };
 
     #[test]
@@ -2554,6 +3506,77 @@ mod tests {
     }
 
     #[test]
+    fn identity_mfa_secret_debug_is_redacted_and_validated() {
+        let duo = IdentityMfaDuoMethodRequest::new(
+            "duo-main",
+            SecretString::from("fixture-a"),
+            SecretString::from("fixture-b"),
+            "api.example.com",
+        );
+        let debug = format!("{duo:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("fixture-a"));
+        assert!(!debug.contains("fixture-b"));
+
+        let okta = IdentityMfaOktaMethodRequest::new(
+            "okta-main",
+            "dev-org",
+            SecretString::from("fixture-c"),
+        );
+        let debug = format!("{okta:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("fixture-c"));
+
+        let ping =
+            IdentityMfaPingIdMethodRequest::new("ping-main", SecretString::from("fixture-d"));
+        let debug = format!("{ping:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("fixture-d"));
+
+        let duo_info = serde_json::from_value::<IdentityMfaDuoMethodInfo>(serde_json::json!({
+            "secret_key": "fixture-a",
+            "integration_key": "fixture-b"
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        let debug = format!("{duo_info:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("fixture-a"));
+        assert!(!debug.contains("fixture-b"));
+
+        let okta_info = serde_json::from_value::<IdentityMfaOktaMethodInfo>(serde_json::json!({
+            "api_token": "fixture-c"
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        let debug = format!("{okta_info:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("fixture-c"));
+
+        let totp_secret = serde_json::from_value::<IdentityMfaTotpSecret>(serde_json::json!({
+            "barcode": "barcode-data",
+            "url": "otpauth://totp/example?secret=value"
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        let debug = format!("{totp_secret:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("barcode-data"));
+        assert!(!debug.contains("value"));
+
+        assert!(
+            IdentityMfaLoginEnforcementRequest::new()
+                .with_mfa_method_id("totp-id")
+                .validate()
+                .is_err()
+        );
+        assert!(
+            IdentityMfaLoginEnforcementRequest::new()
+                .with_mfa_method_id("totp-id")
+                .with_auth_method_accessor("auth-userpass")
+                .validate()
+                .is_ok()
+        );
+    }
+
+    #[test]
     fn identity_oidc_lists_are_bounded() {
         let mut keys = Vec::new();
         for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
@@ -2597,5 +3620,17 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[test]
+    fn identity_mfa_lists_are_bounded() {
+        let mut keys = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            keys.push(format!("identity-mfa-{index}"));
+        }
+        let value = serde_json::json!({ "keys": keys });
+
+        assert!(serde_json::from_value::<IdentityMfaMethodList>(value.clone()).is_err());
+        assert!(serde_json::from_value::<IdentityMfaLoginEnforcementList>(value).is_err());
     }
 }

@@ -587,10 +587,10 @@ secret,GET,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs
 secret,POST,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
 secret,PATCH,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
 secret,DELETE,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
-secret,POST,/identity/mfa/login-enforcement/:name,planned,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/login-enforcement/:name,planned,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/login-enforcement/:name,planned,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/login-enforcement,planned,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/login-enforcement/:name,typed,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Typed Identity MFA login-enforcement helper exists.
+secret,GET,/identity/mfa/login-enforcement/:name,typed,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Typed Identity MFA login-enforcement helper exists.
+secret,DELETE,/identity/mfa/login-enforcement/:name,typed,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Typed Identity MFA login-enforcement helper exists.
+secret,LIST,/identity/mfa/login-enforcement,typed,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Typed Identity MFA login-enforcement helper exists.
 system,GET,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
 system,POST,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
 system,DELETE,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
@@ -624,22 +624,22 @@ system,POST,/sys/storage/raft/bootstrap,typed,https://openbao.org/api-docs/syste
 system,GET,/sys/storage/raft/autopilot/state,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
 system,GET,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
 system,POST,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
-secret,POST,/identity/mfa/method/duo/:method_id,planned,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/method/duo/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/method/duo/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/method/duo,planned,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/okta/:method_id,planned,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/method/okta/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/method/okta/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/method/okta,planned,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/pingid/:method_id,planned,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/method/pingid/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/method/pingid/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/method/pingid,planned,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/totp/:method_id,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/method/totp/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/method/totp/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/method/totp,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/totp/generate,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/totp/admin-generate,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/totp/admin-destroy,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/duo/:method_id,typed,https://openbao.org/api-docs/secret/identity/mfa/duo/,Typed Identity MFA Duo helper exists with secret-aware provider credentials.
+secret,GET,/identity/mfa/method/duo/:id,typed,https://openbao.org/api-docs/secret/identity/mfa/duo/,Typed Identity MFA Duo helper exists with secret-aware provider credentials.
+secret,DELETE,/identity/mfa/method/duo/:id,typed,https://openbao.org/api-docs/secret/identity/mfa/duo/,Typed Identity MFA Duo helper exists with secret-aware provider credentials.
+secret,LIST,/identity/mfa/method/duo,typed,https://openbao.org/api-docs/secret/identity/mfa/duo/,Typed Identity MFA Duo helper exists with secret-aware provider credentials.
+secret,POST,/identity/mfa/method/okta/:method_id,typed,https://openbao.org/api-docs/secret/identity/mfa/okta/,Typed Identity MFA Okta helper exists with secret-aware provider credentials.
+secret,GET,/identity/mfa/method/okta/:id,typed,https://openbao.org/api-docs/secret/identity/mfa/okta/,Typed Identity MFA Okta helper exists with secret-aware provider credentials.
+secret,DELETE,/identity/mfa/method/okta/:id,typed,https://openbao.org/api-docs/secret/identity/mfa/okta/,Typed Identity MFA Okta helper exists with secret-aware provider credentials.
+secret,LIST,/identity/mfa/method/okta,typed,https://openbao.org/api-docs/secret/identity/mfa/okta/,Typed Identity MFA Okta helper exists with secret-aware provider credentials.
+secret,POST,/identity/mfa/method/pingid/:method_id,typed,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Typed Identity MFA PingID helper exists with secret-aware settings-file payload.
+secret,GET,/identity/mfa/method/pingid/:id,typed,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Typed Identity MFA PingID helper exists with secret-aware settings-file payload.
+secret,DELETE,/identity/mfa/method/pingid/:id,typed,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Typed Identity MFA PingID helper exists with secret-aware settings-file payload.
+secret,LIST,/identity/mfa/method/pingid,typed,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Typed Identity MFA PingID helper exists with secret-aware settings-file payload.
+secret,POST,/identity/mfa/method/totp/:method_id,typed,https://openbao.org/api-docs/secret/identity/mfa/totp/,Typed Identity MFA TOTP helper exists with secret-aware generated QR and URL output.
+secret,GET,/identity/mfa/method/totp/:id,typed,https://openbao.org/api-docs/secret/identity/mfa/totp/,Typed Identity MFA TOTP helper exists with secret-aware generated QR and URL output.
+secret,DELETE,/identity/mfa/method/totp/:id,typed,https://openbao.org/api-docs/secret/identity/mfa/totp/,Typed Identity MFA TOTP helper exists with secret-aware generated QR and URL output.
+secret,LIST,/identity/mfa/method/totp,typed,https://openbao.org/api-docs/secret/identity/mfa/totp/,Typed Identity MFA TOTP helper exists with secret-aware generated QR and URL output.
+secret,POST,/identity/mfa/method/totp/generate,typed,https://openbao.org/api-docs/secret/identity/mfa/totp/,Typed Identity MFA TOTP helper exists with secret-aware generated QR and URL output.
+secret,POST,/identity/mfa/method/totp/admin-generate,typed,https://openbao.org/api-docs/secret/identity/mfa/totp/,Typed Identity MFA TOTP helper exists with secret-aware generated QR and URL output.
+secret,POST,/identity/mfa/method/totp/admin-destroy,typed,https://openbao.org/api-docs/secret/identity/mfa/totp/,Typed Identity MFA TOTP helper exists with secret-aware generated QR and URL output.

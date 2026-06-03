@@ -4844,6 +4844,346 @@ async fn identity_oidc_provider_helpers_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn identity_mfa_helpers_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..23 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/mfa/method/duo/duo-id HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""method_name":"duo-main""#));
+                    assert!(request.contains(r#""secret_key":"#));
+                    assert!(request.contains(r#""integration_key":"#));
+                    "{}"
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/identity/mfa/method/duo/duo-id HTTP/1.1"));
+                    r#"{"data":{"id":"duo-id","method_name":"duo-main","secret_key":"fixture-a","integration_key":"fixture-b","api_hostname":"api.example.com","type":"duo","use_passcode":true}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("LIST /v1/identity/mfa/method/duo HTTP/1.1"));
+                    r#"{"data":{"keys":["duo-id"]}}"#
+                }
+                3 => {
+                    assert!(
+                        request.starts_with("DELETE /v1/identity/mfa/method/duo/duo-id HTTP/1.1")
+                    );
+                    "{}"
+                }
+                4 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/mfa/method/okta/okta-id HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""method_name":"okta-main""#));
+                    assert!(request.contains(r#""api_token":"#));
+                    "{}"
+                }
+                5 => {
+                    assert!(
+                        request.starts_with("GET /v1/identity/mfa/method/okta/okta-id HTTP/1.1")
+                    );
+                    r#"{"data":{"id":"okta-id","name":"okta-main","org_name":"dev-org","api_token":"fixture-c","type":"okta"}}"#
+                }
+                6 => {
+                    assert!(request.starts_with("LIST /v1/identity/mfa/method/okta HTTP/1.1"));
+                    r#"{"data":{"keys":["okta-id"]}}"#
+                }
+                7 => {
+                    assert!(
+                        request.starts_with("DELETE /v1/identity/mfa/method/okta/okta-id HTTP/1.1")
+                    );
+                    "{}"
+                }
+                8 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/mfa/method/pingid/ping-id HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""method_name":"ping-main""#));
+                    assert!(request.contains(r#""settings_file_base64":"#));
+                    "{}"
+                }
+                9 => {
+                    assert!(
+                        request.starts_with("GET /v1/identity/mfa/method/pingid/ping-id HTTP/1.1")
+                    );
+                    r#"{"data":{"id":"ping-id","name":"ping-main","idp_url":"https://idp.example.com","admin_url":"https://admin.example.com","authenticator_url":"https://auth.example.com","org_alias":"org","use_signature":true,"type":"pingid"}}"#
+                }
+                10 => {
+                    assert!(request.starts_with("LIST /v1/identity/mfa/method/pingid HTTP/1.1"));
+                    r#"{"data":{"keys":["ping-id"]}}"#
+                }
+                11 => {
+                    assert!(
+                        request
+                            .starts_with("DELETE /v1/identity/mfa/method/pingid/ping-id HTTP/1.1")
+                    );
+                    "{}"
+                }
+                12 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/mfa/method/totp/totp-id HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""method_name":"totp-main""#));
+                    assert!(request.contains(r#""issuer":"openbao""#));
+                    "{}"
+                }
+                13 => {
+                    assert!(
+                        request.starts_with("GET /v1/identity/mfa/method/totp/totp-id HTTP/1.1")
+                    );
+                    r#"{"data":{"id":"totp-id","name":"totp-main","issuer":"openbao","period":30,"digits":6,"type":"totp"}}"#
+                }
+                14 => {
+                    assert!(request.starts_with("LIST /v1/identity/mfa/method/totp HTTP/1.1"));
+                    r#"{"data":{"keys":["totp-id"]}}"#
+                }
+                15 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/mfa/method/totp/generate HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""method_id":"totp-id""#));
+                    r#"{"data":{"barcode":"fixture-d","url":"otpauth://totp/example"}}"#
+                }
+                16 => {
+                    assert!(
+                        request.starts_with(
+                            "POST /v1/identity/mfa/method/totp/admin-generate HTTP/1.1"
+                        )
+                    );
+                    assert!(request.contains(r#""entity_id":"entity-id""#));
+                    r#"{"data":{"barcode":"fixture-e","url":"otpauth://totp/admin"}}"#
+                }
+                17 => {
+                    assert!(
+                        request.starts_with(
+                            "POST /v1/identity/mfa/method/totp/admin-destroy HTTP/1.1"
+                        )
+                    );
+                    assert!(request.contains(r#""entity_id":"entity-id""#));
+                    "{}"
+                }
+                18 => {
+                    assert!(
+                        request.starts_with("DELETE /v1/identity/mfa/method/totp/totp-id HTTP/1.1")
+                    );
+                    "{}"
+                }
+                19 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/mfa/login-enforcement/app HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""mfa_method_ids":["totp-id"]"#));
+                    assert!(request.contains(r#""auth_method_accessors":["auth-userpass"]"#));
+                    "{}"
+                }
+                20 => {
+                    assert!(
+                        request.starts_with("GET /v1/identity/mfa/login-enforcement/app HTTP/1.1")
+                    );
+                    r#"{"data":{"id":"enforcement-id","name":"app","namespace_id":"root","mfa_method_ids":["totp-id"],"auth_method_accessors":["auth-userpass"],"auth_method_types":[],"identity_group_ids":[],"identity_entity_ids":[]}}"#
+                }
+                21 => {
+                    assert!(
+                        request.starts_with("LIST /v1/identity/mfa/login-enforcement HTTP/1.1")
+                    );
+                    r#"{"data":{"keys":["app"]}}"#
+                }
+                22 => {
+                    assert!(
+                        request
+                            .starts_with("DELETE /v1/identity/mfa/login-enforcement/app HTTP/1.1")
+                    );
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["root-", "token"]));
+    let identity = client.identity().unwrap_or_else(|error| panic!("{error}"));
+    use openbao::secrets::identity::{
+        IdentityMfaDuoMethodRequest, IdentityMfaLoginEnforcementRequest,
+        IdentityMfaOktaMethodRequest, IdentityMfaPingIdMethodRequest, IdentityMfaTotpAdminRequest,
+        IdentityMfaTotpGenerateRequest, IdentityMfaTotpMethodRequest,
+    };
+
+    identity
+        .write_mfa_duo_method(
+            "duo-id",
+            &IdentityMfaDuoMethodRequest::new(
+                "duo-main",
+                test_secret(&["fixture-", "duo-a"]),
+                test_secret(&["fixture-", "duo-b"]),
+                "api.example.com",
+            )
+            .with_use_passcode(true),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let duo = identity
+        .read_mfa_duo_method("duo-id")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(duo.method_name.as_deref(), Some("duo-main"));
+    assert_eq!(
+        identity
+            .list_mfa_duo_methods()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .keys,
+        ["duo-id"]
+    );
+    identity
+        .delete_mfa_duo_method("duo-id")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    identity
+        .write_mfa_okta_method(
+            "okta-id",
+            &IdentityMfaOktaMethodRequest::new(
+                "okta-main",
+                "dev-org",
+                test_secret(&["fixture-", "okta"]),
+            ),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let okta = identity
+        .read_mfa_okta_method("okta-id")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(okta.method_name.as_deref(), Some("okta-main"));
+    assert_eq!(
+        identity
+            .list_mfa_okta_methods()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .keys,
+        ["okta-id"]
+    );
+    identity
+        .delete_mfa_okta_method("okta-id")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    identity
+        .write_mfa_pingid_method(
+            "ping-id",
+            &IdentityMfaPingIdMethodRequest::new("ping-main", test_secret(&["fixture-", "ping"])),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let ping = identity
+        .read_mfa_pingid_method("ping-id")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(ping.method_name.as_deref(), Some("ping-main"));
+    assert_eq!(
+        identity
+            .list_mfa_pingid_methods()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .keys,
+        ["ping-id"]
+    );
+    identity
+        .delete_mfa_pingid_method("ping-id")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    identity
+        .write_mfa_totp_method(
+            "totp-id",
+            &IdentityMfaTotpMethodRequest::new("totp-main").with_issuer("openbao"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let totp = identity
+        .read_mfa_totp_method("totp-id")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(totp.method_name.as_deref(), Some("totp-main"));
+    assert_eq!(
+        identity
+            .list_mfa_totp_methods()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .keys,
+        ["totp-id"]
+    );
+    let generated = identity
+        .generate_mfa_totp_secret(&IdentityMfaTotpGenerateRequest::new("totp-id"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(format!("{generated:?}").contains("<redacted>"));
+    let admin_request = IdentityMfaTotpAdminRequest::new("totp-id", "entity-id");
+    identity
+        .admin_generate_mfa_totp_secret(&admin_request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    identity
+        .admin_destroy_mfa_totp_secret(&admin_request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    identity
+        .delete_mfa_totp_method("totp-id")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    identity
+        .write_mfa_login_enforcement(
+            "app",
+            &IdentityMfaLoginEnforcementRequest::new()
+                .with_mfa_method_id("totp-id")
+                .with_auth_method_accessor("auth-userpass"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let enforcement = identity
+        .read_mfa_login_enforcement("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(enforcement.mfa_method_ids, ["totp-id"]);
+    assert_eq!(
+        identity
+            .list_mfa_login_enforcements()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .keys,
+        ["app"]
+    );
+    identity
+        .delete_mfa_login_enforcement("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

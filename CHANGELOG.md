@@ -16,18 +16,23 @@ All notable changes to this project are documented here.
   browser OIDC protocol flows outside the SDK boundary.
 - Added `Sys::validate_mfa` for `/sys/mfa/validate`, completing the typed
   second step for MFA-enforced login flows.
+- Added Identity MFA Duo, Okta, PingID, and TOTP method helpers, including TOTP
+  secret generation/admin actions and MFA login-enforcement CRUD/list helpers.
 - Added secret-aware Identity OIDC token and introspection request types with
   redacted `Debug` output.
 - Added secret-aware Identity OIDC client response handling so returned client
   secrets are stored as `SecretString` and redacted from `Debug`.
 - Added secret-aware MFA validation request and auth response handling so
   passcodes, returned client tokens, and accessors are redacted from `Debug`.
+- Added secret-aware Identity MFA provider credential and generated TOTP secret
+  handling so Duo/Okta/PingID credentials and TOTP QR/URL outputs are redacted
+  from `Debug`.
 - Added bounded deserialization for Identity OIDC signing-key lists, role lists,
   provider/client metadata maps, nullable discovery metadata lists, and JWKS key
   arrays.
 - Added mock HTTP coverage for the documented Identity OIDC token backend paths.
-- Added mock HTTP coverage for the documented Identity OIDC provider admin
-  paths.
+- Added mock HTTP coverage for the documented Identity OIDC provider admin and
+  Identity MFA management paths.
 
 ## 0.9.0 - 2026-06-03
 

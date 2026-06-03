@@ -73,11 +73,11 @@ The `0.10.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `644`;
-- strict typed coverage: `503/644` (`78.1%`);
-- typed plus partial coverage: `504/644` (`78.3%`);
-- addressed by typed, partial, raw, external, or rejected policy: `549/644`
-  (`85.2%`);
-- planned implementation rows before `1.0.0`: `95`;
+- strict typed coverage: `526/644` (`81.7%`);
+- typed plus partial coverage: `527/644` (`81.8%`);
+- addressed by typed, partial, raw, external, or rejected policy: `572/644`
+  (`88.8%`);
+- planned implementation rows before `1.0.0`: `72`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -239,8 +239,9 @@ into this SDK.
   CRUD/list, signed token generation, token introspection, discovery metadata,
   and default JWKS reads are implemented in `0.10.0`. Identity OIDC provider,
   scope, client, assignment, named-provider discovery, and named-provider JWKS
-  helpers are implemented in `0.10.0`. MFA method management and MFA login
-  enforcement remain planned for `0.10.0`;
+  helpers are implemented in `0.10.0`. MFA method management, MFA TOTP
+  generation/admin actions, and MFA login enforcement helpers are implemented
+  in `0.10.0`;
   named-provider OIDC browser protocol flows remain external. LDAP config,
   root rotation, static roles/credentials, dynamic roles/credentials, and
   library check-out/check-in helpers are implemented.
