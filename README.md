@@ -136,9 +136,12 @@ Implemented now:
 
 Planned next:
 
-- `0.9.0`: public API audit, migration guides, retry/backoff and pagination
-  decisions, token auto-renewal and lease-tracker decisions, remaining
-  bootstrap-convergence scope, and fuzz/fixture hardening before `1.0`.
+- `0.9.0`: public API audit, migration guides, opt-in retry/backoff,
+  non-secret pagination ergonomics, PKI role and Identity entity/group
+  bootstrap convergence, fuzz/fixture hardening, quantum-readiness design
+  notes, and explicit deferral notes for background renewal/tracking,
+  tracing, seal watchers, HTTP/2 knobs, and application-side secret wrappers
+  before `1.0`.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -312,11 +315,11 @@ openbao = { version = "0.9", features = ["time"] }
 | Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
-| Identity | Yes | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, and entity merge. Identity OIDC provider/MFA management remains planned. |
+| Identity | Yes | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, and entity merge. Identity OIDC provider/MFA management is deferred to `1.0` design because policy impact is broad. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, and optional raw-byte helpers. |
-| PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, tidy, tidy status, and tidy cancel are implemented. Root rotate/replace and named issuer issue/sign flows remain planned. |
+| PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB/directory URL, CRL rotate, tidy, tidy status, and tidy cancel are implemented. Root rotate/replace and named issuer issue/sign flows require `0.9` documentation review before implementation or rejection. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
 | Custom plugin patterns | Yes | Documented wrapper pattern for typed plugin-specific APIs over `Client::request_json`. |

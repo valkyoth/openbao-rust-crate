@@ -9,6 +9,9 @@ All notable changes to this project are documented here.
 - Started the `0.9.0` API stabilization candidate line.
 - Added API stabilization audit documentation for public API review,
   near-`1.0` design decisions, and deferred work tracking.
+- Added a known-limitations decision register that reviews historical release
+  limitations and assigns each to resolved, `0.9.0` implementation,
+  documentation review, intentional deferral, or permanent external boundary.
 - Added migration guidance for users upgrading from earlier `openbao` releases,
   `vaultrs`, or bespoke `reqwest` OpenBao/Vault wrappers.
 - Added a `0.9.0` release-note skeleton and release gate script.
@@ -19,6 +22,9 @@ All notable changes to this project are documented here.
   high-risk helpers so new APIs do not accidentally overpromise around
   auto-renewal, lease tracking, retries, pagination, tracing, quantum-ready
   posture, or production bootstrap convergence.
+- Background token auto-renewal and background lease tracking are explicitly
+  deferred until their secret lifetime and runtime policy can be designed
+  without hidden tasks.
 
 ## 0.8.0 - 2026-06-02
 

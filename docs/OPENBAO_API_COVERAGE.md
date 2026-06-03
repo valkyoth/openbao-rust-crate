@@ -84,8 +84,8 @@ Sources:
   bootstrap for common service setup.
 - Posture helpers:
   best-effort FIPS-oriented reporting is implemented for crate-visible Transit
-  and seal-assumption choices. A future quantum-readiness profile remains
-  planned once OpenBao exposes stable primitives.
+  and seal-assumption choices. A `0.9.0` quantum-readiness design note must
+  track OpenBao support without claiming current post-quantum safety.
 - Shared list ergonomics:
   common string list response structs implement `ListEntries`; secret accessor
   lists remain separate secret-aware types.
@@ -185,9 +185,10 @@ Support plan:
   Identity entity, group, entity-alias, and group-alias lifecycle helpers are
   implemented. Entity/group lookup and entity merge helpers are implemented in
   `0.8.0`. Identity OIDC provider/key/role/token management, MFA method
-  management, and MFA login enforcement remain planned. LDAP config, root
-  rotation, static roles/credentials, dynamic roles/credentials, and library
-  check-out/check-in helpers are implemented.
+  management, and MFA login enforcement are deferred to `1.0` design because
+  policy impact is broad. LDAP config, root rotation, static roles/credentials,
+  dynamic roles/credentials, and library check-out/check-in helpers are
+  implemented.
 
 ## System Backend
 

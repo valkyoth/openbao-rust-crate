@@ -250,26 +250,25 @@ Stop condition:
 
 - API stability audit document exists and is maintained for every remaining
   near-`1.0` decision;
+- historical release-note `Known Limitations` have current decisions recorded;
 - public API audit completed;
 - feature matrix frozen for `1.0`;
 - migration guide from `0.1` through `0.9` exists and is completed;
 - migration guide from `vaultrs` and bespoke `reqwest` OpenBao wrappers exists
   and is completed;
-- token auto-renewal and lease-tracker designs are implemented or explicitly
-  deferred with API notes;
-- retry policy with exponential backoff is implemented or explicitly deferred
-  with API notes;
-- a shared paginated-list abstraction is implemented or explicitly deferred;
+- background token auto-renewal and lease tracking are deferred with API notes;
+- explicit retry policy with exponential backoff is implemented;
+- a shared non-secret paginated-list abstraction is implemented;
 - admin bootstrap convergence for PKI roles and Identity entities/groups is
-  implemented or explicitly deferred;
+  implemented;
 - Identity OIDC provider/key/role/token management, MFA method management, and
   MFA login enforcement are scoped for `1.0` or deferred with documented
   reasons;
 - PKI root rotate/replace and named issuer issue/sign lifecycle helpers are
   scoped for `1.0` or deferred with documented reasons;
 - optional tracing/OpenTelemetry, seal-status watcher/back-pressure, HTTP/2
-  transport configuration, public response serde fixtures, and application-side
-  secret-struct wrappers have design decisions recorded;
+  transport configuration, and application-side secret-struct wrappers have
+  deferral decisions recorded; public response serde fixtures are added;
 - quantum-readiness design note that tracks OpenBao support, avoids premature
   API promises, and defines how hybrid/post-quantum profiles will be exposed
   once stable upstream primitives exist;
