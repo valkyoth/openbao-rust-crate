@@ -416,6 +416,40 @@ async fn main() -> Result<()> {
 }
 ```
 
+Retry an idempotent raw request with explicit exponential backoff:
+
+```rust,no_run
+use std::time::Duration;
+
+use openbao::{Client, Method, Result, RetryPolicy};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let client = Client::from_env_with_token()?;
+    let policy = RetryPolicy::exponential(
+        3,
+        Duration::from_millis(100),
+        Duration::from_secs(2),
+    )?;
+
+    let health: openbao::sys::Health = client
+        .request_json_with_retry(
+            Method::GET,
+            "sys/health",
+            Option::<&openbao::Empty>::None,
+            policy,
+            tokio::time::sleep,
+        )
+        .await?;
+
+    println!("openbao version: {}", health.version);
+    Ok(())
+}
+```
+
+Retry is never global. Use it only when the call is read-only or otherwise
+idempotent for your application.
+
 Configure a stricter client with a namespace and root-only trust store:
 
 Use `only_root_certificates` when you want to trust only your internal OpenBao

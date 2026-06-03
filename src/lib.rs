@@ -96,7 +96,7 @@ pub mod sys;
 
 pub use client::{
     Authenticated, Client, ClientBuilder, HeaderMode, HttpPolicy, OpenBao, OpenBaoConfig,
-    RootCertificateMode, SharedClient, Unauthenticated,
+    RetryPolicy, RootCertificateMode, SharedClient, Unauthenticated,
 };
 pub use duration::{RenewalHint, duration_to_bao_string};
 pub use error::{Error, Result};

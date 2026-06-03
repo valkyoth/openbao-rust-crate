@@ -60,6 +60,8 @@ All notable changes to this project are documented here.
 - Added operator-gated PKI default root deletion via `Pki::delete_root` and
   `PkiRootDeletion::confirm()` so `DELETE /pki/root` is available only through
   an explicit destructive-operation call site.
+- Added `RetryPolicy` and `Client::request_json_with_retry` for explicit,
+  caller-approved exponential backoff on temporary OpenBao failures.
 - Added explicit `planned` and `rejected` endpoint-matrix statuses and recorded
   system backend decisions: config-ui, sys/monitor streaming, internal router
   inspection, internal counters, and internal request inspection are rejected
@@ -92,6 +94,8 @@ All notable changes to this project are documented here.
   the supported pattern.
 - Runtime HTTP/2 transport knobs are rejected because ALPN handles negotiation;
   HTTP/3 is rejected for stable scope.
+- Retry/backoff remains opt-in and call-site explicit; default typed helpers
+  stay single-shot so non-idempotent writes are not retried by accident.
 - Full ACME account/order/authorization/challenge flows remain external to the
   crate; typed ACME config, EAB provisioning, and directory URL helpers are the
   supported handoff to dedicated ACME clients.

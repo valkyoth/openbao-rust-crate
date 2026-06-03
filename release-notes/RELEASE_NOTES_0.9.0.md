@@ -25,13 +25,13 @@
   custom plugin wrapper building blocks, optional `tracing` instrumentation,
   optional HTTP/2 transport support, token `create-orphan` and
   `renew-accessor` helpers, AppRole delegated role-property helpers, and the
-  operator-gated PKI default root deletion helper; the `0.9.0` release gate
-  script is also present.
+  operator-gated PKI default root deletion helper, plus explicit
+  `RetryPolicy`/`request_json_with_retry` exponential-backoff ergonomics; the
+  `0.9.0` release gate script is also present.
 - Remaining `0.9.0` planned work: public API audit, migration guide
-  completion, opt-in retry/backoff, non-secret pagination ergonomics, PKI role
-  and Identity entity/group bootstrap convergence, PKI named-issuer scope
-  review, response fixtures, fuzz targets, and quantum-readiness posture
-  design.
+  completion, non-secret pagination ergonomics, PKI role and Identity
+  entity/group bootstrap convergence, PKI named-issuer scope review, response
+  fixtures, fuzz targets, and quantum-readiness posture design.
 - Finalization rule: the OpenBao `2.5.x` endpoint matrix expanded the
   pre-`1.0` plan through `0.15.0`. `0.9.0` handles stabilization foundations;
   `0.10.0` through `0.14.0` handle Identity/auth, Transit, PKI, and System
@@ -44,8 +44,9 @@
 - The `0.9.0` line is the API stabilization candidate. New public API should be
   added only when it is expected to survive into `1.0` or when the release
   notes clearly document why it remains experimental.
-- Retry helpers must avoid retrying non-idempotent writes by default and must
-  not hide token or lease revocation failures.
+- Retry helpers are explicit and call-site scoped. Default typed helpers remain
+  single-shot, and callers must not use retry policies for non-idempotent writes
+  unless the application owns the duplicate-operation risk.
 - Token and lease renewal helpers avoid background tasks that silently keep
   secret material alive longer than caller-owned handles require.
 - Pagination helpers must preserve bounded allocation behavior and keep secret

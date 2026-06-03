@@ -8,6 +8,7 @@ use std::{
     io::{Read, Write},
     net::TcpListener,
     thread,
+    time::Duration,
 };
 #[cfg(feature = "operator-ops")]
 use std::{
@@ -15,7 +16,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use openbao::{Client, Error, OpenBaoConfig, sys::DevBootstrapOptions};
+use openbao::{Client, Error, Method, OpenBaoConfig, RetryPolicy, sys::DevBootstrapOptions};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
@@ -177,6 +178,139 @@ async fn transport_errors_do_not_display_request_url() {
     let message = error.to_string();
     assert!(!message.contains(&addr.to_string()));
     assert!(!message.contains("/v1/secret/data/app/config"));
+}
+
+#[tokio::test]
+async fn explicit_retry_policy_retries_temporary_api_errors() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for (index, status) in ["503 Service Unavailable", "429 Too Many Requests", "200 OK"]
+            .into_iter()
+            .enumerate()
+        {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+            let body = if index == 2 {
+                r#"{"initialized":true,"sealed":false,"standby":false,"version":"2.5.4"}"#
+            } else {
+                r#"{"errors":["temporary"]}"#
+            };
+            let response = format!(
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+    let policy = RetryPolicy::exponential(3, Duration::from_millis(5), Duration::from_millis(20))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let mut delays = Vec::new();
+
+    let health: openbao::sys::Health = client
+        .request_json_with_retry(
+            Method::GET,
+            "sys/health",
+            Option::<&openbao::Empty>::None,
+            policy,
+            |delay| {
+                delays.push(delay);
+                async {}
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert!(health.initialized);
+    assert!(!health.sealed);
+    assert_eq!(
+        delays,
+        vec![Duration::from_millis(5), Duration::from_millis(10)]
+    );
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn explicit_retry_policy_does_not_retry_non_temporary_api_errors() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        let body = r#"{"errors":["permission denied"]}"#;
+        let response = format!(
+            "HTTP/1.1 403 Forbidden\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+    let policy = RetryPolicy::exponential(3, Duration::from_millis(5), Duration::from_millis(20))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let mut delay_count = 0;
+
+    let error = match client
+        .request_json_with_retry::<openbao::sys::Health, openbao::Empty, _, _>(
+            Method::GET,
+            "sys/health",
+            None,
+            policy,
+            |_delay| {
+                delay_count += 1;
+                async {}
+            },
+        )
+        .await
+    {
+        Ok(_) => panic!("forbidden response unexpectedly succeeded"),
+        Err(error) => error,
+    };
+
+    assert!(error.is_forbidden());
+    assert_eq!(delay_count, 0);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[test]
+fn retry_policy_validates_bounds() {
+    assert!(
+        RetryPolicy::exponential(0, Duration::from_millis(1), Duration::from_millis(1)).is_err()
+    );
+    assert!(
+        RetryPolicy::exponential(9, Duration::from_millis(1), Duration::from_millis(1)).is_err()
+    );
+    assert!(RetryPolicy::exponential(2, Duration::ZERO, Duration::from_millis(1)).is_err());
+    assert!(
+        RetryPolicy::exponential(2, Duration::from_millis(2), Duration::from_millis(1)).is_err()
+    );
+    let policy = RetryPolicy::exponential(2, Duration::from_millis(1), Duration::from_millis(2))
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(policy.max_attempts(), 2);
+    assert_eq!(policy.initial_delay(), Duration::from_millis(1));
+    assert_eq!(policy.max_delay(), Duration::from_millis(2));
 }
 
 #[tokio::test]

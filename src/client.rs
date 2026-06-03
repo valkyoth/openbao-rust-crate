@@ -22,6 +22,8 @@ const MAX_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
 const MIN_RESPONSE_BYTES: usize = 1024;
 const MAX_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_CONNECT_TIMEOUT: Duration = Duration::from_secs(300);
+const MAX_RETRY_ATTEMPTS: usize = 8;
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
 const ADDRESS_ENV_KEYS: &[&str] = &["OPENBAO_ADDR", "BAO_ADDR", "VAULT_ADDR"];
 const TOKEN_ENV_KEYS: &[&str] = &["OPENBAO_TOKEN", "BAO_TOKEN", "VAULT_TOKEN"];
 const NAMESPACE_ENV_KEYS: &[&str] = &["OPENBAO_NAMESPACE", "BAO_NAMESPACE", "VAULT_NAMESPACE"];
@@ -80,6 +82,90 @@ pub enum RootCertificateMode {
     MergeWithSystem,
     /// Trust only the explicitly configured roots.
     OnlyConfigured,
+}
+
+/// Explicit retry policy for caller-approved idempotent requests.
+///
+/// OpenBao requests are single-shot by default. Use this policy only at call
+/// sites where the application has decided retrying is safe, such as
+/// read-only requests, idempotent bootstrap convergence, or startup probes.
+/// The retry decision is limited to [`Error::is_temporary`]: transport
+/// failures, rate limiting, service unavailability, and server errors.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RetryPolicy {
+    max_attempts: usize,
+    initial_delay: Duration,
+    max_delay: Duration,
+}
+
+impl RetryPolicy {
+    /// Creates an exponential backoff policy.
+    ///
+    /// `max_attempts` includes the first request. A value of `1` is valid and
+    /// means no retry. Delays are capped at `max_delay` and both durations must
+    /// be non-zero.
+    pub fn exponential(
+        max_attempts: usize,
+        initial_delay: Duration,
+        max_delay: Duration,
+    ) -> Result<Self> {
+        if max_attempts == 0 {
+            return Err(Error::InvalidParameter(
+                "retry attempts must be greater than zero".into(),
+            ));
+        }
+        if max_attempts > MAX_RETRY_ATTEMPTS {
+            return Err(Error::InvalidParameter(
+                "retry attempts exceed maximum allowed value".into(),
+            ));
+        }
+        if initial_delay.is_zero() || max_delay.is_zero() {
+            return Err(Error::InvalidParameter(
+                "retry delays must be greater than zero".into(),
+            ));
+        }
+        if initial_delay > MAX_RETRY_DELAY || max_delay > MAX_RETRY_DELAY {
+            return Err(Error::InvalidParameter(
+                "retry delays exceed maximum allowed value".into(),
+            ));
+        }
+        if initial_delay > max_delay {
+            return Err(Error::InvalidParameter(
+                "initial retry delay must not exceed maximum retry delay".into(),
+            ));
+        }
+        Ok(Self {
+            max_attempts,
+            initial_delay,
+            max_delay,
+        })
+    }
+
+    /// Maximum number of attempts, including the first request.
+    #[must_use]
+    pub fn max_attempts(&self) -> usize {
+        self.max_attempts
+    }
+
+    /// Initial delay before the first retry.
+    #[must_use]
+    pub fn initial_delay(&self) -> Duration {
+        self.initial_delay
+    }
+
+    /// Maximum delay between retry attempts.
+    #[must_use]
+    pub fn max_delay(&self) -> Duration {
+        self.max_delay
+    }
+
+    fn delay_for_retry(&self, retry_index: usize) -> Duration {
+        let shift = retry_index.min(u32::BITS as usize - 1) as u32;
+        let multiplier = 1_u32.checked_shl(shift).unwrap_or(u32::MAX);
+        self.initial_delay
+            .saturating_mul(multiplier)
+            .min(self.max_delay)
+    }
 }
 
 /// Validated OpenBao client configuration.
@@ -524,6 +610,46 @@ impl<State> Client<State> {
             &[StatusCode::OK, StatusCode::NO_CONTENT],
         )
         .await
+    }
+
+    /// Sends a raw JSON request with caller-approved exponential retry.
+    ///
+    /// Normal crate requests are single-shot. This helper retries only when
+    /// the returned [`Error`] is temporary and only when the caller explicitly
+    /// supplies a [`RetryPolicy`] and async delay function. Use it for
+    /// read-only or otherwise idempotent calls; do not use it for
+    /// non-idempotent writes unless the application owns and accepts the
+    /// duplicate-operation risk.
+    ///
+    /// The delay function keeps this API runtime-neutral. For Tokio callers,
+    /// pass `tokio::time::sleep`.
+    pub async fn request_json_with_retry<T, B, F, Fut>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        policy: RetryPolicy,
+        mut delay: F,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+        F: FnMut(Duration) -> Fut,
+        Fut: core::future::Future<Output = ()>,
+    {
+        let mut attempt = 1;
+        let mut retry_index = 0;
+        loop {
+            match self.request_json(method.clone(), path, body).await {
+                Ok(response) => return Ok(response),
+                Err(error) if attempt < policy.max_attempts && error.is_temporary() => {
+                    delay(policy.delay_for_retry(retry_index)).await;
+                    attempt += 1;
+                    retry_index += 1;
+                }
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     pub(crate) async fn request_json_accepting<T, B>(
