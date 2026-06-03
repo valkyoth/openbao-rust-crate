@@ -113,9 +113,12 @@
   rotation, and cross-sign rows. Unauthenticated public CA/certificate/CRL
   reads and OCSP responder endpoints are external protocol/public-distribution
   boundaries.
-- Implement or decide in `0.14.0`: system generate-root/recovery-token,
-  decode-token, password policies, monitor/internal rows, resultant ACL, and
-  legacy recovery-key rekey.
+- Implement in `0.14.0`: system generate-root/recovery-token, decode-token,
+  legacy recovery-key rekey behind operator gates; password policy CRUD/list/
+  generate and resultant ACL without gates. Rejected for stable scope:
+  sys/config/ui, sys/monitor streaming, and internal router inspection.
+  In-flight request, internal counters, and internal request inspection still
+  need final `0.14.0` decisions.
 - Decide before `0.15.0`: seal-status watchers, application-side secret-struct
   wrappers, and advanced ACL policy-builder fields. Runtime HTTP/2 transport
   knobs are rejected; use the non-default `http2` feature for TLS ALPN HTTP/2

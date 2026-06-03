@@ -376,7 +376,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, count, tidy, and `RenewalHint` timing helpers for caller-owned renewal loops. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate, PKI root deletion | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. PKI root deletion also requires `PkiRootDeletion::confirm()` at the call site. |
-| Storage | Partial | Integrated Storage Raft JSON, capped snapshot helpers, and operator-gated raw storage helpers are implemented; unstable internal inspect endpoints remain deferred. |
+| Remaining system rows | Partial | Password policies, root/recovery token ceremonies, resultant ACL, and legacy recovery-key rekey are planned before `1.0.0`; config-ui, monitor streaming, and internal router inspection are rejected for stable scope. |
 
 ## Examples
 

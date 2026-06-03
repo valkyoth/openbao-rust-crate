@@ -3,7 +3,7 @@
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
 `643` documented endpoint rows, `469` strict typed or operator-gated rows, and
-`140` rows still needing an implementation, rejection, raw-wrapper policy, or
+`131` rows still needing an implementation, rejection, raw-wrapper policy, or
 external-client policy decision. Because there is no rush to force stability,
 the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
 deliberately.
@@ -453,15 +453,21 @@ Publishable value:
 
 Stop condition:
 
-- system config UI header helpers are implemented or rejected;
-- generate-root and generate-recovery-token ceremony helpers are implemented
-  behind explicit operator gates or rejected in favor of OpenBao CLI/operator
-  process documentation;
-- decode-token and password policy CRUD/generate helpers are implemented or
-  rejected;
-- monitor streaming, in-flight request, internal counters, internal inspect,
-  resultant ACL, and legacy recovery-key rekey rows are implemented, rejected,
-  or classified as permanent internal/streaming/operator boundaries;
+- sys/config/ui header rows are rejected for stable scope because OpenBao no
+  longer ships the embedded UI and the residual header use case is narrow
+  server administration;
+- generate-root, generate-recovery-token, decode-token, and legacy
+  recovery-key rekey helpers are implemented behind `operator-ops` plus
+  `operator-ops-acknowledged`;
+- password policy CRUD/list/generate helpers are implemented without a feature
+  gate, and generated passwords return `SecretString`;
+- resultant ACL is implemented without a feature gate, with a documented
+  internal-endpoint stability caveat and conservative capability maps;
+- sys/monitor streaming and internal router inspection are rejected for stable
+  scope; monitor needs a deliberate streaming API design, and router
+  inspection has no stable OpenBao compatibility contract;
+- in-flight request, internal counters, and internal request inspection rows
+  receive final implementation or rejection decisions;
 - all system endpoint decisions are reflected in the matrix and support table;
 - operator-risk additions preserve the existing `operator-ops` plus
   `operator-ops-acknowledged` pattern.

@@ -349,23 +349,61 @@ def classify_system(page: str, path: str) -> tuple[str, str]:
             "Implement in 0.10.0; this completes MFA-enforced login flows.",
         )
 
+    if page == "/api-docs/system/config-ui/":
+        return (
+            "rejected",
+            "Rejected for stable scope: OpenBao removed the embedded UI and the remaining header configuration use case is narrow server administration.",
+        )
+
+    if page == "/api-docs/system/monitor/":
+        return (
+            "rejected",
+            "Rejected for current stable scope: sys/monitor is a streaming log endpoint and needs a deliberate streaming API design outside the crate's single-response model.",
+        )
+
+    if page == "/api-docs/system/inspect/router/":
+        return (
+            "rejected",
+            "Rejected: router inspection is an internal OpenBao implementation/debug endpoint with no backwards-compatibility guarantee.",
+        )
+
+    if page == "/api-docs/system/inspect/request/":
+        return (
+            "decision",
+            "Internal request inspection still needs a final 0.14.0 implementation or rejection decision.",
+        )
+
+    if page in (
+        "/api-docs/system/generate-root/",
+        "/api-docs/system/generate-recovery-token/",
+        "/api-docs/system/decode-token/",
+        "/api-docs/system/rekey-recovery-key/",
+    ):
+        return (
+            "decision",
+            "Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.",
+        )
+
+    if page == "/api-docs/system/policies-password/":
+        return (
+            "decision",
+            "Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.",
+        )
+
+    if page == "/api-docs/system/internal-ui-resultant-acl/":
+        return (
+            "decision",
+            "Implement in 0.14.0 with an internal-endpoint stability caveat and conservative capability maps.",
+        )
+
     if any(
         segment in page
         for segment in (
-            "generate-root",
-            "generate-recovery-token",
-            "decode-token",
             "in-flight-req",
             "internal-counters",
-            "inspect",
-            "internal-ui-resultant-acl",
-            "monitor",
-            "policies-password",
-            "config-ui",
-            "rekey-recovery-key",
         )
     ):
-        return ("decision", "System endpoint is planned for 0.14.0 decision or explicit rejection.")
+        return ("decision", "System endpoint still needs a final 0.14.0 implement/reject decision.")
 
     gated_pages = (
         "raw",
@@ -434,7 +472,12 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
 
     covered = by_status["typed"] + by_status["typed-gated"]
     covered_or_partial = covered + by_status["partial"]
-    addressed = covered_or_partial + by_status["raw"] + by_status["external"]
+    addressed = (
+        covered_or_partial
+        + by_status["raw"]
+        + by_status["external"]
+        + by_status["rejected"]
+    )
     generated = dt.date.today().isoformat()
 
     lines = [
@@ -457,6 +500,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
         "- `partial`: a typed helper exists, but the documented row differs in method, variant, or exact endpoint shape.",
         "- `raw`: the crate intentionally relies on `Client::request_json` for this row.",
         "- `external`: the workflow is intentionally delegated to an external protocol/client.",
+        "- `rejected`: the endpoint is intentionally not covered by this SDK.",
         "- `decision`: the row needs implementation, rejection, raw-wrapper policy, or external-client policy before `1.0.0`.",
         "",
         "## Summary",
@@ -464,13 +508,13 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
         f"- Total documented endpoint rows: `{total}`",
         f"- Strict typed coverage: `{covered}/{total}` ({percent(covered, total)})",
         f"- Typed plus partial coverage: `{covered_or_partial}/{total}` ({percent(covered_or_partial, total)})",
-        f"- Addressed by typed, partial, raw, or external policy: `{addressed}/{total}` ({percent(addressed, total)})",
+        f"- Addressed by typed, partial, raw, external, or rejected policy: `{addressed}/{total}` ({percent(addressed, total)})",
         f"- Open decisions before `1.0.0`: `{by_status['decision']}`",
         "",
         "| Status | Count |",
         "| --- | ---: |",
     ]
-    for status in ("typed", "typed-gated", "partial", "raw", "external", "decision"):
+    for status in ("typed", "typed-gated", "partial", "raw", "external", "rejected", "decision"):
         lines.append(f"| `{status}` | {by_status[status]} |")
 
     lines.extend(
@@ -478,8 +522,8 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "## Area Totals",
             "",
-            "| Area | Total | Typed | Typed gated | Partial | Raw | External | Decision | Strict % |",
-            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Decision | Strict % |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for area in ("auth", "secret", "system"):
@@ -489,7 +533,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
         lines.append(
             f"| `{area}` | {area_total} | {counts['typed']} | {counts['typed-gated']} | "
             f"{counts['partial']} | {counts['raw']} | {counts['external']} | "
-            f"{counts['decision']} | {percent(area_covered, area_total)} |"
+            f"{counts['rejected']} | {counts['decision']} | {percent(area_covered, area_total)} |"
         )
 
     lines.extend(
@@ -497,17 +541,17 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "## Pages With Non-Typed Rows",
             "",
-            "| Page | Typed | Typed gated | Partial | Raw | External | Decision |",
-            "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Page | Typed | Typed gated | Partial | Raw | External | Rejected | Decision |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for page in sorted(by_page):
         counts = by_page[page]
-        if not any(counts[status] for status in ("partial", "raw", "external", "decision")):
+        if not any(counts[status] for status in ("partial", "raw", "external", "rejected", "decision")):
             continue
         lines.append(
             f"| [{page}]({DOCS_ROOT}{page}) | {counts['typed']} | {counts['typed-gated']} | "
-            f"{counts['partial']} | {counts['raw']} | {counts['external']} | {counts['decision']} |"
+            f"{counts['partial']} | {counts['raw']} | {counts['external']} | {counts['rejected']} | {counts['decision']} |"
         )
 
     lines.extend(
@@ -520,7 +564,8 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.",
             "- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.",
             "- PKI Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and current-doc struct-field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.",
-            "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, and legacy recovery rekey are planned for `0.14.0`.",
+            "- System generate-root/recovery-token, decode-token, password policies, resultant ACL, and legacy recovery-key rekey are planned for `0.14.0`; config-ui, monitor streaming, and internal router inspection are classified as `rejected`.",
+            "- System in-flight request and internal counters rows still need final `0.14.0` implementation or rejection decisions.",
             "- `0.15.0` is the closure release where no endpoint row may remain `decision`.",
             "",
             "Regenerate with:",

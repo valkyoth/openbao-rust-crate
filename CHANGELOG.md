@@ -59,6 +59,11 @@ All notable changes to this project are documented here.
 - Added operator-gated PKI default root deletion via `Pki::delete_root` and
   `PkiRootDeletion::confirm()` so `DELETE /pki/root` is available only through
   an explicit destructive-operation call site.
+- Added an explicit `rejected` endpoint-matrix status and recorded system
+  backend decisions: config-ui, sys/monitor streaming, and internal router
+  inspection are rejected for stable scope; root/recovery token ceremonies,
+  decode-token, password policies, resultant ACL, and legacy recovery-key rekey
+  are planned for `0.14.0`.
 
 ### Security
 
