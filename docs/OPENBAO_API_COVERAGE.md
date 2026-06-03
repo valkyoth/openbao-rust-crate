@@ -69,15 +69,15 @@ Sources:
 
 ## Endpoint Matrix
 
-The `0.9.0` stabilization line now uses a mechanical endpoint matrix instead
+The `0.10.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
-- documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `469/643` (`72.9%`);
-- typed plus partial coverage: `470/643` (`73.1%`);
-- addressed by typed, partial, raw, external, or rejected policy: `515/643`
-  (`80.1%`);
-- planned implementation rows before `1.0.0`: `128`;
+- documented endpoint rows extracted from OpenBao `2.5.x`: `644`;
+- strict typed coverage: `484/644` (`75.2%`);
+- typed plus partial coverage: `485/644` (`75.3%`);
+- addressed by typed, partial, raw, external, or rejected policy: `530/644`
+  (`82.3%`);
+- planned implementation rows before `1.0.0`: `114`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -235,9 +235,11 @@ into this SDK.
   write/read/list/delete, and generated credential helpers are implemented.
   Identity entity, group, entity-alias, and group-alias lifecycle helpers are
   implemented. Entity/group lookup and entity merge helpers are implemented in
-  `0.8.0`. Identity OIDC admin CRUD, discovery/JWKS reads, token generation,
-  token introspection, MFA method management, MFA login enforcement, and
-  `sys/mfa/validate` are planned for `0.10.0`; named-provider OIDC browser
+  `0.8.0`. Identity OIDC token backend config, signing key CRUD/rotate, role
+  CRUD/list, signed token generation, token introspection, discovery metadata,
+  and default JWKS reads are implemented in `0.10.0`. Identity OIDC provider
+  admin CRUD, MFA method management, MFA login enforcement, and
+  `sys/mfa/validate` remain planned for `0.10.0`; named-provider OIDC browser
   protocol flows remain external. LDAP config, root rotation, static
   roles/credentials, dynamic roles/credentials, and library check-out/check-in
   helpers are implemented.

@@ -5,17 +5,21 @@
 //! metadata maps bounded before allocation can grow without limit.
 
 use std::collections::BTreeMap;
+use std::fmt;
 
 use reqwest::{Method, StatusCode};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
-        deserialize_bounded_string_vec,
+        deserialize_bounded_string_vec, deserialize_optional_bounded_string_vec,
     },
+    validation::validate_duration_parameter,
 };
 
 const IDENTITY_LIST_LIMIT: usize = crate::response::MAX_RESPONSE_STRINGS;
@@ -717,6 +721,366 @@ impl ListEntries for IdentityAliasList {
     }
 }
 
+/// Identity OIDC token backend configuration request.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityOidcConfigRequest {
+    /// Issuer URL used in the `iss` claim.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer: Option<String>,
+}
+
+impl IdentityOidcConfigRequest {
+    /// Creates an OIDC config request.
+    pub fn new(issuer: impl Into<String>) -> Self {
+        Self {
+            issuer: Some(issuer.into()),
+        }
+    }
+}
+
+/// Identity OIDC token backend configuration.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcConfig {
+    /// Issuer URL used in the `iss` claim.
+    #[serde(default)]
+    pub issuer: Option<String>,
+}
+
+/// Request to create or update an Identity OIDC signing key.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityOidcKeyRequest {
+    /// Signing-key rotation period.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rotation_period: Option<String>,
+    /// Public verification key lifetime after rotation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification_ttl: Option<String>,
+    /// Role client IDs allowed to use this key. Use `"*"` to allow all clients.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_client_ids: Vec<String>,
+    /// Signing algorithm, such as `RS256`, `ES256`, or `EdDSA`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub algorithm: Option<String>,
+}
+
+impl IdentityOidcKeyRequest {
+    /// Creates an empty OIDC signing-key request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the signing-key rotation period.
+    #[must_use]
+    pub fn with_rotation_period(mut self, rotation_period: impl Into<String>) -> Self {
+        self.rotation_period = Some(rotation_period.into());
+        self
+    }
+
+    /// Sets the public verification key lifetime after rotation.
+    #[must_use]
+    pub fn with_verification_ttl(mut self, verification_ttl: impl Into<String>) -> Self {
+        self.verification_ttl = Some(verification_ttl.into());
+        self
+    }
+
+    /// Adds an allowed client ID.
+    #[must_use]
+    pub fn with_allowed_client_id(mut self, client_id: impl Into<String>) -> Self {
+        self.allowed_client_ids.push(client_id.into());
+        self
+    }
+
+    /// Sets the signing algorithm.
+    #[must_use]
+    pub fn with_algorithm(mut self, algorithm: impl Into<String>) -> Self {
+        self.algorithm = Some(algorithm.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(rotation_period) = &self.rotation_period {
+            validate_duration_parameter(rotation_period, "identity OIDC key rotation_period")?;
+        }
+        if let Some(verification_ttl) = &self.verification_ttl {
+            validate_duration_parameter(verification_ttl, "identity OIDC key verification_ttl")?;
+        }
+        validate_string_count(
+            self.allowed_client_ids.len(),
+            "identity OIDC allowed client IDs",
+        )
+    }
+}
+
+/// Identity OIDC signing-key rotation request.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityOidcKeyRotateRequest {
+    /// Optional verification lifetime override for the rotated key.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verification_ttl: Option<String>,
+}
+
+impl IdentityOidcKeyRotateRequest {
+    /// Creates a key-rotation request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the verification TTL override for this rotation.
+    #[must_use]
+    pub fn with_verification_ttl(mut self, verification_ttl: impl Into<String>) -> Self {
+        self.verification_ttl = Some(verification_ttl.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if let Some(verification_ttl) = &self.verification_ttl {
+            validate_duration_parameter(
+                verification_ttl,
+                "identity OIDC key rotation verification_ttl",
+            )?;
+        }
+        Ok(())
+    }
+}
+
+/// Identity OIDC signing-key information.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcKeyInfo {
+    /// Signing algorithm.
+    #[serde(default)]
+    pub algorithm: Option<String>,
+    /// Signing-key rotation period in seconds.
+    #[serde(default)]
+    pub rotation_period: Option<u64>,
+    /// Public verification key lifetime in seconds.
+    #[serde(default)]
+    pub verification_ttl: Option<u64>,
+    /// Role client IDs allowed to use this key.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub allowed_client_ids: Vec<String>,
+}
+
+/// Identity OIDC signing-key list response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct IdentityOidcKeyList {
+    /// OIDC signing-key names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for IdentityOidcKeyList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Request to create or update an Identity OIDC role.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityOidcRoleRequest {
+    /// Configured named key used to sign generated ID tokens.
+    pub key: String,
+    /// Optional token template string.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+    /// Optional client ID. OpenBao generates one when omitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    /// Token TTL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ttl: Option<String>,
+}
+
+impl IdentityOidcRoleRequest {
+    /// Creates an OIDC role request for the given signing key.
+    pub fn new(key: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            ..Self::default()
+        }
+    }
+
+    /// Sets the token template.
+    #[must_use]
+    pub fn with_template(mut self, template: impl Into<String>) -> Self {
+        self.template = Some(template.into());
+        self
+    }
+
+    /// Sets the client ID.
+    #[must_use]
+    pub fn with_client_id(mut self, client_id: impl Into<String>) -> Self {
+        self.client_id = Some(client_id.into());
+        self
+    }
+
+    /// Sets the token TTL.
+    #[must_use]
+    pub fn with_ttl(mut self, ttl: impl Into<String>) -> Self {
+        self.ttl = Some(ttl.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.key.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "identity OIDC role key must not be empty".into(),
+            ));
+        }
+        if let Some(ttl) = &self.ttl {
+            validate_duration_parameter(ttl, "identity OIDC role ttl")?;
+        }
+        Ok(())
+    }
+}
+
+/// Identity OIDC role information.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcRoleInfo {
+    /// Client ID.
+    #[serde(default)]
+    pub client_id: Option<String>,
+    /// Signing key name.
+    #[serde(default)]
+    pub key: Option<String>,
+    /// Token template.
+    #[serde(default)]
+    pub template: Option<String>,
+    /// Token TTL in seconds.
+    #[serde(default)]
+    pub ttl: Option<u64>,
+}
+
+/// Identity OIDC role list response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct IdentityOidcRoleList {
+    /// OIDC role names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for IdentityOidcRoleList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Signed Identity OIDC token generated by OpenBao.
+#[derive(Clone, Deserialize)]
+pub struct IdentityOidcToken {
+    /// Client ID associated with the generated token.
+    #[serde(default)]
+    pub client_id: Option<String>,
+    /// Signed OIDC ID token.
+    pub token: SecretString,
+    /// Token TTL in seconds.
+    #[serde(default)]
+    pub ttl: Option<u64>,
+}
+
+impl fmt::Debug for IdentityOidcToken {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityOidcToken")
+            .field("client_id", &self.client_id)
+            .field("token", &"<redacted>")
+            .field("ttl", &self.ttl)
+            .finish()
+    }
+}
+
+/// Request to introspect a signed Identity OIDC token.
+#[derive(Clone)]
+pub struct IdentityOidcIntrospectRequest {
+    /// Signed OIDC token to verify.
+    pub token: SecretString,
+    /// Optional audience/client ID requirement.
+    pub client_id: Option<String>,
+}
+
+impl IdentityOidcIntrospectRequest {
+    /// Creates an introspection request.
+    pub fn new(token: SecretString) -> Self {
+        Self {
+            token,
+            client_id: None,
+        }
+    }
+
+    /// Requires the token audience to match `client_id`.
+    #[must_use]
+    pub fn with_client_id(mut self, client_id: impl Into<String>) -> Self {
+        self.client_id = Some(client_id.into());
+        self
+    }
+}
+
+impl fmt::Debug for IdentityOidcIntrospectRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityOidcIntrospectRequest")
+            .field("token", &"<redacted>")
+            .field("client_id", &self.client_id)
+            .finish()
+    }
+}
+
+/// Identity OIDC introspection response.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcIntrospection {
+    /// Whether OpenBao considers the token active.
+    #[serde(default)]
+    pub active: bool,
+    /// Additional RFC 7662/OpenBao claims returned by the endpoint.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, JsonValue>,
+}
+
+/// OIDC discovery metadata returned by OpenBao.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcDiscovery {
+    /// Issuer URL.
+    #[serde(default)]
+    pub issuer: Option<String>,
+    /// Authorization endpoint.
+    #[serde(default)]
+    pub authorization_endpoint: Option<String>,
+    /// Token endpoint.
+    #[serde(default)]
+    pub token_endpoint: Option<String>,
+    /// JWKS URI.
+    #[serde(default)]
+    pub jwks_uri: Option<String>,
+    /// Supported response types.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
+    pub response_types_supported: Option<Vec<String>>,
+    /// Supported subject types.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
+    pub subject_types_supported: Option<Vec<String>>,
+    /// Supported ID-token signing algorithms.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
+    pub id_token_signing_alg_values_supported: Option<Vec<String>>,
+    /// Supported scopes.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
+    pub scopes_supported: Option<Vec<String>>,
+    /// Supported token endpoint authentication methods.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
+    pub token_endpoint_auth_methods_supported: Option<Vec<String>>,
+    /// Supported claims.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
+    pub claims_supported: Option<Vec<String>>,
+    /// Additional provider metadata claims.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, JsonValue>,
+}
+
+/// OIDC JSON Web Key Set returned by OpenBao.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcJwks {
+    /// Public JWK entries.
+    #[serde(default, deserialize_with = "deserialize_bounded_json_vec")]
+    pub keys: Vec<JsonValue>,
+}
+
 impl Client<Authenticated> {
     /// Uses the identity engine mounted at `identity`.
     pub fn identity(&self) -> Result<Identity<'_>> {
@@ -1053,6 +1417,184 @@ impl Identity<'_> {
         self.list_at(&["group-alias", "id"]).await
     }
 
+    /// Writes Identity OIDC token backend configuration.
+    pub async fn write_oidc_config(&self, request: &IdentityOidcConfigRequest) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "config"])?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Reads Identity OIDC token backend configuration.
+    pub async fn read_oidc_config(&self) -> Result<IdentityOidcConfig> {
+        let envelope: ResponseEnvelope<IdentityOidcConfig> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "config"])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Creates or updates an Identity OIDC signing key.
+    pub async fn write_oidc_key(
+        &self,
+        name: &str,
+        request: &IdentityOidcKeyRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "key", name])?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Reads an Identity OIDC signing key.
+    pub async fn read_oidc_key(&self, name: &str) -> Result<IdentityOidcKeyInfo> {
+        let envelope: ResponseEnvelope<IdentityOidcKeyInfo> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "key", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Deletes an Identity OIDC signing key.
+    pub async fn delete_oidc_key(&self, name: &str) -> Result<Empty> {
+        self.delete_at(&["oidc", "key", name]).await
+    }
+
+    /// Lists Identity OIDC signing keys.
+    pub async fn list_oidc_keys(&self) -> Result<IdentityOidcKeyList> {
+        self.list_at(&["oidc", "key"]).await
+    }
+
+    /// Rotates an Identity OIDC signing key.
+    pub async fn rotate_oidc_key(
+        &self,
+        name: &str,
+        request: &IdentityOidcKeyRotateRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "key", name, "rotate"])?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Creates or updates an Identity OIDC role.
+    pub async fn write_oidc_role(
+        &self,
+        name: &str,
+        request: &IdentityOidcRoleRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "role", name])?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Reads an Identity OIDC role.
+    pub async fn read_oidc_role(&self, name: &str) -> Result<IdentityOidcRoleInfo> {
+        let envelope: ResponseEnvelope<IdentityOidcRoleInfo> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "role", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Deletes an Identity OIDC role.
+    pub async fn delete_oidc_role(&self, name: &str) -> Result<Empty> {
+        self.delete_at(&["oidc", "role", name]).await
+    }
+
+    /// Lists Identity OIDC roles.
+    pub async fn list_oidc_roles(&self) -> Result<IdentityOidcRoleList> {
+        self.list_at(&["oidc", "role"]).await
+    }
+
+    /// Generates a signed Identity OIDC ID token for `name`.
+    pub async fn generate_oidc_token(&self, name: &str) -> Result<IdentityOidcToken> {
+        let envelope: ResponseEnvelope<IdentityOidcToken> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "token", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Introspects a signed Identity OIDC token.
+    ///
+    /// The token is exposed only while serializing the request body.
+    pub async fn introspect_oidc_token(
+        &self,
+        request: &IdentityOidcIntrospectRequest,
+    ) -> Result<IdentityOidcIntrospection> {
+        let payload = IdentityOidcIntrospectPayload {
+            token: request.token.expose_secret(),
+            client_id: request.client_id.as_deref(),
+        };
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "introspect"])?,
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Reads OIDC provider discovery metadata for the identity token backend.
+    ///
+    /// OpenBao serves this as a plain OIDC response, not a `data` envelope.
+    pub async fn read_oidc_discovery(&self) -> Result<IdentityOidcDiscovery> {
+        self.client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", ".well-known", "openid-configuration"])?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads public OIDC JSON Web Keys for the identity token backend.
+    ///
+    /// The returned keys are public verification material. The list is still
+    /// bounded during deserialization to avoid disproportionate allocations.
+    pub async fn read_oidc_jwks(&self) -> Result<IdentityOidcJwks> {
+        self.client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", ".well-known", "keys"])?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
     async fn list_at<T>(&self, tail: &[&str]) -> Result<T>
     where
         T: serde::de::DeserializeOwned,
@@ -1101,6 +1643,70 @@ fn validate_string_count(count: usize, field: &'static str) -> Result<()> {
     )))
 }
 
+#[derive(Serialize)]
+struct IdentityOidcIntrospectPayload<'a> {
+    token: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    client_id: Option<&'a str>,
+}
+
+fn deserialize_bounded_json_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<JsonValue>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for Visitor {
+        type Value = Vec<JsonValue>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a bounded JSON array")
+        }
+
+        fn visit_none<E>(self) -> core::result::Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Vec::new())
+        }
+
+        fn visit_unit<E>(self) -> core::result::Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Vec::new())
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_seq(self)
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let mut values = Vec::new();
+            while values.len() < IDENTITY_LIST_LIMIT {
+                let Some(value) = seq.next_element::<JsonValue>()? else {
+                    return Ok(values);
+                };
+                values.push(value);
+            }
+            while seq.next_element::<serde::de::IgnoredAny>()?.is_some() {}
+            Err(serde::de::Error::custom(
+                "identity OIDC JWKS key list exceeds item limit",
+            ))
+        }
+    }
+
+    deserializer.deserialize_option(Visitor)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
@@ -1113,6 +1719,8 @@ mod tests {
     use super::{
         IdentityAliasList, IdentityEntityBatchDeleteRequest, IdentityEntityList,
         IdentityEntityRequest, IdentityGroupList, IdentityGroupRequest,
+        IdentityOidcIntrospectRequest, IdentityOidcJwks, IdentityOidcKeyList, IdentityOidcRoleList,
+        IdentityOidcToken,
     };
 
     #[test]
@@ -1166,5 +1774,46 @@ mod tests {
 
         let batch = IdentityEntityBatchDeleteRequest::new(Vec::<String>::new());
         assert!(batch.validate().is_err());
+    }
+
+    #[test]
+    fn identity_oidc_secret_debug_is_redacted() {
+        let token = IdentityOidcToken {
+            client_id: Some("client-id".to_owned()),
+            token: SecretString::from("signed-id-token"),
+            ttl: Some(3600),
+        };
+        let debug = format!("{token:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("signed-id-token"));
+
+        let request = IdentityOidcIntrospectRequest::new(SecretString::from("signed-id-token"))
+            .with_client_id("client-id");
+        let debug = format!("{request:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("signed-id-token"));
+    }
+
+    #[test]
+    fn identity_oidc_lists_are_bounded() {
+        let mut keys = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            keys.push(format!("identity-oidc-{index}"));
+        }
+        let value = serde_json::json!({ "keys": keys });
+
+        assert!(serde_json::from_value::<IdentityOidcKeyList>(value.clone()).is_err());
+        assert!(serde_json::from_value::<IdentityOidcRoleList>(value).is_err());
+
+        let mut jwks = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            jwks.push(serde_json::json!({ "kid": format!("key-{index}") }));
+        }
+        assert!(
+            serde_json::from_value::<IdentityOidcJwks>(serde_json::json!({
+                "keys": jwks
+            }))
+            .is_err()
+        );
     }
 }

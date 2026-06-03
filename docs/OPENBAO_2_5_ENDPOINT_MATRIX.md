@@ -23,22 +23,22 @@ Sources:
 
 ## Summary
 
-- Total documented endpoint rows: `643`
-- Strict typed coverage: `469/643` (72.9%)
-- Typed plus partial coverage: `470/643` (73.1%)
-- Addressed by typed, partial, raw, external, or rejected policy: `515/643` (80.1%)
-- Planned implementation rows before `1.0.0`: `128`
+- Total documented endpoint rows: `644`
+- Strict typed coverage: `484/644` (75.2%)
+- Typed plus partial coverage: `485/644` (75.3%)
+- Addressed by typed, partial, raw, external, or rejected policy: `530/644` (82.3%)
+- Planned implementation rows before `1.0.0`: `114`
 - Open owner decisions before `1.0.0`: `0`
 
 | Status | Count |
 | --- | ---: |
-| `typed` | 424 |
+| `typed` | 439 |
 | `typed-gated` | 45 |
 | `partial` | 1 |
 | `raw` | 0 |
 | `external` | 33 |
 | `rejected` | 12 |
-| `planned` | 128 |
+| `planned` | 114 |
 | `decision` | 0 |
 
 ## Area Totals
@@ -46,7 +46,7 @@ Sources:
 | Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Planned | Decision | Strict % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 99.0% |
-| `secret` | 347 | 211 | 1 | 0 | 0 | 33 | 0 | 102 | 0 | 61.1% |
+| `secret` | 348 | 226 | 1 | 0 | 0 | 33 | 0 | 88 | 0 | 65.2% |
 | `system` | 191 | 109 | 44 | 0 | 0 | 0 | 12 | 26 | 0 | 80.1% |
 
 ## Pages With Non-Typed Rows
@@ -60,7 +60,6 @@ Sources:
 | [/api-docs/secret/identity/mfa/pingid/](https://openbao.org/api-docs/secret/identity/mfa/pingid/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
 | [/api-docs/secret/identity/mfa/totp/](https://openbao.org/api-docs/secret/identity/mfa/totp/) | 0 | 0 | 0 | 0 | 0 | 0 | 7 | 0 |
 | [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 0 | 0 | 0 | 0 | 3 | 0 | 18 | 0 |
-| [/api-docs/secret/identity/tokens/](https://openbao.org/api-docs/secret/identity/tokens/) | 0 | 0 | 0 | 0 | 0 | 0 | 14 | 0 |
 | [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 1 | 0 | 0 | 28 | 0 | 35 | 0 |
 | [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 | 0 | 0 |
 | [/api-docs/secret/transit/](https://openbao.org/api-docs/secret/transit/) | 19 | 0 | 0 | 0 | 0 | 0 | 12 | 0 |
@@ -79,7 +78,10 @@ Sources:
 
 ## Required Follow-Up
 
-- Identity OIDC admin/discovery/token/introspection rows and MFA management are planned for `0.10.0`.
+- Identity OIDC token backend config, signing key CRUD/rotate, role CRUD/list,
+  signed token generation, token introspection, discovery metadata, and default
+  JWKS reads are implemented in `0.10.0`. OIDC provider admin CRUD and MFA
+  management remain planned for `0.10.0`.
 - Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
 - `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.
 - Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.

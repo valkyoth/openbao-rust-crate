@@ -4288,6 +4288,220 @@ async fn identity_entity_group_and_alias_lifecycle_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn identity_oidc_token_helpers_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..15 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/identity/oidc/config HTTP/1.1"));
+                    assert!(request.contains(r#""issuer":"https://bao.example.com""#));
+                    "{}"
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/identity/oidc/config HTTP/1.1"));
+                    r#"{"data":{"issuer":"https://bao.example.com"}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/identity/oidc/key/app-key HTTP/1.1"));
+                    assert!(request.contains(r#""rotation_period":"12h""#));
+                    assert!(request.contains(r#""verification_ttl":"24h""#));
+                    assert!(request.contains(r#""allowed_client_ids":["app-client"]"#));
+                    "{}"
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/identity/oidc/key/app-key HTTP/1.1"));
+                    r#"{"data":{"algorithm":"RS256","rotation_period":43200,"verification_ttl":86400,"allowed_client_ids":["app-client"]}}"#
+                }
+                4 => {
+                    assert!(request.starts_with("LIST /v1/identity/oidc/key HTTP/1.1"));
+                    r#"{"data":{"keys":["app-key"]}}"#
+                }
+                5 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/oidc/key/app-key/rotate HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""verification_ttl":"24h""#));
+                    "{}"
+                }
+                6 => {
+                    assert!(request.starts_with("POST /v1/identity/oidc/role/app-role HTTP/1.1"));
+                    assert!(request.contains(r#""key":"app-key""#));
+                    assert!(request.contains(r#""client_id":"app-client""#));
+                    assert!(request.contains(r#""ttl":"1h""#));
+                    "{}"
+                }
+                7 => {
+                    assert!(request.starts_with("GET /v1/identity/oidc/role/app-role HTTP/1.1"));
+                    r#"{"data":{"client_id":"app-client","key":"app-key","template":"","ttl":3600}}"#
+                }
+                8 => {
+                    assert!(request.starts_with("LIST /v1/identity/oidc/role HTTP/1.1"));
+                    r#"{"data":{"keys":["app-role"]}}"#
+                }
+                9 => {
+                    assert!(request.starts_with("GET /v1/identity/oidc/token/app-role HTTP/1.1"));
+                    r#"{"data":{"client_id":"app-client","token":"signed-id-token","ttl":3600}}"#
+                }
+                10 => {
+                    assert!(request.starts_with("POST /v1/identity/oidc/introspect HTTP/1.1"));
+                    assert!(request.contains(r#""token":"signed-id-token""#));
+                    assert!(request.contains(r#""client_id":"app-client""#));
+                    r#"{"active":true}"#
+                }
+                11 => {
+                    assert!(request.starts_with(
+                        "GET /v1/identity/oidc/.well-known/openid-configuration HTTP/1.1"
+                    ));
+                    r#"{"issuer":"https://bao.example.com","authorization_endpoint":"","token_endpoint":"","jwks_uri":"https://bao.example.com/.well-known/keys","response_types_supported":null,"subject_types_supported":["public"],"id_token_signing_alg_values_supported":["RS256"],"scopes_supported":null,"token_endpoint_auth_methods_supported":null,"claims_supported":null}"#
+                }
+                12 => {
+                    assert!(request.starts_with("GET /v1/identity/oidc/.well-known/keys HTTP/1.1"));
+                    r#"{"keys":[{"use":"sig","kty":"RSA","kid":"key-1","alg":"RS256","n":"modulus","e":"AQAB"}]}"#
+                }
+                13 => {
+                    assert!(request.starts_with("DELETE /v1/identity/oidc/role/app-role HTTP/1.1"));
+                    "{}"
+                }
+                14 => {
+                    assert!(request.starts_with("DELETE /v1/identity/oidc/key/app-key HTTP/1.1"));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["root-", "token"]));
+    let identity = client.identity().unwrap_or_else(|error| panic!("{error}"));
+
+    identity
+        .write_oidc_config(&openbao::secrets::identity::IdentityOidcConfigRequest::new(
+            "https://bao.example.com",
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = identity
+        .read_oidc_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(config.issuer.as_deref(), Some("https://bao.example.com"));
+
+    identity
+        .write_oidc_key(
+            "app-key",
+            &openbao::secrets::identity::IdentityOidcKeyRequest::new()
+                .with_rotation_period("12h")
+                .with_verification_ttl("24h")
+                .with_allowed_client_id("app-client")
+                .with_algorithm("RS256"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let key = identity
+        .read_oidc_key("app-key")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(key.allowed_client_ids, ["app-client"]);
+    let keys = identity
+        .list_oidc_keys()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(keys.keys, ["app-key"]);
+    identity
+        .rotate_oidc_key(
+            "app-key",
+            &openbao::secrets::identity::IdentityOidcKeyRotateRequest::new()
+                .with_verification_ttl("24h"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    identity
+        .write_oidc_role(
+            "app-role",
+            &openbao::secrets::identity::IdentityOidcRoleRequest::new("app-key")
+                .with_client_id("app-client")
+                .with_ttl("1h"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let role = identity
+        .read_oidc_role("app-role")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role.client_id.as_deref(), Some("app-client"));
+    let roles = identity
+        .list_oidc_roles()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(roles.keys, ["app-role"]);
+
+    let token = identity
+        .generate_oidc_token("app-role")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(token.client_id.as_deref(), Some("app-client"));
+    assert_eq!(token.token.expose_secret(), "signed-id-token");
+    let introspection = identity
+        .introspect_oidc_token(
+            &openbao::secrets::identity::IdentityOidcIntrospectRequest::new(token.token)
+                .with_client_id("app-client"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(introspection.active);
+
+    let discovery = identity
+        .read_oidc_discovery()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        discovery
+            .subject_types_supported
+            .as_ref()
+            .and_then(|values| values.first())
+            .map(String::as_str),
+        Some("public")
+    );
+    let jwks = identity
+        .read_oidc_jwks()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(jwks.keys.len(), 1);
+
+    identity
+        .delete_oidc_role("app-role")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    identity
+        .delete_oidc_key("app-key")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## 0.10.0 - Unreleased
+
+### Added
+
+- Started the `0.10.0` Identity and auth completion line.
+- Added typed Identity OIDC token backend helpers for config read/write,
+  signing key create/read/list/delete/rotate, role create/read/list/delete,
+  signed ID token generation, token introspection, discovery metadata, and
+  public JWKS reads.
+- Added secret-aware Identity OIDC token and introspection request types with
+  redacted `Debug` output.
+- Added bounded deserialization for Identity OIDC signing-key lists, role lists,
+  nullable discovery metadata lists, and JWKS key arrays.
+- Added mock HTTP coverage for the documented Identity OIDC token backend paths.
+
 ## 0.9.0 - 2026-06-03
 
 ### Added

@@ -37,10 +37,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.9.0` development line. `0.9.0` builds on the
-released `0.8.0` API with stabilization work for migration guidance, public API
-audit evidence, retry and pagination ergonomics, bootstrap convergence, fixture
-and fuzz hardening, and near-`1.0` decisions.
+This README documents the `0.10.0` development line. `0.10.0` builds on the
+released `0.9.0` API with Identity OIDC token/admin coverage and the remaining
+Identity/MFA completion work planned for this release line.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -77,8 +76,9 @@ Implemented now:
   create/read/list/delete, and dynamic credential helpers.
 - Database connection config, dynamic roles, static roles, root/static
   rotation, and credential helpers.
-- Identity entity, group, entity-alias, and group-alias lifecycle, lookup, and
-  entity merge helpers.
+- Identity entity, group, entity-alias, and group-alias lifecycle, lookup,
+  entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD,
+  signed ID token generation, token introspection, discovery, and JWKS helpers.
 - LDAP secrets engine config, static role, dynamic role, credential, library
   checkout, and check-in helpers.
 - SSH role, zero-address role, IP lookup, OTP credential, issuer config,
@@ -147,9 +147,11 @@ Delivered in `0.9.0`:
 
 Planned next:
 
-- `0.10.0` through `0.15.0`: close the endpoint matrix deliberately: Identity
-  and auth, Transit advanced key management, PKI advanced/public/specialized
-  flows, remaining system backend rows, then final endpoint closure and stable
+- `0.10.0`: finish Identity OIDC provider admin CRUD, MFA method management,
+  login enforcement, and `/sys/mfa/validate`.
+- `0.11.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
+  Transit advanced key management, PKI advanced/public/specialized flows,
+  remaining system backend rows, then final endpoint closure and stable
   ergonomics. Request-level back-pressure, full OpenTelemetry SDK integration,
   certificate pinning, KV v1 bootstrap convergence, and ACL parameter-constraint
   HCL generation are rejected for stable scope.
@@ -189,7 +191,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.9.0` development line tracks compatibility evidence across this supported
+The `0.10.0` development line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -206,7 +208,7 @@ range:
 
 ```toml
 [dependencies]
-openbao = "0.9"
+openbao = "0.10"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
 ```
@@ -222,7 +224,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.9", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.10", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -230,7 +232,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.9", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.10", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 Optional RFC3339 timestamp parsing is available behind the lightweight `time`
@@ -238,7 +240,7 @@ feature:
 
 ```toml
 [dependencies]
-openbao = { version = "0.9", features = ["time"] }
+openbao = { version = "0.10", features = ["time"] }
 ```
 
 ## Features
@@ -282,8 +284,8 @@ openbao = { version = "0.9", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the current `0.9.0` line it records `643` documented endpoint rows, with
-`469/643` (`72.9%`) strict typed or operator-gated coverage.
+For the current `0.10.0` line it records `644` documented endpoint rows, with
+`484/644` (`75.2%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
 
@@ -337,7 +339,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
-| Identity | Yes | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, and entity merge. Identity OIDC admin/discovery/token/introspection and MFA management are planned for `0.10.0`; named-provider OIDC browser protocol flows stay external. |
+| Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, and JWKS helpers are implemented. OIDC provider admin CRUD and MFA management are still in progress for `0.10.0`; named-provider OIDC browser protocol flows stay external. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, and optional raw-byte helpers. Import/BYOK endpoint wrappers are planned for `0.11.0` with pre-wrapped `SecretString` ciphertext only; no raw key bytes enter those wrappers. Soft-delete/restore, cache/global config, CSR, certificate-install, and optional `transit-import` wrapping-helper work are planned before `1.0.0`. |

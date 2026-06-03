@@ -526,20 +526,21 @@ secret,GET,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secre
 secret,DELETE,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,LIST,/identity/group-alias/id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,GET,/identity/group-alias/id?list=true,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
-secret,POST,/identity/oidc/config,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/config,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/key/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/key/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/key/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/key,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/key/:name/rotate,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/role/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/role/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/role/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/role,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/token/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/introspect,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/.well-known/openid-configuration,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/config,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,GET,/identity/oidc/config,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,POST,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,GET,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,DELETE,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,LIST,/identity/oidc/key,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,POST,/identity/oidc/key/:name/rotate,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,POST,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,GET,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,DELETE,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,LIST,/identity/oidc/role,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,GET,/identity/oidc/token/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,POST,/identity/oidc/introspect,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,GET,/identity/oidc/.well-known/openid-configuration,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,GET,/identity/oidc/.well-known/keys,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
 secret,POST,/identity/lookup/entity,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
 secret,POST,/identity/lookup/group,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
 secret,POST,/identity/oidc/provider/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
