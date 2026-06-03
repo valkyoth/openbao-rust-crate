@@ -198,20 +198,33 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         return ("typed", "Typed SSH helper exists.")
 
     if page.startswith("/api-docs/secret/transit/"):
-        decision_segments = (
-            "/import",
-            "/import_version",
-            "/wrapping_key",
-            "/byok-export",
-            "/cache-config",
-            "/csr",
-            "/set-certificate",
-            "/soft-delete",
+        import_paths = (
+            "/transit/wrapping_key",
+            "/transit/keys/:name/import",
+            "/transit/keys/:name/import_version",
         )
-        if path == "/transit/config/keys" or any(segment in path for segment in decision_segments):
+        if path in import_paths or path.startswith("/transit/byok-export/"):
             return (
                 "decision",
-                "Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.",
+                "Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.",
+            )
+        if path in (
+            "/transit/keys/:name/soft-delete",
+            "/transit/keys/:name/soft-delete-restore",
+        ):
+            return (
+                "decision",
+                "Implement in 0.11.0 as reversible Transit key disable and restore helpers.",
+            )
+        if path in ("/transit/cache-config", "/transit/config/keys"):
+            return (
+                "decision",
+                "Implement in 0.11.0 as Transit cache and global key configuration helpers.",
+            )
+        if path in ("/transit/keys/:name/csr", "/transit/keys/:name/set-certificate"):
+            return (
+                "decision",
+                "Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.",
             )
         return ("typed", "Typed Transit helper exists.")
 
@@ -518,7 +531,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "- Identity OIDC admin/discovery/token/introspection rows and MFA management are planned for `0.10.0`.",
             "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",
             "- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.",
-            "- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows are planned for `0.11.0`.",
+            "- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; client-side wrapping stays outside core scope.",
             "- PKI named-issuer, root lifecycle, public CA/CRL/cert reads, and config rows are planned for `0.12.0`; PKI revocation/CRL management, CEL, sign-verbatim, and cross-sign rows are planned for `0.13.0`; OCSP rows are classified as `raw`.",
             "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, and legacy recovery rekey are planned for `0.14.0`.",
             "- `0.15.0` is the closure release where no endpoint row may remain `decision`.",

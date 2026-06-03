@@ -80,7 +80,7 @@ Sources:
 - Identity OIDC admin/discovery/token/introspection rows and MFA management are planned for `0.10.0`.
 - Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
 - `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.
-- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows are planned for `0.11.0`.
+- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; client-side wrapping stays outside core scope.
 - PKI named-issuer, root lifecycle, public CA/CRL/cert reads, and config rows are planned for `0.12.0`; PKI revocation/CRL management, CEL, sign-verbatim, and cross-sign rows are planned for `0.13.0`; OCSP rows are classified as `raw`.
 - System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, and legacy recovery rekey are planned for `0.14.0`.
 - `0.15.0` is the closure release where no endpoint row may remain `decision`.

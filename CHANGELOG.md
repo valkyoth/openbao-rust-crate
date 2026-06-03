@@ -34,6 +34,11 @@ All notable changes to this project are documented here.
   lifecycle, public CA/CRL/cert read, and PKI config rows are planned for
   `0.12.0`; revocation/CRL management, CEL, sign-verbatim, and cross-sign rows
   are planned for `0.13.0`; OCSP is classified as raw binary protocol support.
+- Recorded the Transit import/BYOK boundary: wrapping-key, import and
+  import-version, BYOK export, soft-delete/restore, cache/global config, CSR,
+  and certificate-install rows are planned for `0.11.0`; core wrappers accept
+  already-wrapped `SecretString` material and do not perform client-side
+  RSA-OAEP/AES-GCM wrapping.
 
 ### Security
 

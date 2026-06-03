@@ -86,8 +86,11 @@
   browser protocol flows.
 - Implement or decide in `0.10.0`: token `create-orphan`/`renew-accessor` and
   AppRole delegated per-property rows.
-- Implement or decide in `0.11.0`: Transit BYOK/import, wrapping-key,
-  cache/config, CSR/certificate, and soft-delete rows.
+- Implement in `0.11.0`: Transit wrapping-key, import/import-version, BYOK
+  export, soft-delete/restore, cache/global config, CSR generation, and
+  certificate install rows. Core wrappers accept already-wrapped
+  `SecretString` material; optional client-side wrapping helpers remain
+  post-`1.0.0` or late pre-`1.0.0` behind `transit-import` only if justified.
 - Implement in `0.12.0`: PKI named-issuer issue/sign/sign-intermediate,
   root lifecycle, public CA/CRL/cert reads, and PKI config rows. Destructive
   root deletion must stay behind `operator-ops` plus

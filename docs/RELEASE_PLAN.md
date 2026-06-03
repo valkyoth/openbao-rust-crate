@@ -353,13 +353,18 @@ Publishable value:
 
 Stop condition:
 
-- Transit key import, import-version, wrapping-key, BYOK export, key config,
-  cache config, CSR generation, certificate install, soft-delete, and
-  soft-delete-restore rows are implemented or explicitly rejected;
-- imported key material and wrapped key material use secret-aware request and
-  response types with custom `Debug`;
-- risky operations are documented with operator warnings and feature gates if
-  the API can expose import/export material outside OpenBao;
+- Transit wrapping-key, key import, import-version, and BYOK export rows are
+  implemented; request types accept already-wrapped blobs as `SecretString`
+  and response types that carry wrapped blobs use custom redacted `Debug`;
+- Transit soft-delete and soft-delete-restore helpers are implemented;
+- Transit cache config and global key config helpers are implemented;
+- Transit CSR generation and certificate install helpers are implemented with
+  PEM strings documented as public certificate material;
+- the boundary is documented clearly: the core crate does not implement
+  client-side RSA-OAEP/AES-GCM wrapping; callers own that step through their
+  HSM, OpenSSL, or chosen crypto library;
+- an optional `transit-import` wrapping helper with `rsa` and `aes-gcm`
+  remains post-`1.0.0` or late pre-`1.0.0` only if real usage proves the need;
 - `transit-bytes` remains optional and no default dependency growth is added;
 - endpoint matrix is regenerated and Transit decision rows are resolved.
 

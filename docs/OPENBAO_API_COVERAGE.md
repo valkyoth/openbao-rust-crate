@@ -181,6 +181,11 @@ Support plan:
   are implemented for sign/verify.
 - `0.8.0`: Transit key config update, key rotation, export, backup, restore,
   trim, and batch encrypt/decrypt/rewrap/sign/verify helpers are implemented.
+- `0.11.0`: Transit wrapping-key, import/import-version, BYOK export,
+  soft-delete/restore, cache config, global key config, CSR generation, and
+  certificate install rows are planned. The crate will carry already-wrapped
+  key material as `SecretString`; callers own client-side RSA-OAEP/AES-GCM
+  wrapping through their HSM, OpenSSL, or chosen crypto library.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer

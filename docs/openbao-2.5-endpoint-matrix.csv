@@ -105,20 +105,20 @@ auth,POST,/auth/userpass/users/:username/policies,typed,https://openbao.org/api-
 auth,LIST,/auth/userpass/users,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 auth,POST,/auth/userpass/login/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 secret,POST,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/keys/:name/import,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
-secret,POST,/transit/keys/:name/import_version,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
-secret,GET,/transit/wrapping_key,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,POST,/transit/keys/:name/import,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.
+secret,POST,/transit/keys/:name/import_version,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.
+secret,GET,/transit/wrapping_key,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.
 secret,GET,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,LIST,/transit/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,DELETE,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/config,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/rotate,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,DELETE,/transit/keys/:name/soft-delete,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
-secret,POST,/transit/keys/:name/soft-delete-restore,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
-secret,GET,/transit/byok-export/:destination/:source(/:version),decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,DELETE,/transit/keys/:name/soft-delete,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
+secret,POST,/transit/keys/:name/soft-delete-restore,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
+secret,GET,/transit/byok-export/:destination/:source(/:version),decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; crate handles HTTP transport for already-wrapped key material and does not perform client-side wrapping.
 secret,GET,/transit/export/:key_type/:name(/:version),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
-secret,GET,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,POST,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
+secret,GET,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
 secret,POST,/transit/encrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/decrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/rewrap/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
@@ -131,10 +131,10 @@ secret,POST,/transit/verify/:name(/:hash_algorithm),typed,https://openbao.org/ap
 secret,GET,/transit/backup/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/restore(/:name),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/trim,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
-secret,GET,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
-secret,POST,/transit/keys/:name/csr,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
-secret,POST,/transit/keys/:name/set-certificate,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,POST,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
+secret,GET,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
+secret,POST,/transit/keys/:name/csr,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.
+secret,POST,/transit/keys/:name/set-certificate,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.
 secret,GET,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
 secret,LIST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
 secret,POST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
