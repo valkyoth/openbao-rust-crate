@@ -2,11 +2,10 @@
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
-`643` documented endpoint rows, `469` strict typed or operator-gated rows, and
-`131` rows still needing an implementation, rejection, raw-wrapper policy, or
-external-client policy decision. Because there is no rush to force stability,
-the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
-deliberately.
+`643` documented endpoint rows, `469` strict typed or operator-gated rows,
+`128` planned implementation rows, and `0` open owner-decision rows. Because
+there is no rush to force stability, the pre-`1.0` line now extends through
+`0.15.0` so planned gaps can be closed deliberately.
 
 After `1.0.0`, the expected line is `1.0.x` maintenance, security fixes,
 compatibility fixes, and documentation corrections only. Every pre-`1.0`
@@ -36,9 +35,11 @@ Every release:
   `0.15.0`, or be explicitly rejected/delegated before `1.0.0`.
 - The stable readiness target is not blindly `100% typed`; it is `100%`
   addressed endpoint rows. A row may be addressed as `typed`, `typed-gated`,
-  `partial`, `raw`, `external`, or rejected with a documented safe
-  alternative.
-- No endpoint row may remain classified as `decision` when `1.0.0` is tagged.
+  `partial`, `raw`, `external`, or rejected with a documented safe alternative.
+  Rows classified as `planned` have a final owner decision but still need the
+  implementation work assigned in this plan.
+- No endpoint row may remain classified as `planned` or `decision` when
+  `1.0.0` is tagged.
 - After `1.0.0`, new feature work is not planned. Only `1.0.x` security,
   correctness, compatibility, and documentation updates are assumed.
 
@@ -384,7 +385,8 @@ Stop condition:
   has redacted `Debug`, and is documented as an ergonomic client-side helper
   rather than an OpenBao, FIPS, HSM, or post-quantum security guarantee;
 - `transit-bytes` remains optional and no default dependency growth is added;
-- endpoint matrix is regenerated and Transit decision rows are resolved.
+- endpoint matrix is regenerated and Transit planned rows are implemented or
+  reclassified.
 
 Publishable value:
 
@@ -467,8 +469,14 @@ Stop condition:
 - sys/monitor streaming and internal router inspection are rejected for stable
   scope; monitor needs a deliberate streaming API design, and router
   inspection has no stable OpenBao compatibility contract;
-- in-flight request, internal counters, and internal request inspection rows
-  receive final implementation or rejection decisions;
+- in-flight request inspection is implemented as a typed operator-gated
+  diagnostic helper with `SecretString` token accessors and bounded response
+  maps;
+- internal counters are rejected because `/sys/metrics` covers the observability
+  use case and the internal counter API has no stable compatibility contract;
+- internal request inspection is rejected because it is underdocumented and
+  either overlaps capability/resultant-ACL helpers or belongs to OpenBao
+  internal debugging;
 - all system endpoint decisions are reflected in the matrix and support table;
 - operator-risk additions preserve the existing `operator-ops` plus
   `operator-ops-acknowledged` pattern.
@@ -483,6 +491,7 @@ Publishable value:
 Stop condition:
 
 - endpoint matrix has zero `decision` rows;
+- endpoint matrix has zero `planned` rows;
 - every row is `typed`, `typed-gated`, `partial`, `raw`, `external`, or
   explicitly rejected in linked documentation;
 - strict typed coverage and addressed coverage percentages are recorded in
@@ -520,6 +529,7 @@ Stop condition:
 - complete documented support for the selected stable API surface;
 - no unresolved pre-`1.0` feature backlog remains;
 - endpoint matrix still has zero `decision` rows after final regeneration;
+- endpoint matrix still has zero `planned` rows after final regeneration;
 - all rejected or permanently out-of-scope items are documented with stable
   reasons and safe alternatives where applicable;
 - no known high or critical findings from pentest;

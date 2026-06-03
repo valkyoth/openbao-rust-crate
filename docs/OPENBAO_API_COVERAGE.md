@@ -75,9 +75,10 @@ of only area-level estimates:
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
 - strict typed coverage: `469/643` (`72.9%`);
 - typed plus partial coverage: `470/643` (`73.1%`);
-- addressed by typed, partial, raw, external, or rejected policy: `512/643` (`79.6%`);
-- rows needing a pre-`1.0.0` implementation/rejection/deferral decision:
-  `131`.
+- addressed by typed, partial, raw, external, or rejected policy: `515/643`
+  (`80.1%`);
+- planned implementation rows before `1.0.0`: `128`;
+- open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
 `docs/openbao-2.5-endpoint-matrix.csv` for each method/path row.
@@ -289,11 +290,11 @@ Support plan:
   operator-operation feature gates. Lease prefix revoke, force prefix revoke,
   lease count, lease tidy, and `RenewalHint` timing helpers are implemented.
   CORS wildcard origins are rejected locally. System config UI, streaming
-  monitor, and internal router inspection are rejected for stable scope.
-  Generate-root/recovery-token, decode-token, password policies, resultant ACL,
-  and legacy recovery-key rekey are planned for `0.14.0`; in-flight request,
-  internal counters, and internal request inspection still need final
-  decisions.
+  monitor, internal router inspection, internal counters, and internal request
+  inspection are rejected for stable scope. Generate-root/recovery-token,
+  decode-token, password policies, resultant ACL, legacy recovery-key rekey,
+  and typed operator-gated in-flight request inspection are planned for
+  `0.14.0`.
 
 ## Ergonomics And Capability Roadmap
 

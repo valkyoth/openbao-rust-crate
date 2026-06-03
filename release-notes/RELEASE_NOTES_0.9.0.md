@@ -36,7 +36,7 @@
   pre-`1.0` plan through `0.15.0`. `0.9.0` handles stabilization foundations;
   `0.10.0` through `0.14.0` handle Identity/auth, Transit, PKI, and System
   completion; `0.15.0` is the endpoint-closure release where no matrix row may
-  remain classified as `decision`.
+  remain classified as `planned` or `decision`.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -115,10 +115,11 @@
   boundaries.
 - Implement in `0.14.0`: system generate-root/recovery-token, decode-token,
   legacy recovery-key rekey behind operator gates; password policy CRUD/list/
-  generate and resultant ACL without gates. Rejected for stable scope:
-  sys/config/ui, sys/monitor streaming, and internal router inspection.
-  In-flight request, internal counters, and internal request inspection still
-  need final `0.14.0` decisions.
+  generate and resultant ACL without gates; and typed operator-gated in-flight
+  request inspection with `SecretString` token accessors and bounded response
+  maps. Rejected for stable scope: sys/config/ui, sys/monitor streaming,
+  internal router inspection, internal counters, and internal request
+  inspection.
 - Implement in `0.15.0`: a bounded `wait_until_unsealed` helper behind an
   explicit Tokio helper feature, typed response-wrapping ergonomics with
   redacted wrapping tokens and typed unwrap, selective AdminBootstrap

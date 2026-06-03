@@ -18,6 +18,7 @@ Sources:
 - `raw`: the crate intentionally relies on `Client::request_json` for this row.
 - `external`: the workflow is intentionally delegated to an external protocol/client.
 - `rejected`: the endpoint is intentionally not covered by this SDK.
+- `planned`: the row has a final pre-`1.0.0` implementation decision but is not implemented yet.
 - `decision`: the row needs implementation, rejection, raw-wrapper policy, or external-client policy before `1.0.0`.
 
 ## Summary
@@ -25,8 +26,9 @@ Sources:
 - Total documented endpoint rows: `643`
 - Strict typed coverage: `469/643` (72.9%)
 - Typed plus partial coverage: `470/643` (73.1%)
-- Addressed by typed, partial, raw, external, or rejected policy: `512/643` (79.6%)
-- Open decisions before `1.0.0`: `131`
+- Addressed by typed, partial, raw, external, or rejected policy: `515/643` (80.1%)
+- Planned implementation rows before `1.0.0`: `128`
+- Open owner decisions before `1.0.0`: `0`
 
 | Status | Count |
 | --- | ---: |
@@ -35,44 +37,45 @@ Sources:
 | `partial` | 1 |
 | `raw` | 0 |
 | `external` | 33 |
-| `rejected` | 9 |
-| `decision` | 131 |
+| `rejected` | 12 |
+| `planned` | 128 |
+| `decision` | 0 |
 
 ## Area Totals
 
-| Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Decision | Strict % |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 0 | 99.0% |
-| `secret` | 347 | 211 | 1 | 0 | 0 | 33 | 0 | 102 | 61.1% |
-| `system` | 191 | 109 | 44 | 0 | 0 | 0 | 9 | 29 | 80.1% |
+| Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Planned | Decision | Strict % |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 99.0% |
+| `secret` | 347 | 211 | 1 | 0 | 0 | 33 | 0 | 102 | 0 | 61.1% |
+| `system` | 191 | 109 | 44 | 0 | 0 | 0 | 12 | 26 | 0 | 80.1% |
 
 ## Pages With Non-Typed Rows
 
-| Page | Typed | Typed gated | Partial | Raw | External | Rejected | Decision |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| [/api-docs/auth/token/](https://openbao.org/api-docs/auth/token/) | 18 | 0 | 1 | 0 | 0 | 0 | 0 |
-| [/api-docs/secret/identity/mfa/duo/](https://openbao.org/api-docs/secret/identity/mfa/duo/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 |
-| [/api-docs/secret/identity/mfa/login-enforcement/](https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 |
-| [/api-docs/secret/identity/mfa/okta/](https://openbao.org/api-docs/secret/identity/mfa/okta/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 |
-| [/api-docs/secret/identity/mfa/pingid/](https://openbao.org/api-docs/secret/identity/mfa/pingid/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 |
-| [/api-docs/secret/identity/mfa/totp/](https://openbao.org/api-docs/secret/identity/mfa/totp/) | 0 | 0 | 0 | 0 | 0 | 0 | 7 |
-| [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 0 | 0 | 0 | 0 | 3 | 0 | 18 |
-| [/api-docs/secret/identity/tokens/](https://openbao.org/api-docs/secret/identity/tokens/) | 0 | 0 | 0 | 0 | 0 | 0 | 14 |
-| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 1 | 0 | 0 | 28 | 0 | 35 |
-| [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 | 0 |
-| [/api-docs/secret/transit/](https://openbao.org/api-docs/secret/transit/) | 19 | 0 | 0 | 0 | 0 | 0 | 12 |
-| [/api-docs/system/config-ui/](https://openbao.org/api-docs/system/config-ui/) | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
-| [/api-docs/system/generate-recovery-token/](https://openbao.org/api-docs/system/generate-recovery-token/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 |
-| [/api-docs/system/generate-root/](https://openbao.org/api-docs/system/generate-root/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 |
-| [/api-docs/system/in-flight-req/](https://openbao.org/api-docs/system/in-flight-req/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| [/api-docs/system/inspect/request/](https://openbao.org/api-docs/system/inspect/request/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| [/api-docs/system/inspect/router/](https://openbao.org/api-docs/system/inspect/router/) | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
-| [/api-docs/system/internal-counters/](https://openbao.org/api-docs/system/internal-counters/) | 0 | 0 | 0 | 0 | 0 | 0 | 2 |
-| [/api-docs/system/internal-ui-resultant-acl/](https://openbao.org/api-docs/system/internal-ui-resultant-acl/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| [/api-docs/system/mfa-validate/](https://openbao.org/api-docs/system/mfa-validate/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| [/api-docs/system/monitor/](https://openbao.org/api-docs/system/monitor/) | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
-| [/api-docs/system/policies-password/](https://openbao.org/api-docs/system/policies-password/) | 0 | 0 | 0 | 0 | 0 | 0 | 6 |
-| [/api-docs/system/rekey-recovery-key/](https://openbao.org/api-docs/system/rekey-recovery-key/) | 0 | 0 | 0 | 0 | 0 | 0 | 9 |
+| Page | Typed | Typed gated | Partial | Raw | External | Rejected | Planned | Decision |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| [/api-docs/auth/token/](https://openbao.org/api-docs/auth/token/) | 18 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+| [/api-docs/secret/identity/mfa/duo/](https://openbao.org/api-docs/secret/identity/mfa/duo/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
+| [/api-docs/secret/identity/mfa/login-enforcement/](https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
+| [/api-docs/secret/identity/mfa/okta/](https://openbao.org/api-docs/secret/identity/mfa/okta/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
+| [/api-docs/secret/identity/mfa/pingid/](https://openbao.org/api-docs/secret/identity/mfa/pingid/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
+| [/api-docs/secret/identity/mfa/totp/](https://openbao.org/api-docs/secret/identity/mfa/totp/) | 0 | 0 | 0 | 0 | 0 | 0 | 7 | 0 |
+| [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 0 | 0 | 0 | 0 | 3 | 0 | 18 | 0 |
+| [/api-docs/secret/identity/tokens/](https://openbao.org/api-docs/secret/identity/tokens/) | 0 | 0 | 0 | 0 | 0 | 0 | 14 | 0 |
+| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 1 | 0 | 0 | 28 | 0 | 35 | 0 |
+| [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 | 0 | 0 |
+| [/api-docs/secret/transit/](https://openbao.org/api-docs/secret/transit/) | 19 | 0 | 0 | 0 | 0 | 0 | 12 | 0 |
+| [/api-docs/system/config-ui/](https://openbao.org/api-docs/system/config-ui/) | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 |
+| [/api-docs/system/generate-recovery-token/](https://openbao.org/api-docs/system/generate-recovery-token/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
+| [/api-docs/system/generate-root/](https://openbao.org/api-docs/system/generate-root/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
+| [/api-docs/system/in-flight-req/](https://openbao.org/api-docs/system/in-flight-req/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| [/api-docs/system/inspect/request/](https://openbao.org/api-docs/system/inspect/request/) | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
+| [/api-docs/system/inspect/router/](https://openbao.org/api-docs/system/inspect/router/) | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 |
+| [/api-docs/system/internal-counters/](https://openbao.org/api-docs/system/internal-counters/) | 0 | 0 | 0 | 0 | 0 | 2 | 0 | 0 |
+| [/api-docs/system/internal-ui-resultant-acl/](https://openbao.org/api-docs/system/internal-ui-resultant-acl/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| [/api-docs/system/mfa-validate/](https://openbao.org/api-docs/system/mfa-validate/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| [/api-docs/system/monitor/](https://openbao.org/api-docs/system/monitor/) | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
+| [/api-docs/system/policies-password/](https://openbao.org/api-docs/system/policies-password/) | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 0 |
+| [/api-docs/system/rekey-recovery-key/](https://openbao.org/api-docs/system/rekey-recovery-key/) | 0 | 0 | 0 | 0 | 0 | 0 | 9 | 0 |
 
 ## Required Follow-Up
 
@@ -81,9 +84,8 @@ Sources:
 - `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.
 - Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.
 - PKI Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and current-doc struct-field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
-- System generate-root/recovery-token, decode-token, password policies, resultant ACL, and legacy recovery-key rekey are planned for `0.14.0`; config-ui, monitor streaming, and internal router inspection are classified as `rejected`.
-- System in-flight request and internal counters rows still need final `0.14.0` implementation or rejection decisions.
-- `0.15.0` is the closure release where no endpoint row may remain `decision`.
+- System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are planned for `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.
+- `0.15.0` is the closure release where planned endpoint rows are implemented or intentionally reclassified before `1.0.0`.
 
 Regenerate with:
 

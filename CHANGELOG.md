@@ -16,7 +16,8 @@ All notable changes to this project are documented here.
   `vaultrs`, or bespoke `reqwest` OpenBao/Vault wrappers.
 - Added a generated OpenBao `2.5.x` endpoint-by-endpoint coverage matrix with
   `643` documented endpoint rows, `72.9%` strict typed or operator-gated
-  coverage, and explicit pre-`1.0.0` decision rows.
+  coverage, explicit pre-`1.0.0` planned rows, and zero remaining owner-decision
+  rows.
 - Added a `0.9.0` release-note skeleton and release gate script.
 - Expanded the pre-`1.0` release strategy through `0.15.0` so Identity/auth,
   Transit advanced key management, PKI advanced and specialized flows, system
@@ -59,11 +60,12 @@ All notable changes to this project are documented here.
 - Added operator-gated PKI default root deletion via `Pki::delete_root` and
   `PkiRootDeletion::confirm()` so `DELETE /pki/root` is available only through
   an explicit destructive-operation call site.
-- Added an explicit `rejected` endpoint-matrix status and recorded system
-  backend decisions: config-ui, sys/monitor streaming, and internal router
-  inspection are rejected for stable scope; root/recovery token ceremonies,
-  decode-token, password policies, resultant ACL, and legacy recovery-key rekey
-  are planned for `0.14.0`.
+- Added explicit `planned` and `rejected` endpoint-matrix statuses and recorded
+  system backend decisions: config-ui, sys/monitor streaming, internal router
+  inspection, internal counters, and internal request inspection are rejected
+  for stable scope; root/recovery token ceremonies, decode-token, password
+  policies, resultant ACL, legacy recovery-key rekey, and typed operator-gated
+  in-flight request inspection are planned for `0.14.0`.
 - Recorded the `0.15.0` stable-scope ergonomics decisions: bounded
   `wait_until_unsealed` polling, typed response-wrapping ergonomics, selective
   PKI/database/SSH bootstrap convergence, and ACL wrapping-TTL policy builder

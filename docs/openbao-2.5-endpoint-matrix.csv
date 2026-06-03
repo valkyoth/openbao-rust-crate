@@ -105,20 +105,20 @@ auth,POST,/auth/userpass/users/:username/policies,typed,https://openbao.org/api-
 auth,LIST,/auth/userpass/users,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 auth,POST,/auth/userpass/login/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 secret,POST,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/keys/:name/import,decision,https://openbao.org/api-docs/secret/transit/,"Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
-secret,POST,/transit/keys/:name/import_version,decision,https://openbao.org/api-docs/secret/transit/,"Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
-secret,GET,/transit/wrapping_key,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; returns the Transit mount RSA wrapping public key PEM as non-secret String.
+secret,POST,/transit/keys/:name/import,planned,https://openbao.org/api-docs/secret/transit/,"Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
+secret,POST,/transit/keys/:name/import_version,planned,https://openbao.org/api-docs/secret/transit/,"Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
+secret,GET,/transit/wrapping_key,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; returns the Transit mount RSA wrapping public key PEM as non-secret String.
 secret,GET,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,LIST,/transit/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,DELETE,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/config,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/rotate,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,DELETE,/transit/keys/:name/soft-delete,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
-secret,POST,/transit/keys/:name/soft-delete-restore,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
-secret,GET,/transit/byok-export/:destination/:source(/:version),decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; returns a destination-wrapped ciphertext blob as SecretString with redacted Debug.
+secret,DELETE,/transit/keys/:name/soft-delete,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
+secret,POST,/transit/keys/:name/soft-delete-restore,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
+secret,GET,/transit/byok-export/:destination/:source(/:version),planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; returns a destination-wrapped ciphertext blob as SecretString with redacted Debug.
 secret,GET,/transit/export/:key_type/:name(/:version),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
-secret,GET,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
+secret,POST,/transit/config/keys,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
+secret,GET,/transit/config/keys,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
 secret,POST,/transit/encrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/decrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/rewrap/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
@@ -131,10 +131,10 @@ secret,POST,/transit/verify/:name(/:hash_algorithm),typed,https://openbao.org/ap
 secret,GET,/transit/backup/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/restore(/:name),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/trim,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
-secret,GET,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
-secret,POST,/transit/keys/:name/csr,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.
-secret,POST,/transit/keys/:name/set-certificate,decision,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.
+secret,POST,/transit/cache-config,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
+secret,GET,/transit/cache-config,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
+secret,POST,/transit/keys/:name/csr,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.
+secret,POST,/transit/keys/:name/set-certificate,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.
 secret,GET,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
 secret,LIST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
 secret,POST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
@@ -202,23 +202,23 @@ secret,POST,/pki/config/acme,typed,https://openbao.org/api-docs/secret/pki/,Type
 secret,LIST,/pki/roles,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issue/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/issuer/:issuer_ref/issue/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/sign/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/root/sign-intermediate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,POST,/pki/root/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,POST,/pki/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,LIST,/pki/cel/roles,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,GET,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,POST,/pki/cel/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,POST,/pki/cel/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/root/sign-self-issued,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/sign-verbatim(/:name),planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,LIST,/pki/cel/roles,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,GET,/pki/cel/roles/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/cel/issue/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/cel/sign/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/revoke,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/revoke-with-key,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,LIST,/certs/revoked,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,LIST,/certs/revocation-queue,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/revoke-with-key,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,LIST,/certs/revoked,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,LIST,/certs/revocation-queue,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,LIST,/pki/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/cert/ca,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
 secret,GET,/pki/ca,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
@@ -243,18 +243,18 @@ secret,GET,/pki/issuer/:issuer_ref/crl/delta/pem,external,https://openbao.org/ap
 secret,GET,/pki/ocsp/<base 64+URL encoded ocsp DER request>,external,https://openbao.org/api-docs/secret/pki/,"OCSP responder protocol endpoint is handled by OCSP/TLS clients, not this SDK."
 secret,POST,/pki/ocsp,external,https://openbao.org/api-docs/secret/pki/,"OCSP responder protocol endpoint is handled by OCSP/TLS clients, not this SDK."
 secret,LIST,/pki/certs,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,LIST,/pki/certs/detailed?detailed=true,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,LIST,/pki/certs/detailed?detailed=true,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,GET,/pki/cert/:serial,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/cert/:serial/raw,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
 secret,GET,/pki/cert/:serial/raw/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
 secret,LIST,/pki/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/keys/generate/:type,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/keys/generate/:type,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/root/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuers/generate/root/:type,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/root/rotate/:type,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/issuers/generate/root/:type,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/root/rotate/:type,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/intermediate/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuers/generate/intermediate/:type,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/intermediate/cross-sign,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/issuers/generate/intermediate/:type,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/intermediate/cross-sign,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/config/ca,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issuers/import/bundle,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issuers/import/cert,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
@@ -269,30 +269,30 @@ secret,GET,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Type
 secret,POST,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,DELETE,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,DELETE,/pki/root,typed-gated,https://openbao.org/api-docs/secret/pki/,Dedicated destructive PKI root deletion helper exists behind operator-operation gates and requires an explicit confirmation type.
-secret,POST,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,PATCH,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,DELETE,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/cel/roles/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,PATCH,/pki/cel/roles/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,DELETE,/pki/cel/roles/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,PATCH,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,DELETE,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/root/replace,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,GET,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,GET,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/issuers,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/config/issuers,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/root/replace,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/keys,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/config/keys,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/cluster,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/config/cluster,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,GET,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/crl/rotate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/crl/rotate-delta,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,POST,/pki/issuer/:issuer_ref/resign-crls,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,POST,/pki/issuer/:issuer_ref/sign-revocation-list,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,GET,/pki/crl/rotate-delta,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/issuer/:issuer_ref/resign-crls,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
+secret,POST,/pki/issuer/:issuer_ref/sign-revocation-list,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/tidy,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/auto-tidy,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/config/auto-tidy,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,GET,/pki/tidy-status,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/tidy-cancel,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/rabbitmq/config/connection,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
@@ -357,26 +357,26 @@ system,GET,/sys/config/ui/headers/:name,rejected,https://openbao.org/api-docs/sy
 system,POST,/sys/config/ui/headers/:name,rejected,https://openbao.org/api-docs/system/config-ui/,Rejected for stable scope: OpenBao removed the embedded UI and the remaining header configuration use case is narrow server administration.
 system,DELETE,/sys/config/ui/headers/:name,rejected,https://openbao.org/api-docs/system/config-ui/,Rejected for stable scope: OpenBao removed the embedded UI and the remaining header configuration use case is narrow server administration.
 system,LIST,/sys/config/ui/headers,rejected,https://openbao.org/api-docs/system/config-ui/,Rejected for stable scope: OpenBao removed the embedded UI and the remaining header configuration use case is narrow server administration.
-system,GET,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,POST,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,DELETE,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,POST,/sys/generate-recovery-token/update,decision,https://openbao.org/api-docs/system/generate-recovery-token/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,GET,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,POST,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,DELETE,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,POST,/sys/generate-root/update,decision,https://openbao.org/api-docs/system/generate-root/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,GET,/sys/generate-recovery-token/attempt,planned,https://openbao.org/api-docs/system/generate-recovery-token/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,POST,/sys/generate-recovery-token/attempt,planned,https://openbao.org/api-docs/system/generate-recovery-token/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,DELETE,/sys/generate-recovery-token/attempt,planned,https://openbao.org/api-docs/system/generate-recovery-token/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,POST,/sys/generate-recovery-token/update,planned,https://openbao.org/api-docs/system/generate-recovery-token/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,GET,/sys/generate-root/attempt,planned,https://openbao.org/api-docs/system/generate-root/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,POST,/sys/generate-root/attempt,planned,https://openbao.org/api-docs/system/generate-root/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,DELETE,/sys/generate-root/attempt,planned,https://openbao.org/api-docs/system/generate-root/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,POST,/sys/generate-root/update,planned,https://openbao.org/api-docs/system/generate-root/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
 system,GET,/sys/health,typed,https://openbao.org/api-docs/system/health/,Typed system helper exists.
 system,GET,/sys/host-info,typed,https://openbao.org/api-docs/system/host-info/,Typed system helper exists.
-system,GET,/sys/in-flight-req,decision,https://openbao.org/api-docs/system/in-flight-req/,System endpoint still needs a final 0.14.0 implement/reject decision.
+system,GET,/sys/in-flight-req,planned,https://openbao.org/api-docs/system/in-flight-req/,Implement in 0.14.0 as a typed operator-gated diagnostic helper; client token accessors are SecretString and the response map is bounded.
 system,GET,/sys/init,typed,https://openbao.org/api-docs/system/init/,Typed system helper exists.
 system,POST,/sys/init,typed,https://openbao.org/api-docs/system/init/,Typed system helper exists.
-system,GET,/sys/internal/counters/entities,decision,https://openbao.org/api-docs/system/internal-counters/,System endpoint still needs a final 0.14.0 implement/reject decision.
-system,GET,/sys/internal/counters/tokens,decision,https://openbao.org/api-docs/system/internal-counters/,System endpoint still needs a final 0.14.0 implement/reject decision.
+system,GET,/sys/internal/counters/entities,rejected,https://openbao.org/api-docs/system/internal-counters/,Rejected: internal counter endpoints have no stability guarantee and sys/metrics covers the observability use case.
+system,GET,/sys/internal/counters/tokens,rejected,https://openbao.org/api-docs/system/internal-counters/,Rejected: internal counter endpoints have no stability guarantee and sys/metrics covers the observability use case.
 system,GET,/sys/internal/specs/openapi,typed,https://openbao.org/api-docs/system/internal-specs-openapi/,Typed system helper exists.
 system,GET,/sys/internal/ui/mounts,typed,https://openbao.org/api-docs/system/internal-ui-mounts/,Typed system helper exists.
 system,GET,/sys/internal/ui/mounts/:path,typed,https://openbao.org/api-docs/system/internal-ui-mounts/,Typed system helper exists.
 system,GET,/sys/internal/ui/namespaces,typed,https://openbao.org/api-docs/system/internal-ui-namespaces/,Typed system helper exists.
-system,GET,/sys/internal/ui/resultant-acl,decision,https://openbao.org/api-docs/system/internal-ui-resultant-acl/,Implement in 0.14.0 with an internal-endpoint stability caveat and conservative capability maps.
+system,GET,/sys/internal/ui/resultant-acl,planned,https://openbao.org/api-docs/system/internal-ui-resultant-acl/,Implement in 0.14.0 with an internal-endpoint stability caveat and conservative capability maps.
 system,GET,/sys/key-status,typed,https://openbao.org/api-docs/system/key-status/,Typed system helper exists.
 system,GET,/sys/ha-status,typed,https://openbao.org/api-docs/system/ha-status/,Typed system helper exists.
 system,GET,/sys/leader,typed,https://openbao.org/api-docs/system/leader/,Typed system helper exists.
@@ -396,7 +396,7 @@ system,GET,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/
 system,DELETE,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
 system,DELETE,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
 system,GET,/sys/metrics,typed,https://openbao.org/api-docs/system/metrics/,Typed system helper exists.
-system,POST,/sys/mfa/validate,decision,https://openbao.org/api-docs/system/mfa-validate/,Implement in 0.10.0; this completes MFA-enforced login flows.
+system,POST,/sys/mfa/validate,planned,https://openbao.org/api-docs/system/mfa-validate/,Implement in 0.10.0; this completes MFA-enforced login flows.
 system,GET,/sys/monitor,rejected,https://openbao.org/api-docs/system/monitor/,Rejected for current stable scope: sys/monitor is a streaming log endpoint and needs a deliberate streaming API design outside the crate's single-response model.
 system,GET,/sys/mounts,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
 system,POST,/sys/mounts/:path,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
@@ -429,12 +429,12 @@ system,LIST,/sys/policies/detailed/acl/:prefix,typed,https://openbao.org/api-doc
 system,GET,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
 system,POST,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
 system,DELETE,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
-system,POST,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
-system,LIST,/sys/policies/password,decision,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
-system,GET,/sys/policies/password?list=true,decision,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
-system,GET,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
-system,DELETE,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
-system,GET,/sys/policies/password/:name/generate,decision,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
+system,POST,/sys/policies/password/:name,planned,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
+system,LIST,/sys/policies/password,planned,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
+system,GET,/sys/policies/password?list=true,planned,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
+system,GET,/sys/policies/password/:name,planned,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
+system,DELETE,/sys/policies/password/:name,planned,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
+system,GET,/sys/policies/password/:name/generate,planned,https://openbao.org/api-docs/system/policies-password/,Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.
 system,GET,/sys/pprof/,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
 system,GET,/sys/pprof/allocs,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
 system,GET,/sys/pprof/block,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
@@ -466,15 +466,15 @@ system,POST,/sys/rekey/update,typed-gated,https://openbao.org/api-docs/system/re
 system,GET,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
 system,DELETE,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
 system,POST,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
-system,GET,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,POST,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,DELETE,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,GET,/sys/rekey/recovery-key-backup,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,DELETE,/sys/rekey/recovery-key-backup,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,POST,/sys/rekey-recovery-key/update,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,GET,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,DELETE,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
-system,POST,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,GET,/sys/rekey-recovery-key/init,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,POST,/sys/rekey-recovery-key/init,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,DELETE,/sys/rekey-recovery-key/init,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,GET,/sys/rekey/recovery-key-backup,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,DELETE,/sys/rekey/recovery-key-backup,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,POST,/sys/rekey-recovery-key/update,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,GET,/sys/rekey-recovery-key/verify,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,DELETE,/sys/rekey-recovery-key/verify,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
+system,POST,/sys/rekey-recovery-key/verify,planned,https://openbao.org/api-docs/system/rekey-recovery-key/,Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.
 system,POST,/sys/remount,typed,https://openbao.org/api-docs/system/remount/,Typed system helper exists.
 system,GET,/sys/remount/status/:migration_id,typed,https://openbao.org/api-docs/system/remount/,Typed system helper exists.
 system,POST,/sys/seal,typed-gated,https://openbao.org/api-docs/system/seal/,Typed helper exists behind operator-operation gates where needed.
@@ -526,40 +526,40 @@ secret,GET,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secre
 secret,DELETE,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,LIST,/identity/group-alias/id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,GET,/identity/group-alias/id?list=true,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
-secret,POST,/identity/oidc/config,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/config,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/key/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/key/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/key/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/key,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/key/:name/rotate,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/role/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/role/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/role/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/role,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/token/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/introspect,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/.well-known/openid-configuration,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/config,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/config,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/key/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/key/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/key/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/key,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/key/:name/rotate,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/role/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/role/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/role/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/role,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/token/:name,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/introspect,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/.well-known/openid-configuration,planned,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
 secret,POST,/identity/lookup/entity,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
 secret,POST,/identity/lookup/group,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
-secret,POST,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/provider,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/scope,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/client,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/assignment,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/provider/:name/.well-known/keys,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/provider/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/provider/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/provider,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/provider/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/scope/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/scope/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/scope,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/scope/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/client/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/client/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/client,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/client/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/assignment/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/assignment/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/assignment,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/assignment/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/provider/:name/.well-known/keys,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
 secret,GET/POST,/identity/oidc/provider/:name/authorize,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
 secret,POST,/identity/oidc/provider/:name/token,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
 secret,POST,/identity/oidc/provider/:name/userinfo,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
@@ -586,14 +586,14 @@ secret,GET,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs
 secret,POST,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
 secret,PATCH,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
 secret,DELETE,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
-secret,POST,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/login-enforcement,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/login-enforcement/:name,planned,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/login-enforcement/:name,planned,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/login-enforcement/:name,planned,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/login-enforcement,planned,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
 system,GET,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
 system,POST,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
 system,DELETE,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
-system,GET,/sys/internal/inspect/request/root,decision,https://openbao.org/api-docs/system/inspect/request/,Internal request inspection still needs a final 0.14.0 implementation or rejection decision.
+system,GET,/sys/internal/inspect/request/root,rejected,https://openbao.org/api-docs/system/inspect/request/,Rejected: request inspection is underdocumented and either overlaps capability/resultant-ACL helpers or belongs to internal OpenBao debugging.
 system,GET,/sys/internal/inspect/router/root,rejected,https://openbao.org/api-docs/system/inspect/router/,Rejected: router inspection is an internal OpenBao implementation/debug endpoint with no backwards-compatibility guarantee.
 system,GET,/sys/internal/inspect/router/uuid,rejected,https://openbao.org/api-docs/system/inspect/router/,Rejected: router inspection is an internal OpenBao implementation/debug endpoint with no backwards-compatibility guarantee.
 system,GET,/sys/internal/inspect/router/accessor,rejected,https://openbao.org/api-docs/system/inspect/router/,Rejected: router inspection is an internal OpenBao implementation/debug endpoint with no backwards-compatibility guarantee.
@@ -623,22 +623,22 @@ system,POST,/sys/storage/raft/bootstrap,typed,https://openbao.org/api-docs/syste
 system,GET,/sys/storage/raft/autopilot/state,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
 system,GET,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
 system,POST,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
-secret,POST,/identity/mfa/method/duo/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/method/duo,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/okta/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/method/okta,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/pingid/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/method/pingid,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/totp/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/mfa/method/totp,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/totp/generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/totp/admin-generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/mfa/method/totp/admin-destroy,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/duo/:method_id,planned,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/method/duo/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/method/duo/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/method/duo,planned,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/okta/:method_id,planned,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/method/okta/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/method/okta/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/method/okta,planned,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/pingid/:method_id,planned,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/method/pingid/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/method/pingid/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/method/pingid,planned,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/totp/:method_id,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/method/totp/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/method/totp/:id,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/method/totp,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/totp/generate,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/totp/admin-generate,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/totp/admin-destroy,planned,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.

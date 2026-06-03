@@ -149,9 +149,9 @@ Planned next:
   ergonomics. Request-level back-pressure, full OpenTelemetry SDK integration,
   certificate pinning, KV v1 bootstrap convergence, and ACL parameter-constraint
   HCL generation are rejected for stable scope.
-- `1.0.0`: stable API freeze after the endpoint matrix has zero `decision`
-  rows; after `1.0.0`, only `1.0.x` maintenance and security fixes are
-  planned.
+- `1.0.0`: stable API freeze after the endpoint matrix has zero `planned` or
+  `decision` rows; after `1.0.0`, only `1.0.x` maintenance and security fixes
+  are planned.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.

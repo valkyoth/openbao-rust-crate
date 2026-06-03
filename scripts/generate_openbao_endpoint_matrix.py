@@ -161,7 +161,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
             )
         if any(segment in page for segment in ("/mfa", "/oidc-provider", "/tokens")):
             return (
-                "decision",
+                "planned",
                 "Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.",
             )
         return ("typed", "Typed Identity entity/group/alias/lookup helper exists.")
@@ -177,17 +177,17 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
     if page.startswith("/api-docs/secret/transit/"):
         if path == "/transit/wrapping_key":
             return (
-                "decision",
+                "planned",
                 "Implement in 0.11.0; returns the Transit mount RSA wrapping public key PEM as non-secret String.",
             )
         if path in ("/transit/keys/:name/import", "/transit/keys/:name/import_version"):
             return (
-                "decision",
+                "planned",
                 "Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed.",
             )
         if path.startswith("/transit/byok-export/"):
             return (
-                "decision",
+                "planned",
                 "Implement in 0.11.0; returns a destination-wrapped ciphertext blob as SecretString with redacted Debug.",
             )
         if path in (
@@ -195,17 +195,17 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
             "/transit/keys/:name/soft-delete-restore",
         ):
             return (
-                "decision",
+                "planned",
                 "Implement in 0.11.0 as reversible Transit key disable and restore helpers.",
             )
         if path in ("/transit/cache-config", "/transit/config/keys"):
             return (
-                "decision",
+                "planned",
                 "Implement in 0.11.0 as Transit cache and global key configuration helpers.",
             )
         if path in ("/transit/keys/:name/csr", "/transit/keys/:name/set-certificate"):
             return (
-                "decision",
+                "planned",
                 "Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.",
             )
         return ("typed", "Typed Transit helper exists.")
@@ -310,7 +310,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
             )
         if path in pki_0_12_paths:
             return (
-                "decision",
+                "planned",
                 "Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage.",
             )
         pki_0_13_paths = {
@@ -331,7 +331,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         }
         if path in pki_0_13_paths:
             return (
-                "decision",
+                "planned",
                 "Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage.",
             )
         return (
@@ -345,7 +345,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
 def classify_system(page: str, path: str) -> tuple[str, str]:
     if page == "/api-docs/system/mfa-validate/":
         return (
-            "decision",
+            "planned",
             "Implement in 0.10.0; this completes MFA-enforced login flows.",
         )
 
@@ -369,8 +369,8 @@ def classify_system(page: str, path: str) -> tuple[str, str]:
 
     if page == "/api-docs/system/inspect/request/":
         return (
-            "decision",
-            "Internal request inspection still needs a final 0.14.0 implementation or rejection decision.",
+            "rejected",
+            "Rejected: request inspection is underdocumented and either overlaps capability/resultant-ACL helpers or belongs to internal OpenBao debugging.",
         )
 
     if page in (
@@ -380,30 +380,33 @@ def classify_system(page: str, path: str) -> tuple[str, str]:
         "/api-docs/system/rekey-recovery-key/",
     ):
         return (
-            "decision",
+            "planned",
             "Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.",
         )
 
     if page == "/api-docs/system/policies-password/":
         return (
-            "decision",
+            "planned",
             "Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.",
         )
 
     if page == "/api-docs/system/internal-ui-resultant-acl/":
         return (
-            "decision",
+            "planned",
             "Implement in 0.14.0 with an internal-endpoint stability caveat and conservative capability maps.",
         )
 
-    if any(
-        segment in page
-        for segment in (
-            "in-flight-req",
-            "internal-counters",
+    if "in-flight-req" in page:
+        return (
+            "planned",
+            "Implement in 0.14.0 as a typed operator-gated diagnostic helper; client token accessors are SecretString and the response map is bounded.",
         )
-    ):
-        return ("decision", "System endpoint still needs a final 0.14.0 implement/reject decision.")
+
+    if "internal-counters" in page:
+        return (
+            "rejected",
+            "Rejected: internal counter endpoints have no stability guarantee and sys/metrics covers the observability use case.",
+        )
 
     gated_pages = (
         "raw",
@@ -501,6 +504,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
         "- `raw`: the crate intentionally relies on `Client::request_json` for this row.",
         "- `external`: the workflow is intentionally delegated to an external protocol/client.",
         "- `rejected`: the endpoint is intentionally not covered by this SDK.",
+        "- `planned`: the row has a final pre-`1.0.0` implementation decision but is not implemented yet.",
         "- `decision`: the row needs implementation, rejection, raw-wrapper policy, or external-client policy before `1.0.0`.",
         "",
         "## Summary",
@@ -509,12 +513,22 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
         f"- Strict typed coverage: `{covered}/{total}` ({percent(covered, total)})",
         f"- Typed plus partial coverage: `{covered_or_partial}/{total}` ({percent(covered_or_partial, total)})",
         f"- Addressed by typed, partial, raw, external, or rejected policy: `{addressed}/{total}` ({percent(addressed, total)})",
-        f"- Open decisions before `1.0.0`: `{by_status['decision']}`",
+        f"- Planned implementation rows before `1.0.0`: `{by_status['planned']}`",
+        f"- Open owner decisions before `1.0.0`: `{by_status['decision']}`",
         "",
         "| Status | Count |",
         "| --- | ---: |",
     ]
-    for status in ("typed", "typed-gated", "partial", "raw", "external", "rejected", "decision"):
+    for status in (
+        "typed",
+        "typed-gated",
+        "partial",
+        "raw",
+        "external",
+        "rejected",
+        "planned",
+        "decision",
+    ):
         lines.append(f"| `{status}` | {by_status[status]} |")
 
     lines.extend(
@@ -522,8 +536,8 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "## Area Totals",
             "",
-            "| Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Decision | Strict % |",
-            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Planned | Decision | Strict % |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for area in ("auth", "secret", "system"):
@@ -533,7 +547,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
         lines.append(
             f"| `{area}` | {area_total} | {counts['typed']} | {counts['typed-gated']} | "
             f"{counts['partial']} | {counts['raw']} | {counts['external']} | "
-            f"{counts['rejected']} | {counts['decision']} | {percent(area_covered, area_total)} |"
+            f"{counts['rejected']} | {counts['planned']} | {counts['decision']} | {percent(area_covered, area_total)} |"
         )
 
     lines.extend(
@@ -541,17 +555,20 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "## Pages With Non-Typed Rows",
             "",
-            "| Page | Typed | Typed gated | Partial | Raw | External | Rejected | Decision |",
-            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Page | Typed | Typed gated | Partial | Raw | External | Rejected | Planned | Decision |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for page in sorted(by_page):
         counts = by_page[page]
-        if not any(counts[status] for status in ("partial", "raw", "external", "rejected", "decision")):
+        if not any(
+            counts[status]
+            for status in ("partial", "raw", "external", "rejected", "planned", "decision")
+        ):
             continue
         lines.append(
             f"| [{page}]({DOCS_ROOT}{page}) | {counts['typed']} | {counts['typed-gated']} | "
-            f"{counts['partial']} | {counts['raw']} | {counts['external']} | {counts['rejected']} | {counts['decision']} |"
+            f"{counts['partial']} | {counts['raw']} | {counts['external']} | {counts['rejected']} | {counts['planned']} | {counts['decision']} |"
         )
 
     lines.extend(
@@ -564,9 +581,8 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.",
             "- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.",
             "- PKI Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and current-doc struct-field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.",
-            "- System generate-root/recovery-token, decode-token, password policies, resultant ACL, and legacy recovery-key rekey are planned for `0.14.0`; config-ui, monitor streaming, and internal router inspection are classified as `rejected`.",
-            "- System in-flight request and internal counters rows still need final `0.14.0` implementation or rejection decisions.",
-            "- `0.15.0` is the closure release where no endpoint row may remain `decision`.",
+            "- System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are planned for `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.",
+            "- `0.15.0` is the closure release where planned endpoint rows are implemented or intentionally reclassified before `1.0.0`.",
             "",
             "Regenerate with:",
             "",
