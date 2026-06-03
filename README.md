@@ -38,8 +38,8 @@ use openbao::Client;
 ```
 
 This README documents the `0.10.0` development line. `0.10.0` builds on the
-released `0.9.0` API with Identity OIDC token/admin coverage and the remaining
-Identity/MFA completion work planned for this release line.
+released `0.9.0` API with Identity OIDC token/admin coverage and the
+Identity/MFA completion work for this release line.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 

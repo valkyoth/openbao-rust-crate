@@ -2,6 +2,9 @@
 
 Status: in development.
 
+Readiness: implementation complete locally; ready for external pentest and CI
+validation.
+
 ## Summary
 
 `0.10.0` is the Identity and auth completion line. The current slices add typed
@@ -46,6 +49,7 @@ bounded.
 - JWKS, list, and provider/client metadata map responses are bounded during
   deserialization.
 
-## Still In Scope For 0.10.0
+## Release Readiness
 
-- Final documentation and release checks.
+- Local release checks pass as of this development snapshot.
+- Wait for the external pentest report and GitHub CI before tagging `v0.10.0`.
