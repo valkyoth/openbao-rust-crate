@@ -154,14 +154,21 @@ Delivered in `0.10.0`:
   response parsing and secret-aware MFA provider credentials, TOTP outputs,
   passcodes, returned tokens, and accessors.
 
+In progress for `0.11.0`:
+
+- Transit advanced key management: BYOK wrapping-key, import/import-version,
+  BYOK export, soft-delete/restore, cache/global config, CSR generation, and
+  certificate-chain install helpers. Endpoint wrappers accept only externally
+  wrapped ciphertext; raw key bytes remain outside the default wrapper APIs.
+
 Planned next:
 
-- `0.11.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
-  Transit advanced key management, PKI advanced/public/specialized flows,
-  remaining system backend rows, then final endpoint closure and stable
-  ergonomics. Request-level back-pressure, full OpenTelemetry SDK integration,
-  certificate pinning, KV v1 bootstrap convergence, and ACL parameter-constraint
-  HCL generation are rejected for stable scope.
+- `0.12.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
+  PKI advanced/public/specialized flows, remaining system backend rows, then
+  final endpoint closure and stable ergonomics. Request-level back-pressure,
+  full OpenTelemetry SDK integration, certificate pinning, KV v1 bootstrap
+  convergence, and ACL parameter-constraint HCL generation are rejected for
+  stable scope.
 - `1.0.0`: stable API freeze after the endpoint matrix has zero `planned` or
   `decision` rows; after `1.0.0`, only `1.0.x` maintenance and security fixes
   are planned.
@@ -291,8 +298,8 @@ openbao = { version = "0.10", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the current `0.10.0` line it records `644` documented endpoint rows, with
-`526/644` (`81.7%`) strict typed or operator-gated coverage.
+For the current `0.11.0` line it records `643` documented endpoint rows, with
+`537/643` (`83.5%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
 
@@ -349,7 +356,7 @@ For the current `0.10.0` line it records `644` documented endpoint rows, with
 | Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, JWKS, OIDC provider/scope/client/assignment admin, named-provider discovery/JWKS, MFA method management, TOTP MFA generation/admin actions, and MFA login-enforcement helpers are implemented. Named-provider OIDC browser protocol flows stay external. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
-| Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, and optional raw-byte helpers. Import/BYOK endpoint wrappers are planned for `0.11.0` with pre-wrapped `SecretString` ciphertext only; no raw key bytes enter those wrappers. Soft-delete/restore, cache/global config, CSR, certificate-install, and optional `transit-import` wrapping-helper work are planned before `1.0.0`. |
+| Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional raw-byte helpers, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR generation, and certificate-chain install helpers. Import wrappers accept externally wrapped `SecretString` ciphertext only; raw key bytes stay outside the default endpoint wrappers. Optional `transit-import` client-side wrapping-helper work remains pending before `1.0.0`. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, revoke, certificate list/read, issuer/key list/read/delete/update, issuer revoke, operator-gated default root deletion with explicit confirmation, CA/key import, ACME config/EAB/directory URL, CRL rotate, tidy, tidy status, and tidy cancel are implemented. Tier 1 multi-issuer/config/root rotation/sign-verbatim/revoke-with-key and struct field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads stay external. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |

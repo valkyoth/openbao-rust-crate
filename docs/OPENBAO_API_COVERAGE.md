@@ -69,15 +69,15 @@ Sources:
 
 ## Endpoint Matrix
 
-The `0.10.0` development line uses a mechanical endpoint matrix instead
+The `0.11.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
-- documented endpoint rows extracted from OpenBao `2.5.x`: `644`;
-- strict typed coverage: `526/644` (`81.7%`);
-- typed plus partial coverage: `527/644` (`81.8%`);
-- addressed by typed, partial, raw, external, or rejected policy: `572/644`
-  (`88.8%`);
-- planned implementation rows before `1.0.0`: `72`;
+- documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
+- strict typed coverage: `537/643` (`83.5%`);
+- typed plus partial coverage: `538/643` (`83.7%`);
+- addressed by typed, partial, raw, external, or rejected policy: `583/643`
+  (`90.7%`);
+- planned implementation rows before `1.0.0`: `60`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -188,14 +188,14 @@ Support plan:
   trim, and batch encrypt/decrypt/rewrap/sign/verify helpers are implemented.
 - `0.11.0`: Transit wrapping-key, import/import-version, BYOK export,
   soft-delete/restore, cache config, global key config, CSR generation, and
-  certificate install rows are planned. `wrapping_key` returns a public PEM
-  string. Import requests carry only pre-wrapped ciphertext as `SecretString`
-  and reject empty ciphertext constructors; optional derivation context is also
-  secret-aware. BYOK export returns a wrapped ciphertext blob as
-  `SecretString`. Raw key bytes are never accepted by these endpoint wrappers.
-  A pre-`1.0.0` optional `transit-import` helper is also planned for callers
-  who want the crate to prepare OpenBao's wrapped-key blob behind feature-gated
-  `rsa` and `aes-gcm` dependencies.
+  certificate install rows are implemented. `wrapping_key` returns a public
+  PEM string. Import requests carry only pre-wrapped ciphertext as
+  `SecretString` and reject empty ciphertext constructors; optional derivation
+  context is also secret-aware. BYOK export returns a wrapped ciphertext blob
+  as `SecretString`. Raw key bytes are never accepted by these endpoint
+  wrappers. A pre-`1.0.0` optional `transit-import` helper is still planned
+  for callers who want the crate to prepare OpenBao's wrapped-key blob behind
+  feature-gated `rsa` and `aes-gcm` dependencies.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer

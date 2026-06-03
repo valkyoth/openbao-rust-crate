@@ -196,36 +196,36 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
     if page.startswith("/api-docs/secret/transit/"):
         if path == "/transit/wrapping_key":
             return (
-                "planned",
-                "Implement in 0.11.0; returns the Transit mount RSA wrapping public key PEM as non-secret String.",
+                "typed",
+                "Typed Transit wrapping-key helper exists and returns the RSA public key PEM as non-secret String.",
             )
         if path in ("/transit/keys/:name/import", "/transit/keys/:name/import_version"):
             return (
-                "planned",
-                "Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed.",
+                "typed",
+                "Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed.",
             )
         if path.startswith("/transit/byok-export/"):
             return (
-                "planned",
-                "Implement in 0.11.0; returns a destination-wrapped ciphertext blob as SecretString with redacted Debug.",
+                "typed",
+                "Typed Transit BYOK export helper exists and returns destination-wrapped ciphertext blobs as SecretString with redacted Debug.",
             )
         if path in (
             "/transit/keys/:name/soft-delete",
             "/transit/keys/:name/soft-delete-restore",
         ):
             return (
-                "planned",
-                "Implement in 0.11.0 as reversible Transit key disable and restore helpers.",
+                "typed",
+                "Typed reversible Transit key soft-delete and restore helpers exist.",
             )
         if path in ("/transit/cache-config", "/transit/config/keys"):
             return (
-                "planned",
-                "Implement in 0.11.0 as Transit cache and global key configuration helpers.",
+                "typed",
+                "Typed Transit cache and global key configuration helpers exist.",
             )
         if path in ("/transit/keys/:name/csr", "/transit/keys/:name/set-certificate"):
             return (
-                "planned",
-                "Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.",
+                "typed",
+                "Typed Transit CSR generation and certificate install helpers exist; PEM material is public.",
             )
         return ("typed", "Typed Transit helper exists.")
 
@@ -598,7 +598,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "- Identity OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed token generation, token introspection, discovery metadata, default JWKS reads, OIDC provider/scope/client/assignment admin, named-provider discovery, named-provider JWKS, MFA method management, MFA TOTP generation/admin actions, and MFA login enforcement helpers are implemented in `0.10.0`.",
             "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",
             "- `sys/mfa/validate` is implemented in `0.10.0` because MFA-enforced login flows cannot complete without it.",
-            "- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.",
+            "- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are implemented in `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.",
             "- PKI Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and current-doc struct-field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.",
             "- System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are planned for `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.",
             "- `0.15.0` is the closure release where planned endpoint rows are implemented or intentionally reclassified before `1.0.0`.",

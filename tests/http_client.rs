@@ -3473,6 +3473,236 @@ async fn transit_datakey_random_and_rewrap_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn transit_advanced_key_management_uses_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..12 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match index {
+                0 => {
+                    assert!(request.starts_with("GET /v1/transit/wrapping_key HTTP/1.1"));
+                    r#"{"data":{"public_key":"-----BEGIN PUBLIC KEY-----\nMIIB\n-----END PUBLIC KEY-----"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/transit/keys/imported/import HTTP/1.1"));
+                    assert!(request.contains(r#""ciphertext":"wrapped-key-blob""#));
+                    assert!(request.contains(r#""type":"aes256-gcm96""#));
+                    assert!(request.contains(r#""hash_function":"SHA256""#));
+                    assert!(request.contains(r#""context":"YXBw""#));
+                    "{}"
+                }
+                2 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/transit/keys/imported/import_version HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""ciphertext":"wrapped-version-blob""#));
+                    assert!(request.contains(r#""version":2"#));
+                    "{}"
+                }
+                3 => {
+                    assert!(
+                        request
+                            .starts_with("DELETE /v1/transit/keys/imported/soft-delete HTTP/1.1")
+                    );
+                    "{}"
+                }
+                4 => {
+                    assert!(request.starts_with(
+                        "POST /v1/transit/keys/imported/soft-delete-restore HTTP/1.1"
+                    ));
+                    "{}"
+                }
+                5 => {
+                    assert!(request.starts_with(
+                        "GET /v1/transit/byok-export/destination/source/3?hash=SHA512 HTTP/1.1"
+                    ));
+                    r#"{"data":{"name":"source","keys":{"3":"wrapped-for-destination"}}}"#
+                }
+                6 => {
+                    assert!(request.starts_with("POST /v1/transit/config/keys HTTP/1.1"));
+                    assert!(request.contains(r#""disable_upsert":true"#));
+                    r#"{"data":{"disable_upsert":true}}"#
+                }
+                7 => {
+                    assert!(request.starts_with("GET /v1/transit/config/keys HTTP/1.1"));
+                    r#"{"data":{"disable_upsert":true}}"#
+                }
+                8 => {
+                    assert!(request.starts_with("POST /v1/transit/cache-config HTTP/1.1"));
+                    assert!(request.contains(r#""size":128"#));
+                    r#"{"data":{"size":128}}"#
+                }
+                9 => {
+                    assert!(request.starts_with("GET /v1/transit/cache-config HTTP/1.1"));
+                    r#"{"data":{"size":128}}"#
+                }
+                10 => {
+                    assert!(request.starts_with("POST /v1/transit/keys/signing/csr HTTP/1.1"));
+                    assert!(request.contains(r#""version":1"#));
+                    r#"{"data":{"name":"signing","type":"rsa-2048","csr":"-----BEGIN CERTIFICATE REQUEST-----"}}"#
+                }
+                11 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/transit/keys/signing/set-certificate HTTP/1.1")
+                    );
+                    assert!(
+                        request.contains(r#""certificate_chain":"-----BEGIN CERTIFICATE-----"#)
+                    );
+                    r#"{"data":{"name":"signing","type":"rsa-2048","certificate_chain":"-----BEGIN CERTIFICATE-----"}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    let transit = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let wrapping_key = transit
+        .wrapping_key()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(
+        wrapping_key
+            .public_key
+            .starts_with("-----BEGIN PUBLIC KEY-----")
+    );
+
+    transit
+        .import_key(
+            "imported",
+            &openbao::secrets::transit::TransitImportRequest::new(
+                SecretString::from("wrapped-key-blob"),
+                openbao::secrets::transit::TransitKeyType::Aes256Gcm96,
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_hash_function(openbao::secrets::transit::TransitImportHashFunction::Sha256)
+            .allow_rotation()
+            .with_context(SecretString::from("YXBw"))
+            .exportable()
+            .allow_plaintext_backup()
+            .with_auto_rotate_period("24h")
+            .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    transit
+        .import_key_version(
+            "imported",
+            &openbao::secrets::transit::TransitImportVersionRequest::new(SecretString::from(
+                "wrapped-version-blob",
+            ))
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_version(2)
+            .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    transit
+        .soft_delete_key("imported")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    transit
+        .restore_soft_deleted_key("imported")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let byok = transit
+        .byok_export(
+            "destination",
+            "source",
+            Some("3"),
+            Some(openbao::secrets::transit::TransitImportHashFunction::Sha512),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        byok.keys
+            .get("3")
+            .map(SecretString::expose_secret)
+            .unwrap_or_else(|| panic!("missing BYOK export version")),
+        "wrapped-for-destination"
+    );
+
+    let global = transit
+        .write_global_key_config(&openbao::secrets::transit::TransitGlobalKeyConfig {
+            disable_upsert: Some(true),
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(global.disable_upsert, Some(true));
+    let global = transit
+        .read_global_key_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(global.disable_upsert, Some(true));
+
+    let cache = transit
+        .write_cache_config(
+            &openbao::secrets::transit::TransitCacheConfig::new(128)
+                .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(cache.size, 128);
+    let cache = transit
+        .read_cache_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(cache.size, 128);
+
+    let csr = transit
+        .generate_csr(
+            "signing",
+            &openbao::secrets::transit::TransitCsrRequest {
+                version: Some(1),
+                csr: None,
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(csr.name, "signing");
+
+    let certificate = transit
+        .set_certificate(
+            "signing",
+            &openbao::secrets::transit::TransitSetCertificateRequest::new(
+                "-----BEGIN CERTIFICATE-----",
+            )
+            .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(certificate.key_type, "rsa-2048");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn redirects_are_not_followed_with_token_headers() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

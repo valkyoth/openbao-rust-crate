@@ -333,6 +333,363 @@ impl TransitUpdateKeyRequest {
     }
 }
 
+/// RSA-OAEP hash function used for Transit BYOK import/export wrapping.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub enum TransitImportHashFunction {
+    /// SHA-1. Legacy only.
+    #[cfg(feature = "allow-sha1")]
+    #[serde(rename = "SHA1")]
+    #[deprecated(since = "0.11.0", note = "SHA-1 is broken; use SHA256 or stronger")]
+    Sha1,
+    /// SHA2-224.
+    #[serde(rename = "SHA224")]
+    Sha224,
+    /// SHA2-256.
+    #[serde(rename = "SHA256")]
+    Sha256,
+    /// SHA2-384.
+    #[serde(rename = "SHA384")]
+    Sha384,
+    /// SHA2-512.
+    #[serde(rename = "SHA512")]
+    Sha512,
+}
+
+impl TransitImportHashFunction {
+    fn as_query_value(self) -> &'static str {
+        match self {
+            #[cfg(feature = "allow-sha1")]
+            #[allow(deprecated)]
+            Self::Sha1 => "SHA1",
+            Self::Sha224 => "SHA224",
+            Self::Sha256 => "SHA256",
+            Self::Sha384 => "SHA384",
+            Self::Sha512 => "SHA512",
+        }
+    }
+}
+
+/// Transit wrapping key used by BYOK import workflows.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitWrappingKey {
+    /// RSA public key PEM returned by OpenBao.
+    ///
+    /// This is public certificate material. Raw key bytes to import must be
+    /// wrapped outside this endpoint wrapper before constructing an import
+    /// request.
+    pub public_key: String,
+}
+
+/// Request for importing pre-wrapped Transit key material.
+#[derive(Clone)]
+pub struct TransitImportRequest {
+    /// Base64 BYOK ciphertext produced outside this crate.
+    pub ciphertext: SecretString,
+    /// Transit key type to create.
+    pub key_type: TransitKeyType,
+    /// RSA-OAEP hash function used when producing `ciphertext`.
+    pub hash_function: Option<TransitImportHashFunction>,
+    /// Whether this imported key may be rotated inside OpenBao.
+    pub allow_rotation: Option<bool>,
+    /// Whether key derivation is enabled.
+    pub derived: Option<bool>,
+    /// Base64 derivation context. Required by OpenBao when `derived=true`.
+    pub context: Option<SecretString>,
+    /// Whether key material may be exported.
+    pub exportable: Option<bool>,
+    /// Whether plaintext backup is allowed.
+    pub allow_plaintext_backup: Option<bool>,
+    /// Automatic rotation period, such as `24h`.
+    pub auto_rotate_period: Option<String>,
+}
+
+impl fmt::Debug for TransitImportRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitImportRequest")
+            .field("ciphertext", &"<redacted>")
+            .field("key_type", &self.key_type)
+            .field("hash_function", &self.hash_function)
+            .field("allow_rotation", &self.allow_rotation)
+            .field("derived", &self.derived)
+            .field("context", &self.context.as_ref().map(|_| "<redacted>"))
+            .field("exportable", &self.exportable)
+            .field("allow_plaintext_backup", &self.allow_plaintext_backup)
+            .field("auto_rotate_period", &self.auto_rotate_period)
+            .finish()
+    }
+}
+
+impl TransitImportRequest {
+    /// Creates an import request from a pre-wrapped BYOK ciphertext blob.
+    ///
+    /// The crate does not perform client-side BYOK wrapping in this endpoint
+    /// wrapper. Raw key bytes must not be passed here. Use
+    /// [`Transit::wrapping_key`] to obtain OpenBao's RSA wrapping public key,
+    /// wrap key material externally through an HSM, OpenSSL, or a reviewed
+    /// crypto library, then pass only the base64 ciphertext blob here.
+    pub fn new(ciphertext: SecretString, key_type: TransitKeyType) -> Result<Self> {
+        validate_non_empty_secret(&ciphertext, "Transit import ciphertext")?;
+        Ok(Self {
+            ciphertext,
+            key_type,
+            hash_function: None,
+            allow_rotation: None,
+            derived: None,
+            context: None,
+            exportable: None,
+            allow_plaintext_backup: None,
+            auto_rotate_period: None,
+        })
+    }
+
+    /// Sets the BYOK wrapping hash function.
+    #[must_use]
+    pub fn with_hash_function(mut self, hash_function: TransitImportHashFunction) -> Self {
+        self.hash_function = Some(hash_function);
+        self
+    }
+
+    /// Allows OpenBao-side rotation of the imported key.
+    #[must_use]
+    pub fn allow_rotation(mut self) -> Self {
+        self.allow_rotation = Some(true);
+        self
+    }
+
+    /// Sets base64 derivation context for derived imported keys.
+    #[must_use]
+    pub fn with_context(mut self, context: SecretString) -> Self {
+        self.derived = Some(true);
+        self.context = Some(context);
+        self
+    }
+
+    /// Marks the imported key as exportable.
+    #[must_use]
+    pub fn exportable(mut self) -> Self {
+        self.exportable = Some(true);
+        self
+    }
+
+    /// Allows plaintext backup of the imported key.
+    #[must_use]
+    pub fn allow_plaintext_backup(mut self) -> Self {
+        self.allow_plaintext_backup = Some(true);
+        self
+    }
+
+    /// Sets the automatic rotation period after validating duration syntax.
+    pub fn with_auto_rotate_period(mut self, period: impl Into<String>) -> Result<Self> {
+        let period = period.into();
+        crate::validation::validate_duration_parameter(&period, "Transit auto_rotate_period")?;
+        self.auto_rotate_period = Some(period);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_non_empty_secret(&self.ciphertext, "Transit import ciphertext")?;
+        if let Some(period) = &self.auto_rotate_period {
+            crate::validation::validate_duration_parameter(period, "Transit auto_rotate_period")?;
+        }
+        Ok(())
+    }
+}
+
+/// Request for importing a new version of an existing imported Transit key.
+#[derive(Clone)]
+pub struct TransitImportVersionRequest {
+    /// Base64 BYOK ciphertext produced outside this crate.
+    pub ciphertext: SecretString,
+    /// RSA-OAEP hash function used when producing `ciphertext`.
+    pub hash_function: Option<TransitImportHashFunction>,
+    /// Base64 derivation context for derived keys.
+    pub context: Option<SecretString>,
+    /// Existing key version to update.
+    pub version: Option<u64>,
+}
+
+impl fmt::Debug for TransitImportVersionRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitImportVersionRequest")
+            .field("ciphertext", &"<redacted>")
+            .field("hash_function", &self.hash_function)
+            .field("context", &self.context.as_ref().map(|_| "<redacted>"))
+            .field("version", &self.version)
+            .finish()
+    }
+}
+
+impl TransitImportVersionRequest {
+    /// Creates an import-version request from a pre-wrapped BYOK ciphertext.
+    ///
+    /// The crate does not perform client-side BYOK wrapping in this endpoint
+    /// wrapper. Raw key bytes must not be passed here.
+    pub fn new(ciphertext: SecretString) -> Result<Self> {
+        validate_non_empty_secret(&ciphertext, "Transit import ciphertext")?;
+        Ok(Self {
+            ciphertext,
+            hash_function: None,
+            context: None,
+            version: None,
+        })
+    }
+
+    /// Sets the BYOK wrapping hash function.
+    #[must_use]
+    pub fn with_hash_function(mut self, hash_function: TransitImportHashFunction) -> Self {
+        self.hash_function = Some(hash_function);
+        self
+    }
+
+    /// Sets base64 derivation context for derived imported keys.
+    #[must_use]
+    pub fn with_context(mut self, context: SecretString) -> Self {
+        self.context = Some(context);
+        self
+    }
+
+    /// Selects an existing version to update.
+    pub fn with_version(mut self, version: u64) -> Result<Self> {
+        if version == 0 {
+            return Err(Error::InvalidParameter(
+                "Transit import version must be greater than zero".into(),
+            ));
+        }
+        self.version = Some(version);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_non_empty_secret(&self.ciphertext, "Transit import ciphertext")
+    }
+}
+
+/// Destination-wrapped Transit key material returned by BYOK export.
+#[derive(Clone, Deserialize)]
+pub struct TransitByokExport {
+    /// Exported key name, when returned.
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Destination-wrapped ciphertext blobs keyed by source key version.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_map")]
+    pub keys: BTreeMap<String, SecretString>,
+}
+
+impl fmt::Debug for TransitByokExport {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitByokExport")
+            .field("name", &self.name)
+            .field("keys", &format_args!("<{} redacted>", self.keys.len()))
+            .finish()
+    }
+}
+
+/// Transit global key configuration.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+pub struct TransitGlobalKeyConfig {
+    /// Whether Transit should refuse automatic key creation through encrypt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable_upsert: Option<bool>,
+}
+
+/// Transit cache configuration.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub struct TransitCacheConfig {
+    /// LRU cache size. `0` means unlimited; non-zero values must be at least 10.
+    pub size: u64,
+}
+
+impl TransitCacheConfig {
+    /// Creates a cache configuration request.
+    pub fn new(size: u64) -> Result<Self> {
+        if size != 0 && size < 10 {
+            return Err(Error::InvalidParameter(
+                "Transit cache size must be 0 or at least 10".into(),
+            ));
+        }
+        Ok(Self { size })
+    }
+}
+
+/// Request for generating a CSR from a Transit asymmetric signing key.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct TransitCsrRequest {
+    /// Key version to use. Omitted means OpenBao uses the current version.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<u64>,
+    /// Optional PEM-encoded CSR template.
+    ///
+    /// This is public certificate request material, not private key material.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub csr: Option<String>,
+}
+
+/// CSR generated by a Transit asymmetric signing key.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitCsrResponse {
+    /// Transit key name.
+    pub name: String,
+    /// Transit key type.
+    #[serde(rename = "type")]
+    pub key_type: String,
+    /// PEM-encoded CSR.
+    pub csr: String,
+}
+
+/// Request for installing a certificate chain on a Transit key.
+#[derive(Clone, Debug, Serialize)]
+pub struct TransitSetCertificateRequest {
+    /// Key version to attach the chain to. Omitted means OpenBao uses current.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<u64>,
+    /// PEM-encoded certificate chain, end-entity certificate first.
+    ///
+    /// This is public certificate material, not private key material.
+    pub certificate_chain: String,
+}
+
+impl TransitSetCertificateRequest {
+    /// Creates a certificate-chain install request.
+    pub fn new(certificate_chain: impl Into<String>) -> Result<Self> {
+        let certificate_chain = certificate_chain.into();
+        if certificate_chain.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "Transit certificate chain must not be empty".into(),
+            ));
+        }
+        Ok(Self {
+            version: None,
+            certificate_chain,
+        })
+    }
+
+    /// Selects a key version.
+    pub fn with_version(mut self, version: u64) -> Result<Self> {
+        if version == 0 {
+            return Err(Error::InvalidParameter(
+                "Transit certificate version must be greater than zero".into(),
+            ));
+        }
+        self.version = Some(version);
+        Ok(self)
+    }
+}
+
+/// Certificate chain attached to a Transit key.
+#[derive(Clone, Debug, Deserialize)]
+pub struct TransitCertificateChain {
+    /// Transit key name.
+    pub name: String,
+    /// Transit key type.
+    #[serde(rename = "type")]
+    pub key_type: String,
+    /// PEM-encoded certificate chain.
+    pub certificate_chain: String,
+}
+
 /// Transit export key material type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransitExportKeyType {
@@ -1379,6 +1736,38 @@ struct TransitRestorePayload<'a> {
     force: Option<bool>,
 }
 
+#[derive(Serialize)]
+struct TransitImportPayload<'a> {
+    ciphertext: &'a str,
+    #[serde(rename = "type")]
+    key_type: TransitKeyType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hash_function: Option<TransitImportHashFunction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    allow_rotation: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    derived: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    context: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    exportable: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    allow_plaintext_backup: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    auto_rotate_period: Option<&'a str>,
+}
+
+#[derive(Serialize)]
+struct TransitImportVersionPayload<'a> {
+    ciphertext: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hash_function: Option<TransitImportHashFunction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    context: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<u64>,
+}
+
 impl Client<Authenticated> {
     /// Uses the Transit engine mounted at `mount`.
     pub fn transit(&self, mount: impl Into<String>) -> Result<Transit<'_>> {
@@ -1406,6 +1795,23 @@ impl Transit<'_> {
             .request_json(
                 Method::GET,
                 &self.key_path(name, None)?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads the RSA wrapping public key used by Transit BYOK import.
+    ///
+    /// The returned PEM is public key material. Raw key bytes for import must
+    /// be wrapped outside this endpoint wrapper before calling
+    /// [`Transit::import_key`] or [`Transit::import_key_version`].
+    pub async fn wrapping_key(&self) -> Result<TransitWrappingKey> {
+        let envelope: ResponseEnvelope<TransitWrappingKey> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["wrapping_key"])?,
                 Option::<&Empty>::None,
             )
             .await?;
@@ -1475,6 +1881,160 @@ impl Transit<'_> {
                 Option::<&Empty>::None,
             )
             .await
+    }
+
+    /// Imports a new Transit key from pre-wrapped BYOK ciphertext.
+    ///
+    /// This endpoint wrapper never accepts raw key bytes and does not perform
+    /// RSA-OAEP/AES-GCM wrapping. Fetch [`Transit::wrapping_key`], wrap key
+    /// material externally through an HSM, OpenSSL, or reviewed crypto
+    /// library, and pass only the base64 ciphertext blob in `request`.
+    pub async fn import_key(&self, name: &str, request: &TransitImportRequest) -> Result<Empty> {
+        request.validate()?;
+        let payload = TransitImportPayload {
+            ciphertext: request.ciphertext.expose_secret(),
+            key_type: request.key_type,
+            hash_function: request.hash_function,
+            allow_rotation: request.allow_rotation,
+            derived: request.derived,
+            context: request
+                .context
+                .as_ref()
+                .map(|secret| secret.expose_secret()),
+            exportable: request.exportable,
+            allow_plaintext_backup: request.allow_plaintext_backup,
+            auto_rotate_period: request.auto_rotate_period.as_deref(),
+        };
+        self.client
+            .request_json(
+                Method::POST,
+                &self.key_path(name, Some("import"))?,
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Imports new pre-wrapped key material into an existing imported key.
+    ///
+    /// Keys generated by OpenBao cannot import external material. This wrapper
+    /// accepts only the already-wrapped BYOK ciphertext; raw key bytes remain
+    /// outside this crate's endpoint wrapper.
+    pub async fn import_key_version(
+        &self,
+        name: &str,
+        request: &TransitImportVersionRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        let payload = TransitImportVersionPayload {
+            ciphertext: request.ciphertext.expose_secret(),
+            hash_function: request.hash_function,
+            context: request
+                .context
+                .as_ref()
+                .map(|secret| secret.expose_secret()),
+            version: request.version,
+        };
+        self.client
+            .request_json(
+                Method::POST,
+                &self.key_path(name, Some("import_version"))?,
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Soft-deletes a Transit key without requiring `deletion_allowed=true`.
+    ///
+    /// OpenBao disables cryptographic operations for the key until it is
+    /// restored with [`Transit::restore_soft_deleted_key`].
+    pub async fn soft_delete_key(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &self.key_path(name, Some("soft-delete"))?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Restores a soft-deleted Transit key.
+    pub async fn restore_soft_deleted_key(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.key_path(name, Some("soft-delete-restore"))?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Exports source key material wrapped for another Transit destination key.
+    ///
+    /// Returned BYOK blobs are ciphertext but are still treated as
+    /// secret-aware values and redacted from `Debug`.
+    pub async fn byok_export(
+        &self,
+        destination: &str,
+        source: &str,
+        version: Option<&str>,
+        hash_function: Option<TransitImportHashFunction>,
+    ) -> Result<TransitByokExport> {
+        let mut segments = vec!["byok-export"];
+        let destination = validate_key_name(destination)?;
+        for segment in &destination {
+            segments.push(segment);
+        }
+        let source = validate_key_name(source)?;
+        for segment in &source {
+            segments.push(segment);
+        }
+        if let Some(version) = version {
+            segments.push(version);
+        }
+        let query = hash_function
+            .map(|hash| vec![("hash", hash.as_query_value().to_owned())])
+            .unwrap_or_default();
+        let envelope: ResponseEnvelope<TransitByokExport> = self
+            .client
+            .request_json_query_accepting(
+                Method::GET,
+                &self.path(&segments)?,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Writes global Transit key configuration.
+    pub async fn write_global_key_config(
+        &self,
+        request: &TransitGlobalKeyConfig,
+    ) -> Result<TransitGlobalKeyConfig> {
+        let envelope: ResponseEnvelope<TransitGlobalKeyConfig> = self
+            .client
+            .request_json(
+                Method::POST,
+                &self.path(&["config", "keys"])?,
+                Some(request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads global Transit key configuration.
+    pub async fn read_global_key_config(&self) -> Result<TransitGlobalKeyConfig> {
+        let envelope: ResponseEnvelope<TransitGlobalKeyConfig> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["config", "keys"])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Exports key material for an exportable Transit key.
@@ -1555,6 +2115,72 @@ impl Transit<'_> {
                 Some(request),
             )
             .await
+    }
+
+    /// Writes Transit cache configuration.
+    pub async fn write_cache_config(
+        &self,
+        request: &TransitCacheConfig,
+    ) -> Result<TransitCacheConfig> {
+        let request = TransitCacheConfig::new(request.size)?;
+        let envelope: ResponseEnvelope<TransitCacheConfig> = self
+            .client
+            .request_json(Method::POST, &self.path(&["cache-config"])?, Some(&request))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads Transit cache configuration.
+    pub async fn read_cache_config(&self) -> Result<TransitCacheConfig> {
+        let envelope: ResponseEnvelope<TransitCacheConfig> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["cache-config"])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Generates a PEM-encoded CSR signed by a Transit asymmetric key.
+    ///
+    /// The returned CSR is public certificate request material. The private key
+    /// remains inside Transit.
+    pub async fn generate_csr(
+        &self,
+        name: &str,
+        request: &TransitCsrRequest,
+    ) -> Result<TransitCsrResponse> {
+        let envelope: ResponseEnvelope<TransitCsrResponse> = self
+            .client
+            .request_json(
+                Method::POST,
+                &self.key_path(name, Some("csr"))?,
+                Some(request),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Installs a PEM certificate chain on a Transit key.
+    ///
+    /// Certificate chains are public certificate material. This method does not
+    /// transmit private key material.
+    pub async fn set_certificate(
+        &self,
+        name: &str,
+        request: &TransitSetCertificateRequest,
+    ) -> Result<TransitCertificateChain> {
+        let envelope: ResponseEnvelope<TransitCertificateChain> = self
+            .client
+            .request_json(
+                Method::POST,
+                &self.key_path(name, Some("set-certificate"))?,
+                Some(request),
+            )
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Encrypts base64-encoded plaintext with a Transit key.
@@ -1927,6 +2553,15 @@ fn validate_batch_len(len: usize) -> Result<()> {
     Ok(())
 }
 
+fn validate_non_empty_secret(secret: &SecretString, label: &'static str) -> Result<()> {
+    if secret.expose_secret().is_empty() {
+        return Err(Error::InvalidParameter(format!(
+            "{label} must not be empty"
+        )));
+    }
+    Ok(())
+}
+
 fn encrypt_payload(request: &TransitEncryptRequest) -> TransitEncryptPayload<'_> {
     TransitEncryptPayload {
         plaintext: request.plaintext.expose_secret(),
@@ -2195,6 +2830,8 @@ mod tests {
     #![allow(clippy::panic)]
     #![allow(deprecated)]
 
+    use std::collections::BTreeMap;
+
     #[cfg(feature = "transit-bytes")]
     use secrecy::ExposeSecret;
     use secrecy::SecretString;
@@ -2280,6 +2917,47 @@ mod tests {
         let debug = format!("{response:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("secret-ciphertext"));
+    }
+
+    #[test]
+    fn transit_import_requests_reject_empty_ciphertext_and_redact_debug() {
+        assert!(
+            super::TransitImportRequest::new(
+                SecretString::from(""),
+                super::TransitKeyType::Aes256Gcm96
+            )
+            .is_err()
+        );
+        assert!(super::TransitImportVersionRequest::new(SecretString::from("")).is_err());
+
+        let request = super::TransitImportRequest::new(
+            SecretString::from("wrapped-secret"),
+            super::TransitKeyType::Aes256Gcm96,
+        )
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_context(SecretString::from("secret-context"));
+        let debug = format!("{request:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("wrapped-secret"));
+        assert!(!debug.contains("secret-context"));
+    }
+
+    #[test]
+    fn transit_byok_export_redacts_wrapped_blobs() {
+        let response = super::TransitByokExport {
+            name: Some("key".to_owned()),
+            keys: BTreeMap::from([("1".to_owned(), SecretString::from("wrapped-secret"))]),
+        };
+        let debug = format!("{response:?}");
+        assert!(debug.contains("<1 redacted>"));
+        assert!(!debug.contains("wrapped-secret"));
+    }
+
+    #[test]
+    fn transit_cache_config_validates_small_nonzero_sizes() {
+        assert!(super::TransitCacheConfig::new(0).is_ok());
+        assert!(super::TransitCacheConfig::new(10).is_ok());
+        assert!(super::TransitCacheConfig::new(9).is_err());
     }
 
     #[cfg(feature = "transit-bytes")]

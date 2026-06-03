@@ -13,7 +13,7 @@
 //! token lifecycle and token-role helpers, Cubbyhole, Identity lifecycle,
 //! lookup, and merge helpers, KV v1/v2, Kubernetes secrets, RabbitMQ secrets,
 //! Transit lifecycle, batch, and single-operation cryptography helpers, PKI
-//! issue/sign/revoke/tidy helpers, system health/readiness, dev-only
+//! import/BYOK helpers, issue/sign/revoke/tidy helpers, system health/readiness, dev-only
 //! bootstrap, mount management, audit devices, exact and prefix lease helpers,
 //! plugin catalog operations, SSH, TOTP, and raw JSON calls for advanced users.
 //! Selected system endpoints that return non-JSON data, such as Prometheus

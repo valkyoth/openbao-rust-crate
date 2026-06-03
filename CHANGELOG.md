@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented here.
 
+## 0.11.0 - Unreleased
+
+### Added
+
+- Started the `0.11.0` Transit advanced key-management line.
+- Added Transit wrapping-key, import/import-version, BYOK export,
+  soft-delete/restore, global key config, cache config, CSR generation, and
+  certificate-chain install helpers.
+- Added secret-aware BYOK import/export request and response types so wrapped
+  ciphertext and derivation contexts are stored as `SecretString` and redacted
+  from `Debug`.
+
+### Security
+
+- Documented the Transit BYOK wrapper boundary: endpoint wrappers accept only
+  externally wrapped ciphertext and do not accept raw key bytes.
+
 ## 0.10.0 - 2026-06-03
 
 ### Added

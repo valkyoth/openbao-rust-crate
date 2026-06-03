@@ -105,20 +105,20 @@ auth,POST,/auth/userpass/users/:username/policies,typed,https://openbao.org/api-
 auth,LIST,/auth/userpass/users,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 auth,POST,/auth/userpass/login/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 secret,POST,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/keys/:name/import,planned,https://openbao.org/api-docs/secret/transit/,"Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
-secret,POST,/transit/keys/:name/import_version,planned,https://openbao.org/api-docs/secret/transit/,"Implement in 0.11.0; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
-secret,GET,/transit/wrapping_key,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; returns the Transit mount RSA wrapping public key PEM as non-secret String.
+secret,POST,/transit/keys/:name/import,typed,https://openbao.org/api-docs/secret/transit/,"Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
+secret,POST,/transit/keys/:name/import_version,typed,https://openbao.org/api-docs/secret/transit/,"Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
+secret,GET,/transit/wrapping_key,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit wrapping-key helper exists and returns the RSA public key PEM as non-secret String.
 secret,GET,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,LIST,/transit/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,DELETE,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/config,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/rotate,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,DELETE,/transit/keys/:name/soft-delete,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
-secret,POST,/transit/keys/:name/soft-delete-restore,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as reversible Transit key disable and restore helpers.
-secret,GET,/transit/byok-export/:destination/:source(/:version),planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0; returns a destination-wrapped ciphertext blob as SecretString with redacted Debug.
+secret,DELETE,/transit/keys/:name/soft-delete,typed,https://openbao.org/api-docs/secret/transit/,Typed reversible Transit key soft-delete and restore helpers exist.
+secret,POST,/transit/keys/:name/soft-delete-restore,typed,https://openbao.org/api-docs/secret/transit/,Typed reversible Transit key soft-delete and restore helpers exist.
+secret,GET,/transit/byok-export/:destination/:source(/:version),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit BYOK export helper exists and returns destination-wrapped ciphertext blobs as SecretString with redacted Debug.
 secret,GET,/transit/export/:key_type/:name(/:version),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/config/keys,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
-secret,GET,/transit/config/keys,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
+secret,POST,/transit/config/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit cache and global key configuration helpers exist.
+secret,GET,/transit/config/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit cache and global key configuration helpers exist.
 secret,POST,/transit/encrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/decrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/rewrap/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
@@ -131,10 +131,10 @@ secret,POST,/transit/verify/:name(/:hash_algorithm),typed,https://openbao.org/ap
 secret,GET,/transit/backup/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/restore(/:name),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/trim,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/cache-config,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
-secret,GET,/transit/cache-config,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as Transit cache and global key configuration helpers.
-secret,POST,/transit/keys/:name/csr,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.
-secret,POST,/transit/keys/:name/set-certificate,planned,https://openbao.org/api-docs/secret/transit/,Implement in 0.11.0 as CSR generation and certificate install helpers; PEM material is public.
+secret,POST,/transit/cache-config,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit cache and global key configuration helpers exist.
+secret,GET,/transit/cache-config,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit cache and global key configuration helpers exist.
+secret,POST,/transit/keys/:name/csr,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit CSR generation and certificate install helpers exist; PEM material is public.
+secret,POST,/transit/keys/:name/set-certificate,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit CSR generation and certificate install helpers exist; PEM material is public.
 secret,GET,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
 secret,LIST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
 secret,POST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
@@ -526,41 +526,40 @@ secret,GET,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secre
 secret,DELETE,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,LIST,/identity/group-alias/id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,GET,/identity/group-alias/id?list=true,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
-secret,POST,/identity/oidc/config,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,GET,/identity/oidc/config,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,POST,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,GET,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,DELETE,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,LIST,/identity/oidc/key,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,POST,/identity/oidc/key/:name/rotate,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,POST,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,GET,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,DELETE,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,LIST,/identity/oidc/role,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,GET,/identity/oidc/token/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,POST,/identity/oidc/introspect,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,GET,/identity/oidc/.well-known/openid-configuration,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
-secret,GET,/identity/oidc/.well-known/keys,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
+secret,POST,/identity/oidc/config,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/config,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,POST,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,DELETE,/identity/oidc/key/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,LIST,/identity/oidc/key,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,POST,/identity/oidc/key/:name/rotate,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,POST,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,DELETE,/identity/oidc/role/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,LIST,/identity/oidc/role,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/token/:name,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,POST,/identity/oidc/introspect,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/.well-known/openid-configuration,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC helper exists.
 secret,POST,/identity/lookup/entity,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
 secret,POST,/identity/lookup/group,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
-secret,POST,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,GET,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,LIST,/identity/oidc/provider,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,DELETE,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,POST,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,GET,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,LIST,/identity/oidc/scope,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,DELETE,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,POST,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,GET,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,LIST,/identity/oidc/client,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,DELETE,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,POST,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,GET,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,LIST,/identity/oidc/assignment,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,DELETE,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
-secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed named-provider OIDC discovery helper exists.
-secret,GET,/identity/oidc/provider/:name/.well-known/keys,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed named-provider OIDC JWKS helper exists.
+secret,POST,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,LIST,/identity/oidc/provider,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,DELETE,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,POST,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,LIST,/identity/oidc/scope,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,DELETE,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,POST,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,LIST,/identity/oidc/client,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,DELETE,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,POST,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,LIST,/identity/oidc/assignment,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,DELETE,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
+secret,GET,/identity/oidc/provider/:name/.well-known/keys,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC helper exists.
 secret,GET/POST,/identity/oidc/provider/:name/authorize,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
 secret,POST,/identity/oidc/provider/:name/token,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
 secret,POST,/identity/oidc/provider/:name/userinfo,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
