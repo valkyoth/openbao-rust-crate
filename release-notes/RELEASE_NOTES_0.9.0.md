@@ -67,14 +67,16 @@
 ## Security And Stability Gate
 
 - Gate command: `scripts/release_0_9_gate.sh`
-- Result: pending.
+- Result: passed locally on 2026-06-03, with `cargo audit` rerun separately
+  outside the sandbox because the RustSec advisory database lock path is under
+  `~/.cargo`.
 - Pentest report: pending.
-- `cargo audit` result: pending.
-- `cargo deny check` result: pending.
+- `cargo audit` result: passed locally on 2026-06-03.
+- `cargo deny check` result: passed locally on 2026-06-03.
 - CodeQL result: pending.
-- Podman OpenBao integration result: pending.
-- SBOM generation result: pending.
-- Reproducible package result: pending.
+- Podman OpenBao integration result: passed locally on 2026-06-03.
+- SBOM generation result: passed locally on 2026-06-03.
+- Reproducible package result: passed locally on 2026-06-03.
 
 ## Known Limitations And Decisions
 
