@@ -3285,13 +3285,20 @@ where
     if value.is_null() {
         return Ok(None);
     }
-    let values = serde_json::from_value::<Vec<String>>(value).map_err(E::custom)?;
+    let JsonValue::Array(values) = value else {
+        return Err(E::custom(format!("expected array for field {key}")));
+    };
     if values.len() > IDENTITY_LIST_LIMIT {
         return Err(E::custom(
             "identity OIDC discovery string list exceeds item limit",
         ));
     }
-    Ok(Some(values))
+    values
+        .into_iter()
+        .map(serde_json::from_value::<String>)
+        .collect::<core::result::Result<Vec<_>, _>>()
+        .map(Some)
+        .map_err(E::custom)
 }
 
 #[derive(Serialize)]
@@ -3380,13 +3387,19 @@ where
             A: serde::de::MapAccess<'de>,
         {
             let mut values = BTreeMap::new();
-            while let Some((key, value)) = map.next_entry::<String, JsonValue>()? {
-                if values.len() >= IDENTITY_LIST_LIMIT {
-                    return Err(serde::de::Error::custom(
-                        "identity OIDC JSON object exceeds item limit",
-                    ));
-                }
+            while values.len() < IDENTITY_LIST_LIMIT {
+                let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
+                    return Ok(values);
+                };
                 values.insert(key, value);
+            }
+            if map
+                .next_entry::<serde::de::IgnoredAny, serde::de::IgnoredAny>()?
+                .is_some()
+            {
+                return Err(serde::de::Error::custom(
+                    "identity OIDC JSON object exceeds item limit",
+                ));
             }
             Ok(values)
         }
@@ -3746,6 +3759,19 @@ mod tests {
         }
         assert!(serde_json::from_value::<IdentityOidcIntrospection>(extra.clone().into()).is_err());
         assert!(serde_json::from_value::<IdentityOidcDiscovery>(extra.into()).is_err());
+    }
+
+    #[test]
+    fn identity_oidc_discovery_string_lists_are_bounded() {
+        let values = (0..=crate::response::MAX_RESPONSE_STRINGS)
+            .map(|index| serde_json::json!(format!("claim-{index}")))
+            .collect::<Vec<_>>();
+        assert!(
+            serde_json::from_value::<IdentityOidcDiscovery>(serde_json::json!({
+                "claims_supported": values
+            }))
+            .is_err()
+        );
     }
 
     #[test]

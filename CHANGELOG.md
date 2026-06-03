@@ -33,6 +33,8 @@ All notable changes to this project are documented here.
 - Added bounded deserialization for Identity OIDC introspection/discovery extra
   claim maps, accepted exact-limit JWKS key lists, and fail-early oversized JWKS
   handling.
+- Tightened Identity OIDC bounded JSON map and discovery string-list handling
+  so bounds are checked before parsing or converting the first oversized item.
 - Added mock HTTP coverage for the documented Identity OIDC token backend paths.
 - Added mock HTTP coverage for the documented Identity OIDC provider admin and
   Identity MFA management paths.

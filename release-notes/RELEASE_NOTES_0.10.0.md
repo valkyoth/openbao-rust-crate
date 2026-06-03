@@ -51,6 +51,8 @@ bounded.
 - Identity OIDC introspection/discovery extra claim maps are bounded during
   deserialization, and oversized JWKS key lists now fail without draining the
   full sequence.
+- Identity OIDC bounded JSON map and discovery string-list checks run before
+  parsing or converting the first oversized entry.
 - JSON object string validation now rejects oversized inputs before parsing, and
   ACL policy string generation escapes HCL template interpolation starts.
 - Bootstrap convergence docs now warn at the top-level API that `ensure_*`

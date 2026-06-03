@@ -26,6 +26,13 @@
 //! can retain transient copies outside this crate's control. Treat Transit
 //! plaintext and other request-body secret material as process-resident during
 //! the request lifecycle.
+//!
+//! With the optional `tracing` feature, request spans include HTTP method,
+//! status, and the validated URL path. Bodies, tokens, and namespaces are not
+//! logged, but paths can contain opaque operational identifiers such as secret
+//! paths, lease IDs, entity IDs, or accessors. Deployments with strict
+//! path-confidentiality requirements should filter `openbao.request` spans or
+//! suppress the path field in their tracing layer.
 
 #![forbid(unsafe_code)]
 
