@@ -13,11 +13,17 @@ All notable changes to this project are documented here.
 - Added secret-aware BYOK import/export request and response types so wrapped
   ciphertext and derivation contexts are stored as `SecretString` and redacted
   from `Debug`.
+- Added public-key-only Transit import request constructors for OpenBao import
+  paths that accept public key material instead of wrapped private key blobs.
+- Added the optional `transit-import` software wrapping helper for preparing
+  OpenBao AES-KWP/RSA-OAEP import blobs without adding dependencies to default
+  builds.
 
 ### Security
 
-- Documented the Transit BYOK wrapper boundary: endpoint wrappers accept only
-  externally wrapped ciphertext and do not accept raw key bytes.
+- Documented the Transit BYOK wrapper boundary: default endpoint wrappers
+  accept only externally wrapped ciphertext or public-key-only import material
+  and do not accept raw private key bytes.
 
 ## 0.10.0 - 2026-06-03
 
@@ -104,11 +110,11 @@ All notable changes to this project are documented here.
   external boundaries.
 - Recorded the Transit import/BYOK boundary: wrapping-key, import and
   import-version, BYOK export, soft-delete/restore, cache/global config, CSR,
-  and certificate-install rows are planned for `0.11.0`; core wrappers accept
-  already-wrapped `SecretString` material or public-key-only import material.
-  The optional `transit-import` helper is implemented with feature-gated
-  `openssl` and `aes-kw` dependencies and follows OpenBao's documented
-  AES-KWP/RSA-OAEP software wrapping flow.
+  and certificate-install rows are assigned to the `0.11.0` line; the current
+  line implements those wrappers with already-wrapped `SecretString` material
+  or public-key-only import material. The optional `transit-import` helper is
+  implemented with feature-gated `openssl` and `aes-kw` dependencies and
+  follows OpenBao's documented AES-KWP/RSA-OAEP software wrapping flow.
 - Tightened the Transit import/BYOK implementation contract: wrapping-key
   returns public PEM, import constructors must reject empty pre-wrapped
   ciphertext, BYOK export returns redacted `SecretString` ciphertext, and raw

@@ -105,8 +105,8 @@ auth,POST,/auth/userpass/users/:username/policies,typed,https://openbao.org/api-
 auth,LIST,/auth/userpass/users,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 auth,POST,/auth/userpass/login/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 secret,POST,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/keys/:name/import,typed,https://openbao.org/api-docs/secret/transit/,"Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
-secret,POST,/transit/keys/:name/import_version,typed,https://openbao.org/api-docs/secret/transit/,"Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString, rejects empty ciphertext constructors, and documents that raw key bytes must never be passed."
+secret,POST,/transit/keys/:name/import,typed,https://openbao.org/api-docs/secret/transit/,"Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString or public-key-only import material, rejects empty import constructors, and documents that raw private key bytes stay outside default endpoint wrappers."
+secret,POST,/transit/keys/:name/import_version,typed,https://openbao.org/api-docs/secret/transit/,"Typed Transit import helper exists; accepts pre-wrapped ciphertext as SecretString or public-key-only import material, rejects empty import constructors, and documents that raw private key bytes stay outside default endpoint wrappers."
 secret,GET,/transit/wrapping_key,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit wrapping-key helper exists and returns the RSA public key PEM as non-secret String.
 secret,GET,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,LIST,/transit/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.

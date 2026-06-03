@@ -189,11 +189,12 @@ Support plan:
 - `0.11.0`: Transit wrapping-key, import/import-version, BYOK export,
   soft-delete/restore, cache config, global key config, CSR generation, and
   certificate install rows are implemented. `wrapping_key` returns a public
-  PEM string. Import requests carry only pre-wrapped ciphertext as
-  `SecretString` and reject empty ciphertext constructors; optional derivation
-  context is also secret-aware. BYOK export returns a wrapped ciphertext blob
-  as `SecretString`. Raw key bytes are never accepted by these endpoint
-  wrappers. The optional `transit-import` feature prepares OpenBao's
+  PEM string. Import requests carry pre-wrapped ciphertext as `SecretString`
+  or public-key-only import material and reject empty import material;
+  optional derivation context is also secret-aware. BYOK export returns a
+  wrapped ciphertext blob as `SecretString`. Raw private key bytes are never
+  accepted by these default endpoint wrappers. The optional `transit-import`
+  feature prepares OpenBao's
   wrapped-key blob with AES-KWP/RSA-OAEP behind feature-gated `openssl` and
   `aes-kw` dependencies.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,

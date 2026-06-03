@@ -9,8 +9,8 @@ for external pentest and CI validation before tagging.
 
 `0.11.0` is the Transit advanced key-management line. It focuses on BYOK/import
 endpoint wrappers, reversible Transit key soft deletion, global/cache
-configuration, and certificate/CSR helpers while keeping raw key material out of
-the default endpoint wrappers.
+configuration, and certificate/CSR helpers while keeping raw private or
+symmetric key material out of the default endpoint wrappers.
 
 ## Added
 
@@ -31,9 +31,11 @@ the default endpoint wrappers.
 
 ## Security Notes
 
-- Raw key bytes must not be passed to the endpoint wrappers. Callers fetch the
-  wrapping key, wrap key material externally through an HSM, OpenSSL, or a
-  reviewed crypto library, and pass only the base64 BYOK ciphertext blob.
+- Raw private or symmetric key bytes must not be passed to the default endpoint
+  wrappers. For private/symmetric imports, callers fetch the wrapping key, wrap
+  key material externally through an HSM, OpenSSL, or a reviewed crypto
+  library, and pass only the base64 BYOK ciphertext blob. Public-key-only import
+  constructors carry public material.
 - The `transit-import` helper is non-default and software-only. It is an
   ergonomic helper for audited development and automation use; it is not an
   OpenBao, HSM, FIPS, certification, or post-quantum security claim.
