@@ -70,13 +70,33 @@
 - Result: passed locally on 2026-06-03, with `cargo audit` rerun separately
   outside the sandbox because the RustSec advisory database lock path is under
   `~/.cargo`.
-- Pentest report: pending.
+- Pentest report: reviewed locally on 2026-06-03; actionable findings were
+  remediated, and the temporary `PENTEST.md` file was deleted before commit.
 - `cargo audit` result: passed locally on 2026-06-03.
 - `cargo deny check` result: passed locally on 2026-06-03.
 - CodeQL result: pending.
 - Podman OpenBao integration result: passed locally on 2026-06-03.
 - SBOM generation result: passed locally on 2026-06-03.
 - Reproducible package result: passed locally on 2026-06-03.
+
+Pentest remediations in this candidate:
+
+- Transit key creation validates direct `auto_rotate_period` field assignment.
+- CIDR validation now rejects host-bit-set network values.
+- Public `BoundedStringList` no longer exposes its inner vector for unchecked
+  mutation and has a checked constructor for caller-provided values.
+- Retry-temporary classification no longer treats HTTP 501 or 505 as
+  retryable.
+- The unreachable `Error::Http(reqwest::Error)` variant was removed so future
+  code cannot expose reqwest URL-bearing error chains through `source()`.
+- LDAP auth `Debug` redacts certificate PEM fields as operationally sensitive
+  topology material.
+- OpenBao mount/endpoint path validation rejects spaces.
+- Duration builder helpers reject `Duration::ZERO` before formatting it as
+  `0s`.
+- The response-size default remains 32 MiB for compatibility with snapshot and
+  raw-byte workflows; small-response clients should lower
+  `OpenBaoConfig::max_response_bytes`.
 
 ## Known Limitations And Decisions
 

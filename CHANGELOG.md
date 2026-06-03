@@ -128,6 +128,17 @@ All notable changes to this project are documented here.
 - Quantum-readiness documentation avoids post-quantum safety claims for current
   OpenBao deployments and treats crate-visible posture helpers as advisory
   evidence only.
+- Resolved the 2026-06-03 pentest follow-up by validating Transit
+  `auto_rotate_period` on key creation, requiring CIDR host bits to be zeroed,
+  making the public `BoundedStringList` inner vector private with a checked
+  constructor, excluding permanent 501/505 responses from retry-temporary
+  classification, removing the unreachable `Error::Http(reqwest::Error)`
+  variant, redacting LDAP auth PEM material in `Debug`, rejecting spaces in
+  OpenBao path validation, and rejecting zero `Duration` values in duration
+  builder helpers before they become `0s`.
+- Kept the 32 MiB response cap default for `0.9.0` because snapshot/raw-byte
+  workflows already rely on the documented override model; small-response
+  clients should continue lowering `OpenBaoConfig::max_response_bytes`.
 
 ## 0.8.0 - 2026-06-02
 

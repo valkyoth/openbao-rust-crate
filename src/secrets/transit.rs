@@ -230,6 +230,15 @@ pub struct TransitCreateKeyRequest {
     pub auto_rotate_period: Option<String>,
 }
 
+impl TransitCreateKeyRequest {
+    fn validate(&self) -> Result<()> {
+        if let Some(period) = &self.auto_rotate_period {
+            crate::validation::validate_duration_parameter(period, "Transit auto_rotate_period")?;
+        }
+        Ok(())
+    }
+}
+
 /// Transit key information.
 #[derive(Clone, Debug, Deserialize)]
 pub struct TransitKeyInfo {
@@ -1384,6 +1393,7 @@ impl Client<Authenticated> {
 impl Transit<'_> {
     /// Creates a named Transit key.
     pub async fn create_key(&self, name: &str, request: &TransitCreateKeyRequest) -> Result<Empty> {
+        request.validate()?;
         self.client
             .request_json(Method::POST, &self.key_path(name, None)?, Some(request))
             .await
@@ -2227,6 +2237,15 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn transit_create_key_validates_direct_auto_rotate_period_assignment() {
+        let request = super::TransitCreateKeyRequest {
+            auto_rotate_period: Some("forever".to_owned()),
+            ..super::TransitCreateKeyRequest::default()
+        };
+        assert!(request.validate().is_err());
     }
 
     #[test]

@@ -26,8 +26,6 @@ pub enum Error {
     /// A crate invariant was violated.
     Internal(&'static str),
     /// The request failed before an OpenBao response could be decoded.
-    Http(reqwest::Error),
-    /// The request failed before an OpenBao response could be decoded.
     ///
     /// Transport errors intentionally avoid retaining the underlying HTTP
     /// error because lower layers may attach request URLs to loggable error
@@ -69,7 +67,6 @@ impl fmt::Display for Error {
                 write!(formatter, "invalid OpenBao request parameter: {message}")
             }
             Self::Internal(message) => write!(formatter, "internal OpenBao SDK error: {message}"),
-            Self::Http(error) => write!(formatter, "OpenBao HTTP error: {error}"),
             Self::Transport(message) => write!(formatter, "OpenBao transport error: {message}"),
             Self::Decode(error) => write!(formatter, "OpenBao decode error: {error}"),
             Self::Api { status, errors } if errors.is_empty() => {
@@ -139,11 +136,13 @@ impl Error {
     /// separately.
     pub fn is_temporary(&self) -> bool {
         match self {
-            Self::Transport(_) | Self::Http(_) => true,
+            Self::Transport(_) => true,
             Self::Api { status, .. } => {
                 *status == StatusCode::TOO_MANY_REQUESTS
                     || *status == StatusCode::SERVICE_UNAVAILABLE
-                    || status.is_server_error()
+                    || (status.is_server_error()
+                        && *status != StatusCode::NOT_IMPLEMENTED
+                        && *status != StatusCode::HTTP_VERSION_NOT_SUPPORTED)
             }
             _ => false,
         }
@@ -200,14 +199,7 @@ pub(crate) fn sanitize_api_error(error: &str) -> String {
     sanitized
 }
 
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Http(error) => Some(error),
-            _ => None,
-        }
-    }
-}
+impl std::error::Error for Error {}
 
 impl From<reqwest::Error> for Error {
     fn from(error: reqwest::Error) -> Self {
@@ -302,6 +294,12 @@ mod tests {
         };
         assert!(rate_limited.is_rate_limited());
         assert!(rate_limited.is_temporary());
+
+        let not_implemented = Error::Api {
+            status: StatusCode::NOT_IMPLEMENTED,
+            errors: Vec::new(),
+        };
+        assert!(!not_implemented.is_temporary());
 
         let permission_denied = Error::Api {
             status: StatusCode::BAD_REQUEST,

@@ -280,10 +280,23 @@ where
 /// want the same item limit used by built-in list helpers.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct BoundedStringList(
-    #[serde(deserialize_with = "deserialize_bounded_string_vec")] pub Vec<String>,
+    #[serde(deserialize_with = "deserialize_bounded_string_vec")] Vec<String>,
 );
 
 impl BoundedStringList {
+    /// Builds a bounded list from caller-provided values.
+    ///
+    /// This enforces the same maximum item count that deserialization applies
+    /// to OpenBao responses.
+    pub fn try_new(values: Vec<String>) -> Result<Self> {
+        if values.len() > MAX_RESPONSE_STRINGS {
+            return Err(Error::InvalidParameter(
+                "OpenBao string list exceeds item limit".into(),
+            ));
+        }
+        Ok(Self(values))
+    }
+
     /// Returns the bounded list entries.
     #[must_use]
     pub fn as_slice(&self) -> &[String] {
@@ -527,6 +540,12 @@ mod tests {
         assert_eq!(list.entries(), ["alpha", "beta"]);
         assert!(list.contains("beta"));
         assert_eq!(list.into_vec(), ["alpha".to_owned(), "beta".to_owned()]);
+
+        let mut values = Vec::new();
+        for index in 0..=super::MAX_RESPONSE_STRINGS {
+            values.push(format!("value-{index}"));
+        }
+        assert!(BoundedStringList::try_new(values).is_err());
     }
 
     #[test]

@@ -171,7 +171,10 @@ impl KubernetesSecretsRole {
 
     /// Sets `token_default_ttl` from a Rust duration.
     pub fn with_token_default_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_token_default_ttl(crate::duration_to_bao_string(ttl))
+        self.with_token_default_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "kubernetes secrets token_default_ttl",
+        )?)
     }
 
     /// Sets `token_max_ttl` after validating OpenBao duration syntax.
@@ -184,7 +187,10 @@ impl KubernetesSecretsRole {
 
     /// Sets `token_max_ttl` from a Rust duration.
     pub fn with_token_max_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_token_max_ttl(crate::duration_to_bao_string(ttl))
+        self.with_token_max_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "kubernetes secrets token_max_ttl",
+        )?)
     }
 
     fn validate(&self) -> Result<()> {
@@ -267,7 +273,10 @@ impl KubernetesCredentialsRequest {
 
     /// Sets the requested generated token TTL from a Rust duration.
     pub fn with_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_ttl(crate::duration_to_bao_string(ttl))
+        self.with_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "kubernetes secrets credential ttl",
+        )?)
     }
 }
 

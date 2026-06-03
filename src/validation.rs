@@ -113,6 +113,29 @@ pub(crate) fn validate_cidr(value: &str, field: &'static str) -> Result<()> {
             "{field} CIDR prefix exceeds /{max_prefix}"
         )));
     }
+    let host_bits_are_zero = match ip {
+        IpAddr::V4(ip) => {
+            let mask = if prefix == 0 {
+                0
+            } else {
+                u32::MAX << (32 - prefix)
+            };
+            u32::from(ip) & !mask == 0
+        }
+        IpAddr::V6(ip) => {
+            let mask = if prefix == 0 {
+                0
+            } else {
+                u128::MAX << (128 - prefix)
+            };
+            u128::from(ip) & !mask == 0
+        }
+    };
+    if !host_bits_are_zero {
+        return Err(Error::InvalidParameter(format!(
+            "{field} CIDR value must be a network address with host bits zeroed"
+        )));
+    }
     Ok(())
 }
 
@@ -154,6 +177,8 @@ mod tests {
         assert!(validate_cidr("2001:db8::/32", "test cidr").is_ok());
         assert!(validate_cidr("192.0.2.0/33", "test cidr").is_err());
         assert!(validate_cidr("2001:db8::/129", "test cidr").is_err());
+        assert!(validate_cidr("192.0.2.5/24", "test cidr").is_err());
+        assert!(validate_cidr("2001:db8::1/32", "test cidr").is_err());
         assert!(validate_cidr("not-a-cidr", "test cidr").is_err());
         assert!(validate_cidr("192.0.2.0/24/extra", "test cidr").is_err());
     }

@@ -305,8 +305,14 @@ impl fmt::Debug for LdapAuthConfig {
             .field("tls_min_version", &self.tls_min_version)
             .field("tls_max_version", &self.tls_max_version)
             .field("insecure_tls", &self.insecure_tls)
-            .field("certificate", &self.certificate)
-            .field("client_tls_cert", &self.client_tls_cert)
+            .field(
+                "certificate",
+                &self.certificate.as_ref().map(|_| "<redacted-pem>"),
+            )
+            .field(
+                "client_tls_cert",
+                &self.client_tls_cert.as_ref().map(|_| "<redacted-pem>"),
+            )
             .field(
                 "client_tls_key",
                 &self.client_tls_key.as_ref().map(|_| "<redacted>"),
@@ -894,13 +900,19 @@ mod tests {
 
     #[test]
     fn ldap_auth_config_debug_redacts_secret_fields() {
-        let config = LdapAuthConfig::new().with_bind(
+        let mut config = LdapAuthConfig::new().with_bind(
             "cn=openbao,dc=example,dc=com",
             test_secret(&["bind", "-pass"]),
         );
+        config.certificate =
+            Some("-----BEGIN CERTIFICATE-----\nca\n-----END CERTIFICATE-----".to_owned());
+        config.client_tls_cert =
+            Some("-----BEGIN CERTIFICATE-----\nclient\n-----END CERTIFICATE-----".to_owned());
         let debug = format!("{config:?}");
         assert!(debug.contains("<redacted>"));
+        assert!(debug.contains("<redacted-pem>"));
         assert!(!debug.contains("bind-pass"));
+        assert!(!debug.contains("BEGIN CERTIFICATE"));
     }
 
     #[test]

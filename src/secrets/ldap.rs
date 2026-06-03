@@ -199,7 +199,10 @@ impl LdapStaticRole {
         self,
         rotation_period: std::time::Duration,
     ) -> Result<Self> {
-        self.with_rotation_period(crate::duration_to_bao_string(rotation_period))
+        self.with_rotation_period(crate::duration::nonzero_duration_to_bao_string(
+            rotation_period,
+            "LDAP static role rotation_period",
+        )?)
     }
 
     fn validate(&self) -> Result<()> {

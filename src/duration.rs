@@ -2,6 +2,8 @@
 
 use std::time::Duration;
 
+use crate::{Error, Result};
+
 /// Renewal timing guidance for application-owned token or lease renewal loops.
 ///
 /// This type does not start background tasks and does not decide what happens
@@ -97,11 +99,23 @@ pub fn duration_to_bao_string(duration: Duration) -> String {
     output
 }
 
+pub(crate) fn nonzero_duration_to_bao_string(
+    duration: Duration,
+    field: &'static str,
+) -> Result<String> {
+    if duration.is_zero() {
+        return Err(Error::InvalidParameter(format!(
+            "{field} duration must be non-zero"
+        )));
+    }
+    Ok(duration_to_bao_string(duration))
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
-    use super::{RenewalHint, duration_to_bao_string};
+    use super::{RenewalHint, duration_to_bao_string, nonzero_duration_to_bao_string};
 
     #[test]
     fn converts_duration_to_openbao_string() {
@@ -110,6 +124,15 @@ mod tests {
         assert_eq!(duration_to_bao_string(Duration::from_secs(90)), "1m30s");
         assert_eq!(duration_to_bao_string(Duration::from_secs(3661)), "1h1m1s");
         assert_eq!(duration_to_bao_string(Duration::from_millis(1)), "1s");
+    }
+
+    #[test]
+    fn nonzero_duration_conversion_rejects_zero() {
+        assert!(nonzero_duration_to_bao_string(Duration::ZERO, "test ttl").is_err());
+        assert!(matches!(
+            nonzero_duration_to_bao_string(Duration::from_secs(1), "test ttl").as_deref(),
+            Ok("1s")
+        ));
     }
 
     #[test]

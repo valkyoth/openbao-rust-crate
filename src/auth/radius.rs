@@ -152,7 +152,10 @@ impl RadiusConfig {
 
     /// Sets generated-token TTL from a Rust duration.
     pub fn with_token_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_token_ttl(crate::duration_to_bao_string(ttl))
+        self.with_token_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "RADIUS token_ttl",
+        )?)
     }
 
     fn validate(&self) -> Result<()> {

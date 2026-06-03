@@ -33,6 +33,11 @@ fn validate_path(value: &str, allow_empty: bool) -> Result<Vec<String>> {
             "control characters are not allowed".into(),
         ));
     }
+    if value.bytes().any(|byte| byte == b' ') {
+        return Err(Error::InvalidPath(
+            "space characters are not allowed".into(),
+        ));
+    }
     if value.contains('\\') || value.contains('?') || value.contains('#') {
         return Err(Error::InvalidPath(
             "backslash, query, and fragment characters are not allowed".into(),
@@ -90,6 +95,7 @@ mod tests {
         assert!(validate_mount_path("secret//nested").is_err());
         assert!(validate_mount_path("secret?x=1").is_err());
         assert!(validate_mount_path("secret.").is_err());
+        assert!(validate_mount_path("secret path").is_err());
         assert!(validate_mount_path(&"a".repeat(MAX_PATH_BYTES + 1)).is_err());
         assert!(validate_endpoint_path(&vec!["a"; MAX_PATH_SEGMENTS + 1].join("/")).is_err());
     }

@@ -87,7 +87,10 @@ impl TokenCreateRequest {
 
     /// Sets the requested token TTL from a Rust duration.
     pub fn with_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_ttl(crate::duration_to_bao_string(ttl))
+        self.with_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "token ttl",
+        )?)
     }
 
     /// Sets the requested explicit maximum TTL after validating duration syntax.
@@ -106,7 +109,10 @@ impl TokenCreateRequest {
         self,
         explicit_max_ttl: std::time::Duration,
     ) -> Result<Self> {
-        self.with_explicit_max_ttl(crate::duration_to_bao_string(explicit_max_ttl))
+        self.with_explicit_max_ttl(crate::duration::nonzero_duration_to_bao_string(
+            explicit_max_ttl,
+            "token explicit_max_ttl",
+        )?)
     }
 
     /// Sets the requested periodic token period after validating duration syntax.
@@ -119,7 +125,10 @@ impl TokenCreateRequest {
 
     /// Sets the requested periodic token period from a Rust duration.
     pub fn with_period_duration(self, period: std::time::Duration) -> Result<Self> {
-        self.with_period(crate::duration_to_bao_string(period))
+        self.with_period(crate::duration::nonzero_duration_to_bao_string(
+            period,
+            "token period",
+        )?)
     }
 
     fn validate(&self) -> Result<()> {

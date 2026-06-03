@@ -125,7 +125,10 @@ impl AppRoleRoleRequest {
 
     /// Sets the generated-token TTL from a Rust duration.
     pub fn with_token_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_token_ttl(crate::duration_to_bao_string(ttl))
+        self.with_token_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "approle token_ttl",
+        )?)
     }
 
     /// Sets the generated SecretID TTL.
@@ -138,7 +141,10 @@ impl AppRoleRoleRequest {
 
     /// Sets the generated SecretID TTL from a Rust duration.
     pub fn with_secret_id_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_secret_id_ttl(crate::duration_to_bao_string(ttl))
+        self.with_secret_id_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "approle secret_id_ttl",
+        )?)
     }
 
     fn validate(&self) -> Result<()> {
@@ -225,7 +231,10 @@ impl AppRoleSecretIdRequest {
 
     /// Sets the SecretID TTL from a Rust duration.
     pub fn with_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_ttl(crate::duration_to_bao_string(ttl))
+        self.with_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "approle secret_id ttl",
+        )?)
     }
 
     /// Sets the SecretID metadata JSON object string.
@@ -363,7 +372,10 @@ impl AppRoleCustomSecretIdRequest {
 
     /// Sets the custom SecretID TTL from a Rust duration.
     pub fn with_ttl_duration(self, ttl: std::time::Duration) -> Result<Self> {
-        self.with_ttl(crate::duration_to_bao_string(ttl))
+        self.with_ttl(crate::duration::nonzero_duration_to_bao_string(
+            ttl,
+            "approle custom secret_id ttl",
+        )?)
     }
 
     fn validate(&self) -> Result<()> {
