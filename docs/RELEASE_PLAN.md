@@ -309,9 +309,10 @@ Stop condition:
   `0.10.0`;
 - optional `tracing` crate instrumentation is implemented without a default
   dependency; OpenTelemetry SDK dependencies and custom request hooks are
-  rejected for stable scope, W3C `traceparent` propagation is deferred, and
-  seal-status watcher/back-pressure, HTTP/2 transport configuration, and
-  application-side secret-struct wrappers have deferral decisions recorded;
+  rejected for stable scope, W3C `traceparent` propagation is deferred, the
+  non-default `http2` feature is implemented without a runtime transport knob,
+  HTTP/3 is rejected for stable scope, and seal-status watcher/back-pressure
+  and application-side secret-struct wrappers have deferral decisions recorded;
   public response serde fixtures are added;
 - leaf certificate and SPKI pinning are rejected for stable scope; root-only
   trust with an internal CA or self-signed OpenBao certificate is documented as

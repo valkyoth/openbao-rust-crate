@@ -87,6 +87,7 @@ totp = []
 transit = []
 transit-bytes = ["dep:base64-ng"]
 sys = []
+http2 = ["reqwest/http2"]
 time = ["dep:time"]
 tracing = ["dep:tracing"]
 # Production operator APIs for init/unseal/rekey/rotate. These endpoints can

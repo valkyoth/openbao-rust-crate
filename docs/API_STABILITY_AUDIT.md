@@ -70,7 +70,7 @@ owner decision unless a pentest or implementation blocker changes their risk:
 | System backend | Broad sys coverage with operator gates. Matrix shows config UI, generate-root/recovery, password policy, monitor/internal, and legacy recovery rekey decisions. | Complete or reject remaining system rows in `0.14.0`; keep operator-risk APIs gated. |
 | Tracing | Optional `tracing` feature instruments the shared HTTP dispatch point with method, validated path, and status only. | Reject OpenTelemetry SDK dependencies and custom request hooks for stable scope. Defer W3C `traceparent` propagation past `1.0.0` unless a concrete OpenBao-side correlation use case emerges. |
 | Seal watcher | Readiness polling and seal status helpers exist. | Defer background seal watchers; document polling patterns because watchers need runtime/back-pressure policy. |
-| HTTP/2 | Not exposed as public configuration. | Decide in `0.9.0` whether to expose a transport knob; otherwise document reqwest defaults as the stable policy. |
+| HTTP/2 | Default builds are HTTP/1.1-only because reqwest default features are disabled. | Reject a runtime `OpenBaoConfig` knob. Add non-default `http2 = ["reqwest/http2"]`; when enabled, TLS ALPN negotiates HTTP/2 where OpenBao supports it and falls back to HTTP/1.1. Reject HTTP/3 for stable scope. |
 | Fuzz/fixtures | Unit and HTTP mock coverage are broad. | Add `0.9.0` fuzz targets for path validation, API error decoding, and response envelopes; add serde fixtures for representative public responses. |
 | Quantum readiness | Advisory roadmap only. | Add a design note in `0.9.0`; no API may claim post-quantum safety until OpenBao exposes stable primitives. |
 
@@ -99,7 +99,7 @@ must now have an explicit current decision.
 | `0.7.0` | Bootstrap preview, typed capabilities, list traits, and timestamps were planned. | Resolved in `0.8.0`. |
 | `0.7.0` | Broader bootstrap convergence for LDAP/RabbitMQ/Kubernetes secrets/Identity remained planned. | Implement PKI role and Identity entity/group convergence in `0.9.0`; decide before `0.15.0` whether broader engine-specific convergence is rejected or implemented. |
 | `0.8.0` | Kerberos SPNEGO acquisition is left to platform tooling. | Intentional; the crate accepts the documented base64 token and does not embed Kerberos client stacks. |
-| `0.8.0` | Retry, auto-renewal, lease tracking, pagination, Identity OIDC/MFA, PKI root/named issuer, tracing, seal watcher, HTTP/2, and secret wrappers needed decisions. | Decisions are recorded in the API Areas table above and must be reflected in `0.9.0` release notes before tag. Tracing is resolved with an optional feature and no OpenTelemetry SDK dependency. |
+| `0.8.0` | Retry, auto-renewal, lease tracking, pagination, Identity OIDC/MFA, PKI root/named issuer, tracing, seal watcher, HTTP/2, and secret wrappers needed decisions. | Decisions are recorded in the API Areas table above and must be reflected in `0.9.0` release notes before tag. Tracing and HTTP/2 are resolved with optional features and no runtime transport hooks. |
 
 ## Deferred Work Template
 

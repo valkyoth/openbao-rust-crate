@@ -23,7 +23,7 @@
   stabilization audit documentation, migration guidance, release-note skeleton,
   the known-limitations decision register, `RenewalHint`, lease tidy, safe
   custom plugin wrapper building blocks, optional `tracing` instrumentation,
-  and the `0.9.0` release gate script.
+  optional HTTP/2 transport support, and the `0.9.0` release gate script.
 - Remaining `0.9.0` planned work: public API audit, migration guide
   completion, opt-in retry/backoff, non-secret pagination ergonomics, PKI role
   and Identity entity/group bootstrap convergence, PKI root/named-issuer scope
@@ -107,9 +107,11 @@
 - Implement or decide in `0.14.0`: system generate-root/recovery-token,
   decode-token, password policies, monitor/internal rows, resultant ACL, and
   legacy recovery-key rekey.
-- Decide before `0.15.0`: seal-status watchers, HTTP/2 transport knobs,
-  application-side secret-struct wrappers, and advanced ACL policy-builder
-  fields. Certificate and public-key pinning are rejected for stable scope;
+- Decide before `0.15.0`: seal-status watchers, application-side secret-struct
+  wrappers, and advanced ACL policy-builder fields. Runtime HTTP/2 transport
+  knobs are rejected; use the non-default `http2` feature for TLS ALPN HTTP/2
+  negotiation, and keep default builds HTTP/1.1-only. HTTP/3 is rejected for
+  stable scope. Certificate and public-key pinning are rejected for stable scope;
   use root-only trust with an internal CA or self-signed OpenBao certificate
   instead. Tracing is resolved with a
   non-default `tracing` feature; OpenTelemetry SDK dependencies and custom

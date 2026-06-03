@@ -140,7 +140,8 @@ Planned next:
   non-secret pagination ergonomics, PKI role and Identity entity/group
   bootstrap convergence, fuzz/fixture hardening, quantum-readiness design
   notes, and explicit pre-`1.0` decisions for background renewal/tracking,
-  tracing, seal watchers, HTTP/2 knobs, and application-side secret wrappers.
+  seal watchers, and application-side secret wrappers. Tracing and HTTP/2 are
+  resolved as non-default features without runtime transport hooks.
 - `0.10.0` through `0.15.0`: close the endpoint matrix deliberately: Identity
   and auth, Transit advanced key management, PKI advanced/public/specialized
   flows, remaining system backend rows, then final endpoint closure.
@@ -259,6 +260,7 @@ openbao = { version = "0.9", features = ["time"] }
 | `transit` | yes | Transit key lifecycle, batch cryptography, and single-operation cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
 | `sys` | yes | System backend, readiness, leases, quotas, storage, diagnostics, and operator-gated helpers. |
+| `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tracing` | no | Optional request/response instrumentation with method, validated path, and status only. No OpenTelemetry SDK dependency. |
 | `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
@@ -286,6 +288,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | Response size cap | Yes | 32 MiB default with per-client lowering for small-response workflows. |
 | Timestamp parsing | Optional | Enable `time` for RFC3339 parsing helpers without changing response field types. |
 | TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can opt down to TLS 1.2. |
+| HTTP protocol | HTTP/1.1 by default | Enable non-default `http2` for TLS ALPN HTTP/2 negotiation. No runtime HTTP/2 knob is exposed. |
 | Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
 | Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. This is the supported alternative to leaf certificate or SPKI pinning. |
 | Client TLS identity | Yes | Optional mutual TLS client identity for TLS certificate auth. |

@@ -42,6 +42,8 @@ All notable changes to this project are documented here.
   planned with feature-gated `rsa` and `aes-gcm` dependencies.
 - Added a non-default `tracing` feature that instruments the shared HTTP
   dispatch point with method, validated path, and response status events.
+- Added a non-default `http2` feature that enables reqwest HTTP/2 support and
+  lets TLS ALPN negotiate HTTP/2 when the OpenBao server supports it.
 
 ### Security
 
@@ -60,6 +62,8 @@ All notable changes to this project are documented here.
 - Leaf certificate and SPKI pinning are rejected for stable scope; root-only
   trust with an internal CA or self-signed OpenBao certificate is documented as
   the supported pattern.
+- Runtime HTTP/2 transport knobs are rejected because ALPN handles negotiation;
+  HTTP/3 is rejected for stable scope.
 
 ## 0.8.0 - 2026-06-02
 

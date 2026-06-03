@@ -148,6 +148,11 @@ impl OpenBaoConfig {
     /// OpenBao CA or a self-signed OpenBao certificate and reject every
     /// platform/public CA root.
     ///
+    /// Default crate builds intentionally use HTTP/1.1 only because `reqwest`
+    /// default features are disabled. Enable the crate's `http2` feature when
+    /// a high-throughput deployment wants TLS ALPN to negotiate HTTP/2 where
+    /// the OpenBao server supports it. There is no runtime HTTP/2 knob.
+    ///
     /// Plain HTTP still requires an explicit local HTTP opt-in and a numeric
     /// loopback host in the `127.0.0.0/8` range or `::1`.
     pub fn from_env() -> Result<Self> {
