@@ -24,7 +24,8 @@
   the known-limitations decision register, `RenewalHint`, lease tidy, safe
   custom plugin wrapper building blocks, optional `tracing` instrumentation,
   optional HTTP/2 transport support, token `create-orphan` and
-  `renew-accessor` helpers, and the `0.9.0` release gate script.
+  `renew-accessor` helpers, AppRole delegated role-property helpers, and the
+  `0.9.0` release gate script.
 - Remaining `0.9.0` planned work: public API audit, migration guide
   completion, opt-in retry/backoff, non-secret pagination ergonomics, PKI role
   and Identity entity/group bootstrap convergence, PKI root/named-issuer scope
@@ -89,7 +90,6 @@
   rows, MFA method and login-enforcement rows, and `sys/mfa/validate`; classify
   named-provider OIDC `/authorize`, `/token`, and `/userinfo` as external
   browser protocol flows.
-- Implement or decide in `0.10.0`: AppRole delegated per-property rows.
 - Implement in `0.11.0`: Transit wrapping-key, import/import-version, BYOK
   export, soft-delete/restore, cache/global config, CSR generation, and
   certificate install rows. `wrapping_key` returns a public PEM string; import

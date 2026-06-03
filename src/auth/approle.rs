@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use reqwest::Method;
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::DeserializeOwned};
 
 use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
@@ -142,6 +142,9 @@ impl AppRoleRoleRequest {
     }
 
     fn validate(&self) -> Result<()> {
+        validate_string_list_len(&self.token_policies, "approle token_policies")?;
+        validate_string_list_len(&self.secret_id_bound_cidrs, "approle secret_id_bound_cidrs")?;
+        validate_string_list_len(&self.token_bound_cidrs, "approle token_bound_cidrs")?;
         crate::validation::validate_cidr_list(
             &self.secret_id_bound_cidrs,
             "approle secret_id_bound_cidrs",
@@ -556,6 +559,88 @@ struct SecretIdAccessorLookupRequest<'a> {
     secret_id_accessor: &'a str,
 }
 
+#[derive(Deserialize)]
+struct BindSecretIdProperty {
+    bind_secret_id: bool,
+}
+
+#[derive(Serialize)]
+struct BindSecretIdPayload {
+    bind_secret_id: bool,
+}
+
+#[derive(Deserialize)]
+struct StringListProperty {
+    #[serde(
+        default,
+        alias = "policies",
+        alias = "secret_id_bound_cidrs",
+        alias = "token_bound_cidrs",
+        alias = "token_policies",
+        deserialize_with = "deserialize_bounded_string_vec"
+    )]
+    values: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct PoliciesPayload<'a> {
+    token_policies: &'a [String],
+}
+
+#[derive(Serialize)]
+struct SecretIdBoundCidrsPayload<'a> {
+    secret_id_bound_cidrs: &'a [String],
+}
+
+#[derive(Serialize)]
+struct TokenBoundCidrsPayload<'a> {
+    token_bound_cidrs: &'a [String],
+}
+
+#[derive(Deserialize)]
+struct U64Property {
+    #[serde(alias = "secret_id_num_uses")]
+    value: u64,
+}
+
+#[derive(Serialize)]
+struct SecretIdNumUsesPayload {
+    secret_id_num_uses: u64,
+}
+
+#[derive(Deserialize)]
+struct DurationProperty {
+    #[serde(
+        alias = "secret_id_ttl",
+        alias = "token_ttl",
+        alias = "token_max_ttl",
+        alias = "period",
+        alias = "token_period",
+        deserialize_with = "deserialize_string_or_u64"
+    )]
+    value: String,
+}
+
+#[derive(Serialize)]
+struct SecretIdTtlPayload<'a> {
+    secret_id_ttl: &'a str,
+}
+
+#[derive(Serialize)]
+struct TokenTtlPayload<'a> {
+    token_ttl: &'a str,
+}
+
+#[derive(Serialize)]
+struct TokenMaxTtlPayload<'a> {
+    token_max_ttl: &'a str,
+}
+
+#[derive(Serialize)]
+struct TokenPeriodPayload<'a> {
+    period: &'a str,
+}
+
 impl Client<Unauthenticated> {
     /// Uses the AppRole auth method mounted at `auth/approle`.
     pub fn approle(&self) -> Result<AppRole<'_>> {
@@ -685,6 +770,246 @@ impl AppRoleAdmin<'_> {
         Ok(envelope.data)
     }
 
+    /// Reads generated-token policies for an AppRole role through the
+    /// delegated `policies` endpoint.
+    pub async fn read_token_policies(&self, role_name: &str) -> Result<Vec<String>> {
+        Ok(self
+            .read_role_property::<StringListProperty>(role_name, "policies")
+            .await?
+            .values)
+    }
+
+    /// Updates generated-token policies for an AppRole role through the
+    /// delegated `policies` endpoint.
+    pub async fn write_token_policies<I, P>(&self, role_name: &str, policies: I) -> Result<Empty>
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<String>,
+    {
+        let policies = collect_string_list(policies, "approle token_policies")?;
+        self.write_role_property(
+            role_name,
+            "policies",
+            &PoliciesPayload {
+                token_policies: &policies,
+            },
+        )
+        .await
+    }
+
+    /// Resets generated-token policies for an AppRole role through the
+    /// delegated `policies` endpoint.
+    pub async fn delete_token_policies(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "policies").await
+    }
+
+    /// Reads the generated SecretID use-count limit for an AppRole role.
+    pub async fn read_secret_id_num_uses(&self, role_name: &str) -> Result<u64> {
+        Ok(self
+            .read_role_property::<U64Property>(role_name, "secret-id-num-uses")
+            .await?
+            .value)
+    }
+
+    /// Updates the generated SecretID use-count limit for an AppRole role.
+    pub async fn write_secret_id_num_uses(&self, role_name: &str, uses: u64) -> Result<Empty> {
+        self.write_role_property(
+            role_name,
+            "secret-id-num-uses",
+            &SecretIdNumUsesPayload {
+                secret_id_num_uses: uses,
+            },
+        )
+        .await
+    }
+
+    /// Resets the generated SecretID use-count limit for an AppRole role.
+    pub async fn delete_secret_id_num_uses(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "secret-id-num-uses")
+            .await
+    }
+
+    /// Reads the generated SecretID TTL for an AppRole role.
+    pub async fn read_secret_id_ttl(&self, role_name: &str) -> Result<String> {
+        Ok(self
+            .read_role_property::<DurationProperty>(role_name, "secret-id-ttl")
+            .await?
+            .value)
+    }
+
+    /// Updates the generated SecretID TTL for an AppRole role.
+    pub async fn write_secret_id_ttl(&self, role_name: &str, ttl: &str) -> Result<Empty> {
+        crate::validation::validate_duration_parameter(ttl, "approle secret_id_ttl")?;
+        self.write_role_property(
+            role_name,
+            "secret-id-ttl",
+            &SecretIdTtlPayload { secret_id_ttl: ttl },
+        )
+        .await
+    }
+
+    /// Resets the generated SecretID TTL for an AppRole role.
+    pub async fn delete_secret_id_ttl(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "secret-id-ttl").await
+    }
+
+    /// Reads the generated-token TTL for an AppRole role.
+    pub async fn read_token_ttl(&self, role_name: &str) -> Result<String> {
+        Ok(self
+            .read_role_property::<DurationProperty>(role_name, "token-ttl")
+            .await?
+            .value)
+    }
+
+    /// Updates the generated-token TTL for an AppRole role.
+    pub async fn write_token_ttl(&self, role_name: &str, ttl: &str) -> Result<Empty> {
+        crate::validation::validate_duration_parameter(ttl, "approle token_ttl")?;
+        self.write_role_property(role_name, "token-ttl", &TokenTtlPayload { token_ttl: ttl })
+            .await
+    }
+
+    /// Resets the generated-token TTL for an AppRole role.
+    pub async fn delete_token_ttl(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "token-ttl").await
+    }
+
+    /// Reads the generated-token max TTL for an AppRole role.
+    pub async fn read_token_max_ttl(&self, role_name: &str) -> Result<String> {
+        Ok(self
+            .read_role_property::<DurationProperty>(role_name, "token-max-ttl")
+            .await?
+            .value)
+    }
+
+    /// Updates the generated-token max TTL for an AppRole role.
+    pub async fn write_token_max_ttl(&self, role_name: &str, ttl: &str) -> Result<Empty> {
+        crate::validation::validate_duration_parameter(ttl, "approle token_max_ttl")?;
+        self.write_role_property(
+            role_name,
+            "token-max-ttl",
+            &TokenMaxTtlPayload { token_max_ttl: ttl },
+        )
+        .await
+    }
+
+    /// Resets the generated-token max TTL for an AppRole role.
+    pub async fn delete_token_max_ttl(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "token-max-ttl").await
+    }
+
+    /// Reads whether an AppRole role requires SecretIDs during login.
+    pub async fn read_bind_secret_id(&self, role_name: &str) -> Result<bool> {
+        Ok(self
+            .read_role_property::<BindSecretIdProperty>(role_name, "bind-secret-id")
+            .await?
+            .bind_secret_id)
+    }
+
+    /// Updates whether an AppRole role requires SecretIDs during login.
+    pub async fn write_bind_secret_id(&self, role_name: &str, bind: bool) -> Result<Empty> {
+        self.write_role_property(
+            role_name,
+            "bind-secret-id",
+            &BindSecretIdPayload {
+                bind_secret_id: bind,
+            },
+        )
+        .await
+    }
+
+    /// Resets whether an AppRole role requires SecretIDs during login.
+    pub async fn delete_bind_secret_id(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "bind-secret-id").await
+    }
+
+    /// Reads CIDRs allowed to use generated SecretIDs for an AppRole role.
+    pub async fn read_secret_id_bound_cidrs(&self, role_name: &str) -> Result<Vec<String>> {
+        Ok(self
+            .read_role_property::<StringListProperty>(role_name, "secret-id-bound-cidrs")
+            .await?
+            .values)
+    }
+
+    /// Updates CIDRs allowed to use generated SecretIDs for an AppRole role.
+    pub async fn write_secret_id_bound_cidrs<I, P>(
+        &self,
+        role_name: &str,
+        cidrs: I,
+    ) -> Result<Empty>
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<String>,
+    {
+        let cidrs = collect_string_list(cidrs, "approle secret_id_bound_cidrs")?;
+        crate::validation::validate_cidr_list(&cidrs, "approle secret_id_bound_cidrs")?;
+        self.write_role_property(
+            role_name,
+            "secret-id-bound-cidrs",
+            &SecretIdBoundCidrsPayload {
+                secret_id_bound_cidrs: &cidrs,
+            },
+        )
+        .await
+    }
+
+    /// Resets CIDRs allowed to use generated SecretIDs for an AppRole role.
+    pub async fn delete_secret_id_bound_cidrs(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "secret-id-bound-cidrs")
+            .await
+    }
+
+    /// Reads CIDRs allowed to use generated tokens for an AppRole role.
+    pub async fn read_token_bound_cidrs(&self, role_name: &str) -> Result<Vec<String>> {
+        Ok(self
+            .read_role_property::<StringListProperty>(role_name, "token-bound-cidrs")
+            .await?
+            .values)
+    }
+
+    /// Updates CIDRs allowed to use generated tokens for an AppRole role.
+    pub async fn write_token_bound_cidrs<I, P>(&self, role_name: &str, cidrs: I) -> Result<Empty>
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<String>,
+    {
+        let cidrs = collect_string_list(cidrs, "approle token_bound_cidrs")?;
+        crate::validation::validate_cidr_list(&cidrs, "approle token_bound_cidrs")?;
+        self.write_role_property(
+            role_name,
+            "token-bound-cidrs",
+            &TokenBoundCidrsPayload {
+                token_bound_cidrs: &cidrs,
+            },
+        )
+        .await
+    }
+
+    /// Resets CIDRs allowed to use generated tokens for an AppRole role.
+    pub async fn delete_token_bound_cidrs(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "token-bound-cidrs")
+            .await
+    }
+
+    /// Reads the generated periodic-token period for an AppRole role.
+    pub async fn read_token_period(&self, role_name: &str) -> Result<String> {
+        Ok(self
+            .read_role_property::<DurationProperty>(role_name, "period")
+            .await?
+            .value)
+    }
+
+    /// Updates the generated periodic-token period for an AppRole role.
+    pub async fn write_token_period(&self, role_name: &str, period: &str) -> Result<Empty> {
+        crate::validation::validate_duration_parameter(period, "approle token_period")?;
+        self.write_role_property(role_name, "period", &TokenPeriodPayload { period })
+            .await
+    }
+
+    /// Resets the generated periodic-token period for an AppRole role.
+    pub async fn delete_token_period(&self, role_name: &str) -> Result<Empty> {
+        self.delete_role_property(role_name, "period").await
+    }
+
     /// Deletes an AppRole role.
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
@@ -696,6 +1021,50 @@ impl AppRoleAdmin<'_> {
                 &[reqwest::StatusCode::OK, reqwest::StatusCode::NO_CONTENT],
             )
             .await
+    }
+
+    async fn read_role_property<T>(&self, role_name: &str, segment: &str) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        let path = self.role_property_path(role_name, segment)?;
+        let envelope: ResponseEnvelope<T> = self
+            .client
+            .request_json(Method::GET, &path, Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    async fn write_role_property<P>(
+        &self,
+        role_name: &str,
+        segment: &str,
+        payload: &P,
+    ) -> Result<Empty>
+    where
+        P: Serialize,
+    {
+        let path = self.role_property_path(role_name, segment)?;
+        self.client
+            .request_json(Method::POST, &path, Some(payload))
+            .await
+    }
+
+    async fn delete_role_property(&self, role_name: &str, segment: &str) -> Result<Empty> {
+        let path = self.role_property_path(role_name, segment)?;
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &path,
+                Option::<&Empty>::None,
+                &[reqwest::StatusCode::OK, reqwest::StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    fn role_property_path(&self, role_name: &str, segment: &str) -> Result<String> {
+        let role_name = validate_mount_path(role_name)?.join("/");
+        Ok(format!("auth/{}/role/{role_name}/{segment}", self.mount))
     }
 
     /// Reads the RoleID for an AppRole role.
@@ -921,6 +1290,42 @@ where
     Ok(SecretString::from(value))
 }
 
+fn collect_string_list<I, P>(values: I, field: &'static str) -> Result<Vec<String>>
+where
+    I: IntoIterator<Item = P>,
+    P: Into<String>,
+{
+    let values = values.into_iter().map(Into::into).collect::<Vec<_>>();
+    validate_string_list_len(&values, field)?;
+    Ok(values)
+}
+
+fn validate_string_list_len(values: &[String], field: &'static str) -> Result<()> {
+    if values.len() > crate::response::MAX_RESPONSE_STRINGS {
+        return Err(Error::InvalidParameter(format!(
+            "{field} exceeds item limit"
+        )));
+    }
+    Ok(())
+}
+
+fn deserialize_string_or_u64<'de, D>(deserializer: D) -> core::result::Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Value {
+        String(String),
+        U64(u64),
+    }
+
+    Ok(match Value::deserialize(deserializer)? {
+        Value::String(value) => value,
+        Value::U64(value) => value.to_string(),
+    })
+}
+
 fn deserialize_optional_string_or_u64<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Option<String>, D::Error>
@@ -950,6 +1355,7 @@ mod tests {
 
     use super::{
         AppRoleCustomSecretIdRequest, AppRoleRoleRequest, AppRoleSecretIdRequest, LoginResponse,
+        StringListProperty, collect_string_list,
     };
 
     #[test]
@@ -973,6 +1379,28 @@ mod tests {
         let value = serde_json::json!({ "auth": { "client_token": "token", "accessor": "accessor", "policies": policies } });
         let error = match serde_json::from_value::<LoginResponse>(value) {
             Ok(_) => panic!("oversized AppRole policy list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn approle_property_policies_are_bounded() {
+        let mut policies = Vec::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            policies.push(format!("policy-{index}"));
+        }
+        let value = serde_json::json!({ "policies": policies });
+        let error = match serde_json::from_value::<StringListProperty>(value) {
+            Ok(_) => panic!("oversized AppRole property policy list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        let values =
+            (0..=crate::response::MAX_RESPONSE_STRINGS).map(|index| format!("policy-{index}"));
+        let error = match collect_string_list(values, "approle token_policies") {
+            Ok(_) => panic!("oversized AppRole property policy list unexpectedly accepted"),
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));

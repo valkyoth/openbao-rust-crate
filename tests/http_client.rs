@@ -6436,6 +6436,368 @@ async fn approle_admin_role_and_secret_id_lifecycle_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn approle_delegated_role_properties_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..27 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/auth/approle/role/web/policies HTTP/1.1"));
+                    r#"{"data":{"policies":["web","ops"]}}"#
+                }
+                1 => {
+                    assert!(
+                        request.starts_with("POST /v1/auth/approle/role/web/policies HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""token_policies":["web","ops"]"#));
+                    "{}"
+                }
+                2 => {
+                    assert!(
+                        request.starts_with("DELETE /v1/auth/approle/role/web/policies HTTP/1.1")
+                    );
+                    "{}"
+                }
+                3 => {
+                    assert!(
+                        request.starts_with(
+                            "GET /v1/auth/approle/role/web/secret-id-num-uses HTTP/1.1"
+                        )
+                    );
+                    r#"{"data":{"secret_id_num_uses":7}}"#
+                }
+                4 => {
+                    assert!(
+                        request.starts_with(
+                            "POST /v1/auth/approle/role/web/secret-id-num-uses HTTP/1.1"
+                        )
+                    );
+                    assert!(request.contains(r#""secret_id_num_uses":9"#));
+                    "{}"
+                }
+                5 => {
+                    assert!(request.starts_with(
+                        "DELETE /v1/auth/approle/role/web/secret-id-num-uses HTTP/1.1"
+                    ));
+                    "{}"
+                }
+                6 => {
+                    assert!(
+                        request.starts_with("GET /v1/auth/approle/role/web/secret-id-ttl HTTP/1.1")
+                    );
+                    r#"{"data":{"secret_id_ttl":600}}"#
+                }
+                7 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/auth/approle/role/web/secret-id-ttl HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""secret_id_ttl":"15m""#));
+                    "{}"
+                }
+                8 => {
+                    assert!(
+                        request
+                            .starts_with("DELETE /v1/auth/approle/role/web/secret-id-ttl HTTP/1.1")
+                    );
+                    "{}"
+                }
+                9 => {
+                    assert!(
+                        request.starts_with("GET /v1/auth/approle/role/web/token-ttl HTTP/1.1")
+                    );
+                    r#"{"data":{"token_ttl":"10m"}}"#
+                }
+                10 => {
+                    assert!(
+                        request.starts_with("POST /v1/auth/approle/role/web/token-ttl HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""token_ttl":"20m""#));
+                    "{}"
+                }
+                11 => {
+                    assert!(
+                        request.starts_with("DELETE /v1/auth/approle/role/web/token-ttl HTTP/1.1")
+                    );
+                    "{}"
+                }
+                12 => {
+                    assert!(
+                        request.starts_with("GET /v1/auth/approle/role/web/token-max-ttl HTTP/1.1")
+                    );
+                    r#"{"data":{"token_max_ttl":"1h"}}"#
+                }
+                13 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/auth/approle/role/web/token-max-ttl HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""token_max_ttl":"2h""#));
+                    "{}"
+                }
+                14 => {
+                    assert!(
+                        request
+                            .starts_with("DELETE /v1/auth/approle/role/web/token-max-ttl HTTP/1.1")
+                    );
+                    "{}"
+                }
+                15 => {
+                    assert!(
+                        request
+                            .starts_with("GET /v1/auth/approle/role/web/bind-secret-id HTTP/1.1")
+                    );
+                    r#"{"data":{"bind_secret_id":true}}"#
+                }
+                16 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/auth/approle/role/web/bind-secret-id HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""bind_secret_id":false"#));
+                    "{}"
+                }
+                17 => {
+                    assert!(
+                        request.starts_with(
+                            "DELETE /v1/auth/approle/role/web/bind-secret-id HTTP/1.1"
+                        )
+                    );
+                    "{}"
+                }
+                18 => {
+                    assert!(request.starts_with(
+                        "GET /v1/auth/approle/role/web/secret-id-bound-cidrs HTTP/1.1"
+                    ));
+                    r#"{"data":{"secret_id_bound_cidrs":["192.0.2.0/24"]}}"#
+                }
+                19 => {
+                    assert!(request.starts_with(
+                        "POST /v1/auth/approle/role/web/secret-id-bound-cidrs HTTP/1.1"
+                    ));
+                    assert!(request.contains(r#""secret_id_bound_cidrs":["192.0.2.0/24"]"#));
+                    "{}"
+                }
+                20 => {
+                    assert!(request.starts_with(
+                        "DELETE /v1/auth/approle/role/web/secret-id-bound-cidrs HTTP/1.1"
+                    ));
+                    "{}"
+                }
+                21 => {
+                    assert!(
+                        request.starts_with(
+                            "GET /v1/auth/approle/role/web/token-bound-cidrs HTTP/1.1"
+                        )
+                    );
+                    r#"{"data":{"token_bound_cidrs":["198.51.100.0/24"]}}"#
+                }
+                22 => {
+                    assert!(
+                        request.starts_with(
+                            "POST /v1/auth/approle/role/web/token-bound-cidrs HTTP/1.1"
+                        )
+                    );
+                    assert!(request.contains(r#""token_bound_cidrs":["198.51.100.0/24"]"#));
+                    "{}"
+                }
+                23 => {
+                    assert!(request.starts_with(
+                        "DELETE /v1/auth/approle/role/web/token-bound-cidrs HTTP/1.1"
+                    ));
+                    "{}"
+                }
+                24 => {
+                    assert!(request.starts_with("GET /v1/auth/approle/role/web/period HTTP/1.1"));
+                    r#"{"data":{"period":"24h"}}"#
+                }
+                25 => {
+                    assert!(request.starts_with("POST /v1/auth/approle/role/web/period HTTP/1.1"));
+                    assert!(request.contains(r#""period":"30m""#));
+                    "{}"
+                }
+                26 => {
+                    assert!(
+                        request.starts_with("DELETE /v1/auth/approle/role/web/period HTTP/1.1")
+                    );
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(test_secret(&["root-", "token"])))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let admin = client
+        .approle_admin()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(
+        admin
+            .read_token_policies("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}")),
+        ["web", "ops"]
+    );
+    admin
+        .write_token_policies("web", ["web", "ops"])
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_token_policies("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(
+        admin
+            .read_secret_id_num_uses("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}")),
+        7
+    );
+    admin
+        .write_secret_id_num_uses("web", 9)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_secret_id_num_uses("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(
+        admin
+            .read_secret_id_ttl("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}")),
+        "600"
+    );
+    admin
+        .write_secret_id_ttl("web", "15m")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_secret_id_ttl("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(
+        admin
+            .read_token_ttl("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}")),
+        "10m"
+    );
+    admin
+        .write_token_ttl("web", "20m")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_token_ttl("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(
+        admin
+            .read_token_max_ttl("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}")),
+        "1h"
+    );
+    admin
+        .write_token_max_ttl("web", "2h")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_token_max_ttl("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert!(
+        admin
+            .read_bind_secret_id("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+    );
+    admin
+        .write_bind_secret_id("web", false)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_bind_secret_id("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(
+        admin
+            .read_secret_id_bound_cidrs("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}")),
+        ["192.0.2.0/24"]
+    );
+    admin
+        .write_secret_id_bound_cidrs("web", ["192.0.2.0/24"])
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_secret_id_bound_cidrs("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(
+        admin
+            .read_token_bound_cidrs("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}")),
+        ["198.51.100.0/24"]
+    );
+    admin
+        .write_token_bound_cidrs("web", ["198.51.100.0/24"])
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_token_bound_cidrs("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert_eq!(
+        admin
+            .read_token_period("web")
+            .await
+            .unwrap_or_else(|error| panic!("{error}")),
+        "24h"
+    );
+    admin
+        .write_token_period("web", "30m")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    admin
+        .delete_token_period("web")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn pki_acme_config_and_eab_paths_are_documented() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

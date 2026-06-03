@@ -15,7 +15,7 @@ All notable changes to this project are documented here.
 - Added migration guidance for users upgrading from earlier `openbao` releases,
   `vaultrs`, or bespoke `reqwest` OpenBao/Vault wrappers.
 - Added a generated OpenBao `2.5.x` endpoint-by-endpoint coverage matrix with
-  `643` documented endpoint rows, `71.4%` strict typed or operator-gated
+  `643` documented endpoint rows, `72.8%` strict typed or operator-gated
   coverage, and explicit pre-`1.0.0` decision rows.
 - Added a `0.9.0` release-note skeleton and release gate script.
 - Expanded the pre-`1.0` release strategy through `0.15.0` so Identity/auth,
@@ -53,6 +53,9 @@ All notable changes to this project are documented here.
 - Added token `create_orphan` and `renew_accessor` helpers, resolving the
   remaining token endpoint decision rows and completing the accessor-only
   renew/revoke administration path.
+- Added typed AppRole delegated role-property helpers for OpenBao's documented
+  `policies`, SecretID limits, token TTL/max TTL, bind-secret-id, CIDR, and
+  period endpoints, including the documented reset/delete operations.
 
 ### Security
 

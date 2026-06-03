@@ -13,15 +13,15 @@ auth,POST,/auth/approle/role/:role_name/secret-id-accessor/lookup,typed,https://
 auth,POST,/auth/approle/role/:role_name/secret-id-accessor/destroy,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
 auth,POST,/auth/approle/role/:role_name/custom-secret-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
 auth,POST,/auth/approle/login,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/policies,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-num-uses,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-ttl,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-ttl,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-max-ttl,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/bind-secret-id,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-bound-cidrs,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-bound-cidrs,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
-auth,GET/POST/DELETE,/auth/approle/role/:role_name/period,raw,https://openbao.org/api-docs/auth/approle/,AppRole delegated per-property endpoint; full role read/write is typed.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/policies,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-num-uses,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-ttl,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-ttl,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-max-ttl,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/bind-secret-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/secret-id-bound-cidrs,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/token-bound-cidrs,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
+auth,GET/POST/DELETE,/auth/approle/role/:role_name/period,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
 auth,POST,/auth/approle/tidy/secret-id,typed,https://openbao.org/api-docs/auth/approle/,Typed auth helper exists.
 auth,POST,/auth/jwt/config,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.
 auth,GET,/auth/jwt/config,typed,https://openbao.org/api-docs/auth/jwt/,Typed auth helper exists.

@@ -60,6 +60,7 @@ owner decision unless a pentest or implementation blocker changes their risk:
 | Error handling | Sanitized API errors and common predicates. | Audit predicates in `0.9.0`; add only value-free helpers that do not expose raw response bodies. |
 | Retry/backoff | Only readiness polling retries temporary failures. | Implement an explicit opt-in retry policy in `0.9.0`; default requests remain single-shot to avoid retrying non-idempotent writes. |
 | Token lifecycle | Typed create/create-orphan, lookup, accessor lookup/list, renew/renew-accessor, revoke/revoke-accessor, role, tidy helpers, plus `RenewalHint` timing guidance. | Reject background auto-renewal for stable scope. No remaining token endpoint decision rows. |
+| AppRole | Login, role CRUD, delegated documented role-property read/write/delete, RoleID, SecretID, SecretID accessor, custom SecretID, and tidy helpers are typed. | No remaining AppRole endpoint decision rows in the OpenBao `2.5.x` matrix. The current docs do not publish delegated paths for `local_secret_ids`, `token_explicit_max_ttl`, `token_num_uses`, or `token_type`; those remain full-role fields unless upstream documents narrow endpoints. |
 | Lease lifecycle | Exact lookup/renew/revoke plus prefix revoke/count/tidy and `RenewalHint` timing guidance. | Reject background lease tracking and `LeaseHandle` wrappers for stable scope; applications own renewal loops, renewal-failure policy, and shutdown ordering. |
 | Pagination | Endpoint-specific helpers exist where implemented. | Implement a shared request/response pagination shape in `0.9.0` for non-secret string lists only; secret accessor lists stay dedicated. |
 | Admin bootstrap | Common service bootstrap and preview are implemented. | Implement PKI role and Identity entity/group convergence in `0.9.0` where existing typed reads/writes make comparison safe. |
@@ -94,7 +95,7 @@ must now have an explicit current decision.
 | `0.5.0` | Full JOSE/JWKS construction was out of scope. | Still out of scope; use Transit signing helpers with an application JWT/JWK library. |
 | `0.6.0` | Raw unauthenticated SSH public-key reads were not typed. | Intentional; use an external HTTP client for unauthenticated text/plain public-key endpoints. |
 | `0.6.0` | ACL builder did not cover advanced ACL parameter/wrapping constraints. | Keep direct `PolicyWriteRequest` for advanced policies; do not expand builder until a safe typed representation is designed. |
-| `0.7.0` | AppRole delegated per-property endpoints were not typed. | Defer; full role update covers the common case, and delegated single-property ACLs can use `Client::request_json`. |
+| `0.7.0` | AppRole delegated per-property endpoints were not typed. | Resolved in `0.9.0` for every documented OpenBao `2.5.x` delegated property row. |
 | `0.7.0` | Custom plugin APIs were not modeled as a generic trait. | Intentional; plugin schemas are deployment-specific. Keep local typed wrappers. |
 | `0.7.0` | Bootstrap preview, typed capabilities, list traits, and timestamps were planned. | Resolved in `0.8.0`. |
 | `0.7.0` | Broader bootstrap convergence for LDAP/RabbitMQ/Kubernetes secrets/Identity remained planned. | Implement PKI role and Identity entity/group convergence in `0.9.0`; decide before `0.15.0` whether broader engine-specific convergence is rejected or implemented. |

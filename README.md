@@ -237,7 +237,7 @@ openbao = { version = "0.9", features = ["time"] }
 
 | Feature | Default | Purpose |
 | --- | --- | --- |
-| `approle` | yes | AppRole login, role, RoleID, and SecretID helpers. |
+| `approle` | yes | AppRole login, role, delegated role-property, RoleID, and SecretID helpers. |
 | `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
 | `cubbyhole` | yes | Token-scoped Cubbyhole read/write/delete/list helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
@@ -275,7 +275,7 @@ openbao = { version = "0.9", features = ["time"] }
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
 For the current `0.9.0` line it records `643` documented endpoint rows, with
-`459/643` (`71.4%`) strict typed or operator-gated coverage.
+`468/643` (`72.8%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
 
@@ -305,7 +305,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | Direct token auth | Yes | Tokens are accepted as `SecretString`. |
 | `X-Vault-Token` | Yes | Default documented OpenBao-compatible token header. |
 | Bearer auth | Yes | Optional `Authorization: Bearer` header mode. |
-| AppRole login/admin | Yes | Role ID, SecretID, accessors, and returned tokens are secret-aware; role and SecretID lifecycle helpers are typed. |
+| AppRole login/admin | Yes | Role ID, SecretID, accessors, and returned tokens are secret-aware; role, delegated role-property, and SecretID lifecycle helpers are typed. |
 | Token accessor handling | Yes | Accessors are treated as secret material. |
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, create/create-orphan, renew/renew-accessor, revoke, revoke-self, and revoke-accessor helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |

@@ -2,7 +2,7 @@
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
-`643` documented endpoint rows, `459` strict typed or operator-gated rows, and
+`643` documented endpoint rows, `468` strict typed or operator-gated rows, and
 `141` rows still needing an implementation, rejection, raw-wrapper policy, or
 external-client policy decision. Because there is no rush to force stability,
 the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
@@ -306,6 +306,8 @@ Stop condition:
 - admin bootstrap convergence for PKI roles and Identity entities/groups is
   implemented;
 - token `create-orphan` and `renew-accessor` helpers are implemented;
+- AppRole delegated role-property read/write/delete helpers are implemented
+  for every documented OpenBao `2.5.x` per-property path;
 - optional `tracing` crate instrumentation is implemented without a default
   dependency; OpenTelemetry SDK dependencies and custom request hooks are
   rejected for stable scope, W3C `traceparent` propagation is deferred, the
@@ -342,11 +344,8 @@ Stop condition:
   implemented with secret-aware request/response types and redacted `Debug`;
 - system MFA validate is implemented as the required second step for
   MFA-enforced login flows;
-- AppRole delegated per-property endpoints are either implemented as narrow
-  helpers or permanently documented as `Client::request_json` rows because full
-  role read/write is already typed;
 - endpoint matrix is regenerated and all affected rows have updated statuses;
-- tests cover redaction for new OIDC/MFA/token request and response types.
+- tests cover redaction for new OIDC/MFA request and response types.
 
 Publishable value:
 

@@ -122,27 +122,6 @@ def classify(page: str, method: str, path: str) -> tuple[str, str]:
 
 
 def classify_auth(page: str, path: str) -> tuple[str, str]:
-    approle_property_segments = (
-        "policies",
-        "secret-id-num-uses",
-        "secret-id-ttl",
-        "token-ttl",
-        "token-max-ttl",
-        "bind-secret-id",
-        "secret-id-bound-cidrs",
-        "token-bound-cidrs",
-        "period",
-    )
-    if (
-        page == "/api-docs/auth/approle/"
-        and "/auth/approle/role/:role_name/" in path
-        and any(segment in path for segment in approle_property_segments)
-    ):
-        return (
-            "raw",
-            "AppRole delegated per-property endpoint; full role read/write is typed.",
-        )
-
     if page == "/api-docs/auth/token/":
         if path == "/auth/token/lookup-self":
             return (
@@ -536,7 +515,6 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "## Required Follow-Up",
             "",
-            "- AppRole delegated per-property endpoints need a final raw-vs-typed decision.",
             "- Identity OIDC admin/discovery/token/introspection rows and MFA management are planned for `0.10.0`.",
             "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",
             "- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.",

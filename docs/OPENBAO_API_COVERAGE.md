@@ -73,8 +73,8 @@ The `0.9.0` stabilization line now uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `459/643` (`71.4%`);
-- typed plus partial coverage: `460/643` (`71.5%`);
+- strict typed coverage: `468/643` (`72.8%`);
+- typed plus partial coverage: `469/643` (`72.9%`);
 - addressed by typed, partial, raw, or external policy: `502/643` (`78.1%`);
 - rows needing a pre-`1.0.0` implementation/rejection/deferral decision:
   `141`.
@@ -142,6 +142,9 @@ Support plan:
 - `0.7.0`: AppRole role and SecretID administration is implemented. Admin
   bootstrap orchestration for auth method enablement, AppRole role
   convergence, and explicit SecretID issuance is implemented.
+- `0.9.0`: AppRole delegated role-property helpers are implemented for all
+  documented OpenBao `2.5.x` per-property paths, including read, write, and
+  reset/delete operations.
 - `0.8.0`: LDAP login, config, user mapping, group mapping, list, read, and
   delete helpers are implemented. RADIUS login, config, user mapping, user
   deletion, and paginated user listing are implemented. Kerberos SPNEGO login,

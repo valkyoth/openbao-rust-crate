@@ -22,17 +22,17 @@ Sources:
 ## Summary
 
 - Total documented endpoint rows: `643`
-- Strict typed coverage: `459/643` (71.4%)
-- Typed plus partial coverage: `460/643` (71.5%)
+- Strict typed coverage: `468/643` (72.8%)
+- Typed plus partial coverage: `469/643` (72.9%)
 - Addressed by typed, partial, raw, or external policy: `502/643` (78.1%)
 - Open decisions before `1.0.0`: `141`
 
 | Status | Count |
 | --- | ---: |
-| `typed` | 415 |
+| `typed` | 424 |
 | `typed-gated` | 44 |
 | `partial` | 1 |
-| `raw` | 9 |
+| `raw` | 0 |
 | `external` | 33 |
 | `decision` | 141 |
 
@@ -40,7 +40,7 @@ Sources:
 
 | Area | Total | Typed | Typed gated | Partial | Raw | External | Decision | Strict % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `auth` | 105 | 95 | 0 | 1 | 9 | 0 | 0 | 90.5% |
+| `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 99.0% |
 | `secret` | 347 | 211 | 0 | 0 | 0 | 33 | 103 | 60.8% |
 | `system` | 191 | 109 | 44 | 0 | 0 | 0 | 38 | 80.1% |
 
@@ -48,7 +48,6 @@ Sources:
 
 | Page | Typed | Typed gated | Partial | Raw | External | Decision |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| [/api-docs/auth/approle/](https://openbao.org/api-docs/auth/approle/) | 15 | 0 | 0 | 9 | 0 | 0 |
 | [/api-docs/auth/token/](https://openbao.org/api-docs/auth/token/) | 18 | 0 | 1 | 0 | 0 | 0 |
 | [/api-docs/secret/identity/mfa/duo/](https://openbao.org/api-docs/secret/identity/mfa/duo/) | 0 | 0 | 0 | 0 | 0 | 4 |
 | [/api-docs/secret/identity/mfa/login-enforcement/](https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/) | 0 | 0 | 0 | 0 | 0 | 4 |
@@ -75,7 +74,6 @@ Sources:
 
 ## Required Follow-Up
 
-- AppRole delegated per-property endpoints need a final raw-vs-typed decision.
 - Identity OIDC admin/discovery/token/introspection rows and MFA management are planned for `0.10.0`.
 - Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
 - `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.
