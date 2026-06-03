@@ -12,6 +12,12 @@ use subtle::ConstantTimeEq;
 
 #[cfg(feature = "approle")]
 use crate::auth::approle::{AppRoleRoleRequest, AppRoleSecretId, AppRoleSecretIdRequest};
+#[cfg(feature = "identity")]
+use crate::secrets::identity::{
+    IdentityEntityInfo, IdentityEntityRequest, IdentityGroupInfo, IdentityGroupRequest,
+};
+#[cfg(feature = "pki")]
+use crate::secrets::pki::PkiRole;
 use crate::{
     AclPolicyBuilder, Authenticated, Client, Error, Result,
     auth::token::{TokenAuth, TokenCreateRequest},
@@ -56,6 +62,24 @@ enum BootstrapOperation {
         mount: String,
         path: String,
         values: BTreeMap<String, SecretString>,
+    },
+    #[cfg(feature = "pki")]
+    PkiRole {
+        mount: String,
+        name: String,
+        role: PkiRole,
+    },
+    #[cfg(feature = "identity")]
+    IdentityEntity {
+        mount: String,
+        name: String,
+        request: IdentityEntityRequest,
+    },
+    #[cfg(feature = "identity")]
+    IdentityGroup {
+        mount: String,
+        name: String,
+        request: IdentityGroupRequest,
     },
     ServiceToken {
         name: String,
@@ -302,6 +326,27 @@ impl fmt::Debug for BootstrapOperation {
                 .field("path", path)
                 .field("values", &"<redacted>")
                 .finish(),
+            #[cfg(feature = "pki")]
+            Self::PkiRole { mount, name, role } => formatter
+                .debug_struct("PkiRole")
+                .field("mount", mount)
+                .field("name", name)
+                .field("role", role)
+                .finish(),
+            #[cfg(feature = "identity")]
+            Self::IdentityEntity { mount, name, .. } => formatter
+                .debug_struct("IdentityEntity")
+                .field("mount", mount)
+                .field("name", name)
+                .field("request", &"<redacted>")
+                .finish(),
+            #[cfg(feature = "identity")]
+            Self::IdentityGroup { mount, name, .. } => formatter
+                .debug_struct("IdentityGroup")
+                .field("mount", mount)
+                .field("name", name)
+                .field("request", &"<redacted>")
+                .finish(),
             Self::ServiceToken { name, .. } => formatter
                 .debug_struct("ServiceToken")
                 .field("name", name)
@@ -443,6 +488,88 @@ impl AdminBootstrap {
             mount,
             path,
             values,
+        })
+    }
+
+    /// Ensures a PKI role exists and matches the desired fields supplied in
+    /// `role`.
+    ///
+    /// This only converges role configuration. It intentionally does not
+    /// generate or import CA material, sign intermediates, or manage trust
+    /// stores; those are operator ceremonies outside application bootstrap.
+    #[cfg(feature = "pki")]
+    pub fn ensure_pki_role(
+        &mut self,
+        mount: impl AsRef<str>,
+        name: impl AsRef<str>,
+        role: PkiRole,
+    ) -> Result<&mut Self> {
+        let mount = validate_mount_path(mount.as_ref())?.join("/");
+        let name = validate_mount_path(name.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::PkiRole { mount, name, role })
+    }
+
+    /// Ensures an Identity entity exists at the default `identity` mount.
+    #[cfg(feature = "identity")]
+    pub fn ensure_identity_entity(
+        &mut self,
+        name: impl AsRef<str>,
+        request: IdentityEntityRequest,
+    ) -> Result<&mut Self> {
+        self.ensure_identity_entity_at("identity", name, request)
+    }
+
+    /// Ensures an Identity entity exists at `mount`.
+    #[cfg(feature = "identity")]
+    pub fn ensure_identity_entity_at(
+        &mut self,
+        mount: impl AsRef<str>,
+        name: impl AsRef<str>,
+        request: IdentityEntityRequest,
+    ) -> Result<&mut Self> {
+        let mount = validate_mount_path(mount.as_ref())?.join("/");
+        let name = validate_mount_path(name.as_ref())?.join("/");
+        if request.name.as_deref() != Some(name.as_str()) && request.name.is_some() {
+            return Err(Error::InvalidParameter(
+                "identity entity request name must match bootstrap target name".into(),
+            ));
+        }
+        self.push_operation(BootstrapOperation::IdentityEntity {
+            mount,
+            name,
+            request,
+        })
+    }
+
+    /// Ensures an Identity group exists at the default `identity` mount.
+    #[cfg(feature = "identity")]
+    pub fn ensure_identity_group(
+        &mut self,
+        name: impl AsRef<str>,
+        request: IdentityGroupRequest,
+    ) -> Result<&mut Self> {
+        self.ensure_identity_group_at("identity", name, request)
+    }
+
+    /// Ensures an Identity group exists at `mount`.
+    #[cfg(feature = "identity")]
+    pub fn ensure_identity_group_at(
+        &mut self,
+        mount: impl AsRef<str>,
+        name: impl AsRef<str>,
+        request: IdentityGroupRequest,
+    ) -> Result<&mut Self> {
+        let mount = validate_mount_path(mount.as_ref())?.join("/");
+        let name = validate_mount_path(name.as_ref())?.join("/");
+        if request.name.as_deref() != Some(name.as_str()) && request.name.is_some() {
+            return Err(Error::InvalidParameter(
+                "identity group request name must match bootstrap target name".into(),
+            ));
+        }
+        self.push_operation(BootstrapOperation::IdentityGroup {
+            mount,
+            name,
+            request,
         })
     }
 
@@ -607,6 +734,65 @@ impl AdminBootstrap {
                         status,
                     ));
                 }
+                #[cfg(feature = "pki")]
+                BootstrapOperation::PkiRole { mount, name, role } => {
+                    let pki = client.pki(mount)?;
+                    let status = match pki.read_role(name).await {
+                        Ok(existing) if pki_role_matches_desired(&existing, role) => {
+                            BootstrapPreviewStatus::Unchanged
+                        }
+                        Ok(_) => BootstrapPreviewStatus::WouldUpdate,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "pki_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "identity")]
+                BootstrapOperation::IdentityEntity {
+                    mount,
+                    name,
+                    request,
+                } => {
+                    let identity = client.identity_at(mount)?;
+                    let status = match identity.read_entity_by_name(name).await {
+                        Ok(existing) if identity_entity_matches_desired(&existing, request) => {
+                            BootstrapPreviewStatus::Unchanged
+                        }
+                        Ok(_) => BootstrapPreviewStatus::WouldUpdate,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "identity_entity",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "identity")]
+                BootstrapOperation::IdentityGroup {
+                    mount,
+                    name,
+                    request,
+                } => {
+                    let identity = client.identity_at(mount)?;
+                    let status = match identity.read_group_by_name(name).await {
+                        Ok(existing) if identity_group_matches_desired(&existing, request) => {
+                            BootstrapPreviewStatus::Unchanged
+                        }
+                        Ok(_) => BootstrapPreviewStatus::WouldUpdate,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "identity_group",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
                 BootstrapOperation::ServiceToken { name, .. } => {
                     report.steps.push(BootstrapPreviewStep::new(
                         "service_token",
@@ -768,6 +954,83 @@ impl AdminBootstrap {
                     report.steps.push(BootstrapStepReport::new(
                         "kv2_secret",
                         format!("{mount}/{path}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "pki")]
+                BootstrapOperation::PkiRole { mount, name, role } => {
+                    let pki = client.pki(mount)?;
+                    let status = match pki.read_role(name).await {
+                        Ok(existing) if pki_role_matches_desired(&existing, role) => {
+                            BootstrapStepStatus::Unchanged
+                        }
+                        Ok(_) => {
+                            pki.write_role(name, role).await?;
+                            BootstrapStepStatus::Updated
+                        }
+                        Err(error) if error.is_not_found() => {
+                            pki.write_role(name, role).await?;
+                            BootstrapStepStatus::Created
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapStepReport::new(
+                        "pki_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "identity")]
+                BootstrapOperation::IdentityEntity {
+                    mount,
+                    name,
+                    request,
+                } => {
+                    let identity = client.identity_at(mount)?;
+                    let status = match identity.read_entity_by_name(name).await {
+                        Ok(existing) if identity_entity_matches_desired(&existing, request) => {
+                            BootstrapStepStatus::Unchanged
+                        }
+                        Ok(_) => {
+                            identity.write_entity_by_name(name, request).await?;
+                            BootstrapStepStatus::Updated
+                        }
+                        Err(error) if error.is_not_found() => {
+                            identity.write_entity_by_name(name, request).await?;
+                            BootstrapStepStatus::Created
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapStepReport::new(
+                        "identity_entity",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "identity")]
+                BootstrapOperation::IdentityGroup {
+                    mount,
+                    name,
+                    request,
+                } => {
+                    let identity = client.identity_at(mount)?;
+                    let status = match identity.read_group_by_name(name).await {
+                        Ok(existing) if identity_group_matches_desired(&existing, request) => {
+                            BootstrapStepStatus::Unchanged
+                        }
+                        Ok(_) => {
+                            identity.write_group_by_name(name, request).await?;
+                            BootstrapStepStatus::Updated
+                        }
+                        Err(error) if error.is_not_found() => {
+                            identity.write_group_by_name(name, request).await?;
+                            BootstrapStepStatus::Created
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapStepReport::new(
+                        "identity_group",
+                        format!("{mount}/{name}"),
                         status,
                     ));
                 }
@@ -998,6 +1261,67 @@ fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<Str
         .collect()
 }
 
+#[cfg(feature = "pki")]
+fn pki_role_matches_desired(existing: &PkiRole, desired: &PkiRole) -> bool {
+    desired
+        .issuer_ref
+        .as_ref()
+        .is_none_or(|value| existing.issuer_ref.as_ref() == Some(value))
+        && vec_empty_or_equal(&existing.allowed_domains, &desired.allowed_domains)
+        && desired
+            .allow_subdomains
+            .is_none_or(|value| existing.allow_subdomains == Some(value))
+        && desired
+            .ttl
+            .as_ref()
+            .is_none_or(|value| existing.ttl.as_ref() == Some(value))
+        && desired
+            .max_ttl
+            .as_ref()
+            .is_none_or(|value| existing.max_ttl.as_ref() == Some(value))
+        && desired
+            .key_type
+            .as_ref()
+            .is_none_or(|value| existing.key_type.as_ref() == Some(value))
+        && desired
+            .key_bits
+            .is_none_or(|value| existing.key_bits == Some(value))
+}
+
+#[cfg(feature = "identity")]
+fn identity_entity_matches_desired(
+    existing: &IdentityEntityInfo,
+    desired: &IdentityEntityRequest,
+) -> bool {
+    desired
+        .name
+        .as_ref()
+        .is_none_or(|value| existing.name.as_ref() == Some(value))
+        && vec_empty_or_equal(&existing.policies, &desired.policies)
+        && map_empty_or_contains(&existing.metadata, &desired.metadata)
+        && desired
+            .disabled
+            .is_none_or(|value| existing.disabled == value)
+}
+
+#[cfg(feature = "identity")]
+fn identity_group_matches_desired(
+    existing: &IdentityGroupInfo,
+    desired: &IdentityGroupRequest,
+) -> bool {
+    desired
+        .name
+        .as_ref()
+        .is_none_or(|value| existing.name.as_ref() == Some(value))
+        && desired
+            .group_type
+            .is_none_or(|value| existing.group_type == Some(value))
+        && vec_empty_or_equal(&existing.policies, &desired.policies)
+        && vec_empty_or_equal(&existing.member_entity_ids, &desired.member_entity_ids)
+        && vec_empty_or_equal(&existing.member_group_ids, &desired.member_group_ids)
+        && map_empty_or_contains(&existing.metadata, &desired.metadata)
+}
+
 #[cfg(feature = "approle")]
 fn approle_role_matches_desired(
     existing: &AppRoleRoleRequest,
@@ -1053,9 +1377,18 @@ fn approle_role_matches_desired(
             .is_none_or(|value| existing.token_type.as_ref() == Some(value))
 }
 
-#[cfg(feature = "approle")]
 fn vec_empty_or_equal(existing: &[String], desired: &[String]) -> bool {
     desired.is_empty() || existing == desired
+}
+
+#[cfg(feature = "identity")]
+fn map_empty_or_contains(
+    existing: &BTreeMap<String, String>,
+    desired: &BTreeMap<String, String>,
+) -> bool {
+    desired
+        .iter()
+        .all(|(key, value)| existing.get(key) == Some(value))
 }
 
 #[cfg(test)]
@@ -1067,6 +1400,13 @@ mod tests {
 
     use secrecy::SecretString;
 
+    #[cfg(feature = "identity")]
+    use crate::secrets::identity::{
+        IdentityEntityInfo, IdentityEntityRequest, IdentityGroupInfo, IdentityGroupRequest,
+        IdentityGroupType,
+    };
+    #[cfg(feature = "pki")]
+    use crate::secrets::pki::PkiRole;
     use crate::{
         AclCapability, AclPolicyBuilder, Authenticated, Client, Error, OpenBaoConfig,
         auth::token::TokenCreateRequest,
@@ -1183,6 +1523,92 @@ mod tests {
             errors: vec!["permission denied".to_owned()],
         };
         assert!(!is_already_exists_error(&unrelated));
+    }
+
+    #[test]
+    #[cfg(feature = "pki")]
+    fn pki_role_convergence_compares_desired_fields_only() {
+        let existing = PkiRole {
+            issuer_ref: Some("issuer-a".to_owned()),
+            allowed_domains: vec!["example.com".to_owned()],
+            allow_subdomains: Some(true),
+            ttl: Some("1h".to_owned()),
+            max_ttl: Some("24h".to_owned()),
+            key_type: Some("rsa".to_owned()),
+            key_bits: Some(3072),
+            ..PkiRole::default()
+        };
+        let desired = PkiRole {
+            allowed_domains: vec!["example.com".to_owned()],
+            ttl: Some("1h".to_owned()),
+            ..PkiRole::default()
+        };
+        assert!(super::pki_role_matches_desired(&existing, &desired));
+
+        let different = PkiRole {
+            allowed_domains: vec!["internal.example.com".to_owned()],
+            ..PkiRole::default()
+        };
+        assert!(!super::pki_role_matches_desired(&existing, &different));
+    }
+
+    #[test]
+    #[cfg(feature = "identity")]
+    fn identity_convergence_compares_desired_fields_only() {
+        let mut entity_metadata = BTreeMap::new();
+        entity_metadata.insert("owner".to_owned(), "platform".to_owned());
+        entity_metadata.insert("ignored".to_owned(), "extra".to_owned());
+        let existing_entity = IdentityEntityInfo {
+            name: Some("app".to_owned()),
+            policies: vec!["app-read".to_owned()],
+            metadata: entity_metadata,
+            disabled: false,
+            ..IdentityEntityInfo::default()
+        };
+        let desired_entity = IdentityEntityRequest::named("app")
+            .with_policy("app-read")
+            .with_metadata("owner", "platform");
+        assert!(super::identity_entity_matches_desired(
+            &existing_entity,
+            &desired_entity
+        ));
+
+        let existing_group = IdentityGroupInfo {
+            name: Some("apps".to_owned()),
+            group_type: Some(IdentityGroupType::Internal),
+            policies: vec!["app-read".to_owned()],
+            member_entity_ids: vec!["entity-1".to_owned()],
+            ..IdentityGroupInfo::default()
+        };
+        let desired_group = IdentityGroupRequest::internal("apps")
+            .with_policy("app-read")
+            .with_member_entity_id("entity-1");
+        assert!(super::identity_group_matches_desired(
+            &existing_group,
+            &desired_group
+        ));
+
+        let different_group = IdentityGroupRequest::internal("apps").with_policy("admin");
+        assert!(!super::identity_group_matches_desired(
+            &existing_group,
+            &different_group
+        ));
+    }
+
+    #[test]
+    #[cfg(feature = "identity")]
+    fn identity_bootstrap_rejects_mismatched_request_names() {
+        let mut bootstrap = AdminBootstrap::new();
+        assert!(
+            bootstrap
+                .ensure_identity_entity("app", IdentityEntityRequest::named("other"))
+                .is_err()
+        );
+        assert!(
+            bootstrap
+                .ensure_identity_group("apps", IdentityGroupRequest::internal("other"))
+                .is_err()
+        );
     }
 
     #[test]

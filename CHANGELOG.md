@@ -65,6 +65,9 @@ All notable changes to this project are documented here.
 - Added `ListPageOptions` as the shared pagination request shape for
   non-secret string-list endpoints and routed existing paginated list helpers
   through the shared validation/bounds logic.
+- Added AdminBootstrap convergence for PKI roles and Identity entities/groups,
+  using read-compare-write helpers that compare only caller-supplied desired
+  fields.
 - Added explicit `planned` and `rejected` endpoint-matrix statuses and recorded
   system backend decisions: config-ui, sys/monitor streaming, internal router
   inspection, internal counters, and internal request inspection are rejected

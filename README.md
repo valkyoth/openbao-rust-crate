@@ -136,14 +136,13 @@ Implemented now:
 
 Planned next:
 
-- `0.9.0`: public API audit, migration guides, PKI role and Identity
-  entity/group bootstrap convergence, fuzz/fixture hardening,
+- `0.9.0`: public API audit, migration guides, fuzz/fixture hardening,
   quantum-readiness design notes, and explicit pre-`1.0` decisions for
-  background renewal/tracking, seal readiness polling, typed response
-  wrapping, selective bootstrap convergence, and ACL policy-builder wrapping
-  TTLs. Retry/backoff and non-secret pagination ergonomics are implemented;
-  tracing and HTTP/2 are resolved as non-default features without runtime
-  transport hooks.
+  background renewal/tracking, seal readiness polling, typed response wrapping,
+  selective bootstrap convergence, and ACL policy-builder wrapping TTLs.
+  Retry/backoff, non-secret pagination ergonomics, and PKI/Identity bootstrap
+  convergence are implemented; tracing and HTTP/2 are resolved as non-default
+  features without runtime transport hooks.
 - `0.10.0` through `0.15.0`: close the endpoint matrix deliberately: Identity
   and auth, Transit advanced key management, PKI advanced/public/specialized
   flows, remaining system backend rows, then final endpoint closure and stable

@@ -27,12 +27,12 @@
   `renew-accessor` helpers, AppRole delegated role-property helpers, and the
   operator-gated PKI default root deletion helper, plus explicit
   `RetryPolicy`/`request_json_with_retry` exponential-backoff ergonomics and
-  shared `ListPageOptions` pagination for non-secret string-list endpoints; the
-  `0.9.0` release gate script is also present.
+  shared `ListPageOptions` pagination for non-secret string-list endpoints,
+  plus AdminBootstrap convergence for PKI roles and Identity entities/groups;
+  the `0.9.0` release gate script is also present.
 - Remaining `0.9.0` planned work: public API audit, migration guide
-  completion, PKI role and Identity entity/group bootstrap convergence, PKI
-  named-issuer scope review, response fixtures, fuzz targets, and
-  quantum-readiness posture design.
+  completion, PKI named-issuer scope review, response fixtures, fuzz targets,
+  and quantum-readiness posture design.
 - Finalization rule: the OpenBao `2.5.x` endpoint matrix expanded the
   pre-`1.0` plan through `0.15.0`. `0.9.0` handles stabilization foundations;
   `0.10.0` through `0.14.0` handle Identity/auth, Transit, PKI, and System
