@@ -21,8 +21,8 @@
   parsing, and advisory FIPS posture helpers.
 - New `0.9.0` work currently implemented: release-line version bump,
   stabilization audit documentation, migration guidance, release-note skeleton,
-  the known-limitations decision register, `RenewalHint`, lease tidy, and the
-  `0.9.0` release gate script.
+  the known-limitations decision register, `RenewalHint`, lease tidy, safe
+  custom plugin wrapper building blocks, and the `0.9.0` release gate script.
 - Remaining `0.9.0` planned work: public API audit, migration guide
   completion, opt-in retry/backoff, non-secret pagination ergonomics, PKI role
   and Identity entity/group bootstrap convergence, PKI root/named-issuer scope
@@ -77,6 +77,9 @@
   tracking, and `LeaseHandle` wrappers. Applications own the renewal loop,
   renewal-failure policy, and shutdown ordering; use `RenewalHint` for timing
   and increment guidance.
+- Rejected for stable scope: generic `Plugin`/`SecretEngine` traits, codegen,
+  and macro approaches. Deployment-specific plugin wrappers should use
+  `PluginMount`, public path validators, and bounded list helpers instead.
 - Implement in `0.10.0`: Identity OIDC admin/discovery/token/introspection
   rows, MFA method and login-enforcement rows, and `sys/mfa/validate`; classify
   named-provider OIDC `/authorize`, `/token`, and `/userinfo` as external
@@ -94,10 +97,9 @@
   HTTP/2 transport knobs, application-side secret-struct wrappers, certificate
   or public-key pinning, and advanced ACL policy-builder fields.
 - Reject for stable feature scope unless a pentest or downstream integration
-  proves otherwise before `1.0.0`: generic custom-plugin traits, full ACME
-  protocol flows, full JOSE/JWKS construction, and raw unauthenticated SSH
-  public-key reads. The crate keeps safe lower-level helpers or documented
-  alternatives for those workflows.
+  proves otherwise before `1.0.0`: full ACME protocol flows, full JOSE/JWKS
+  construction, and raw unauthenticated SSH public-key reads. The crate keeps
+  safe lower-level helpers or documented alternatives for those workflows.
 - Permanent boundary: request-body bytes can be zeroized by this crate before
   handoff, but buffers owned by `reqwest`, TLS providers, the operating system,
   allocator, or network devices remain outside this crate's control.

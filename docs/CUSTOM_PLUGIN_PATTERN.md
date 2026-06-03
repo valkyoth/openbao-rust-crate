@@ -9,52 +9,73 @@ Recommended pattern:
 
 - keep plugin paths in one module;
 - pass relative `/v1` paths to `request_json`;
+- use `PluginMount` for mount validation and path construction;
 - model request and response bodies with `serde` structs;
 - use `openbao::SecretString` for every password, token, key, plaintext, or
   lease-like value;
 - hand-write `Debug` for request/response structs that contain secrets;
-- bound returned lists before exposing them to application code;
+- use `BoundedStringList` or `deserialize_bounded_string_vec` for returned
+  string lists before exposing them to application code;
 - cover the wrapper with a mock HTTP test that asserts the documented method
   and path.
+
+Do not build a generic `Plugin` or `SecretEngine` trait around this pattern.
+OpenBao plugin schemas are deployment-specific; a trait that only forwards to
+`request_json` adds abstraction without adding safety.
 
 ## Example
 
 ```rust,no_run
 use core::fmt;
 
-use openbao::{Authenticated, Client, Empty, Error, Method, ResponseEnvelope, Result, SecretString};
+use openbao::{
+    Authenticated, Client, Empty, Method, PluginMount, ResponseEnvelope, Result, SecretString,
+    deserialize_bounded_string_vec,
+};
 use serde::{Deserialize, Serialize};
 
 pub struct ExamplePlugin<'a> {
-    client: &'a Client<Authenticated>,
-    mount: String,
+    handle: PluginMount<'a>,
 }
 
 impl<'a> ExamplePlugin<'a> {
-    pub fn new(client: &'a Client<Authenticated>, mount: impl Into<String>) -> Result<Self> {
-        let mount = mount.into();
-        validate_plugin_segment(&mount)?;
-        Ok(Self { client, mount })
+    pub fn new(client: &'a Client<Authenticated>, mount: &str) -> Result<Self> {
+        Ok(Self {
+            handle: PluginMount::new(client, mount)?,
+        })
     }
 
     pub async fn write_account(&self, name: &str, request: &AccountRequest) -> Result<Empty> {
-        validate_plugin_segment(name)?;
-        self.client
+        self.handle
+            .client()
             .request_json(
                 Method::POST,
-                &format!("{}/accounts/{}", self.mount, name),
+                &self.handle.path(&["accounts", name])?,
                 Some(request),
             )
             .await
     }
 
     pub async fn credentials(&self, name: &str) -> Result<AccountCredentials> {
-        validate_plugin_segment(name)?;
         let envelope: ResponseEnvelope<AccountCredentials> = self
-            .client
+            .handle
+            .client()
             .request_json(
                 Method::GET,
-                &format!("{}/creds/{}", self.mount, name),
+                &self.handle.path(&["creds", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    pub async fn list_roles(&self) -> Result<RoleList> {
+        let envelope: ResponseEnvelope<RoleList> = self
+            .handle
+            .client()
+            .request_json(
+                Method::GET,
+                &self.handle.path(&["roles"])?,
                 Option::<&Empty>::None,
             )
             .await?;
@@ -94,20 +115,10 @@ impl fmt::Debug for AccountCredentials {
     }
 }
 
-fn validate_plugin_segment(value: &str) -> Result<()> {
-    if value.is_empty()
-        || value.len() > 256
-        || value.contains('/')
-        || value.contains('\\')
-        || value.contains('?')
-        || value.contains('#')
-        || value == "."
-        || value == ".."
-        || value.as_bytes().iter().any(u8::is_ascii_control)
-    {
-        return Err(Error::InvalidPath("invalid custom plugin path segment".into()));
-    }
-    Ok(())
+#[derive(Clone, Debug, Deserialize)]
+pub struct RoleList {
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub roles: Vec<String>,
 }
 ```
 

@@ -27,6 +27,9 @@ All notable changes to this project are documented here.
   `0.10.0`, while named-provider browser protocol flows remain external.
 - Added `RenewalHint` for caller-owned token and lease renewal loops and typed
   `/sys/leases/tidy` maintenance support.
+- Added safe custom plugin wrapper building blocks: `PluginMount`, public path
+  validators, `BoundedStringList`, and the public bounded string-list
+  deserializer.
 
 ### Security
 
@@ -37,6 +40,9 @@ All notable changes to this project are documented here.
 - Background token auto-renewal and background lease tracking are explicitly
   rejected for stable scope; applications own renewal loops, failure policy,
   and shutdown ordering.
+- Generic plugin/secret-engine traits are rejected for stable scope because
+  plugin schemas are deployment-specific; typed local wrappers should use the
+  public plugin building blocks instead.
 
 ## 0.8.0 - 2026-06-02
 

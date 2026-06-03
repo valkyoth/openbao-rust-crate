@@ -184,7 +184,9 @@ Stop condition:
 - RabbitMQ secrets engine connection, lease, role, and credential helpers;
 - identity entities/groups/aliases;
 - LDAP secrets engine;
-- typed custom plugin API pattern documented.
+- typed custom plugin API pattern documented with public `PluginMount`, path
+  validation, and bounded string-list helper building blocks; generic plugin
+  traits are rejected because plugin schemas are deployment-specific.
 
 Publishable value:
 

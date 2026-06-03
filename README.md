@@ -129,8 +129,8 @@ Implemented now:
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Operator-gated raw storage read, write, list, and delete helpers.
 - Operator-gated pprof diagnostic byte helpers.
-- Typed custom plugin wrapper pattern documentation for application-specific
-  OpenBao plugin APIs.
+- Typed custom plugin wrapper pattern documentation and safe building blocks
+  for application-specific OpenBao plugin APIs.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
@@ -1326,9 +1326,12 @@ crate supports an endpoint; use raw JSON to bridge missing OpenBao APIs while
 coverage grows.
 
 For application-specific OpenBao plugins, keep raw JSON calls behind a small
-typed wrapper. See [Typed Custom Plugin Pattern](docs/CUSTOM_PLUGIN_PATTERN.md)
-for a complete request/response wrapper example with path validation, secret
-redaction, and test guidance.
+typed wrapper built with `PluginMount`, the public path validators, and bounded
+list helpers such as `BoundedStringList`. See
+[Typed Custom Plugin Pattern](docs/CUSTOM_PLUGIN_PATTERN.md) for a complete
+request/response wrapper example with path validation, secret redaction, and
+test guidance. Generic plugin traits are intentionally out of scope because
+plugin schemas are deployment-specific.
 
 ## Local OpenBao Dev Instance
 

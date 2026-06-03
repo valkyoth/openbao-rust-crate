@@ -12,7 +12,8 @@ use serde::{
 use std::collections::BTreeMap;
 
 const MAX_API_ERRORS: usize = 16;
-pub(crate) const MAX_RESPONSE_STRINGS: usize = 4096;
+/// Maximum number of strings accepted by the crate's bounded list helpers.
+pub const MAX_RESPONSE_STRINGS: usize = 4096;
 
 /// Empty JSON payload used for endpoints that do not require a body.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
@@ -120,7 +121,20 @@ fn empty_secret() -> SecretString {
     SecretString::from(String::new())
 }
 
-pub(crate) fn deserialize_bounded_string_vec<'de, D>(
+/// Deserializes a bounded vector of strings.
+///
+/// Custom plugin wrappers can use this with serde field attributes to apply
+/// the same allocation bound used by built-in OpenBao list responses:
+///
+/// ```rust
+/// # use serde::Deserialize;
+/// #[derive(Deserialize)]
+/// struct PluginList {
+///     #[serde(default, deserialize_with = "openbao::deserialize_bounded_string_vec")]
+///     keys: Vec<String>,
+/// }
+/// ```
+pub fn deserialize_bounded_string_vec<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Vec<String>, D::Error>
 where
@@ -170,8 +184,34 @@ where
         .unwrap_or_default())
 }
 
-#[derive(Deserialize)]
-struct BoundedStringList(#[serde(deserialize_with = "deserialize_bounded_string_vec")] Vec<String>);
+/// Bounded string list for custom plugin responses.
+///
+/// Use this when a deployment-specific plugin returns a string array and you
+/// want the same item limit used by built-in list helpers.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BoundedStringList(
+    #[serde(deserialize_with = "deserialize_bounded_string_vec")] pub Vec<String>,
+);
+
+impl BoundedStringList {
+    /// Returns the bounded list entries.
+    #[must_use]
+    pub fn as_slice(&self) -> &[String] {
+        &self.0
+    }
+
+    /// Consumes the wrapper and returns the inner vector.
+    #[must_use]
+    pub fn into_vec(self) -> Vec<String> {
+        self.0
+    }
+}
+
+impl ListEntries for BoundedStringList {
+    fn entries(&self) -> &[String] {
+        self.as_slice()
+    }
+}
 
 #[derive(Deserialize)]
 #[allow(dead_code)]
@@ -318,7 +358,7 @@ mod tests {
 
     use secrecy::SecretString;
 
-    use super::{ListEntries, ResponseEnvelope};
+    use super::{BoundedStringList, ListEntries, ResponseEnvelope};
 
     #[test]
     fn response_debug_redacts_lease_id() {
@@ -387,6 +427,16 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn bounded_string_list_is_public_list_wrapper() {
+        let list: BoundedStringList =
+            serde_json::from_str(r#"["alpha","beta"]"#).unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(list.entries(), ["alpha", "beta"]);
+        assert!(list.contains("beta"));
+        assert_eq!(list.into_vec(), ["alpha".to_owned(), "beta".to_owned()]);
     }
 
     #[test]

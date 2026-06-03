@@ -90,7 +90,9 @@ See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
 - Response wrapping headers.
 - Raw JSON request layer.
 - Typed custom plugin wrapper pattern documented in
-  `docs/CUSTOM_PLUGIN_PATTERN.md`.
+  `docs/CUSTOM_PLUGIN_PATTERN.md`, backed by public `PluginMount`, path
+  validation, and bounded string-list helpers. Generic plugin traits remain
+  rejected because plugin schemas are deployment-specific.
 - Typed error envelope.
 - Health and seal status.
 - OpenAPI discovery support through `/sys/internal/specs/openapi`.

@@ -3,11 +3,22 @@ use crate::{Error, Result};
 const MAX_PATH_BYTES: usize = 4096;
 const MAX_PATH_SEGMENTS: usize = 64;
 
-pub(crate) fn validate_mount_path(value: &str) -> Result<Vec<String>> {
+/// Validates an OpenBao mount-style path and returns normalized path segments.
+///
+/// Mount paths must be non-empty, below the crate path length and segment
+/// limits, and free of ambiguous path characters such as control characters,
+/// backslashes, query/fragment markers, empty segments, relative segments, and
+/// trailing periods.
+pub fn validate_mount_path(value: &str) -> Result<Vec<String>> {
     validate_path(value, false)
 }
 
-pub(crate) fn validate_endpoint_path(value: &str) -> Result<Vec<String>> {
+/// Validates an OpenBao endpoint-style path and returns normalized segments.
+///
+/// Unlike [`validate_mount_path`], an empty path is accepted. This is useful for
+/// wrappers that need to validate caller-provided endpoint tails before joining
+/// them to a mount path.
+pub fn validate_endpoint_path(value: &str) -> Result<Vec<String>> {
     validate_path(value, true)
 }
 

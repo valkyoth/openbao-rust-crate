@@ -55,6 +55,7 @@ mod client;
 pub mod duration;
 mod error;
 mod path;
+pub mod plugin;
 pub mod policy;
 #[cfg(feature = "transit")]
 pub mod posture;
@@ -99,13 +100,18 @@ pub use client::{
 };
 pub use duration::{RenewalHint, duration_to_bao_string};
 pub use error::{Error, Result};
+pub use path::{validate_endpoint_path, validate_mount_path};
+pub use plugin::PluginMount;
 pub use policy::{AclCapability, AclPolicyBuilder};
 #[cfg(feature = "transit")]
 pub use posture::{
     FipsPosture, FipsPostureFinding, FipsPostureNote, FipsPostureReport, FipsPostureSeverity,
 };
 pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
-pub use response::{Empty, ListEntries, ResponseEnvelope};
+pub use response::{
+    BoundedStringList, Empty, ListEntries, MAX_RESPONSE_STRINGS, ResponseEnvelope,
+    deserialize_bounded_string_vec,
+};
 pub use secrecy::{self, ExposeSecret, SecretString};
 pub use serde_json::{self, Value as JsonValue};
 #[cfg(feature = "time")]
@@ -119,10 +125,12 @@ pub use zeroize::{self, Zeroize, Zeroizing};
 /// Common imports for application code using the OpenBao SDK.
 pub mod prelude {
     pub use crate::{
-        AclCapability, AclPolicyBuilder, Authenticated, Certificate, Client, ClientBuilder, Empty,
-        Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries, Method, OpenBao,
-        OpenBaoConfig, RenewalHint, ResponseEnvelope, Result, SecretString, SharedClient,
-        StatusCode, Unauthenticated, Zeroize, Zeroizing, duration_to_bao_string,
+        AclCapability, AclPolicyBuilder, Authenticated, BoundedStringList, Certificate, Client,
+        ClientBuilder, Empty, Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries,
+        MAX_RESPONSE_STRINGS, Method, OpenBao, OpenBaoConfig, PluginMount, RenewalHint,
+        ResponseEnvelope, Result, SecretString, SharedClient, StatusCode, Unauthenticated, Zeroize,
+        Zeroizing, deserialize_bounded_string_vec, duration_to_bao_string, validate_endpoint_path,
+        validate_mount_path,
     };
     #[cfg(feature = "transit")]
     pub use crate::{
