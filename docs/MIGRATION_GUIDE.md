@@ -1,0 +1,120 @@
+# Migration Guide
+
+This guide tracks migration work for the `0.9.0` stabilization line. It is a
+living document until `v0.9.0` is tagged.
+
+## From `openbao` 0.8 To 0.9
+
+At the start of `0.9.0`, the public API is intentionally compatible with
+`0.8.0`. The initial change is the crate version plus release-line
+documentation.
+
+Update `Cargo.toml`:
+
+```toml
+[dependencies]
+openbao = "0.9"
+```
+
+Keep these `0.8` patterns:
+
+- use `openbao::SecretString` instead of depending on `secrecy` directly;
+- prefer `Client::from_env_with_token()` for deployed services;
+- keep TLS verification enabled and add root certificates through
+  `OpenBaoConfig`;
+- use feature gates for operator APIs and Transit byte helpers;
+- use `read_optional` or `Error::is_not_found()` for absent secret handling;
+- use `Sys::wait_ready_with_delay` for startup polling instead of ad hoc
+  retry loops.
+
+## From Earlier `openbao` Releases
+
+### 0.1 To 0.3
+
+- Replace direct URL string assembly with typed helpers such as `client.kv2`,
+  `client.kv1`, `client.transit`, and `client.sys`.
+- Use `try_with_token` for token validation at client construction time.
+- Treat Transit plaintext/ciphertext fields as secret material. Do not log
+  request or response structs unless their `Debug` implementation is known to
+  redact secret-bearing fields.
+
+### 0.4 To 0.6
+
+- Replace manual environment parsing with `Client::from_env_with_token()`.
+- Replace local KV config maps with `Kv2ServiceConfig` helpers when loading
+  service settings.
+- Move byte-oriented Transit glue to the `transit-bytes` feature when raw
+  bytes are more natural than OpenBao's base64 strings.
+- Use `AclPolicyBuilder` and `AdminBootstrap` for common service setup instead
+  of assembling ACL HCL and mount requests with ad hoc strings.
+- Keep production init/unseal/rekey/rotate behind `operator-ops` and
+  `operator-ops-acknowledged`; default builds intentionally cannot call those
+  APIs.
+
+### 0.7 To 0.8
+
+- Use concrete auth/admin helpers for AppRole, LDAP, RADIUS, Kerberos,
+  Kubernetes auth, TLS certificate auth, Userpass, and JWT/OIDC instead of raw
+  JSON calls where supported.
+- Use `ListEntries` for ordinary string list responses, but keep token
+  accessors and other secret-bearing lists in their dedicated types.
+- Use `TokenRole`, Transit lifecycle/batch helpers, PKI tidy/status/cancel,
+  Identity lookup/merge, and lease prefix/count helpers instead of
+  hand-written endpoint paths.
+- Use `Error::is_rate_limited`, `Error::is_temporary`, and
+  `Error::is_permission_denied` where caller logic branches on common API
+  failures.
+
+## From `vaultrs`
+
+The `openbao` crate is OpenBao-specific and uses `X-Vault-Token` by default
+for documented compatibility while keeping the API centered on OpenBao
+deployment behavior.
+
+Common migration steps:
+
+- Replace `vaultrs` client construction with `Client::new`,
+  `OpenBaoConfig`, or `Client::from_env_with_token`.
+- Replace direct token strings with `openbao::SecretString`.
+- Replace engine-specific functions with typed handles such as
+  `client.kv2("secret")?`, `client.transit("transit")?`, and
+  `client.sys()`.
+- Review feature flags. `openbao` keeps risky operator and legacy TLS behavior
+  behind explicit opt-in features.
+- Review error handling. Use `Error::status()`, `Error::is_not_found()`, and
+  related predicates rather than matching a transport crate directly when
+  possible.
+
+Do not migrate by disabling TLS verification or reusing root tokens in service
+configuration. Use scoped service tokens, AppRole SecretIDs, Kubernetes auth,
+or another workload auth method appropriate to the deployment.
+
+## From Bespoke `reqwest` Wrappers
+
+Replace hand-written wrappers in layers:
+
+1. Move address, namespace, CA, and token parsing into `OpenBaoConfig` or
+   `Client::from_env_with_token`.
+2. Replace request URL string concatenation with typed engine handles.
+3. Replace raw secret strings with `SecretString` in request and response
+   structs.
+4. Replace logging of raw HTTP errors with sanitized `openbao::Error`
+   handling.
+5. Move custom plugin or unsupported endpoint calls behind a small local typed
+   wrapper around `Client::request_json`.
+6. Add tests that assert documented HTTP method, path, headers, and redaction
+   behavior for each local wrapper.
+
+## Security Checklist
+
+- Never log tokens, token accessors, lease IDs, Transit plaintext/ciphertext,
+  PKI private keys, raw storage values, AppRole SecretIDs, or OpenBao backup
+  payloads.
+- Do not use loopback HTTP outside fresh local development instances.
+- Do not use `bootstrap_dev` for production, shared environments, HSM/KMS
+  auto-unseal deployments, or any instance requiring an operator ceremony.
+- Do not enable `native-tls`, `operator-ops`, `allow-sha1`, or
+  `insecure-ldap-tls-acknowledged` without recording the deployment reason.
+- Keep response-size limits low for small-response services.
+- Prefer least-privilege policies generated by `AclPolicyBuilder` or reviewed
+  policy strings.

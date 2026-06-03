@@ -239,6 +239,12 @@ Support plan:
 
 ## Ergonomics And Capability Roadmap
 
+Started in `0.9.0`:
+
+- API stability audit checklist in `docs/API_STABILITY_AUDIT.md`.
+- Migration guide from earlier `openbao` releases, `vaultrs`, and bespoke
+  `reqwest` wrappers in `docs/MIGRATION_GUIDE.md`.
+
 Implemented in `0.8.0`:
 
 - `Error::is_rate_limited`, `Error::is_temporary`, and

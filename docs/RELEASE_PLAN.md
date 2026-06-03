@@ -248,10 +248,13 @@ Publishable value:
 
 Stop condition:
 
+- API stability audit document exists and is maintained for every remaining
+  near-`1.0` decision;
 - public API audit completed;
 - feature matrix frozen for `1.0`;
-- migration guide from `0.1` through `0.9`;
-- migration guide from `vaultrs` and bespoke `reqwest` OpenBao wrappers;
+- migration guide from `0.1` through `0.9` exists and is completed;
+- migration guide from `vaultrs` and bespoke `reqwest` OpenBao wrappers exists
+  and is completed;
 - token auto-renewal and lease-tracker designs are implemented or explicitly
   deferred with API notes;
 - retry policy with exponential backoff is implemented or explicitly deferred

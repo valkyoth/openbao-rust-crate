@@ -3,9 +3,9 @@
 ## Version
 
 - Version: 0.8.0
-- Release date: Unreleased
-- Git tag: `v0.8.0` planned
-- Git commit: tag target for `v0.8.0`
+- Release date: 2026-06-02
+- Git tag: `v0.8.0`
+- Git commit: `b4e0a83fad8035b5acca45bccceb7bf11b2b7f1c`
 - License: MIT OR Apache-2.0
 
 ## Scope
@@ -51,8 +51,7 @@
   runtime-neutral `Sys::wait_ready_with_delay` helper; and additional error
   predicates for rate limiting, temporary failures, and permission denial.
 - Remaining `0.8.0` planned work: none. GitHub CI and the final local pentest
-  pass are complete; the release is ready for the `v0.8.0` tag after
-  maintainer approval.
+  pass were complete before the signed `v0.8.0` tag was created.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes

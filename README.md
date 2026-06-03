@@ -10,6 +10,10 @@
   ·
   <a href="docs/RELEASE_PLAN.md">Release Plan</a>
   ·
+  <a href="docs/API_STABILITY_AUDIT.md">API Stability</a>
+  ·
+  <a href="docs/MIGRATION_GUIDE.md">Migration</a>
+  ·
   <a href="SECURITY.md">Security</a>
 </div>
 
@@ -33,9 +37,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.8.0` release candidate. `0.8.0` builds on
-`0.7.0` with remaining auth method and system backend coverage, Transit and
-Identity gap closures, and optional timestamp parsing helpers.
+This README documents the `0.9.0` development line. `0.9.0` builds on the
+released `0.8.0` API with stabilization work for migration guidance, public API
+audit evidence, and near-`1.0` ergonomics decisions.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -132,8 +136,9 @@ Implemented now:
 
 Planned next:
 
-- Remaining `0.8.0`: none; GitHub CI and pentest are complete. Tag after final
-  release approval.
+- `0.9.0`: public API audit, migration guides, retry/backoff and pagination
+  decisions, token auto-renewal and lease-tracker decisions, remaining
+  bootstrap-convergence scope, and fuzz/fixture hardening before `1.0`.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
@@ -167,7 +172,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.8.0` development line tracks compatibility evidence across this supported
+The `0.9.0` development line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -184,7 +189,7 @@ range:
 
 ```toml
 [dependencies]
-openbao = "0.8"
+openbao = "0.9"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
 ```
@@ -200,7 +205,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.8", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.9", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -208,7 +213,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.8", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.9", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 Optional RFC3339 timestamp parsing is available behind the lightweight `time`
@@ -216,7 +221,7 @@ feature:
 
 ```toml
 [dependencies]
-openbao = { version = "0.8", features = ["time"] }
+openbao = { version = "0.9", features = ["time"] }
 ```
 
 ## Features
@@ -1397,7 +1402,7 @@ scripts/checks.sh
 Run the current release gate:
 
 ```bash
-scripts/release_0_8_gate.sh
+scripts/release_0_9_gate.sh
 ```
 
 Set `OPENBAO_SKIP_INTEGRATION=1` only when Podman is unavailable; release
