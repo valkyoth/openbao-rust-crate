@@ -147,10 +147,15 @@ Delivered in `0.9.0`:
   wrapping TTLs. Tracing and HTTP/2 are resolved as non-default features
   without runtime transport hooks.
 
+Delivered in `0.10.0`:
+
+- Identity OIDC token/provider administration, Identity MFA Duo/Okta/PingID/TOTP
+  management, MFA login enforcement, and `/sys/mfa/validate`, with bounded OIDC
+  response parsing and secret-aware MFA provider credentials, TOTP outputs,
+  passcodes, returned tokens, and accessors.
+
 Planned next:
 
-- `0.10.0`: final documentation and release checks for the Identity/auth
-  completion line.
 - `0.11.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
   Transit advanced key management, PKI advanced/public/specialized flows,
   remaining system backend rows, then final endpoint closure and stable

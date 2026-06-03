@@ -1,13 +1,16 @@
-# openbao 0.10.0 Release Notes
+# OpenBao Rust SDK 0.10.0 Release Notes
 
-Status: in development.
+## Version
 
-Readiness: implementation complete locally; ready for external pentest and CI
-validation.
+- Version: 0.10.0
+- Release date: 2026-06-03
+- Git tag: `v0.10.0`
+- Git commit: see the signed `v0.10.0` tag object
+- License: MIT OR Apache-2.0
 
 ## Summary
 
-`0.10.0` is the Identity and auth completion line. The current slices add typed
+`0.10.0` is the Identity and auth completion line. This release adds typed
 Identity OIDC token/provider administration, Identity MFA management, and the
 system MFA validation step while preserving the crate's secret-handling rules:
 generated ID tokens, token introspection inputs, MFA provider credentials, TOTP
@@ -61,5 +64,6 @@ bounded.
 
 ## Release Readiness
 
-- Local release checks pass as of this development snapshot.
-- Wait for the external pentest report and GitHub CI before tagging `v0.10.0`.
+- External pentest feedback for the release line was reviewed and actionable
+  items were resolved before tagging.
+- GitHub CI was green before tagging.

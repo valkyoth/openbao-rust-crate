@@ -64,7 +64,8 @@ check_grep '0.8.0 - Remaining Auth And System Backend' docs/RELEASE_PLAN.md
 check_grep '0.9.0 - API Stabilization Candidate' docs/RELEASE_PLAN.md
 check_grep '0.10.0 - Identity And Auth Completion' docs/RELEASE_PLAN.md
 check_grep '1.0.0 - First Stable Release' docs/RELEASE_PLAN.md
-check_grep 'Status: in development.' release-notes/RELEASE_NOTES_0.10.0.md
+check_grep 'Version: 0.10.0' release-notes/RELEASE_NOTES_0.10.0.md
+check_grep 'Git tag: `v0.10.0`' release-notes/RELEASE_NOTES_0.10.0.md
 check_grep 'Audit status:' docs/API_STABILITY_AUDIT.md
 check_grep 'From `vaultrs`' docs/MIGRATION_GUIDE.md
 
