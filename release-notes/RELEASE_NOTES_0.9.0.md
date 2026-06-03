@@ -28,10 +28,11 @@
   and Identity entity/group bootstrap convergence, PKI root/named-issuer scope
   review, response fixtures, fuzz targets, and quantum-readiness posture
   design.
-- Finalization rule: `1.0.0` is treated as the final planned feature release.
-  Any feature not completed in `0.9.0` must either fit in an optional `0.10.0`
-  buffer, land before `1.0.0`, be rejected for stable scope, or be documented
-  as a permanent external boundary.
+- Finalization rule: the OpenBao `2.5.x` endpoint matrix expanded the
+  pre-`1.0` plan through `0.15.0`. `0.9.0` handles stabilization foundations;
+  `0.10.0` through `0.14.0` handle Identity/auth, Transit, PKI, and System
+  completion; `0.15.0` is the endpoint-closure release where no matrix row may
+  remain classified as `decision`.
 - Minimum supported Rust: 1.90.0.
 
 ## Security Notes
@@ -71,16 +72,20 @@
   bootstrap convergence, public response fixtures, fuzz targets for path
   validation/error decoding/response envelopes, and a quantum-readiness design
   note.
-- Decide after current OpenBao documentation review in `0.9.0`: PKI root
-  rotate/replace helpers, named issuer issue/sign helpers, and Transit BYOK or
-  import-style helpers.
-- Decide before `1.0.0` or move to the optional `0.10.0` buffer: background
-  token auto-renewal, background lease tracking, Identity OIDC
-  provider/key/role/token management, MFA management/enforcement,
-  tracing/OpenTelemetry hooks, seal-status watchers, HTTP/2 transport knobs,
-  application-side secret-struct wrappers, certificate or public-key pinning,
-  AppRole delegated per-property endpoints, and advanced ACL policy-builder
-  fields.
+- Implement or decide in `0.10.0`: Identity OIDC provider/token rows, MFA
+  management/enforcement, token `create-orphan`/`renew-accessor`, and AppRole
+  delegated per-property rows.
+- Implement or decide in `0.11.0`: Transit BYOK/import, wrapping-key,
+  cache/config, CSR/certificate, and soft-delete rows.
+- Implement or decide in `0.12.0`/`0.13.0`: PKI named issuer/root/public-read,
+  CEL, sign-verbatim, OCSP, revocation-list, and ACME-boundary rows.
+- Implement or decide in `0.14.0`: system generate-root/recovery-token,
+  decode-token, password policies, monitor/internal rows, resultant ACL, MFA
+  validate, legacy recovery-key rekey, and lease tidy.
+- Decide before `0.15.0`: background token auto-renewal, background lease
+  tracking, tracing/OpenTelemetry hooks, seal-status watchers, HTTP/2
+  transport knobs, application-side secret-struct wrappers, certificate or
+  public-key pinning, and advanced ACL policy-builder fields.
 - Reject for stable feature scope unless a pentest or downstream integration
   proves otherwise before `1.0.0`: generic custom-plugin traits, full ACME
   protocol flows, full JOSE/JWKS construction, and raw unauthenticated SSH

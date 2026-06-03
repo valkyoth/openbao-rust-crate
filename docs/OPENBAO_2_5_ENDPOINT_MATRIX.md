@@ -17,7 +17,7 @@ Sources:
 - `partial`: a typed helper exists, but the documented row differs in method, variant, or exact endpoint shape.
 - `raw`: the crate intentionally relies on `Client::request_json` for this row.
 - `external`: the workflow is intentionally delegated to an external protocol/client.
-- `decision`: the row needs implementation, rejection, or movement to the optional `0.10.0` buffer before `1.0.0`.
+- `decision`: the row needs implementation, rejection, raw-wrapper policy, or external-client policy before `1.0.0`.
 
 ## Summary
 
@@ -77,10 +77,11 @@ Sources:
 
 - Token `create-orphan` and `renew-accessor` need dedicated helper decisions.
 - AppRole delegated per-property endpoints need a final raw-vs-typed decision.
-- Identity OIDC provider/token and MFA management needs a pre-`1.0.0` decision.
-- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows need pre-`1.0.0` decisions.
-- PKI advanced issuer/root/CEL/authority rows need implementation or explicit rejection.
-- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, MFA validate, legacy recovery rekey, and lease tidy need decisions.
+- Identity OIDC provider/token and MFA management is planned for `0.10.0`.
+- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows are planned for `0.11.0`.
+- PKI advanced issuer/root/public-read rows are planned for `0.12.0`; PKI specialized CEL/sign-verbatim/OCSP/ACME-boundary rows are planned for `0.13.0`.
+- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, MFA validate, legacy recovery rekey, and lease tidy are planned for `0.14.0`.
+- `0.15.0` is the closure release where no endpoint row may remain `decision`.
 
 Regenerate with:
 

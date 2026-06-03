@@ -156,7 +156,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         if any(segment in page for segment in ("/mfa", "/oidc-provider", "/tokens")):
             return (
                 "decision",
-                "Identity OIDC/token/MFA management needs pre-1.0 decision.",
+                "Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.",
             )
         return ("typed", "Typed Identity entity/group/alias/lookup helper exists.")
 
@@ -182,7 +182,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         if path == "/transit/config/keys" or any(segment in path for segment in decision_segments):
             return (
                 "decision",
-                "Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.",
+                "Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.",
             )
         return ("typed", "Typed Transit helper exists.")
 
@@ -231,7 +231,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
             return ("typed", "Typed PKI helper exists.")
         return (
             "decision",
-            "PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.",
+            "PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.",
         )
 
     return ("decision", "Secret-engine endpoint is not classified yet.")
@@ -255,10 +255,10 @@ def classify_system(page: str, path: str) -> tuple[str, str]:
             "rekey-recovery-key",
         )
     ):
-        return ("decision", "System endpoint needs pre-1.0 decision or explicit rejection.")
+        return ("decision", "System endpoint is planned for 0.14.0 decision or explicit rejection.")
 
     if page.startswith("/api-docs/system/leases/") and "/sys/leases/tidy" in path:
-        return ("decision", "Lease tidy needs pre-1.0 decision.")
+        return ("decision", "Lease tidy is planned for 0.14.0 decision or implementation.")
 
     gated_pages = (
         "raw",
@@ -350,7 +350,7 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
         "- `partial`: a typed helper exists, but the documented row differs in method, variant, or exact endpoint shape.",
         "- `raw`: the crate intentionally relies on `Client::request_json` for this row.",
         "- `external`: the workflow is intentionally delegated to an external protocol/client.",
-        "- `decision`: the row needs implementation, rejection, or movement to the optional `0.10.0` buffer before `1.0.0`.",
+        "- `decision`: the row needs implementation, rejection, raw-wrapper policy, or external-client policy before `1.0.0`.",
         "",
         "## Summary",
         "",
@@ -410,10 +410,11 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "- Token `create-orphan` and `renew-accessor` need dedicated helper decisions.",
             "- AppRole delegated per-property endpoints need a final raw-vs-typed decision.",
-            "- Identity OIDC provider/token and MFA management needs a pre-`1.0.0` decision.",
-            "- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows need pre-`1.0.0` decisions.",
-            "- PKI advanced issuer/root/CEL/authority rows need implementation or explicit rejection.",
-            "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, MFA validate, legacy recovery rekey, and lease tidy need decisions.",
+            "- Identity OIDC provider/token and MFA management is planned for `0.10.0`.",
+            "- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows are planned for `0.11.0`.",
+            "- PKI advanced issuer/root/public-read rows are planned for `0.12.0`; PKI specialized CEL/sign-verbatim/OCSP/ACME-boundary rows are planned for `0.13.0`.",
+            "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, MFA validate, legacy recovery rekey, and lease tidy are planned for `0.14.0`.",
+            "- `0.15.0` is the closure release where no endpoint row may remain `decision`.",
             "",
             "Regenerate with:",
             "",

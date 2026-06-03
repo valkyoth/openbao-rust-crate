@@ -105,20 +105,20 @@ auth,POST,/auth/userpass/users/:username/policies,typed,https://openbao.org/api-
 auth,LIST,/auth/userpass/users,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 auth,POST,/auth/userpass/login/:username,typed,https://openbao.org/api-docs/auth/userpass/,Typed auth helper exists.
 secret,POST,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/keys/:name/import,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
-secret,POST,/transit/keys/:name/import_version,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
-secret,GET,/transit/wrapping_key,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,POST,/transit/keys/:name/import,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,POST,/transit/keys/:name/import_version,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,GET,/transit/wrapping_key,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
 secret,GET,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,LIST,/transit/keys,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,DELETE,/transit/keys/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/config,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/rotate,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,DELETE,/transit/keys/:name/soft-delete,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
-secret,POST,/transit/keys/:name/soft-delete-restore,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
-secret,GET,/transit/byok-export/:destination/:source(/:version),decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,DELETE,/transit/keys/:name/soft-delete,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,POST,/transit/keys/:name/soft-delete-restore,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,GET,/transit/byok-export/:destination/:source(/:version),decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
 secret,GET,/transit/export/:key_type/:name(/:version),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
-secret,GET,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,POST,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,GET,/transit/config/keys,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
 secret,POST,/transit/encrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/decrypt/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/rewrap/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
@@ -131,10 +131,10 @@ secret,POST,/transit/verify/:name(/:hash_algorithm),typed,https://openbao.org/ap
 secret,GET,/transit/backup/:name,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/restore(/:name),typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
 secret,POST,/transit/keys/:name/trim,typed,https://openbao.org/api-docs/secret/transit/,Typed Transit helper exists.
-secret,POST,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
-secret,GET,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
-secret,POST,/transit/keys/:name/csr,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
-secret,POST,/transit/keys/:name/set-certificate,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint needs pre-1.0 decision.
+secret,POST,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,GET,/transit/cache-config,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,POST,/transit/keys/:name/csr,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
+secret,POST,/transit/keys/:name/set-certificate,decision,https://openbao.org/api-docs/secret/transit/,Transit advanced key-import/BYOK/config/certificate/soft-delete endpoint is planned for 0.11.0 decision or implementation.
 secret,GET,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
 secret,LIST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
 secret,POST,/cubbyhole/:path,typed,https://openbao.org/api-docs/secret/cubbyhole/,Typed secrets-engine helper exists.
@@ -202,59 +202,59 @@ secret,POST,/pki/config/acme,typed,https://openbao.org/api-docs/secret/pki/,Type
 secret,LIST,/pki/roles,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issue/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,POST,/pki/sign/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,POST,/pki/root/sign-intermediate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/root/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,LIST,/pki/cel/roles,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/cel/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/cel/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/root/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,LIST,/pki/cel/roles,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/cel/issue/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/cel/sign/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,POST,/pki/revoke,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/revoke-with-key,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,LIST,/certs/revoked,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,LIST,/certs/revocation-queue,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/revoke-with-key,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,LIST,/certs/revoked,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,LIST,/certs/revocation-queue,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,LIST,/pki/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/cert/ca,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/ca,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/ca/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/json,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/ca_chain,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/cert/ca_chain,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/cert/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/crl/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/cert/delta-crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/crl/delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/crl/delta/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/crl/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/crl/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/crl/delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/crl/delta/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/issuer/:issuer_ref/crl/delta/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/ocsp/<base 64+URL encoded ocsp DER request>,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/ocsp,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/cert/ca,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/ca,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/ca/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/json,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/ca_chain,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/cert/ca_chain,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/cert/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/crl/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/cert/delta-crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/crl/delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/crl/delta/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/delta/der,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/issuer/:issuer_ref/crl/delta/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/ocsp/<base 64+URL encoded ocsp DER request>,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/ocsp,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,LIST,/pki/certs,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,LIST,/pki/certs/detailed?detailed=true,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,LIST,/pki/certs/detailed?detailed=true,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,GET,/pki/cert/:serial,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/cert/:serial/raw,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/cert/:serial/raw/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/cert/:serial/raw,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/cert/:serial/raw/pem,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,LIST,/pki/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/keys/generate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/keys/generate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,POST,/pki/root/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuers/generate/root/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/root/rotate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuers/generate/root/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/root/rotate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,POST,/pki/intermediate/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuers/generate/intermediate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/intermediate/cross-sign,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,POST,/pki/issuers/generate/intermediate/:type,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/intermediate/cross-sign,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,POST,/pki/config/ca,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issuers/import/bundle,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issuers/import/cert,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
@@ -268,31 +268,31 @@ secret,POST,/pki/keys/import,typed,https://openbao.org/api-docs/secret/pki/,Type
 secret,GET,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,DELETE,/pki/key/:key_ref,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,DELETE,/pki/root,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,PATCH,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,DELETE,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,DELETE,/pki/root,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,PATCH,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,DELETE,/pki/cel/roles/:name,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,POST,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,PATCH,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,DELETE,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/root/replace,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,GET,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/config/issuers,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/root/replace,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/config/keys,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,GET,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/config/cluster,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,GET,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/crl/rotate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/crl/rotate-delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/issuer/:issuer_ref/resign-crls,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/issuer/:issuer_ref/sign-revocation-list,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/crl/rotate-delta,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/resign-crls,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/issuer/:issuer_ref/sign-revocation-list,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,POST,/pki/tidy,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
-secret,POST,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint needs pre-1.0 decision or implementation.
+secret,GET,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
+secret,POST,/pki/config/auto-tidy,decision,https://openbao.org/api-docs/secret/pki/,PKI advanced issuer/root/CEL/authority endpoint is planned for 0.12.0/0.13.0 decision or implementation.
 secret,GET,/pki/tidy-status,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/tidy-cancel,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/rabbitmq/config/connection,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.
@@ -353,31 +353,31 @@ system,GET,/sys/config/cors,typed,https://openbao.org/api-docs/system/config-cor
 system,POST,/sys/config/cors,typed,https://openbao.org/api-docs/system/config-cors/,Typed system helper exists.
 system,DELETE,/sys/config/cors,typed,https://openbao.org/api-docs/system/config-cors/,Typed system helper exists.
 system,GET,/sys/config/state/sanitized,typed,https://openbao.org/api-docs/system/config-state/,Typed system helper exists.
-system,GET,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,POST,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,DELETE,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,LIST,/sys/config/ui/headers,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,POST,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,DELETE,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,POST,/sys/generate-recovery-token/update,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,POST,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,DELETE,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,POST,/sys/generate-root/update,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,DELETE,/sys/config/ui/headers/:name,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,LIST,/sys/config/ui/headers,decision,https://openbao.org/api-docs/system/config-ui/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,DELETE,/sys/generate-recovery-token/attempt,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/generate-recovery-token/update,decision,https://openbao.org/api-docs/system/generate-recovery-token/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,DELETE,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/generate-root/update,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,HEAD,/sys/health,typed,https://openbao.org/api-docs/system/health/,Typed system helper exists.
 system,GET,/sys/health,typed,https://openbao.org/api-docs/system/health/,Typed system helper exists.
 system,GET,/sys/host-info,typed,https://openbao.org/api-docs/system/host-info/,Typed system helper exists.
-system,GET,/sys/in-flight-req,decision,https://openbao.org/api-docs/system/in-flight-req/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/in-flight-req,decision,https://openbao.org/api-docs/system/in-flight-req/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,GET,/sys/init,typed,https://openbao.org/api-docs/system/init/,Typed system helper exists.
 system,POST,/sys/init,typed,https://openbao.org/api-docs/system/init/,Typed system helper exists.
-system,GET,/sys/internal/counters/entities,decision,https://openbao.org/api-docs/system/internal-counters/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/internal/counters/tokens,decision,https://openbao.org/api-docs/system/internal-counters/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/counters/entities,decision,https://openbao.org/api-docs/system/internal-counters/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/internal/counters/tokens,decision,https://openbao.org/api-docs/system/internal-counters/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,GET,/sys/internal/specs/openapi,typed,https://openbao.org/api-docs/system/internal-specs-openapi/,Typed system helper exists.
 system,GET,/sys/internal/ui/mounts,typed,https://openbao.org/api-docs/system/internal-ui-mounts/,Typed system helper exists.
 system,GET,/sys/internal/ui/mounts/:path,typed,https://openbao.org/api-docs/system/internal-ui-mounts/,Typed system helper exists.
 system,GET,/sys/internal/ui/namespaces,typed,https://openbao.org/api-docs/system/internal-ui-namespaces/,Typed system helper exists.
-system,GET,/sys/internal/ui/resultant-acl,decision,https://openbao.org/api-docs/system/internal-ui-resultant-acl/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/ui/resultant-acl,decision,https://openbao.org/api-docs/system/internal-ui-resultant-acl/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,GET,/sys/key-status,typed,https://openbao.org/api-docs/system/key-status/,Typed system helper exists.
 system,GET,/sys/ha-status,typed,https://openbao.org/api-docs/system/ha-status/,Typed system helper exists.
 system,GET,/sys/leader,typed,https://openbao.org/api-docs/system/leader/,Typed system helper exists.
@@ -387,7 +387,7 @@ system,POST,/sys/leases/renew,typed,https://openbao.org/api-docs/system/leases/,
 system,POST,/sys/leases/revoke,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,POST,/sys/leases/revoke-force/:prefix,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,POST,/sys/leases/revoke-prefix/:prefix,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
-system,POST,/sys/leases/tidy,decision,https://openbao.org/api-docs/system/leases/,Lease tidy needs pre-1.0 decision.
+system,POST,/sys/leases/tidy,decision,https://openbao.org/api-docs/system/leases/,Lease tidy is planned for 0.14.0 decision or implementation.
 system,GET,/sys/leases/count,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,GET,/sys/leases,typed,https://openbao.org/api-docs/system/leases/,Typed system helper exists.
 system,POST,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
@@ -397,8 +397,8 @@ system,GET,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/
 system,DELETE,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
 system,DELETE,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
 system,GET,/sys/metrics,typed,https://openbao.org/api-docs/system/metrics/,Typed system helper exists.
-system,POST,/sys/mfa/validate,decision,https://openbao.org/api-docs/system/mfa-validate/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/monitor,decision,https://openbao.org/api-docs/system/monitor/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/mfa/validate,decision,https://openbao.org/api-docs/system/mfa-validate/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/monitor,decision,https://openbao.org/api-docs/system/monitor/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,GET,/sys/mounts,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
 system,POST,/sys/mounts/:path,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
 system,DELETE,/sys/mounts/:path,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
@@ -430,12 +430,12 @@ system,LIST,/sys/policies/detailed/acl/:prefix,typed,https://openbao.org/api-doc
 system,GET,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
 system,POST,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
 system,DELETE,/sys/policies/acl/:name,typed,https://openbao.org/api-docs/system/policies/,Typed system helper exists.
-system,POST,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,LIST,/sys/policies/password,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/policies/password?list=true,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,DELETE,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/policies/password/:name/generate,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,POST,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,LIST,/sys/policies/password,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/policies/password?list=true,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,DELETE,/sys/policies/password/:name,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/policies/password/:name/generate,decision,https://openbao.org/api-docs/system/policies-password/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,GET,/sys/pprof/,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
 system,GET,/sys/pprof/allocs,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
 system,GET,/sys/pprof/block,typed-gated,https://openbao.org/api-docs/system/pprof/,Typed helper exists behind operator-operation gates where needed.
@@ -467,15 +467,15 @@ system,POST,/sys/rekey/update,typed-gated,https://openbao.org/api-docs/system/re
 system,GET,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
 system,DELETE,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
 system,POST,/sys/rekey/verify,typed-gated,https://openbao.org/api-docs/system/rekey/,Typed helper exists behind operator-operation gates where needed.
-system,GET,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,POST,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,DELETE,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/rekey/recovery-key-backup,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,DELETE,/sys/rekey/recovery-key-backup,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,POST,/sys/rekey-recovery-key/update,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,DELETE,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,POST,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,DELETE,/sys/rekey-recovery-key/init,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/rekey/recovery-key-backup,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,DELETE,/sys/rekey/recovery-key-backup,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/rekey-recovery-key/update,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,DELETE,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/rekey-recovery-key/verify,decision,https://openbao.org/api-docs/system/rekey-recovery-key/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,POST,/sys/remount,typed,https://openbao.org/api-docs/system/remount/,Typed system helper exists.
 system,GET,/sys/remount/status/:migration_id,typed,https://openbao.org/api-docs/system/remount/,Typed system helper exists.
 system,POST,/sys/seal,typed-gated,https://openbao.org/api-docs/system/seal/,Typed helper exists behind operator-operation gates where needed.
@@ -529,23 +529,23 @@ secret,LIST,/identity/group-alias/id,typed,https://openbao.org/api-docs/secret/i
 secret,GET,/identity/group-alias/id?list=true,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,POST,/identity/lookup/entity,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
 secret,POST,/identity/lookup/group,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
-secret,GET,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/oidc/provider,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/oidc/scope,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/oidc/client,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/oidc/assignment,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/oidc/provider/:name/.well-known/keys,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET/POST,/identity/oidc/provider/:name/authorize,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,POST,/identity/oidc/provider/:name/token,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,POST,/identity/oidc/provider/:name/userinfo,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,GET,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/oidc/provider,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/oidc/scope,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/oidc/client,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/oidc/assignment,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/oidc/provider/:name/.well-known/keys,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET/POST,/identity/oidc/provider/:name/authorize,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/oidc/provider/:name/token,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/oidc/provider/:name/userinfo,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
 secret,GET,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
 secret,LIST,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
 secret,SCAN,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
@@ -569,18 +569,18 @@ secret,GET,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs
 secret,POST,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
 secret,PATCH,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
 secret,DELETE,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
-secret,POST,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/mfa/login-enforcement,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/mfa/login-enforcement,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
 system,GET,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
 system,POST,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
 system,DELETE,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
-system,GET,/sys/internal/inspect/request/root,decision,https://openbao.org/api-docs/system/inspect/request/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/internal/inspect/router/root,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/internal/inspect/router/uuid,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/internal/inspect/router/accessor,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint needs pre-1.0 decision or explicit rejection.
-system,GET,/sys/internal/inspect/router/storage,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint needs pre-1.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/request/root,decision,https://openbao.org/api-docs/system/inspect/request/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/router/root,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/router/uuid,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/router/accessor,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,GET,/sys/internal/inspect/router/storage,decision,https://openbao.org/api-docs/system/inspect/router/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,POST,/sys/rotate/keyring,typed-gated,https://openbao.org/api-docs/system/rotate/keyring/,Typed helper exists behind operator-operation gates where needed.
 system,POST,/sys/rotate,typed-gated,https://openbao.org/api-docs/system/rotate/keyring/,Typed helper exists behind operator-operation gates where needed.
 system,POST,/sys/rotate/keyring/config,typed-gated,https://openbao.org/api-docs/system/rotate/keyring-config/,Typed helper exists behind operator-operation gates where needed.
@@ -606,22 +606,22 @@ system,POST,/sys/storage/raft/bootstrap,typed,https://openbao.org/api-docs/syste
 system,GET,/sys/storage/raft/autopilot/state,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
 system,GET,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
 system,POST,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
-secret,POST,/identity/mfa/method/duo/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/mfa/method/duo,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,POST,/identity/mfa/method/okta/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/mfa/method/okta,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,POST,/identity/mfa/method/pingid/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/mfa/method/pingid,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,POST,/identity/mfa/method/totp/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,GET,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,DELETE,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,LIST,/identity/mfa/method/totp,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,POST,/identity/mfa/method/totp/generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,POST,/identity/mfa/method/totp/admin-generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
-secret,POST,/identity/mfa/method/totp/admin-destroy,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management needs pre-1.0 decision.
+secret,POST,/identity/mfa/method/duo/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/mfa/method/duo,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/mfa/method/okta/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/mfa/method/okta,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/mfa/method/pingid/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/mfa/method/pingid,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/mfa/method/totp/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,GET,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,DELETE,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,LIST,/identity/mfa/method/totp,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/mfa/method/totp/generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/mfa/method/totp/admin-generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/mfa/method/totp/admin-destroy,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.

@@ -185,9 +185,10 @@ Support plan:
   revocation, CA/key import, ACME config/EAB/directory URL helpers, CRL
   rotation, tidy, tidy status, tidy cancel, and role merge-patch are
   implemented. Root rotate/replace and named issuer issue/sign flows require
-  `0.9.0` documentation review before implementation, rejection, or movement
-  to the optional `0.10.0` buffer. Full ACME account/order/challenge client
-  flows are intentionally left to dedicated ACME clients.
+  the planned `0.12.0`/`0.13.0` PKI passes before implementation, rejection,
+  or external-client classification. Full ACME account/order/challenge client
+  flows are expected to stay with dedicated ACME clients unless the `0.13.0`
+  review finds a safe crate boundary.
 - `0.5.0`: database connection config/list/read/delete/reset, root rotation,
   dynamic role list/write/read/delete, dynamic credentials, static role
   list/write/read/delete, static credentials, and static role rotation are
@@ -287,8 +288,12 @@ Finalization work before `1.0.0`:
 - decide whether background token auto-renewal, background lease tracking,
   tracing/OpenTelemetry hooks, seal-status watcher/back-pressure helpers,
   optional HTTP/2 transport configuration, and application-side secret
-  wrappers move to optional `0.10.0` or are rejected for the stable feature
-  scope.
+  wrappers are rejected or documented as explicit non-default stable
+  boundaries.
+- use `0.10.0` through `0.14.0` for Identity/auth, Transit, PKI, and System
+  endpoint-family completion;
+- use `0.15.0` as the endpoint-closure release where no matrix row may remain
+  `decision`.
 
 ## OpenBao-Specific Notes
 

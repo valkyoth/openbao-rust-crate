@@ -18,9 +18,10 @@ All notable changes to this project are documented here.
   `626` documented endpoint rows, `73.0%` strict typed or operator-gated
   coverage, and explicit pre-`1.0.0` decision rows.
 - Added a `0.9.0` release-note skeleton and release gate script.
-- Updated the release strategy to treat `1.0.0` as the final planned feature
-  release, with optional `0.10.0` only as a pre-`1.0` completion buffer and
-  `1.0.x` reserved for maintenance and security fixes.
+- Expanded the pre-`1.0` release strategy through `0.15.0` so Identity/auth,
+  Transit advanced key management, PKI advanced and specialized flows, system
+  backend completion, and endpoint closure can be handled without rushing
+  risky APIs into `0.9.0`.
 
 ### Security
 

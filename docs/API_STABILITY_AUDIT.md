@@ -10,9 +10,14 @@ the crate useful for production trials.
 - Started: 2026-06-03
 - Audit status: decision register started
 - Stable target: `1.0.0`
-- Planning assumption: `1.0.0` is the final planned feature release. Use
-  `0.10.0` only as an optional completion buffer before `1.0.0`; after
-  `1.0.0`, assume only `1.0.x` maintenance and security fixes.
+- Planning assumption: the endpoint matrix expanded the pre-`1.0` plan through
+  `0.15.0`. Use `0.9.0` for stabilization foundations, `0.10.0` through
+  `0.14.0` for remaining endpoint families, `0.15.0` for closure, and
+  `1.0.0` for the stable freeze. After `1.0.0`, assume only `1.0.x`
+  maintenance and security fixes.
+- Coverage target: no OpenBao `2.5.x` endpoint row remains classified as
+  `decision` before `1.0.0`; not every row must become first-class typed if a
+  raw, external, partial, gated, or rejected boundary is safer.
 
 ## Stabilization Rules
 
@@ -32,19 +37,19 @@ the crate useful for production trials.
 
 ## API Areas
 
-| Area | Current Posture | `0.9.0` Decision |
+| Area | Current Posture | Planned Decision |
 | --- | --- | --- |
 | Client construction | Typestate client, env construction, shared client, strict TLS defaults. | Audit names in `0.9.0`; no compatibility aliases until a concrete downstream migration issue is found. |
 | Error handling | Sanitized API errors and common predicates. | Audit predicates in `0.9.0`; add only value-free helpers that do not expose raw response bodies. |
 | Retry/backoff | Only readiness polling retries temporary failures. | Implement an explicit opt-in retry policy in `0.9.0`; default requests remain single-shot to avoid retrying non-idempotent writes. |
-| Token lifecycle | Typed create/lookup/renew/revoke/role/tidy helpers. | Do not add background auto-renewal in `0.9.0`; document caller-owned scheduling and consider explicit renewal handles after the retry policy lands. |
+| Token lifecycle | Typed create/lookup/renew/revoke/role/tidy helpers; matrix still shows `create-orphan` and `renew-accessor` decisions. | Keep background auto-renewal deferred. Implement or reject `create-orphan` and `renew-accessor` in `0.9.0` or `0.10.0`. |
 | Lease lifecycle | Exact lookup/renew/revoke plus prefix revoke/count. | Do not add a background lease tracker in `0.9.0`; implement or document explicit lease-handle ergonomics without hidden tasks. |
 | Pagination | Endpoint-specific helpers exist where implemented. | Implement a shared request/response pagination shape in `0.9.0` for non-secret string lists only; secret accessor lists stay dedicated. |
 | Admin bootstrap | Common service bootstrap and preview are implemented. | Implement PKI role and Identity entity/group convergence in `0.9.0` where existing typed reads/writes make comparison safe. |
-| Identity | Entity/group/alias lifecycle, lookup, and merge are implemented. | Identity OIDC provider/key/role/token and MFA management must be implemented, rejected, or moved to the optional `0.10.0` buffer before `1.0.0`; no post-`1.0` feature promise. |
-| PKI | Core CA, issuer/key, role, tidy, ACME config/EAB, issue/sign/revoke helpers. | Implement or explicitly reject root rotate/replace and named issuer issue/sign helpers in `0.9.0` after checking current OpenBao docs. |
-| Transit | Lifecycle, batch, byte, and signing helpers. | Audit constructors and `transit-bytes` boundaries in `0.9.0`; no default dependency growth. |
-| System backend | Broad sys coverage with operator gates. | Keep operator-risk APIs gated; audit names and docs in `0.9.0`. |
+| Identity | Entity/group/alias lifecycle, lookup, and merge are implemented. OIDC provider/token and MFA rows remain decisions. | Implement/reject Identity OIDC and MFA rows in `0.10.0`; keep external OIDC protocol flows documented where the crate should not act as a full OIDC client/server. |
+| PKI | Core CA, issuer/key, role, tidy, ACME config/EAB, issue/sign/revoke helpers. Matrix shows large advanced PKI gap. | Split across `0.12.0` and `0.13.0`: multi-issuer/root/public reads first, specialized CEL/sign-verbatim/OCSP/ACME boundary second. |
+| Transit | Lifecycle, batch, byte, and signing helpers. Matrix shows advanced key-import/BYOK/config/certificate/soft-delete decisions. | Implement/reject advanced Transit key-management rows in `0.11.0`; no default dependency growth. |
+| System backend | Broad sys coverage with operator gates. Matrix shows config UI, generate-root/recovery, password policy, monitor/internal, and legacy recovery rekey decisions. | Complete or reject remaining system rows in `0.14.0`; keep operator-risk APIs gated. |
 | Tracing | Not implemented. | Reject default OpenTelemetry dependency growth for `1.0`; decide in `0.9.0` whether a zero-dependency hook is useful, otherwise document no tracing API in stable scope. |
 | Seal watcher | Readiness polling and seal status helpers exist. | Defer background seal watchers; document polling patterns because watchers need runtime/back-pressure policy. |
 | HTTP/2 | Not exposed as public configuration. | Decide in `0.9.0` whether to expose a transport knob; otherwise document reqwest defaults as the stable policy. |
@@ -74,7 +79,7 @@ must now have an explicit current decision.
 | `0.7.0` | AppRole delegated per-property endpoints were not typed. | Defer; full role update covers the common case, and delegated single-property ACLs can use `Client::request_json`. |
 | `0.7.0` | Custom plugin APIs were not modeled as a generic trait. | Intentional; plugin schemas are deployment-specific. Keep local typed wrappers. |
 | `0.7.0` | Bootstrap preview, typed capabilities, list traits, and timestamps were planned. | Resolved in `0.8.0`. |
-| `0.7.0` | Broader bootstrap convergence for LDAP/RabbitMQ/Kubernetes secrets/Identity remained planned. | Implement PKI role and Identity entity/group convergence in `0.9.0`; decide before `1.0.0` whether engine-specific convergence is rejected or moved to `0.10.0`. |
+| `0.7.0` | Broader bootstrap convergence for LDAP/RabbitMQ/Kubernetes secrets/Identity remained planned. | Implement PKI role and Identity entity/group convergence in `0.9.0`; decide before `0.15.0` whether broader engine-specific convergence is rejected or implemented. |
 | `0.8.0` | Kerberos SPNEGO acquisition is left to platform tooling. | Intentional; the crate accepts the documented base64 token and does not embed Kerberos client stacks. |
 | `0.8.0` | Retry, auto-renewal, lease tracking, pagination, Identity OIDC/MFA, PKI root/named issuer, tracing, seal watcher, HTTP/2, and secret wrappers needed decisions. | Decisions are recorded in the API Areas table above and must be reflected in `0.9.0` release notes before tag. |
 
@@ -83,11 +88,11 @@ must now have an explicit current decision.
 When moving a feature out of `0.9.0`, record:
 
 - user-facing workflow affected;
-- whether it moves to optional `0.10.0`, lands in `1.0.0`, is rejected for
+- whether it moves to `0.10.0` through `0.15.0`, is rejected for
   stable scope, or is a permanent external boundary;
 - why the feature is unsafe, unstable, or too broad for `0.9.0`;
 - whether `Client::request_json` can reach the endpoint safely meanwhile;
-- intended pre-`1.0` decision point;
+- intended pre-`1.0` release decision point;
 - security considerations for callers implementing it locally.
 
 ## Release Exit Criteria
@@ -96,9 +101,11 @@ When moving a feature out of `0.9.0`, record:
   consistency, feature gates, and semver expectations.
 - Migration guide covers `0.1` through `0.9`, `vaultrs`, and bespoke
   `reqwest` wrappers.
-- Retry, token auto-renewal, lease tracking, pagination, PKI root/named issuer
-  scope, Identity OIDC/MFA scope, tracing, HTTP/2, fuzzing, fixtures, and
-  quantum-readiness have explicit decisions in this document or linked docs.
+- Retry, token auto-renewal, lease tracking, pagination, Identity OIDC/MFA,
+  Transit advanced key management, PKI advanced scope, system completion,
+  tracing, HTTP/2, fuzzing, fixtures, and quantum-readiness have explicit
+  decisions in this document or linked docs.
+- Endpoint matrix has zero `decision` rows by `0.15.0`.
 - README examples and docs examples compile.
 - The real OpenBao integration gate passes with default features.
 - A pentest report for the exact release candidate has been reviewed and

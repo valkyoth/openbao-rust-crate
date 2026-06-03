@@ -1,11 +1,17 @@
 # Release Plan
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
-Treat `1.0.0` as the final planned feature release: after it, the expected
-line is `1.0.x` maintenance, security fixes, compatibility fixes, and
-documentation corrections only. Every pre-`1.0` release must be functional
-enough to publish for external testing. No tag is cut until the owner provides
-a pentest report for the exact release commit.
+The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
+`626` documented endpoint rows, `457` strict typed or operator-gated rows, and
+`153` rows still needing an implementation, rejection, raw-wrapper policy, or
+external-client policy decision. Because there is no rush to force stability,
+the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
+deliberately.
+
+After `1.0.0`, the expected line is `1.0.x` maintenance, security fixes,
+compatibility fixes, and documentation corrections only. Every pre-`1.0`
+release must be functional enough to publish for external testing. No tag is
+cut until the owner provides a pentest report for the exact release commit.
 
 ## Standing Release Gates
 
@@ -26,12 +32,13 @@ Every release:
 
 ## Finalization Policy
 
-- Anything valuable enough for the stable crate must land in `0.9.0`,
-  `0.10.0`, or `1.0.0`.
-- `0.10.0` is reserved as an optional final completion buffer for work that is
-  too large or too risky to finish inside `0.9.0`.
-- Items that do not fit before `1.0.0` are rejected for the stable feature
-  scope, not left as open-ended roadmap promises.
+- Anything valuable enough for the stable crate must land between `0.9.0` and
+  `0.15.0`, or be explicitly rejected/delegated before `1.0.0`.
+- The stable readiness target is not blindly `100% typed`; it is `100%`
+  addressed endpoint rows. A row may be addressed as `typed`, `typed-gated`,
+  `partial`, `raw`, `external`, or rejected with a documented safe
+  alternative.
+- No endpoint row may remain classified as `decision` when `1.0.0` is tagged.
 - After `1.0.0`, new feature work is not planned. Only `1.0.x` security,
   correctness, compatibility, and documentation updates are assumed.
 
@@ -262,11 +269,12 @@ Publishable value:
 
 Stop condition:
 
+- generated OpenBao `2.5.x` endpoint matrix exists and is the coverage source
+  of truth;
 - API stability audit document exists and is maintained for every remaining
-  near-`1.0` decision;
+  pre-`1.0` decision;
 - historical release-note `Known Limitations` have current decisions recorded;
 - public API audit completed;
-- feature matrix frozen for `1.0`;
 - migration guide from `0.1` through `0.9` exists and is completed;
 - migration guide from `vaultrs` and bespoke `reqwest` OpenBao wrappers exists
   and is completed;
@@ -275,11 +283,8 @@ Stop condition:
 - a shared non-secret paginated-list abstraction is implemented;
 - admin bootstrap convergence for PKI roles and Identity entities/groups is
   implemented;
-- Identity OIDC provider/key/role/token management, MFA method management, and
-  MFA login enforcement are scoped for `1.0` or deferred with documented
-  reasons;
-- PKI root rotate/replace and named issuer issue/sign lifecycle helpers are
-  scoped for `1.0` or deferred with documented reasons;
+- small auth/token gaps from the matrix are implemented or assigned to
+  `0.10.0`;
 - optional tracing/OpenTelemetry, seal-status watcher/back-pressure, HTTP/2
   transport configuration, and application-side secret-struct wrappers have
   deferral decisions recorded; public response serde fixtures are added;
@@ -294,33 +299,142 @@ Publishable value:
 
 - downstream users can trial the near-stable API.
 
-### 0.10.0 - Optional Final Completion Buffer
-
-This release is used only if `0.9.0` discovers work that is too large or too
-risky to safely finish before a pentested `0.9.0` tag. If all mandatory work
-fits in `0.9.0`, skip directly to `1.0.0`.
+### 0.10.0 - Identity And Auth Completion
 
 Stop condition:
 
-- no unresolved `Known Limitations` item remains classified as "planned";
-- every remaining item is implemented, rejected for the stable feature scope,
-  or documented as a permanent external boundary;
-- any PKI root rotate/replace, named issuer issue/sign, Transit BYOK/import,
-  Identity OIDC/MFA, tracing, HTTP/2, seal watcher, certificate pinning,
-  advanced ACL-builder, AppRole delegated-property, and app-side secret-wrapper
-  decision is finalized;
+- Identity OIDC provider, scope, client, assignment, discovery, key, token,
+  authorize, and userinfo rows are implemented, documented as external OIDC
+  protocol flows, or rejected with a raw-wrapper policy;
+- Identity MFA Duo, Okta, PingID, TOTP method management, MFA TOTP
+  generate/admin-generate/admin-destroy, and login-enforcement rows are
+  implemented or rejected with security rationale;
+- system MFA validate is implemented or assigned to `0.14.0` with Identity MFA
+  docs linking to that decision;
+- token `create-orphan` and `renew-accessor` helpers are implemented or
+  explicitly rejected;
+- AppRole delegated per-property endpoints are either implemented as narrow
+  helpers or permanently documented as `Client::request_json` rows because full
+  role read/write is already typed;
+- endpoint matrix is regenerated and all affected rows have updated statuses;
+- tests cover redaction for new OIDC/MFA/token request and response types.
+
+Publishable value:
+
+- identity-heavy deployments can manage OpenBao Identity and MFA flows with
+  typed helpers or clear external/raw boundaries.
+
+### 0.11.0 - Transit Advanced Key Management
+
+Stop condition:
+
+- Transit key import, import-version, wrapping-key, BYOK export, key config,
+  cache config, CSR generation, certificate install, soft-delete, and
+  soft-delete-restore rows are implemented or explicitly rejected;
+- imported key material and wrapped key material use secret-aware request and
+  response types with custom `Debug`;
+- risky operations are documented with operator warnings and feature gates if
+  the API can expose import/export material outside OpenBao;
+- `transit-bytes` remains optional and no default dependency growth is added;
+- endpoint matrix is regenerated and Transit decision rows are resolved.
+
+Publishable value:
+
+- operators can automate advanced Transit key lifecycle work without bespoke
+  request wrappers, while keeping key-material handling explicit.
+
+### 0.12.0 - PKI Advanced Issuer, Root, And Public Read Coverage
+
+Stop condition:
+
+- named issuer issue/sign/sign-intermediate helpers;
+- root rotate, root replace, root delete, issuers/key generation, intermediate
+  issuer generation, and issuer/key config helpers;
+- CA, certificate, CRL, delta-CRL, issuer JSON/DER/PEM, raw certificate, and
+  detailed certificate list read helpers;
+- cluster config, auto-tidy config, config issuers, config keys, CRL delta
+  rotation, issuer CRL resign, and sign-revocation-list helpers;
+- response-size caps and binary/text handling are documented for public
+  certificate and CRL endpoints;
+- endpoint matrix is regenerated and the main PKI administrative/public-read
+  rows are resolved.
+
+Publishable value:
+
+- PKI operators can manage multi-issuer OpenBao PKI deployments and public CA
+  material through typed helpers.
+
+### 0.13.0 - PKI Specialized Flows And ACME Boundary
+
+Stop condition:
+
+- CEL role list/read/write/patch/delete plus CEL issue/sign helpers are
+  implemented or rejected;
+- sign-self-issued, sign-verbatim, revoke-with-key, revoked-cert list,
+  revocation-queue list, OCSP GET/POST, and intermediate cross-sign helpers
+  are implemented or rejected;
+- full ACME account/order/authorization/challenge flows are either implemented
+  or, more likely, permanently classified as `external` with directory URL and
+  EAB helpers documented as the supported SDK boundary;
+- endpoint matrix is regenerated and no PKI row remains `decision` unless it
+  is intentionally moved to `0.15.0` for closure.
+
+Publishable value:
+
+- specialized PKI workflows are either typed or have stable documented
+  external boundaries before the final system-backend pass.
+
+### 0.14.0 - System Backend Completion
+
+Stop condition:
+
+- system config UI header helpers are implemented or rejected;
+- generate-root and generate-recovery-token ceremony helpers are implemented
+  behind explicit operator gates or rejected in favor of OpenBao CLI/operator
+  process documentation;
+- decode-token, password policy CRUD/generate, lease tidy, and MFA validate
+  helpers are implemented or rejected;
+- monitor streaming, in-flight request, internal counters, internal inspect,
+  resultant ACL, and legacy recovery-key rekey rows are implemented, rejected,
+  or classified as permanent internal/streaming/operator boundaries;
+- all system endpoint decisions are reflected in the matrix and support table;
+- operator-risk additions preserve the existing `operator-ops` plus
+  `operator-ops-acknowledged` pattern.
+
+Publishable value:
+
+- OpenBao system backend rows are fully addressed with typed helpers or stable
+  documented boundaries.
+
+### 0.15.0 - Endpoint Closure And Stable Candidate
+
+Stop condition:
+
+- endpoint matrix has zero `decision` rows;
+- every row is `typed`, `typed-gated`, `partial`, `raw`, `external`, or
+  explicitly rejected in linked documentation;
+- strict typed coverage and addressed coverage percentages are recorded in
+  README, API coverage docs, release notes, and changelog;
+- all remaining historical `Known Limitations` are resolved, rejected, or
+  documented as permanent boundaries;
+- public API names, constructors, feature flags, and module layout are frozen
+  for `1.0.0`;
+- examples, migration guide, custom plugin pattern, security docs, and release
+  notes reflect the final stable scope;
 - full release gate and pentest pass on the exact release candidate.
 
 Publishable value:
 
-- downstream users can trial the final API shape before `1.0.0`.
+- downstream users can trial the final API and endpoint-scope decisions before
+  `1.0.0`.
 
 ### 1.0.0 - First Stable Release
 
 Stop condition:
 
-- complete documented support for selected stable API surface;
+- complete documented support for the selected stable API surface;
 - no unresolved pre-`1.0` feature backlog remains;
+- endpoint matrix still has zero `decision` rows after final regeneration;
 - all rejected or permanently out-of-scope items are documented with stable
   reasons and safe alternatives where applicable;
 - no known high or critical findings from pentest;

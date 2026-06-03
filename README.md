@@ -141,9 +141,12 @@ Planned next:
   bootstrap convergence, fuzz/fixture hardening, quantum-readiness design
   notes, and explicit pre-`1.0` decisions for background renewal/tracking,
   tracing, seal watchers, HTTP/2 knobs, and application-side secret wrappers.
-  If one of these is too large for `0.9.0`, it may move to an optional
-  `0.10.0` completion buffer; after `1.0.0`, only `1.0.x` maintenance and
-  security fixes are planned.
+- `0.10.0` through `0.15.0`: close the endpoint matrix deliberately: Identity
+  and auth, Transit advanced key management, PKI advanced/public/specialized
+  flows, remaining system backend rows, then final endpoint closure.
+- `1.0.0`: stable API freeze after the endpoint matrix has zero `decision`
+  rows; after `1.0.0`, only `1.0.x` maintenance and security fixes are
+  planned.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
