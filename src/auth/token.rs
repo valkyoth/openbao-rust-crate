@@ -377,6 +377,13 @@ struct RenewPayload<'a> {
     increment: Option<&'a str>,
 }
 
+#[derive(Serialize)]
+struct RenewAccessorPayload<'a> {
+    accessor: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    increment: Option<&'a str>,
+}
+
 impl Client<Authenticated> {
     /// Accesses token lifecycle helpers.
     pub fn token(&self) -> Token<'_> {
@@ -388,6 +395,21 @@ impl Token<'_> {
     /// Creates a child token.
     pub async fn create(&self, request: &TokenCreateRequest) -> Result<TokenAuth> {
         self.create_at(None, request).await
+    }
+
+    /// Creates an orphan token through OpenBao's dedicated policy path.
+    ///
+    /// This is not only a convenience for [`TokenCreateRequest::no_parent`].
+    /// OpenBao policies are path-specific, so callers may be granted sudo
+    /// capability on `auth/token/create-orphan` without access to
+    /// `auth/token/create`.
+    pub async fn create_orphan(&self, request: &TokenCreateRequest) -> Result<TokenAuth> {
+        request.validate()?;
+        let envelope: TokenAuthEnvelope = self
+            .client
+            .request_json(Method::POST, "auth/token/create-orphan", Some(request))
+            .await?;
+        envelope.auth.ok_or(Error::MissingField("auth"))
     }
 
     /// Creates a token using an OpenBao token role.
@@ -483,6 +505,24 @@ impl Token<'_> {
         let envelope: TokenAuthEnvelope = self
             .client
             .request_json(Method::POST, "auth/token/renew", Some(&payload))
+            .await?;
+        envelope.auth.ok_or(Error::MissingField("auth"))
+    }
+
+    /// Renews a token by accessor without holding the token value.
+    pub async fn renew_accessor(
+        &self,
+        accessor: &SecretString,
+        increment: Option<&str>,
+    ) -> Result<TokenAuth> {
+        validate_renew_increment(increment)?;
+        let payload = RenewAccessorPayload {
+            accessor: accessor.expose_secret(),
+            increment,
+        };
+        let envelope: TokenAuthEnvelope = self
+            .client
+            .request_json(Method::POST, "auth/token/renew-accessor", Some(&payload))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }

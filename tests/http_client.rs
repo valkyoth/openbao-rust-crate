@@ -1249,6 +1249,81 @@ async fn sys_sanitized_config_state_json_sends_documented_path() {
 }
 
 #[tokio::test]
+async fn token_orphan_and_accessor_renew_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match index {
+                0 => {
+                    assert!(request.starts_with("POST /v1/auth/token/create-orphan HTTP/1.1"));
+                    assert!(request.contains(r#""policies":["app-read"]"#));
+                    assert!(request.contains(r#""renewable":true"#));
+                    format!(
+                        r#"{{"auth":{{"client_token":"{}{}","accessor":"{}{}","policies":["app-read"],"token_policies":["app-read"],"lease_duration":1800,"renewable":true}}}}"#,
+                        "orphan-", "token", "accessor-", "value"
+                    )
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/auth/token/renew-accessor HTTP/1.1"));
+                    assert!(
+                        request.contains(&format!(r#""accessor":"{}{}""#, "accessor-", "value"))
+                    );
+                    assert!(request.contains(r#""increment":"15m""#));
+                    format!(
+                        r#"{{"auth":{{"client_token":"{}{}","accessor":"{}{}","policies":["app-read"],"token_policies":["app-read"],"lease_duration":900,"renewable":true}}}}"#,
+                        "renewed-", "token", "accessor-", "value"
+                    )
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let orphan = client
+        .token()
+        .create_orphan(
+            &openbao::auth::token::TokenCreateRequest {
+                renewable: Some(true),
+                ..Default::default()
+            }
+            .with_policies(["app-read"]),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(orphan.lease_duration, 1800);
+
+    let renewed = client
+        .token()
+        .renew_accessor(&orphan.accessor, Some("15m"))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(renewed.lease_duration, 900);
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_logger_helpers_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

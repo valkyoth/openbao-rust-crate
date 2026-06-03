@@ -73,11 +73,11 @@ The `0.9.0` stabilization line now uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `457/643` (`71.1%`);
-- typed plus partial coverage: `458/643` (`71.2%`);
-- addressed by typed, partial, raw, or external policy: `500/643` (`77.8%`);
+- strict typed coverage: `459/643` (`71.4%`);
+- typed plus partial coverage: `460/643` (`71.5%`);
+- addressed by typed, partial, raw, or external policy: `502/643` (`78.1%`);
 - rows needing a pre-`1.0.0` implementation/rejection/deferral decision:
-  `143`.
+  `141`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
 `docs/openbao-2.5-endpoint-matrix.csv` for each method/path row.
@@ -254,6 +254,9 @@ Support plan:
   are implemented.
 - `0.8.0`: token role write/read/list/delete, token tidy, and revoke-orphan are
   implemented.
+- `0.9.0`: token create-orphan and accessor renewal helpers are implemented,
+  completing the typed token endpoint matrix except for the documented
+  lookup-self GET/POST compatibility partial.
 - `0.8.0`: capability responses now include typed borrowed views and common
   access-check helpers while preserving the raw string lists.
 - `0.6.0`: idempotent admin bootstrap builder is implemented for KV v2 mounts,

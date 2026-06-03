@@ -144,8 +144,6 @@ def classify_auth(page: str, path: str) -> tuple[str, str]:
         )
 
     if page == "/api-docs/auth/token/":
-        if path in ("/auth/token/create-orphan", "/auth/token/renew-accessor"):
-            return ("decision", "Token endpoint needs a dedicated helper decision.")
         if path == "/auth/token/lookup-self":
             return (
                 "partial",
@@ -538,7 +536,6 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "## Required Follow-Up",
             "",
-            "- Token `create-orphan` and `renew-accessor` need dedicated helper decisions.",
             "- AppRole delegated per-property endpoints need a final raw-vs-typed decision.",
             "- Identity OIDC admin/discovery/token/introspection rows and MFA management are planned for `0.10.0`.",
             "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",

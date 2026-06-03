@@ -251,7 +251,7 @@ openbao = { version = "0.9", features = ["time"] }
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
 | `rabbitmq` | yes | RabbitMQ secrets engine connection, lease, role, and credential helpers. |
 | `userpass` | yes | Userpass login and user administration helpers. |
-| `token` | yes | Token lifecycle, token role, tidy, and revoke-orphan helpers. |
+| `token` | yes | Token lifecycle, create-orphan, accessor renewal/revocation, token role, tidy, and revoke-orphan helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
 | `pki` | yes | PKI authority, issuer/key metadata/import, role, role patch, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, tidy, tidy status, and tidy cancel helpers. |
@@ -275,7 +275,7 @@ openbao = { version = "0.9", features = ["time"] }
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
 For the current `0.9.0` line it records `643` documented endpoint rows, with
-`457/643` (`71.1%`) strict typed or operator-gated coverage.
+`459/643` (`71.4%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
 
@@ -307,7 +307,7 @@ For the current `0.9.0` line it records `643` documented endpoint rows, with
 | Bearer auth | Yes | Optional `Authorization: Bearer` header mode. |
 | AppRole login/admin | Yes | Role ID, SecretID, accessors, and returned tokens are secret-aware; role and SecretID lifecycle helpers are typed. |
 | Token accessor handling | Yes | Accessors are treated as secret material. |
-| Token lifecycle helpers | Yes | Lookup, accessor lookup/list, renew, revoke, revoke-self, and create helpers. |
+| Token lifecycle helpers | Yes | Lookup, accessor lookup/list, create/create-orphan, renew/renew-accessor, revoke, revoke-self, and revoke-accessor helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
 | JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL, callback, and direct/device poll helpers. |
@@ -1003,7 +1003,7 @@ async fn main() -> Result<()> {
 }
 ```
 
-Create, inspect, renew, and revoke a child token:
+Create, inspect, renew, and revoke child or orphan tokens:
 
 ```rust,no_run
 use openbao::auth::token::TokenCreateRequest;
@@ -1036,6 +1036,25 @@ async fn main() -> Result<()> {
 
     let _renewed = client.token().renew(&child.client_token, Some("15m")).await?;
     client.token().revoke_accessor(&child.accessor).await?;
+
+    let orphan = client
+        .token()
+        .create_orphan(
+            &TokenCreateRequest {
+                display_name: Some("example-orphan".to_owned()),
+                renewable: Some(true),
+                ..TokenCreateRequest::default()
+            }
+            .with_policies(["app-read"])
+            .with_ttl("30m")?,
+        )
+        .await?;
+
+    let _renewed_by_accessor = client
+        .token()
+        .renew_accessor(&orphan.accessor, Some("15m"))
+        .await?;
+    client.token().revoke_accessor(&orphan.accessor).await?;
     Ok(())
 }
 ```

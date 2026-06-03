@@ -2,8 +2,8 @@
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
-`643` documented endpoint rows, `457` strict typed or operator-gated rows, and
-`143` rows still needing an implementation, rejection, raw-wrapper policy, or
+`643` documented endpoint rows, `459` strict typed or operator-gated rows, and
+`141` rows still needing an implementation, rejection, raw-wrapper policy, or
 external-client policy decision. Because there is no rush to force stability,
 the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
 deliberately.
@@ -305,8 +305,7 @@ Stop condition:
 - a shared non-secret paginated-list abstraction is implemented;
 - admin bootstrap convergence for PKI roles and Identity entities/groups is
   implemented;
-- small auth/token gaps from the matrix are implemented or assigned to
-  `0.10.0`;
+- token `create-orphan` and `renew-accessor` helpers are implemented;
 - optional `tracing` crate instrumentation is implemented without a default
   dependency; OpenTelemetry SDK dependencies and custom request hooks are
   rejected for stable scope, W3C `traceparent` propagation is deferred, the
@@ -343,8 +342,6 @@ Stop condition:
   implemented with secret-aware request/response types and redacted `Debug`;
 - system MFA validate is implemented as the required second step for
   MFA-enforced login flows;
-- token `create-orphan` and `renew-accessor` helpers are implemented or
-  explicitly rejected;
 - AppRole delegated per-property endpoints are either implemented as narrow
   helpers or permanently documented as `Client::request_json` rows because full
   role read/write is already typed;

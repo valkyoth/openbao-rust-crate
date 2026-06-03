@@ -80,14 +80,14 @@ auth,POST,/auth/cert/config,typed,https://openbao.org/api-docs/auth/cert/,Typed 
 auth,POST,/auth/cert/login,typed,https://openbao.org/api-docs/auth/cert/,Typed auth helper exists.
 auth,LIST,/auth/token/accessors,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,POST,/auth/token/create,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
-auth,POST,/auth/token/create-orphan,decision,https://openbao.org/api-docs/auth/token/,Token endpoint needs a dedicated helper decision.
+auth,POST,/auth/token/create-orphan,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,POST,/auth/token/create/:role_name,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,POST,/auth/token/lookup,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,GET,/auth/token/lookup-self,partial,https://openbao.org/api-docs/auth/token/,"Typed helper exists, but uses OpenBao-compatible POST while this row documents GET."
 auth,POST,/auth/token/lookup-accessor,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,POST,/auth/token/renew,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,POST,/auth/token/renew-self,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
-auth,POST,/auth/token/renew-accessor,decision,https://openbao.org/api-docs/auth/token/,Token endpoint needs a dedicated helper decision.
+auth,POST,/auth/token/renew-accessor,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,POST,/auth/token/revoke,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,POST,/auth/token/revoke-self,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
 auth,POST,/auth/token/revoke-accessor,typed,https://openbao.org/api-docs/auth/token/,Typed auth helper exists.
