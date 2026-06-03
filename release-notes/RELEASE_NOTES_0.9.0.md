@@ -89,8 +89,10 @@
 - Implement in `0.11.0`: Transit wrapping-key, import/import-version, BYOK
   export, soft-delete/restore, cache/global config, CSR generation, and
   certificate install rows. Core wrappers accept already-wrapped
-  `SecretString` material; optional client-side wrapping helpers remain
-  post-`1.0.0` or late pre-`1.0.0` behind `transit-import` only if justified.
+  `SecretString` material. A pre-`1.0.0` optional client-side wrapping helper
+  is planned behind `transit-import` with feature-gated `rsa` and `aes-gcm`
+  dependencies, secret-aware inputs, redacted output handling, and no
+  security-certification claims.
 - Implement in `0.12.0`: PKI named-issuer issue/sign/sign-intermediate,
   root lifecycle, public CA/CRL/cert reads, and PKI config rows. Destructive
   root deletion must stay behind `operator-ops` plus

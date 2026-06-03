@@ -185,7 +185,10 @@ Support plan:
   soft-delete/restore, cache config, global key config, CSR generation, and
   certificate install rows are planned. The crate will carry already-wrapped
   key material as `SecretString`; callers own client-side RSA-OAEP/AES-GCM
-  wrapping through their HSM, OpenSSL, or chosen crypto library.
+  wrapping through their HSM, OpenSSL, or chosen crypto library. A pre-`1.0.0`
+  optional `transit-import` helper is also planned for callers who want the
+  crate to prepare OpenBao's wrapped-key blob behind feature-gated `rsa` and
+  `aes-gcm` dependencies.
 - `0.4.0`: PKI URL and CRL config, root/intermediate generation,
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer

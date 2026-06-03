@@ -38,7 +38,8 @@ All notable changes to this project are documented here.
   import-version, BYOK export, soft-delete/restore, cache/global config, CSR,
   and certificate-install rows are planned for `0.11.0`; core wrappers accept
   already-wrapped `SecretString` material and do not perform client-side
-  RSA-OAEP/AES-GCM wrapping.
+  RSA-OAEP/AES-GCM wrapping. A pre-`1.0.0` optional `transit-import` helper is
+  planned with feature-gated `rsa` and `aes-gcm` dependencies.
 
 ### Security
 

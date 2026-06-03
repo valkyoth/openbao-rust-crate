@@ -363,8 +363,13 @@ Stop condition:
 - the boundary is documented clearly: the core crate does not implement
   client-side RSA-OAEP/AES-GCM wrapping; callers own that step through their
   HSM, OpenSSL, or chosen crypto library;
-- an optional `transit-import` wrapping helper with `rsa` and `aes-gcm`
-  remains post-`1.0.0` or late pre-`1.0.0` only if real usage proves the need;
+- an optional `transit-import` wrapping helper is implemented before `1.0.0`,
+  preferably in this `0.11.0` line, with optional `rsa` and `aes-gcm`
+  dependencies only when the feature is enabled;
+- the `transit-import` helper accepts raw key bytes through zeroizing or
+  secret-aware inputs, returns the OpenBao wrapped-key blob as `SecretString`,
+  has redacted `Debug`, and is documented as an ergonomic client-side helper
+  rather than an OpenBao, FIPS, HSM, or post-quantum security guarantee;
 - `transit-bytes` remains optional and no default dependency growth is added;
 - endpoint matrix is regenerated and Transit decision rows are resolved.
 
