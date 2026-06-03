@@ -37,9 +37,10 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.10.0` development line. `0.10.0` builds on the
-released `0.9.0` API with Identity OIDC token/admin coverage and the
-Identity/MFA completion work for this release line.
+This README documents the `0.11.0` release line. `0.11.0` builds on the
+released `0.10.0` API with Transit advanced key-management coverage for
+BYOK/import, reversible soft-delete, cache/global configuration, CSR
+generation, and certificate-chain install helpers.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -154,7 +155,7 @@ Delivered in `0.10.0`:
   response parsing and secret-aware MFA provider credentials, TOTP outputs,
   passcodes, returned tokens, and accessors.
 
-Current `0.11.0` line:
+Delivered in `0.11.0`:
 
 - Transit advanced key management: BYOK wrapping-key, import/import-version,
   BYOK export, soft-delete/restore, cache/global config, CSR generation, and
@@ -208,7 +209,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.10.0` development line tracks compatibility evidence across this supported
+The `0.11.0` release line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
