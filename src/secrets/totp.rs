@@ -27,6 +27,14 @@ pub struct Totp<'a> {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TotpAlgorithm {
     /// SHA-1, the OpenBao default for TOTP compatibility.
+    ///
+    /// SHA-1 in HMAC-TOTP is retained for RFC 4226 and legacy authenticator
+    /// compatibility. Prefer [`TotpAlgorithm::Sha256`] or
+    /// [`TotpAlgorithm::Sha512`] for new deployments.
+    #[deprecated(
+        since = "0.11.0",
+        note = "SHA-1 in TOTP is retained for RFC 4226 compatibility; prefer SHA256 or SHA512 for new deployments"
+    )]
     Sha1,
     /// SHA-256.
     Sha256,
@@ -37,6 +45,7 @@ pub enum TotpAlgorithm {
 impl TotpAlgorithm {
     fn as_str(self) -> &'static str {
         match self {
+            #[allow(deprecated)]
             Self::Sha1 => "SHA1",
             Self::Sha256 => "SHA256",
             Self::Sha512 => "SHA512",
@@ -60,6 +69,7 @@ impl<'de> Deserialize<'de> for TotpAlgorithm {
     {
         let value = String::deserialize(deserializer)?;
         match value.as_str() {
+            #[allow(deprecated)]
             "SHA1" => Ok(Self::Sha1),
             "SHA256" => Ok(Self::Sha256),
             "SHA512" => Ok(Self::Sha512),

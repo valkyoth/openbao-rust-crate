@@ -22,7 +22,10 @@ use crate::{
     AclPolicyBuilder, Authenticated, Client, Error, Result,
     auth::token::{TokenAuth, TokenCreateRequest},
     path::{validate_endpoint_path, validate_mount_path},
-    secrets::transit::TransitCreateKeyRequest,
+    secrets::{
+        kv2::{Kv2ServiceConfig, Kv2WriteOptions},
+        transit::TransitCreateKeyRequest,
+    },
     sys::{AuthEnableRequest, MountEnableRequest, PolicyWriteRequest},
 };
 
@@ -936,23 +939,36 @@ impl AdminBootstrap {
                     values,
                 } => {
                     let kv = client.kv2(mount)?;
-                    let current = match kv.read_service_config(path).await {
-                        Ok(config) => Some(config),
+                    let current = match kv.read::<Kv2ServiceConfig>(path).await {
+                        Ok(secret) => Some(secret),
                         Err(error) if error.is_not_found() => None,
                         Err(error) => return Err(error),
                     };
-                    let needs_patch = current.as_ref().is_none_or(|config| {
+                    let needs_patch = current.as_ref().is_none_or(|secret| {
                         values.iter().any(|(key, value)| {
-                            config.get(key).is_none_or(|current| {
+                            secret.data.get(key).is_none_or(|current| {
                                 !secret_values_equal(current.expose_secret(), value.expose_secret())
                             })
                         })
                     });
                     let status = if needs_patch {
-                        kv.patch(path, secret_patch_payload(values)).await?;
-                        if current.is_some() {
+                        if let Some(current) = current {
+                            kv.patch_with_options(
+                                path,
+                                secret_patch_payload(values),
+                                Some(Kv2WriteOptions {
+                                    cas: Some(current.metadata.version),
+                                }),
+                            )
+                            .await?;
                             BootstrapStepStatus::Updated
                         } else {
+                            kv.write_with_options(
+                                path,
+                                secret_patch_payload(values),
+                                Some(Kv2WriteOptions { cas: Some(0) }),
+                            )
+                            .await?;
                             BootstrapStepStatus::Created
                         }
                     } else {

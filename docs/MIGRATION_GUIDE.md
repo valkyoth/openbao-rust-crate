@@ -28,9 +28,10 @@ Keep these `0.8` patterns:
 
 Adopt these `0.9` additions where they fit:
 
-- use `RetryPolicy` and `Client::request_json_with_retry` only for
-  caller-approved idempotent raw JSON requests. Typed helpers remain
-  single-shot by default so non-idempotent writes are not retried accidentally;
+- use `RetryPolicy`, `RetryableMethod`, and `Client::request_json_with_retry`
+  only for caller-approved idempotent GET, HEAD, or OpenBao LIST raw JSON
+  requests. Typed helpers remain single-shot by default so non-idempotent
+  writes are not retried accidentally;
 - keep existing paginated list helper calls. Internally they now share
   `ListPageOptions`, which validates the `after` cursor and bounds `limit`.
   Token accessors, lease IDs, and other secret-bearing lists intentionally stay

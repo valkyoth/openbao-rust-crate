@@ -20,6 +20,12 @@
 //! metrics and capped Raft snapshots, are exposed through typed helpers rather
 //! than a public raw-body escape hatch.
 //!
+//! `AdminBootstrap` performs read-compare-write convergence. Run only one
+//! bootstrap plan per OpenBao cluster at a time unless the caller provides an
+//! external lock. KV v2 secret convergence uses OpenBao CAS where available,
+//! but ACL policies, AppRole settings, and other bootstrap operations still
+//! require caller-owned serialization to avoid overwriting concurrent changes.
+//!
 //! Secret request payloads are serialized through a zeroizing intermediate
 //! buffer before handoff to `reqwest`. The HTTP stack still owns a normal body
 //! buffer after that handoff, and TLS, kernel, allocator, and device buffers
@@ -103,7 +109,7 @@ pub mod sys;
 
 pub use client::{
     Authenticated, Client, ClientBuilder, HeaderMode, HttpPolicy, OpenBao, OpenBaoConfig,
-    RetryPolicy, RootCertificateMode, SharedClient, Unauthenticated,
+    RetryPolicy, RetryableMethod, RootCertificateMode, SharedClient, Unauthenticated,
 };
 pub use duration::{RenewalHint, duration_to_bao_string};
 pub use error::{Error, Result};

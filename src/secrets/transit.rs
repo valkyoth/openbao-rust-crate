@@ -9,7 +9,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
     de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
 };
-#[cfg(feature = "transit-import")]
+#[cfg(any(feature = "transit-import", feature = "transit-bytes"))]
 use zeroize::Zeroize;
 #[cfg(any(feature = "transit-bytes", feature = "transit-import"))]
 use zeroize::Zeroizing;
@@ -1437,7 +1437,7 @@ pub struct TransitSignResponse {
     pub signature: SecretString,
     /// Derived public key, when returned by OpenBao.
     #[serde(default, alias = "publickey")]
-    pub public_key: Option<SecretString>,
+    pub public_key: Option<String>,
 }
 
 impl fmt::Debug for TransitSignResponse {
@@ -1445,10 +1445,7 @@ impl fmt::Debug for TransitSignResponse {
         formatter
             .debug_struct("TransitSignResponse")
             .field("signature", &"<redacted>")
-            .field(
-                "public_key",
-                &self.public_key.as_ref().map(|_| "<redacted>"),
-            )
+            .field("public_key", &self.public_key)
             .finish()
     }
 }
@@ -2137,9 +2134,14 @@ impl Transit<'_> {
         &self,
         destination: &str,
         source: &str,
-        version: Option<&str>,
+        version: Option<u64>,
         hash_function: Option<TransitImportHashFunction>,
     ) -> Result<TransitByokExport> {
+        if matches!(version, Some(0)) {
+            return Err(Error::InvalidParameter(
+                "Transit key version must be greater than zero".into(),
+            ));
+        }
         let mut segments = vec!["byok-export"];
         let destination = validate_key_name(destination)?;
         for segment in &destination {
@@ -2149,7 +2151,8 @@ impl Transit<'_> {
         for segment in &source {
             segments.push(segment);
         }
-        if let Some(version) = version {
+        let version = version.map(|value| value.to_string());
+        if let Some(version) = version.as_deref() {
             segments.push(version);
         }
         let query = hash_function
@@ -2208,6 +2211,11 @@ impl Transit<'_> {
         name: &str,
         version: Option<u64>,
     ) -> Result<TransitExportResponse> {
+        if matches!(version, Some(0)) {
+            return Err(Error::InvalidParameter(
+                "Transit key version must be greater than zero".into(),
+            ));
+        }
         let version = version.map(|version| version.to_string());
         let mut segments = vec!["export", key_type.as_path_segment()];
         let name = validate_key_name(name)?;
@@ -2947,9 +2955,11 @@ fn base64_encode_secret(input: &[u8]) -> Result<SecretString> {
     let exposed = encoded.try_into_exposed_string().map_err(|_| {
         Error::Internal("base64-ng produced non-UTF-8 text for standard base64 output")
     })?;
-    Ok(SecretString::from(
-        exposed.into_exposed_unprotected_string_caller_must_zeroize(),
-    ))
+    let mut plaintext =
+        Zeroizing::new(exposed.into_exposed_unprotected_string_caller_must_zeroize());
+    let secret = SecretString::from(plaintext.as_str().to_owned());
+    plaintext.zeroize();
+    Ok(secret)
 }
 
 #[cfg(feature = "transit-bytes")]

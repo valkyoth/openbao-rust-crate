@@ -52,6 +52,21 @@ Please include:
 - Third-party GitHub Actions must be pinned to immutable commit SHAs.
 - New dependencies require a release-plan justification and `cargo deny` review.
 
+## Admin Bootstrap Concurrency
+
+`AdminBootstrap` is a convergence helper, not a distributed lock. Its
+`ensure_*` operations read OpenBao state, compare it with the desired state, and
+then write when a change is needed. OpenBao does not provide check-and-set for
+every endpoint this module touches, so multiple bootstrap runners targeting the
+same cluster can race and overwrite security-critical configuration such as ACL
+policies, AppRole constraints, or secret values.
+
+Run at most one bootstrap plan per target cluster at a time. Use an external
+deployment lock, Kubernetes leader election, CI/CD environment lock, or another
+operator-controlled serialization mechanism. KV v2 secret convergence uses
+OpenBao CAS where available, but other bootstrap operations still require
+external serialization.
+
 ## Residual Secret Memory
 
 After a JSON request body is handed to `reqwest`, the transport stack, TLS
@@ -82,6 +97,15 @@ rotation APIs. It is disabled by default and fails to compile unless
 `operator-ops-acknowledged` is enabled too. Do not enable it in normal
 application clients; reserve it for audited operator tooling with an external
 key ceremony and custody model.
+
+The `transit-import` feature is a software BYOK wrapping helper. It depends on
+the host OpenSSL runtime through the `openssl` crate and requires an audited
+OpenSSL 1.1.1 or newer deployment baseline. It is not an HSM, FIPS,
+certification, or post-quantum claim.
+
+The `sensitive-http-test-only` feature is for this crate's mock HTTP tests
+only. It must not be enabled in production application builds. Release metadata
+checks verify it is not part of the default feature set.
 
 ## Dev Bootstrap Warning
 

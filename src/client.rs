@@ -98,6 +98,33 @@ pub struct RetryPolicy {
     max_delay: Duration,
 }
 
+/// HTTP methods that are safe to use with [`Client::request_json_with_retry`].
+///
+/// This intentionally excludes write verbs such as `POST`, `PUT`, `PATCH`, and
+/// `DELETE`. Retrying OpenBao writes can create duplicate credentials or repeat
+/// destructive operations when the server completed the first request but the
+/// connection failed before the response reached the caller.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RetryableMethod {
+    /// HTTP `GET`.
+    Get,
+    /// HTTP `HEAD`.
+    Head,
+    /// OpenBao's custom `LIST` method.
+    List,
+}
+
+impl RetryableMethod {
+    fn as_method(self) -> Method {
+        match self {
+            Self::Get => Method::GET,
+            Self::Head => Method::HEAD,
+            Self::List => Method::from_bytes(b"LIST")
+                .unwrap_or_else(|error| unreachable!("LIST is a valid HTTP method: {error}")),
+        }
+    }
+}
+
 impl RetryPolicy {
     /// Creates an exponential backoff policy.
     ///
@@ -612,20 +639,19 @@ impl<State> Client<State> {
         .await
     }
 
-    /// Sends a raw JSON request with caller-approved exponential retry.
+    /// Sends a retryable raw JSON request with caller-approved exponential retry.
     ///
     /// Normal crate requests are single-shot. This helper retries only when
     /// the returned [`Error`] is temporary and only when the caller explicitly
-    /// supplies a [`RetryPolicy`] and async delay function. Use it for
-    /// read-only or otherwise idempotent calls; do not use it for
-    /// non-idempotent writes unless the application owns and accepts the
-    /// duplicate-operation risk.
+    /// supplies a [`RetryPolicy`] and async delay function. The method is a
+    /// [`RetryableMethod`] so this helper cannot be used for write verbs such
+    /// as `POST`, `PATCH`, or `DELETE`.
     ///
     /// The delay function keeps this API runtime-neutral. For Tokio callers,
     /// pass `tokio::time::sleep`.
     pub async fn request_json_with_retry<T, B, F, Fut>(
         &self,
-        method: Method,
+        method: RetryableMethod,
         path: &str,
         body: Option<&B>,
         policy: RetryPolicy,
@@ -640,7 +666,7 @@ impl<State> Client<State> {
         let mut attempt = 1;
         let mut retry_index = 0;
         loop {
-            match self.request_json(method.clone(), path, body).await {
+            match self.request_json(method.as_method(), path, body).await {
                 Ok(response) => return Ok(response),
                 Err(error) if attempt < policy.max_attempts && error.is_temporary() => {
                     delay(policy.delay_for_retry(retry_index)).await;

@@ -16,7 +16,9 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use openbao::{Client, Error, Method, OpenBaoConfig, RetryPolicy, sys::DevBootstrapOptions};
+use openbao::{
+    Client, Error, OpenBaoConfig, RetryPolicy, RetryableMethod, sys::DevBootstrapOptions,
+};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
@@ -221,7 +223,7 @@ async fn explicit_retry_policy_retries_temporary_api_errors() {
 
     let health: openbao::sys::Health = client
         .request_json_with_retry(
-            Method::GET,
+            RetryableMethod::Get,
             "sys/health",
             Option::<&openbao::Empty>::None,
             policy,
@@ -274,7 +276,7 @@ async fn explicit_retry_policy_does_not_retry_non_temporary_api_errors() {
 
     let error = match client
         .request_json_with_retry::<openbao::sys::Health, openbao::Empty, _, _>(
-            Method::GET,
+            RetryableMethod::Get,
             "sys/health",
             None,
             policy,
@@ -3351,13 +3353,7 @@ async fn transit_crypto_helpers_use_documented_paths() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(signature.signature.expose_secret(), "vault:v1:signature");
-    assert_eq!(
-        signature
-            .public_key
-            .as_ref()
-            .map(SecretString::expose_secret),
-        Some("derived-public-key")
-    );
+    assert_eq!(signature.public_key.as_deref(), Some("derived-public-key"));
 
     let verified = transit
         .verify(
@@ -3679,7 +3675,7 @@ async fn transit_advanced_key_management_uses_documented_paths() {
         .byok_export(
             "destination",
             "source",
-            Some("3"),
+            Some(3),
             Some(openbao::secrets::transit::TransitImportHashFunction::Sha512),
         )
         .await
@@ -7248,6 +7244,35 @@ async fn pki_role_urls_issue_sign_revoke_and_cert_paths_are_documented() {
 }
 
 #[tokio::test]
+async fn transit_export_helpers_reject_zero_versions_before_request() {
+    let config =
+        OpenBaoConfig::new("https://127.0.0.1:9940").unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let transit = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert!(
+        transit
+            .byok_export("destination", "source", Some(0), None)
+            .await
+            .is_err()
+    );
+    assert!(
+        transit
+            .export_key(
+                openbao::secrets::transit::TransitExportKeyType::EncryptionKey,
+                "source",
+                Some(0),
+            )
+            .await
+            .is_err()
+    );
+}
+
+#[tokio::test]
 async fn pki_authority_crl_and_tidy_paths_are_documented() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -8917,8 +8942,8 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
                     )
                 }
                 8 => {
-                    assert!(request.starts_with("PATCH /v1/secret/data/app/config HTTP/1.1"));
-                    assert!(request.contains("application/merge-patch+json"));
+                    assert!(request.starts_with("POST /v1/secret/data/app/config HTTP/1.1"));
+                    assert!(request.contains(r#""options":{"cas":0}"#));
                     assert!(
                         request.contains(&format!(r#""API_KEY":"{}{}""#, "runtime-", "secret"))
                     );

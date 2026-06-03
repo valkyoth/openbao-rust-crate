@@ -325,7 +325,8 @@ Implemented in `0.8.0`:
 Finalization work before `1.0.0`:
 
 - explicit opt-in retry policy with exponential backoff is implemented in
-  `0.9.0` through `RetryPolicy` and `Client::request_json_with_retry`;
+  `0.9.0` and tightened in `0.11.0` through `RetryPolicy`,
+  `RetryableMethod`, and `Client::request_json_with_retry`;
 - shared non-secret paginated-list abstraction is implemented in `0.9.0`
   through `ListPageOptions`;
 - admin bootstrap convergence for PKI roles and Identity entities/groups is

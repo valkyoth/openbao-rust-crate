@@ -24,6 +24,21 @@ All notable changes to this project are documented here.
 - Documented the Transit BYOK wrapper boundary: default endpoint wrappers
   accept only externally wrapped ciphertext or public-key-only import material
   and do not accept raw private or symmetric key bytes.
+- Restricted `request_json_with_retry` to `RetryableMethod` so write verbs
+  cannot be retried accidentally through the raw retry helper.
+- Added KV v2 CAS protection to `AdminBootstrap` secret-value convergence,
+  rejecting concurrent modification instead of silently overwriting it where
+  OpenBao exposes version checks.
+- Tightened OpenBao path validation to reject non-ASCII and percent characters
+  before URL construction.
+- Corrected Transit sign response public-key handling to treat returned public
+  keys as public `String` data while keeping signatures secret-aware.
+- Added local validation for Transit export/BYOK version `0` and changed BYOK
+  export version selection to `Option<u64>`.
+- Explicitly zeroized intermediate base64 strings before returning
+  `SecretString` wrappers from Transit/System raw-byte helpers.
+- Deprecated TOTP SHA-1 selection for new deployments while retaining legacy
+  RFC 4226 compatibility.
 
 ## 0.10.0 - 2026-06-03
 

@@ -28,9 +28,19 @@ fn validate_path(value: &str, allow_empty: bool) -> Result<Vec<String>> {
             "path exceeds maximum allowed length".into(),
         ));
     }
+    if !value.is_ascii() {
+        return Err(Error::InvalidPath(
+            "non-ASCII characters are not allowed in OpenBao paths".into(),
+        ));
+    }
     if value.as_bytes().iter().any(u8::is_ascii_control) {
         return Err(Error::InvalidPath(
             "control characters are not allowed".into(),
+        ));
+    }
+    if value.contains('%') {
+        return Err(Error::InvalidPath(
+            "percent characters are not allowed in OpenBao paths".into(),
         ));
     }
     if value.bytes().any(|byte| byte == b' ') {
@@ -96,6 +106,8 @@ mod tests {
         assert!(validate_mount_path("secret?x=1").is_err());
         assert!(validate_mount_path("secret.").is_err());
         assert!(validate_mount_path("secret path").is_err());
+        assert!(validate_mount_path("secret/%2e%2e").is_err());
+        assert!(validate_mount_path("secret/\u{202e}hidden").is_err());
         assert!(validate_mount_path(&"a".repeat(MAX_PATH_BYTES + 1)).is_err());
         assert!(validate_endpoint_path(&vec!["a"; MAX_PATH_SEGMENTS + 1].join("/")).is_err());
     }

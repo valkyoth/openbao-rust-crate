@@ -76,4 +76,9 @@ if git grep -l "base64-ng contributors" -- ':!scripts/validate-release-metadata.
   exit 1
 fi
 
+if sed -n '/^default = \[/,/^\]/p' Cargo.toml | grep -q 'sensitive-http-test-only'; then
+  echo "test-only sensitive HTTP feature must not be in default features" >&2
+  exit 1
+fi
+
 echo "release metadata ok"

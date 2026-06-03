@@ -44,14 +44,34 @@ waiting for external pentest feedback and GitHub CI validation before the
 
 ## Security Notes
 
+- Pentest feedback for this release line tightened retry, Transit, bootstrap,
+  path-validation, and secret-encoding behavior before tagging.
+- `Client::request_json_with_retry` now accepts `RetryableMethod` instead of
+  arbitrary `reqwest::Method`, preventing accidental retries of non-idempotent
+  OpenBao write operations.
+- `AdminBootstrap` uses KV v2 CAS for secret-value convergence where OpenBao
+  supports it, and the security policy now states that all bootstrap plans
+  still require external serialization for ACL policies, AppRole settings, and
+  other read-compare-write operations.
+- OpenBao path validation rejects non-ASCII and percent characters to avoid
+  visually ambiguous or percent-encoded path input.
+- Transit BYOK export and normal export reject version `0` locally. BYOK export
+  now takes `Option<u64>` for version selection.
+- Transit sign responses expose returned public keys as public `String` data
+  while keeping signatures secret-aware and redacted.
+- TOTP SHA-1 remains available for legacy RFC 4226 compatibility but is
+  deprecated; use SHA-256 or SHA-512 for new deployments.
+- Base64 secret helpers now explicitly zeroize intermediate exposed strings
+  before returning `SecretString` values.
 - Raw private or symmetric key bytes must not be passed to the default endpoint
   wrappers. For private/symmetric imports, callers fetch the wrapping key, wrap
   key material externally through an HSM, OpenSSL, or a reviewed crypto
   library, and pass only the base64 BYOK ciphertext blob. Public-key-only import
   constructors carry public material.
 - The `transit-import` helper is non-default and software-only. It is an
-  ergonomic helper for audited development and automation use; it is not an
-  OpenBao, HSM, FIPS, certification, or post-quantum security claim.
+  ergonomic helper for audited development and automation use; it depends on an
+  audited OpenSSL 1.1.1+ runtime baseline and is not an OpenBao, HSM, FIPS,
+  certification, or post-quantum security claim.
 - BYOK export blobs are ciphertext, but the crate treats them as secret-aware
   values because leakage may enable unintended import workflows.
 - PEM CSRs and certificate chains are documented as public certificate material;

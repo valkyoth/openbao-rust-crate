@@ -286,7 +286,7 @@ openbao = { version = "0.10", features = ["time"] }
 | `totp` | yes | TOTP key and code helpers. |
 | `transit` | yes | Transit key lifecycle, batch cryptography, and single-operation cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
-| `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Uses `openssl` and `aes-kw`; not an HSM, FIPS, certification, or post-quantum claim. |
+| `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, or post-quantum claim. |
 | `sys` | yes | System backend, readiness, leases, quotas, storage, diagnostics, and operator-gated helpers. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
@@ -446,7 +446,7 @@ Retry an idempotent raw request with explicit exponential backoff:
 ```rust,no_run
 use std::time::Duration;
 
-use openbao::{Client, Method, Result, RetryPolicy};
+use openbao::{Client, Result, RetryPolicy, RetryableMethod};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -459,7 +459,7 @@ async fn main() -> Result<()> {
 
     let health: openbao::sys::Health = client
         .request_json_with_retry(
-            Method::GET,
+            RetryableMethod::Get,
             "sys/health",
             Option::<&openbao::Empty>::None,
             policy,
@@ -472,8 +472,8 @@ async fn main() -> Result<()> {
 }
 ```
 
-Retry is never global. Use it only when the call is read-only or otherwise
-idempotent for your application.
+Retry is never global. `RetryableMethod` exposes only GET, HEAD, and OpenBao
+LIST so the helper cannot retry write verbs by accident.
 
 Configure a stricter client with a namespace and root-only trust store:
 

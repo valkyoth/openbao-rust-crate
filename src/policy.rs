@@ -325,11 +325,11 @@ mod tests {
     fn policy_hcl_strings_escape_template_sequences() {
         let mut builder = AclPolicyBuilder::new();
         let policy = builder
-            .allow_path("secret/data/app-${env}/%{literal}", [AclCapability::Read])
+            .allow_path("secret/data/app-${env}", [AclCapability::Read])
             .and_then(|builder| builder.build())
             .unwrap_or_else(|error| panic!("{error}"));
 
-        assert!(policy.contains(r#"secret/data/app-$${env}/%%{literal}"#));
+        assert!(policy.contains(r#"secret/data/app-$${env}"#));
     }
 
     #[test]
