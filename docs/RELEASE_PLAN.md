@@ -2,8 +2,8 @@
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
-`644` documented endpoint rows, `502` strict typed or operator-gated rows,
-`96` planned implementation rows, and `0` open owner-decision rows. Because
+`644` documented endpoint rows, `503` strict typed or operator-gated rows,
+`95` planned implementation rows, and `0` open owner-decision rows. Because
 there is no rush to force stability, the pre-`1.0` line now extends through
 `0.15.0` so planned gaps can be closed deliberately.
 

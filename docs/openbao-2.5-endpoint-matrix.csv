@@ -396,7 +396,7 @@ system,GET,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/
 system,DELETE,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
 system,DELETE,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
 system,GET,/sys/metrics,typed,https://openbao.org/api-docs/system/metrics/,Typed system helper exists.
-system,POST,/sys/mfa/validate,planned,https://openbao.org/api-docs/system/mfa-validate/,Implement in 0.10.0; this completes MFA-enforced login flows.
+system,POST,/sys/mfa/validate,typed,https://openbao.org/api-docs/system/mfa-validate/,Typed MFA validation helper exists and returns secret-aware auth data.
 system,GET,/sys/monitor,rejected,https://openbao.org/api-docs/system/monitor/,Rejected for current stable scope: sys/monitor is a streaming log endpoint and needs a deliberate streaming API design outside the crate's single-response model.
 system,GET,/sys/mounts,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
 system,POST,/sys/mounts/:path,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.

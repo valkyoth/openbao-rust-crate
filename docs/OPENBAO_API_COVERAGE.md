@@ -73,11 +73,11 @@ The `0.10.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `644`;
-- strict typed coverage: `502/644` (`78.0%`);
-- typed plus partial coverage: `503/644` (`78.1%`);
-- addressed by typed, partial, raw, external, or rejected policy: `548/644`
-  (`85.1%`);
-- planned implementation rows before `1.0.0`: `96`;
+- strict typed coverage: `503/644` (`78.1%`);
+- typed plus partial coverage: `504/644` (`78.3%`);
+- addressed by typed, partial, raw, external, or rejected policy: `549/644`
+  (`85.2%`);
+- planned implementation rows before `1.0.0`: `95`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -239,8 +239,8 @@ into this SDK.
   CRUD/list, signed token generation, token introspection, discovery metadata,
   and default JWKS reads are implemented in `0.10.0`. Identity OIDC provider,
   scope, client, assignment, named-provider discovery, and named-provider JWKS
-  helpers are implemented in `0.10.0`. MFA method management, MFA login
-  enforcement, and `sys/mfa/validate` remain planned for `0.10.0`;
+  helpers are implemented in `0.10.0`. MFA method management and MFA login
+  enforcement remain planned for `0.10.0`;
   named-provider OIDC browser protocol flows remain external. LDAP config,
   root rotation, static roles/credentials, dynamic roles/credentials, and
   library check-out/check-in helpers are implemented.
@@ -266,6 +266,9 @@ Support plan:
 - `0.9.0`: token create-orphan and accessor renewal helpers are implemented,
   completing the typed token endpoint matrix except for the documented
   lookup-self GET/POST compatibility partial.
+- `0.10.0`: `sys/mfa/validate` is implemented as the typed second step for
+  MFA-enforced login flows, with passcodes, returned client tokens, and
+  accessors handled as secret material.
 - `0.8.0`: capability responses now include typed borrowed views and common
   access-check helpers while preserving the raw string lists.
 - `0.6.0`: idempotent admin bootstrap builder is implemented for KV v2 mounts,

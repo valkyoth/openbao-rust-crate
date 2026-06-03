@@ -19,8 +19,9 @@ use crate::{
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ListEntries, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
-        deserialize_bounded_string_map, deserialize_bounded_string_vec,
-        deserialize_optional_bounded_string_map, deserialize_optional_bounded_string_vec,
+        deserialize_bounded_string_map, deserialize_bounded_string_map_or_default,
+        deserialize_bounded_string_vec, deserialize_optional_bounded_string_map,
+        deserialize_optional_bounded_string_vec,
     },
 };
 
@@ -2322,6 +2323,185 @@ pub struct Capabilities {
     pub by_path: BTreeMap<String, Vec<String>>,
 }
 
+/// Login MFA validation request for `/sys/mfa/validate`.
+#[derive(Clone)]
+pub struct MfaValidateRequest {
+    /// MFA request ID returned in a login auth response with an MFA requirement.
+    pub mfa_request_id: String,
+    /// MFA method IDs or method names mapped to passcode credentials.
+    pub mfa_payload: BTreeMap<String, Vec<SecretString>>,
+}
+
+impl MfaValidateRequest {
+    /// Creates an MFA validation request.
+    pub fn new(mfa_request_id: impl Into<String>) -> Self {
+        Self {
+            mfa_request_id: mfa_request_id.into(),
+            mfa_payload: BTreeMap::new(),
+        }
+    }
+
+    /// Adds one MFA method credential.
+    ///
+    /// OpenBao accepts method UUIDs or method names as keys. For methods that
+    /// do not use passcodes, pass an empty `SecretString`.
+    #[must_use]
+    pub fn with_passcode(
+        mut self,
+        method_id_or_name: impl Into<String>,
+        passcode: SecretString,
+    ) -> Self {
+        self.mfa_payload
+            .entry(method_id_or_name.into())
+            .or_default()
+            .push(passcode);
+        self
+    }
+
+    /// Adds multiple credentials for one MFA method.
+    #[must_use]
+    pub fn with_passcodes(
+        mut self,
+        method_id_or_name: impl Into<String>,
+        passcodes: impl IntoIterator<Item = SecretString>,
+    ) -> Self {
+        self.mfa_payload
+            .entry(method_id_or_name.into())
+            .or_default()
+            .extend(passcodes);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.mfa_request_id.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "MFA request ID must not be empty".into(),
+            ));
+        }
+        if self.mfa_payload.is_empty() {
+            return Err(Error::InvalidParameter(
+                "MFA validation requires at least one method credential".into(),
+            ));
+        }
+        if self.mfa_payload.len() > crate::response::MAX_RESPONSE_STRINGS {
+            return Err(Error::InvalidParameter(
+                "MFA validation method count exceeds item limit".into(),
+            ));
+        }
+        for (method, passcodes) in &self.mfa_payload {
+            if method.trim().is_empty() {
+                return Err(Error::InvalidParameter(
+                    "MFA validation method IDs must not be empty".into(),
+                ));
+            }
+            if passcodes.is_empty() || passcodes.len() > crate::response::MAX_RESPONSE_STRINGS {
+                return Err(Error::InvalidParameter(
+                    "MFA validation passcode list must be non-empty and bounded".into(),
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for MfaValidateRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("MfaValidateRequest")
+            .field("mfa_request_id", &self.mfa_request_id)
+            .field("mfa_payload", &"<redacted>")
+            .finish()
+    }
+}
+
+impl Serialize for MfaValidateRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        #[derive(Serialize)]
+        struct Payload<'a> {
+            mfa_request_id: &'a str,
+            mfa_payload: BTreeMap<&'a str, Vec<&'a str>>,
+        }
+
+        let mut mfa_payload = BTreeMap::new();
+        for (method, passcodes) in &self.mfa_payload {
+            mfa_payload.insert(
+                method.as_str(),
+                passcodes
+                    .iter()
+                    .map(SecretString::expose_secret)
+                    .collect::<Vec<_>>(),
+            );
+        }
+        Payload {
+            mfa_request_id: &self.mfa_request_id,
+            mfa_payload,
+        }
+        .serialize(serializer)
+    }
+}
+
+/// Auth response returned after successful MFA validation.
+#[derive(Clone, Deserialize)]
+pub struct MfaValidateAuth {
+    /// Client token returned by OpenBao.
+    pub client_token: SecretString,
+    /// Token accessor returned by OpenBao.
+    pub accessor: SecretString,
+    /// Policies attached to the token.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub policies: Vec<String>,
+    /// Token policies attached to the token.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub token_policies: Vec<String>,
+    /// Identity policies attached to the token.
+    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
+    pub identity_policies: Option<Vec<String>>,
+    /// Token metadata.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_string_map_or_default"
+    )]
+    pub metadata: BTreeMap<String, String>,
+    /// Whether the token is orphaned.
+    #[serde(default)]
+    pub orphan: bool,
+    /// Entity ID associated with the token.
+    #[serde(default)]
+    pub entity_id: Option<String>,
+    /// Lease duration in seconds.
+    #[serde(default)]
+    pub lease_duration: u64,
+    /// Whether the token is renewable.
+    #[serde(default)]
+    pub renewable: bool,
+}
+
+impl fmt::Debug for MfaValidateAuth {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("MfaValidateAuth")
+            .field("client_token", &"<redacted>")
+            .field("accessor", &"<redacted>")
+            .field("policies", &self.policies)
+            .field("token_policies", &self.token_policies)
+            .field("identity_policies", &self.identity_policies)
+            .field("metadata", &self.metadata)
+            .field("orphan", &self.orphan)
+            .field("entity_id", &self.entity_id)
+            .field("lease_duration", &self.lease_duration)
+            .field("renewable", &self.renewable)
+            .finish()
+    }
+}
+
+#[derive(Deserialize)]
+struct MfaValidateEnvelope {
+    auth: Option<MfaValidateAuth>,
+}
+
 impl Capabilities {
     /// Returns the single-path compatibility capability list.
     #[must_use]
@@ -3852,6 +4032,20 @@ impl Sys<'_, Authenticated> {
             .request_json(Method::POST, "sys/capabilities-accessor", Some(&payload))
             .await?;
         Ok(envelope.data)
+    }
+
+    /// Validates a login MFA request and returns the resulting auth token.
+    ///
+    /// Use this when a login attempt returns an MFA requirement instead of a
+    /// client token. `mfa_payload` passcodes are stored as `SecretString` and
+    /// exposed only while serializing this request.
+    pub async fn validate_mfa(&self, request: &MfaValidateRequest) -> Result<MfaValidateAuth> {
+        request.validate()?;
+        let envelope: MfaValidateEnvelope = self
+            .client
+            .request_json(Method::POST, "sys/mfa/validate", Some(request))
+            .await?;
+        envelope.auth.ok_or(Error::MissingField("auth"))
     }
 
     /// Lists enabled audit devices.
@@ -5962,16 +6156,16 @@ impl<'de> Visitor<'de> for OptionalStringOrU64Visitor {
 mod tests {
     #![allow(clippy::panic)]
 
-    use secrecy::SecretString;
+    use secrecy::{ExposeSecret, SecretString};
 
     use super::{
         AuditEnableRequest, AuditedRequestHeaders, AuthEnableRequest, Capabilities, Capability,
         CorsConfig, CorsConfigRequest, HaStatus, LeaseDuration, LockedUsers, LoggerLevel,
-        MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest,
-        RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest, RaftPeerRequest,
-        RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest,
-        SysHashAlgorithm, SysHashRequest, SysRandomRequest, SysRandomResponse, SysRandomSource,
-        UiMounts, UiNamespaces, VersionHistory, audited_request_header_path,
+        MfaValidateAuth, MfaValidateRequest, MountEnableRequest, NamespaceList, NamespaceRequest,
+        PolicyList, PolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
+        RaftPeerRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
+        RemountRequest, SysHashAlgorithm, SysHashRequest, SysRandomRequest, SysRandomResponse,
+        SysRandomSource, UiMounts, UiNamespaces, VersionHistory, audited_request_header_path,
         internal_ui_mount_path, locked_user_unlock_path, namespace_path, rate_limit_quota_path,
         remount_status_path, sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
         validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
@@ -6819,6 +7013,35 @@ mod tests {
                 Err(error) => error,
             };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn mfa_validate_request_and_auth_redact_secrets() {
+        let request = MfaValidateRequest::new("mfa-request-id")
+            .with_passcode("method-id", SecretString::from("123456"));
+        let debug = format!("{request:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("123456"));
+
+        let payload = serde_json::to_value(&request).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(payload["mfa_request_id"], "mfa-request-id");
+        assert_eq!(payload["mfa_payload"]["method-id"][0], "123456");
+
+        let auth = serde_json::from_value::<MfaValidateAuth>(serde_json::json!({
+            "client_token": "client-token",
+            "accessor": "token-accessor",
+            "policies": ["default"],
+            "token_policies": ["default"],
+            "metadata": { "username": "alice" },
+            "lease_duration": 3600,
+            "renewable": true
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(auth.client_token.expose_secret(), "client-token");
+        let debug = format!("{auth:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("client-token"));
+        assert!(!debug.contains("token-accessor"));
     }
 
     #[test]

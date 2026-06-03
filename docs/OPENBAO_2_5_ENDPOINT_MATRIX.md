@@ -24,21 +24,21 @@ Sources:
 ## Summary
 
 - Total documented endpoint rows: `644`
-- Strict typed coverage: `502/644` (78.0%)
-- Typed plus partial coverage: `503/644` (78.1%)
-- Addressed by typed, partial, raw, external, or rejected policy: `548/644` (85.1%)
-- Planned implementation rows before `1.0.0`: `96`
+- Strict typed coverage: `503/644` (78.1%)
+- Typed plus partial coverage: `504/644` (78.3%)
+- Addressed by typed, partial, raw, external, or rejected policy: `549/644` (85.2%)
+- Planned implementation rows before `1.0.0`: `95`
 - Open owner decisions before `1.0.0`: `0`
 
 | Status | Count |
 | --- | ---: |
-| `typed` | 457 |
+| `typed` | 458 |
 | `typed-gated` | 45 |
 | `partial` | 1 |
 | `raw` | 0 |
 | `external` | 33 |
 | `rejected` | 12 |
-| `planned` | 96 |
+| `planned` | 95 |
 | `decision` | 0 |
 
 ## Area Totals
@@ -47,7 +47,7 @@ Sources:
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 99.0% |
 | `secret` | 348 | 244 | 1 | 0 | 0 | 33 | 0 | 70 | 0 | 70.4% |
-| `system` | 191 | 109 | 44 | 0 | 0 | 0 | 12 | 26 | 0 | 80.1% |
+| `system` | 191 | 110 | 44 | 0 | 0 | 0 | 12 | 25 | 0 | 80.6% |
 
 ## Pages With Non-Typed Rows
 
@@ -71,7 +71,6 @@ Sources:
 | [/api-docs/system/inspect/router/](https://openbao.org/api-docs/system/inspect/router/) | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 |
 | [/api-docs/system/internal-counters/](https://openbao.org/api-docs/system/internal-counters/) | 0 | 0 | 0 | 0 | 0 | 2 | 0 | 0 |
 | [/api-docs/system/internal-ui-resultant-acl/](https://openbao.org/api-docs/system/internal-ui-resultant-acl/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
-| [/api-docs/system/mfa-validate/](https://openbao.org/api-docs/system/mfa-validate/) | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
 | [/api-docs/system/monitor/](https://openbao.org/api-docs/system/monitor/) | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
 | [/api-docs/system/policies-password/](https://openbao.org/api-docs/system/policies-password/) | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 0 |
 | [/api-docs/system/rekey-recovery-key/](https://openbao.org/api-docs/system/rekey-recovery-key/) | 0 | 0 | 0 | 0 | 0 | 0 | 9 | 0 |
@@ -84,7 +83,7 @@ Sources:
   discovery, and named-provider JWKS helpers are implemented in `0.10.0`. MFA
   management remains planned for `0.10.0`.
 - Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
-- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.
+- `sys/mfa/validate` is implemented in `0.10.0` because MFA-enforced login flows cannot complete without it.
 - Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are planned for `0.11.0`; an optional pre-`1.0.0` `transit-import` wrapping helper is planned behind feature-gated `rsa` and `aes-gcm` dependencies.
 - PKI Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and current-doc struct-field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
 - System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are planned for `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.

@@ -2432,6 +2432,56 @@ async fn sys_capabilities_self_sends_paths() {
 }
 
 #[tokio::test]
+async fn sys_mfa_validate_sends_secret_payload_and_returns_auth() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("POST /v1/sys/mfa/validate HTTP/1.1"));
+        assert!(request.contains("x-vault-token: root-token"));
+        assert!(request.contains(r#""mfa_request_id":"mfa-request-id""#));
+        assert!(request.contains(r#""method-id":["123456"]"#));
+        let body = r#"{"auth":{"client_token":"client-token","accessor":"token-accessor","policies":["default"],"token_policies":["default"],"identity_policies":null,"metadata":{"username":"alice"},"orphan":true,"entity_id":"entity-id","lease_duration":3600,"renewable":true}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["root-", "token"]));
+
+    let auth = client
+        .sys()
+        .validate_mfa(
+            &openbao::sys::MfaValidateRequest::new("mfa-request-id")
+                .with_passcode("method-id", SecretString::from("123456")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(auth.client_token.expose_secret(), "client-token");
+    assert_eq!(auth.accessor.expose_secret(), "token-accessor");
+    assert_eq!(
+        auth.metadata.get("username").map(String::as_str),
+        Some("alice")
+    );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn sys_enable_audit_device_sends_documented_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

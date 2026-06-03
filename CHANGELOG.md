@@ -14,10 +14,14 @@ All notable changes to this project are documented here.
 - Added typed Identity OIDC provider, scope, client, and assignment admin
   helpers, including named-provider discovery and JWKS reads while keeping
   browser OIDC protocol flows outside the SDK boundary.
+- Added `Sys::validate_mfa` for `/sys/mfa/validate`, completing the typed
+  second step for MFA-enforced login flows.
 - Added secret-aware Identity OIDC token and introspection request types with
   redacted `Debug` output.
 - Added secret-aware Identity OIDC client response handling so returned client
   secrets are stored as `SecretString` and redacted from `Debug`.
+- Added secret-aware MFA validation request and auth response handling so
+  passcodes, returned client tokens, and accessors are redacted from `Debug`.
 - Added bounded deserialization for Identity OIDC signing-key lists, role lists,
   provider/client metadata maps, nullable discovery metadata lists, and JWKS key
   arrays.
@@ -47,8 +51,9 @@ All notable changes to this project are documented here.
   backend completion, and endpoint closure can be handled without rushing
   risky APIs into `0.9.0`.
 - Recorded the Identity OIDC and MFA scope decision: admin CRUD, discovery,
-  token generation, introspection, and MFA login validation are planned for
-  `0.10.0`, while named-provider browser protocol flows remain external.
+  token generation, introspection, and MFA login validation were assigned to
+  the `0.10.0` line, while named-provider browser protocol flows remain
+  external.
 - Added `RenewalHint` for caller-owned token and lease renewal loops and typed
   `/sys/leases/tidy` maintenance support.
 - Added safe custom plugin wrapper building blocks: `PluginMount`, public path
