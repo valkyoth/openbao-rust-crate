@@ -332,10 +332,12 @@ Finalization work before `1.0.0`:
 - reject background token auto-renewal, background lease tracking, and
   `LeaseHandle` wrappers for stable scope; use `RenewalHint` for caller-owned
   renewal timing;
-- decide whether tracing/OpenTelemetry hooks, seal-status watcher/back-pressure
-  helpers, optional HTTP/2 transport configuration, and application-side secret
-  wrappers are rejected or documented as explicit non-default stable
-  boundaries.
+- keep the optional `tracing` feature as the stable observability boundary,
+  reject OpenTelemetry SDK dependencies and custom request hooks for stable
+  scope, defer W3C `traceparent` propagation, and decide whether seal-status
+  watcher/back-pressure helpers, optional HTTP/2 transport configuration, and
+  application-side secret wrappers are rejected or documented as explicit
+  non-default stable boundaries.
 - use `0.10.0` through `0.14.0` for Identity/auth, Transit, PKI, and System
   endpoint-family completion;
 - use `0.15.0` as the endpoint-closure release where no matrix row may remain

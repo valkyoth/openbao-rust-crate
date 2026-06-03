@@ -307,9 +307,12 @@ Stop condition:
   implemented;
 - small auth/token gaps from the matrix are implemented or assigned to
   `0.10.0`;
-- optional tracing/OpenTelemetry, seal-status watcher/back-pressure, HTTP/2
-  transport configuration, and application-side secret-struct wrappers have
-  deferral decisions recorded; public response serde fixtures are added;
+- optional `tracing` crate instrumentation is implemented without a default
+  dependency; OpenTelemetry SDK dependencies and custom request hooks are
+  rejected for stable scope, W3C `traceparent` propagation is deferred, and
+  seal-status watcher/back-pressure, HTTP/2 transport configuration, and
+  application-side secret-struct wrappers have deferral decisions recorded;
+  public response serde fixtures are added;
 - quantum-readiness design note that tracks OpenBao support, avoids premature
   API promises, and defines how hybrid/post-quantum profiles will be exposed
   once stable upstream primitives exist;

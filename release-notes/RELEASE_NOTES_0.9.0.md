@@ -22,7 +22,8 @@
 - New `0.9.0` work currently implemented: release-line version bump,
   stabilization audit documentation, migration guidance, release-note skeleton,
   the known-limitations decision register, `RenewalHint`, lease tidy, safe
-  custom plugin wrapper building blocks, and the `0.9.0` release gate script.
+  custom plugin wrapper building blocks, optional `tracing` instrumentation,
+  and the `0.9.0` release gate script.
 - Remaining `0.9.0` planned work: public API audit, migration guide
   completion, opt-in retry/backoff, non-secret pagination ergonomics, PKI role
   and Identity entity/group bootstrap convergence, PKI root/named-issuer scope
@@ -46,6 +47,9 @@
   secret material alive longer than caller-owned handles require.
 - Pagination helpers must preserve bounded allocation behavior and keep secret
   accessor lists out of generic string-list ergonomics.
+- Optional tracing emits only method, validated path, and response status. It
+  must never emit full URLs, headers, request bodies, response bodies, tokens,
+  namespaces, or raw transport-error strings.
 - Migration guidance must not recommend disabling TLS verification, using
   root tokens in application services, logging token accessors, or using
   loopback-only dev bootstrap outside fresh local development instances.
@@ -103,9 +107,12 @@
 - Implement or decide in `0.14.0`: system generate-root/recovery-token,
   decode-token, password policies, monitor/internal rows, resultant ACL, and
   legacy recovery-key rekey.
-- Decide before `0.15.0`: tracing/OpenTelemetry hooks, seal-status watchers,
-  HTTP/2 transport knobs, application-side secret-struct wrappers, certificate
-  or public-key pinning, and advanced ACL policy-builder fields.
+- Decide before `0.15.0`: seal-status watchers, HTTP/2 transport knobs,
+  application-side secret-struct wrappers, certificate or public-key pinning,
+  and advanced ACL policy-builder fields. Tracing is resolved with a
+  non-default `tracing` feature; OpenTelemetry SDK dependencies and custom
+  request hooks are rejected for stable scope, and W3C `traceparent`
+  propagation is deferred past `1.0.0`.
 - Reject for stable feature scope unless a pentest or downstream integration
   proves otherwise before `1.0.0`: full ACME protocol flows, full JOSE/JWKS
   construction, and raw unauthenticated SSH public-key reads. The crate keeps

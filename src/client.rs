@@ -875,10 +875,45 @@ async fn execute_openbao_http_request(
     http: &reqwest::Client,
     outgoing: reqwest::Request,
 ) -> Result<reqwest::Response> {
+    #[cfg(feature = "tracing")]
+    let trace_method = outgoing.method().clone();
+    #[cfg(feature = "tracing")]
+    let trace_path = outgoing.url().path().to_owned();
+
     let pending = reqwest::RequestBuilder::from_parts(http.clone(), outgoing).send();
-    match pending.await {
-        Ok(response) => Ok(response),
-        Err(error) => Err(crate::error::http_transport_error(error)),
+
+    #[cfg(feature = "tracing")]
+    let trace_span = tracing::debug_span!(
+        "openbao.request",
+        method = %trace_method,
+        path = %trace_path
+    );
+    #[cfg(feature = "tracing")]
+    tracing::debug!(parent: &trace_span, "OpenBao request");
+
+    #[cfg(feature = "tracing")]
+    let result = {
+        use tracing::Instrument as _;
+        pending.instrument(trace_span.clone()).await
+    };
+    #[cfg(not(feature = "tracing"))]
+    let result = pending.await;
+
+    match result {
+        Ok(response) => {
+            #[cfg(feature = "tracing")]
+            tracing::debug!(
+                parent: &trace_span,
+                status = %response.status(),
+                "OpenBao response"
+            );
+            Ok(response)
+        }
+        Err(error) => {
+            #[cfg(feature = "tracing")]
+            tracing::warn!(parent: &trace_span, "OpenBao transport error");
+            Err(crate::error::http_transport_error(error))
+        }
     }
 }
 

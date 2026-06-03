@@ -40,6 +40,8 @@ All notable changes to this project are documented here.
   already-wrapped `SecretString` material and do not perform client-side
   RSA-OAEP/AES-GCM wrapping. A pre-`1.0.0` optional `transit-import` helper is
   planned with feature-gated `rsa` and `aes-gcm` dependencies.
+- Added a non-default `tracing` feature that instruments the shared HTTP
+  dispatch point with method, validated path, and response status events.
 
 ### Security
 
@@ -53,6 +55,8 @@ All notable changes to this project are documented here.
 - Generic plugin/secret-engine traits are rejected for stable scope because
   plugin schemas are deployment-specific; typed local wrappers should use the
   public plugin building blocks instead.
+- OpenTelemetry SDK dependencies and custom request hooks are rejected for
+  stable scope; W3C `traceparent` propagation is deferred past `1.0.0`.
 
 ## 0.8.0 - 2026-06-02
 

@@ -260,6 +260,7 @@ openbao = { version = "0.9", features = ["time"] }
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
 | `sys` | yes | System backend, readiness, leases, quotas, storage, diagnostics, and operator-gated helpers. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
+| `tracing` | no | Optional request/response instrumentation with method, validated path, and status only. No OpenTelemetry SDK dependency. |
 | `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
