@@ -21,28 +21,28 @@ Sources:
 
 ## Summary
 
-- Total documented endpoint rows: `626`
-- Strict typed coverage: `457/626` (73.0%)
-- Typed plus partial coverage: `458/626` (73.2%)
-- Addressed by typed, partial, raw, or external policy: `473/626` (75.6%)
-- Open decisions before `1.0.0`: `153`
+- Total documented endpoint rows: `643`
+- Strict typed coverage: `456/643` (70.9%)
+- Typed plus partial coverage: `457/643` (71.1%)
+- Addressed by typed, partial, raw, or external policy: `475/643` (73.9%)
+- Open decisions before `1.0.0`: `168`
 
 | Status | Count |
 | --- | ---: |
-| `typed` | 413 |
+| `typed` | 412 |
 | `typed-gated` | 44 |
 | `partial` | 1 |
 | `raw` | 9 |
-| `external` | 6 |
-| `decision` | 153 |
+| `external` | 9 |
+| `decision` | 168 |
 
 ## Area Totals
 
 | Area | Total | Typed | Typed gated | Partial | Raw | External | Decision | Strict % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `auth` | 105 | 93 | 0 | 1 | 9 | 0 | 2 | 88.6% |
-| `secret` | 329 | 211 | 0 | 0 | 0 | 6 | 112 | 64.1% |
-| `system` | 192 | 109 | 44 | 0 | 0 | 0 | 39 | 79.7% |
+| `secret` | 347 | 211 | 0 | 0 | 0 | 9 | 127 | 60.8% |
+| `system` | 191 | 108 | 44 | 0 | 0 | 0 | 39 | 79.6% |
 
 ## Pages With Non-Typed Rows
 
@@ -55,7 +55,8 @@ Sources:
 | [/api-docs/secret/identity/mfa/okta/](https://openbao.org/api-docs/secret/identity/mfa/okta/) | 0 | 0 | 0 | 0 | 0 | 4 |
 | [/api-docs/secret/identity/mfa/pingid/](https://openbao.org/api-docs/secret/identity/mfa/pingid/) | 0 | 0 | 0 | 0 | 0 | 4 |
 | [/api-docs/secret/identity/mfa/totp/](https://openbao.org/api-docs/secret/identity/mfa/totp/) | 0 | 0 | 0 | 0 | 0 | 7 |
-| [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 0 | 0 | 0 | 0 | 0 | 17 |
+| [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 0 | 0 | 0 | 0 | 3 | 18 |
+| [/api-docs/secret/identity/tokens/](https://openbao.org/api-docs/secret/identity/tokens/) | 0 | 0 | 0 | 0 | 0 | 14 |
 | [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 0 | 0 | 0 | 4 | 60 |
 | [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 |
 | [/api-docs/secret/transit/](https://openbao.org/api-docs/secret/transit/) | 19 | 0 | 0 | 0 | 0 | 12 |
@@ -77,10 +78,12 @@ Sources:
 
 - Token `create-orphan` and `renew-accessor` need dedicated helper decisions.
 - AppRole delegated per-property endpoints need a final raw-vs-typed decision.
-- Identity OIDC provider/token and MFA management is planned for `0.10.0`.
+- Identity OIDC admin/discovery/token/introspection rows and MFA management are planned for `0.10.0`.
+- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
+- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.
 - Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows are planned for `0.11.0`.
 - PKI advanced issuer/root/public-read rows are planned for `0.12.0`; PKI specialized CEL/sign-verbatim/OCSP/ACME-boundary rows are planned for `0.13.0`.
-- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, MFA validate, legacy recovery rekey, and lease tidy are planned for `0.14.0`.
+- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, legacy recovery rekey, and lease tidy are planned for `0.14.0`.
 - `0.15.0` is the closure release where no endpoint row may remain `decision`.
 
 Regenerate with:

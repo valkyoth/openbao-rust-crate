@@ -365,7 +365,6 @@ system,GET,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/syst
 system,POST,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,DELETE,/sys/generate-root/attempt,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,POST,/sys/generate-root/update,decision,https://openbao.org/api-docs/system/generate-root/,System endpoint is planned for 0.14.0 decision or explicit rejection.
-system,HEAD,/sys/health,typed,https://openbao.org/api-docs/system/health/,Typed system helper exists.
 system,GET,/sys/health,typed,https://openbao.org/api-docs/system/health/,Typed system helper exists.
 system,GET,/sys/host-info,typed,https://openbao.org/api-docs/system/host-info/,Typed system helper exists.
 system,GET,/sys/in-flight-req,decision,https://openbao.org/api-docs/system/in-flight-req/,System endpoint is planned for 0.14.0 decision or explicit rejection.
@@ -397,7 +396,7 @@ system,GET,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/
 system,DELETE,/sys/loggers,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
 system,DELETE,/sys/loggers/:name,typed,https://openbao.org/api-docs/system/loggers/,Typed system helper exists.
 system,GET,/sys/metrics,typed,https://openbao.org/api-docs/system/metrics/,Typed system helper exists.
-system,POST,/sys/mfa/validate,decision,https://openbao.org/api-docs/system/mfa-validate/,System endpoint is planned for 0.14.0 decision or explicit rejection.
+system,POST,/sys/mfa/validate,decision,https://openbao.org/api-docs/system/mfa-validate/,Implement in 0.10.0; this completes MFA-enforced login flows.
 system,GET,/sys/monitor,decision,https://openbao.org/api-docs/system/monitor/,System endpoint is planned for 0.14.0 decision or explicit rejection.
 system,GET,/sys/mounts,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
 system,POST,/sys/mounts/:path,typed,https://openbao.org/api-docs/system/mounts/,Typed system helper exists.
@@ -527,25 +526,43 @@ secret,GET,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secre
 secret,DELETE,/identity/group-alias/id/:id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,LIST,/identity/group-alias/id,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
 secret,GET,/identity/group-alias/id?list=true,typed,https://openbao.org/api-docs/secret/identity/group-alias/,Typed Identity entity/group/alias/lookup helper exists.
+secret,POST,/identity/oidc/config,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/config,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/key/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/key/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/key/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/key,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/key/:name/rotate,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/role/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/role/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/role/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/role,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/token/:name,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/introspect,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/.well-known/openid-configuration,decision,https://openbao.org/api-docs/secret/identity/tokens/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
 secret,POST,/identity/lookup/entity,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
 secret,POST,/identity/lookup/group,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
-secret,GET,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/oidc/provider,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/oidc/scope,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/oidc/client,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/oidc/assignment,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/oidc/provider/:name/.well-known/keys,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET/POST,/identity/oidc/provider/:name/authorize,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,POST,/identity/oidc/provider/:name/token,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,POST,/identity/oidc/provider/:name/userinfo,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/provider,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/provider/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/scope,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/scope/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/client,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/client/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/oidc/assignment,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/oidc/assignment/:name,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/oidc/provider/:name/.well-known/keys,decision,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET/POST,/identity/oidc/provider/:name/authorize,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
+secret,POST,/identity/oidc/provider/:name/token,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
+secret,POST,/identity/oidc/provider/:name/userinfo,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
 secret,GET,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
 secret,LIST,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
 secret,SCAN,/secret/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v1/,Typed secrets-engine helper exists.
@@ -569,10 +586,10 @@ secret,GET,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs
 secret,POST,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
 secret,PATCH,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
 secret,DELETE,/:secret-mount-path/metadata/:path,typed,https://openbao.org/api-docs/secret/kv/kv-v2/,Typed secrets-engine helper exists.
-secret,POST,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/mfa/login-enforcement,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/login-enforcement/:name,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/login-enforcement,decision,https://openbao.org/api-docs/secret/identity/mfa/login-enforcement/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
 system,GET,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
 system,POST,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
 system,DELETE,/sys/rotate/(root|recovery)/init,typed-gated,https://openbao.org/api-docs/system/rotate/init/,Typed helper exists behind operator-operation gates where needed.
@@ -606,22 +623,22 @@ system,POST,/sys/storage/raft/bootstrap,typed,https://openbao.org/api-docs/syste
 system,GET,/sys/storage/raft/autopilot/state,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
 system,GET,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
 system,POST,/sys/storage/raft/autopilot/configuration,typed,https://openbao.org/api-docs/system/storage/raftautopilot/,Typed system helper exists.
-secret,POST,/identity/mfa/method/duo/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/mfa/method/duo,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,POST,/identity/mfa/method/okta/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/mfa/method/okta,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,POST,/identity/mfa/method/pingid/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/mfa/method/pingid,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,POST,/identity/mfa/method/totp/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,GET,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,DELETE,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,LIST,/identity/mfa/method/totp,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,POST,/identity/mfa/method/totp/generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,POST,/identity/mfa/method/totp/admin-generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
-secret,POST,/identity/mfa/method/totp/admin-destroy,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.
+secret,POST,/identity/mfa/method/duo/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/method/duo/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/method/duo,decision,https://openbao.org/api-docs/secret/identity/mfa/duo/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/okta/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/method/okta/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/method/okta,decision,https://openbao.org/api-docs/secret/identity/mfa/okta/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/pingid/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/method/pingid/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/method/pingid,decision,https://openbao.org/api-docs/secret/identity/mfa/pingid/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/totp/:method_id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,GET,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,DELETE,/identity/mfa/method/totp/:id,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,LIST,/identity/mfa/method/totp,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/totp/generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/totp/admin-generate,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/mfa/method/totp/admin-destroy,decision,https://openbao.org/api-docs/secret/identity/mfa/totp/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.

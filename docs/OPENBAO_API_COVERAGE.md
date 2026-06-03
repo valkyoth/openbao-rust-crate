@@ -72,12 +72,12 @@ Sources:
 The `0.9.0` stabilization line now uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
-- documented endpoint rows extracted from OpenBao `2.5.x`: `626`;
-- strict typed coverage: `457/626` (`73.0%`);
-- typed plus partial coverage: `458/626` (`73.2%`);
-- addressed by typed, partial, raw, or external policy: `473/626` (`75.6%`);
+- documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
+- strict typed coverage: `456/643` (`70.9%`);
+- typed plus partial coverage: `457/643` (`71.1%`);
+- addressed by typed, partial, raw, or external policy: `475/643` (`73.9%`);
 - rows needing a pre-`1.0.0` implementation/rejection/deferral decision:
-  `153`.
+  `168`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
 `docs/openbao-2.5-endpoint-matrix.csv` for each method/path row.
@@ -205,11 +205,12 @@ Support plan:
   write/read/list/delete, and generated credential helpers are implemented.
   Identity entity, group, entity-alias, and group-alias lifecycle helpers are
   implemented. Entity/group lookup and entity merge helpers are implemented in
-  `0.8.0`. Identity OIDC provider/key/role/token management, MFA method
-  management, and MFA login enforcement are deferred to `1.0` design because
-  policy impact is broad. LDAP config, root rotation, static roles/credentials,
-  dynamic roles/credentials, and library check-out/check-in helpers are
-  implemented.
+  `0.8.0`. Identity OIDC admin CRUD, discovery/JWKS reads, token generation,
+  token introspection, MFA method management, MFA login enforcement, and
+  `sys/mfa/validate` are planned for `0.10.0`; named-provider OIDC browser
+  protocol flows remain external. LDAP config, root rotation, static
+  roles/credentials, dynamic roles/credentials, and library check-out/check-in
+  helpers are implemented.
 
 ## System Backend
 

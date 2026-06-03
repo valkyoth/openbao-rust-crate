@@ -2,8 +2,8 @@
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
-`626` documented endpoint rows, `457` strict typed or operator-gated rows, and
-`153` rows still needing an implementation, rejection, raw-wrapper policy, or
+`643` documented endpoint rows, `456` strict typed or operator-gated rows, and
+`168` rows still needing an implementation, rejection, raw-wrapper policy, or
 external-client policy decision. Because there is no rush to force stability,
 the pre-`1.0` line now extends through `0.15.0` so those gaps can be closed
 deliberately.
@@ -320,14 +320,17 @@ Publishable value:
 
 Stop condition:
 
-- Identity OIDC provider, scope, client, assignment, discovery, key, token,
-  authorize, and userinfo rows are implemented, documented as external OIDC
-  protocol flows, or rejected with a raw-wrapper policy;
-- Identity MFA Duo, Okta, PingID, TOTP method management, MFA TOTP
+- Identity OIDC config, key CRUD/rotate, role CRUD/list, provider/scope/client/
+  assignment CRUD/list, signed ID token generation, token introspection,
+  discovery, and JWKS read helpers are implemented;
+- named-provider OIDC `/authorize`, `/token`, and `/userinfo` rows are
+  documented as external browser protocol flows that belong with a dedicated
+  OIDC library;
+- Identity MFA Duo, Okta, PingID, and TOTP method management, MFA TOTP
   generate/admin-generate/admin-destroy, and login-enforcement rows are
-  implemented or rejected with security rationale;
-- system MFA validate is implemented or assigned to `0.14.0` with Identity MFA
-  docs linking to that decision;
+  implemented with secret-aware request/response types and redacted `Debug`;
+- system MFA validate is implemented as the required second step for
+  MFA-enforced login flows;
 - token `create-orphan` and `renew-accessor` helpers are implemented or
   explicitly rejected;
 - AppRole delegated per-property endpoints are either implemented as narrow
@@ -409,8 +412,8 @@ Stop condition:
 - generate-root and generate-recovery-token ceremony helpers are implemented
   behind explicit operator gates or rejected in favor of OpenBao CLI/operator
   process documentation;
-- decode-token, password policy CRUD/generate, lease tidy, and MFA validate
-  helpers are implemented or rejected;
+- decode-token, password policy CRUD/generate, and lease tidy helpers are
+  implemented or rejected;
 - monitor streaming, in-flight request, internal counters, internal inspect,
   resultant ACL, and legacy recovery-key rekey rows are implemented, rejected,
   or classified as permanent internal/streaming/operator boundaries;

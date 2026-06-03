@@ -15,13 +15,16 @@ All notable changes to this project are documented here.
 - Added migration guidance for users upgrading from earlier `openbao` releases,
   `vaultrs`, or bespoke `reqwest` OpenBao/Vault wrappers.
 - Added a generated OpenBao `2.5.x` endpoint-by-endpoint coverage matrix with
-  `626` documented endpoint rows, `73.0%` strict typed or operator-gated
+  `643` documented endpoint rows, `70.9%` strict typed or operator-gated
   coverage, and explicit pre-`1.0.0` decision rows.
 - Added a `0.9.0` release-note skeleton and release gate script.
 - Expanded the pre-`1.0` release strategy through `0.15.0` so Identity/auth,
   Transit advanced key management, PKI advanced and specialized flows, system
   backend completion, and endpoint closure can be handled without rushing
   risky APIs into `0.9.0`.
+- Recorded the Identity OIDC and MFA scope decision: admin CRUD, discovery,
+  token generation, introspection, and MFA login validation are planned for
+  `0.10.0`, while named-provider browser protocol flows remain external.
 
 ### Security
 

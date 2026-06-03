@@ -271,8 +271,8 @@ openbao = { version = "0.9", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the current `0.9.0` line it records `626` documented endpoint rows, with
-`457/626` (`73.0%`) strict typed or operator-gated coverage.
+For the current `0.9.0` line it records `643` documented endpoint rows, with
+`456/643` (`70.9%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
 
@@ -325,7 +325,7 @@ For the current `0.9.0` line it records `626` documented endpoint rows, with
 | Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
-| Identity | Yes | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, and entity merge. Identity OIDC provider/MFA management is deferred to `1.0` design because policy impact is broad. |
+| Identity | Yes | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, and entity merge. Identity OIDC admin/discovery/token/introspection and MFA management are planned for `0.10.0`; named-provider OIDC browser protocol flows stay external. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, and optional raw-byte helpers. |

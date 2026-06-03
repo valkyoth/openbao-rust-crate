@@ -33,8 +33,20 @@ LINK_RE = re.compile(
     r"href=(?:\"|')?(/api-docs/(?:auth|secret|system)/[^\"' >#?]+/)(?:\"|')?"
 )
 ENDPOINT_RE = re.compile(
-    r"<tr><td[^>]*><code>([^<]+)</code><td[^>]*><code>(/[^<]+)</code>"
+    r"<tr><td[^>]*><code>([^<]+)</code><td[^>]*><code>([^<]+)</code>"
 )
+API_METHODS = {
+    "ACME",
+    "DELETE",
+    "GET",
+    "GET/POST",
+    "GET/POST/DELETE",
+    "LIST",
+    "PATCH",
+    "POST",
+    "PUT",
+    "SCAN",
+}
 
 
 @dataclass(frozen=True)
@@ -84,7 +96,11 @@ def extract_endpoints(pages: list[tuple[str, str]]) -> list[tuple[str, str, str]
     for page, document in pages:
         for method, path in ENDPOINT_RE.findall(document):
             method = html.unescape(method.strip())
+            if method not in API_METHODS:
+                continue
             path = html.unescape(path.strip())
+            if not path.startswith("/"):
+                path = f"/{path}"
             key = (method, path)
             if key in seen:
                 continue
@@ -153,10 +169,23 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         return ("typed", "Typed secrets-engine helper exists.")
 
     if page.startswith("/api-docs/secret/identity/"):
+        if (
+            page == "/api-docs/secret/identity/oidc-provider/"
+            and path
+            in (
+                "/identity/oidc/provider/:name/authorize",
+                "/identity/oidc/provider/:name/token",
+                "/identity/oidc/provider/:name/userinfo",
+            )
+        ):
+            return (
+                "external",
+                "OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.",
+            )
         if any(segment in page for segment in ("/mfa", "/oidc-provider", "/tokens")):
             return (
                 "decision",
-                "Identity OIDC/token/MFA management is planned for 0.10.0 decision or implementation.",
+                "Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.",
             )
         return ("typed", "Typed Identity entity/group/alias/lookup helper exists.")
 
@@ -238,6 +267,12 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
 
 
 def classify_system(page: str, path: str) -> tuple[str, str]:
+    if page == "/api-docs/system/mfa-validate/":
+        return (
+            "decision",
+            "Implement in 0.10.0; this completes MFA-enforced login flows.",
+        )
+
     if any(
         segment in page
         for segment in (
@@ -248,7 +283,6 @@ def classify_system(page: str, path: str) -> tuple[str, str]:
             "internal-counters",
             "inspect",
             "internal-ui-resultant-acl",
-            "mfa-validate",
             "monitor",
             "policies-password",
             "config-ui",
@@ -301,7 +335,7 @@ def percent(numerator: int, denominator: int) -> str:
 def write_csv(endpoints: list[Endpoint]) -> None:
     OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     with OUTPUT_CSV.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.writer(handle)
+        writer = csv.writer(handle, lineterminator="\n")
         writer.writerow(("area", "method", "path", "status", "doc_page", "note"))
         for endpoint in endpoints:
             writer.writerow(
@@ -410,10 +444,12 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "",
             "- Token `create-orphan` and `renew-accessor` need dedicated helper decisions.",
             "- AppRole delegated per-property endpoints need a final raw-vs-typed decision.",
-            "- Identity OIDC provider/token and MFA management is planned for `0.10.0`.",
+            "- Identity OIDC admin/discovery/token/introspection rows and MFA management are planned for `0.10.0`.",
+            "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",
+            "- `sys/mfa/validate` is planned for `0.10.0` because MFA-enforced login flows cannot complete without it.",
             "- Transit import/BYOK, wrapping-key, cache/config, CSR/certificate, and soft-delete rows are planned for `0.11.0`.",
             "- PKI advanced issuer/root/public-read rows are planned for `0.12.0`; PKI specialized CEL/sign-verbatim/OCSP/ACME-boundary rows are planned for `0.13.0`.",
-            "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, MFA validate, legacy recovery rekey, and lease tidy are planned for `0.14.0`.",
+            "- System generate-root/recovery-token, decode-token, password policies, monitor, internal inspection, resultant ACL, legacy recovery rekey, and lease tidy are planned for `0.14.0`.",
             "- `0.15.0` is the closure release where no endpoint row may remain `decision`.",
             "",
             "Regenerate with:",

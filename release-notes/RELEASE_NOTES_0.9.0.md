@@ -73,16 +73,19 @@
   convergence, public response fixtures, fuzz targets for path validation/API
   error decoding/response envelopes, public API audit, migration guide
   completion, and an advisory quantum-readiness design note.
-- Implement or decide in `0.10.0`: Identity OIDC provider/token rows, MFA
-  management/enforcement, token `create-orphan`/`renew-accessor`, and AppRole
-  delegated per-property rows.
+- Implement in `0.10.0`: Identity OIDC admin/discovery/token/introspection
+  rows, MFA method and login-enforcement rows, and `sys/mfa/validate`; classify
+  named-provider OIDC `/authorize`, `/token`, and `/userinfo` as external
+  browser protocol flows.
+- Implement or decide in `0.10.0`: token `create-orphan`/`renew-accessor` and
+  AppRole delegated per-property rows.
 - Implement or decide in `0.11.0`: Transit BYOK/import, wrapping-key,
   cache/config, CSR/certificate, and soft-delete rows.
 - Implement or decide in `0.12.0`/`0.13.0`: PKI named issuer/root/public-read,
   CEL, sign-verbatim, OCSP, revocation-list, and ACME-boundary rows.
 - Implement or decide in `0.14.0`: system generate-root/recovery-token,
-  decode-token, password policies, monitor/internal rows, resultant ACL, MFA
-  validate, legacy recovery-key rekey, and lease tidy.
+  decode-token, password policies, monitor/internal rows, resultant ACL, legacy
+  recovery-key rekey, and lease tidy.
 - Decide before `0.15.0`: background token auto-renewal, background lease
   tracking, tracing/OpenTelemetry hooks, seal-status watchers, HTTP/2
   transport knobs, application-side secret-struct wrappers, certificate or
