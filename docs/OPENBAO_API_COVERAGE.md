@@ -198,8 +198,9 @@ Support plan:
   reads, and PKI config rows are planned for `0.12.0`. Revocation/CRL
   management, CEL roles, sign-verbatim, and cross-sign rows are planned for
   `0.13.0`. OCSP rows are classified as raw binary protocol support. Full ACME
-  account/order/challenge client flows are expected to stay with dedicated
-  ACME clients unless the `0.13.0` review finds a safe crate boundary.
+  account/order/authorization/challenge client flows are permanently external:
+  use the typed ACME config, EAB, and directory URL helpers to hand off to a
+  dedicated ACME client.
 
 OCSP raw boundary example:
 

@@ -703,6 +703,11 @@ pub struct PkiAcmeConfig {
 }
 
 /// ACME external account binding token.
+///
+/// This token is meant to be passed to a dedicated ACME client together with
+/// one of the ACME directory URL helpers. The `key` field is an HMAC key and
+/// must be treated as credential material; do not log it or persist it outside
+/// the ACME client configuration path that needs it.
 #[derive(Clone, Deserialize)]
 pub struct PkiAcmeEabToken {
     /// Token creation time.
@@ -1248,6 +1253,11 @@ impl Pki<'_> {
     /// and are internally authenticated by the ACME protocol. This helper only
     /// builds the documented directory URL; it does not implement ACME
     /// account, order, authorization, or challenge flows.
+    ///
+    /// Pair this URL with [`PkiAcmeEabToken`] from [`Pki::generate_acme_eab`]
+    /// and pass both values to a dedicated ACME client library. The ACME
+    /// client owns account registration, nonce handling, order state,
+    /// challenge responses, certificate polling, and certificate download.
     pub fn acme_directory_url(&self) -> Result<Url> {
         self.client
             .url_for_path(&self.path(&["acme", "directory"])?)

@@ -232,7 +232,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
         if method == "ACME" and "/directory" in path:
             return (
                 "external",
-                "ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL helpers.",
+                "ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL and EAB helpers.",
             )
         if "/pki/ocsp" in path:
             return (

@@ -409,7 +409,7 @@ Publishable value:
 - PKI operators can manage multi-issuer OpenBao PKI deployments and public CA
   material through typed helpers.
 
-### 0.13.0 - PKI Specialized Flows And ACME Boundary
+### 0.13.0 - PKI Specialized Flows
 
 Stop condition:
 
@@ -421,9 +421,9 @@ Stop condition:
   `operator-ops` plus `operator-ops-acknowledged`;
 - OCSP GET/POST rows are documented as raw binary ASN.1 protocol calls that
   should be paired with a dedicated OCSP encoder/decoder;
-- full ACME account/order/authorization/challenge flows are either implemented
-  or, more likely, permanently classified as `external` with directory URL and
-  EAB helpers documented as the supported SDK boundary;
+- full ACME account/order/authorization/challenge flows remain permanently
+  classified as `external`; typed ACME config, EAB provisioning, and directory
+  URL helpers are documented as the supported SDK boundary;
 - endpoint matrix is regenerated and no PKI row remains `decision` unless it
   is intentionally moved to `0.15.0` for closure.
 

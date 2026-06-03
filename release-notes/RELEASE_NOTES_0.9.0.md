@@ -118,9 +118,13 @@
   request hooks are rejected for stable scope, and W3C `traceparent`
   propagation is deferred past `1.0.0`.
 - Reject for stable feature scope unless a pentest or downstream integration
-  proves otherwise before `1.0.0`: full ACME protocol flows, full JOSE/JWKS
-  construction, and raw unauthenticated SSH public-key reads. The crate keeps
-  safe lower-level helpers or documented alternatives for those workflows.
+  proves otherwise before `1.0.0`: full JOSE/JWKS construction and raw
+  unauthenticated SSH public-key reads. The crate keeps safe lower-level
+  helpers or documented alternatives for those workflows.
+- Permanent ACME boundary: account, order, authorization, challenge, polling,
+  and certificate download flows stay with dedicated ACME clients. This crate
+  provides typed OpenBao ACME config, EAB provisioning, and directory URL
+  helpers for that handoff, with EAB HMAC keys kept in `SecretString`.
 - Permanent boundary: request-body bytes can be zeroized by this crate before
   handoff, but buffers owned by `reqwest`, TLS providers, the operating system,
   allocator, or network devices remain outside this crate's control.

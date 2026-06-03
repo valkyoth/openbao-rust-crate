@@ -782,6 +782,33 @@ async fn main() -> Result<()> {
 }
 ```
 
+Provision ACME external account binding and hand it to an ACME client:
+
+```rust,no_run
+use openbao::{Client, ExposeSecret, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let pki = client.pki("pki")?;
+
+    let eab = pki.generate_role_acme_eab("tls-server").await?;
+    let directory_url = pki.role_acme_directory_url("tls-server")?;
+
+    let _eab_hmac_key_for_acme_client = eab.key.expose_secret();
+
+    // Pass `directory_url`, `eab.id`, and the exposed EAB HMAC key to a
+    // dedicated ACME client such as instant-acme or acme2. That client owns
+    // account registration, nonce handling, challenge responses, polling, and
+    // certificate download. Treat `eab.key` as credential material.
+    println!("ACME directory: {directory_url}");
+    println!("EAB key id: {}", eab.id);
+
+    Ok(())
+}
+```
+
 Use a KV v1 mount:
 
 ```rust,no_run

@@ -64,6 +64,9 @@ All notable changes to this project are documented here.
   the supported pattern.
 - Runtime HTTP/2 transport knobs are rejected because ALPN handles negotiation;
   HTTP/3 is rejected for stable scope.
+- Full ACME account/order/authorization/challenge flows remain external to the
+  crate; typed ACME config, EAB provisioning, and directory URL helpers are the
+  supported handoff to dedicated ACME clients.
 
 ## 0.8.0 - 2026-06-02
 
