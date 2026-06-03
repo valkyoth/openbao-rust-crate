@@ -1081,6 +1081,407 @@ pub struct IdentityOidcJwks {
     pub keys: Vec<JsonValue>,
 }
 
+/// Request to create or update an Identity OIDC provider.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityOidcProviderRequest {
+    /// Issuer URL override for provider-issued tokens.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer: Option<String>,
+    /// Client IDs permitted to use the provider. Use `"*"` to allow all clients.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_client_ids: Vec<String>,
+    /// Scopes available for requesting on the provider.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub scopes_supported: Vec<String>,
+}
+
+impl IdentityOidcProviderRequest {
+    /// Creates an empty provider request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the issuer URL override.
+    #[must_use]
+    pub fn with_issuer(mut self, issuer: impl Into<String>) -> Self {
+        self.issuer = Some(issuer.into());
+        self
+    }
+
+    /// Adds an allowed client ID.
+    #[must_use]
+    pub fn with_allowed_client_id(mut self, client_id: impl Into<String>) -> Self {
+        self.allowed_client_ids.push(client_id.into());
+        self
+    }
+
+    /// Adds a supported scope.
+    #[must_use]
+    pub fn with_scope_supported(mut self, scope: impl Into<String>) -> Self {
+        self.scopes_supported.push(scope.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_string_count(
+            self.allowed_client_ids.len(),
+            "identity OIDC provider allowed client IDs",
+        )?;
+        validate_string_count(
+            self.scopes_supported.len(),
+            "identity OIDC provider supported scopes",
+        )
+    }
+}
+
+/// Identity OIDC provider information.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcProviderInfo {
+    /// Issuer URL override.
+    #[serde(default)]
+    pub issuer: Option<String>,
+    /// Client IDs permitted to use the provider.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub allowed_client_ids: Vec<String>,
+    /// Scopes available for requesting on the provider.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub scopes_supported: Vec<String>,
+}
+
+/// Identity OIDC provider list response.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcProviderList {
+    /// Provider names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Provider metadata keyed by provider name.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_oidc_provider_info_map"
+    )]
+    pub key_info: BTreeMap<String, IdentityOidcProviderInfo>,
+}
+
+impl ListEntries for IdentityOidcProviderList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Request to create or update an Identity OIDC scope.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityOidcScopeRequest {
+    /// JSON or base64-encoded JSON template for the scope.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub template: Option<String>,
+    /// Human-readable scope description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+impl IdentityOidcScopeRequest {
+    /// Creates an empty scope request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the scope template.
+    #[must_use]
+    pub fn with_template(mut self, template: impl Into<String>) -> Self {
+        self.template = Some(template.into());
+        self
+    }
+
+    /// Sets the scope description.
+    #[must_use]
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+}
+
+/// Identity OIDC scope information.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcScopeInfo {
+    /// Scope template.
+    #[serde(default)]
+    pub template: Option<String>,
+    /// Scope description.
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+/// Identity OIDC scope list response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct IdentityOidcScopeList {
+    /// Scope names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for IdentityOidcScopeList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Identity OIDC client type.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum IdentityOidcClientType {
+    /// Confidential client with a client secret.
+    Confidential,
+    /// Public client requiring PKCE for authorization-code flow.
+    Public,
+}
+
+impl IdentityOidcClientType {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Confidential => "confidential",
+            Self::Public => "public",
+        }
+    }
+}
+
+impl Serialize for IdentityOidcClientType {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for IdentityOidcClientType {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        match value.as_str() {
+            "confidential" => Ok(Self::Confidential),
+            "public" => Ok(Self::Public),
+            _ => Err(serde::de::Error::custom(
+                "unsupported identity OIDC client type",
+            )),
+        }
+    }
+}
+
+/// Request to create or update an Identity OIDC client.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityOidcClientRequest {
+    /// Signing key name. OpenBao defaults to `default` when omitted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key: Option<String>,
+    /// Redirect URIs accepted by the client.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub redirect_uris: Vec<String>,
+    /// Assignment resources associated with the client.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub assignments: Vec<String>,
+    /// Client type. This cannot be modified after creation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_type: Option<IdentityOidcClientType>,
+    /// ID token TTL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_token_ttl: Option<String>,
+    /// Access token TTL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token_ttl: Option<String>,
+}
+
+impl IdentityOidcClientRequest {
+    /// Creates an empty client request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the signing key.
+    #[must_use]
+    pub fn with_key(mut self, key: impl Into<String>) -> Self {
+        self.key = Some(key.into());
+        self
+    }
+
+    /// Adds a redirect URI.
+    #[must_use]
+    pub fn with_redirect_uri(mut self, redirect_uri: impl Into<String>) -> Self {
+        self.redirect_uris.push(redirect_uri.into());
+        self
+    }
+
+    /// Adds an assignment name.
+    #[must_use]
+    pub fn with_assignment(mut self, assignment: impl Into<String>) -> Self {
+        self.assignments.push(assignment.into());
+        self
+    }
+
+    /// Sets the client type.
+    #[must_use]
+    pub fn with_client_type(mut self, client_type: IdentityOidcClientType) -> Self {
+        self.client_type = Some(client_type);
+        self
+    }
+
+    /// Sets the ID token TTL.
+    #[must_use]
+    pub fn with_id_token_ttl(mut self, ttl: impl Into<String>) -> Self {
+        self.id_token_ttl = Some(ttl.into());
+        self
+    }
+
+    /// Sets the access token TTL.
+    #[must_use]
+    pub fn with_access_token_ttl(mut self, ttl: impl Into<String>) -> Self {
+        self.access_token_ttl = Some(ttl.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_string_count(
+            self.redirect_uris.len(),
+            "identity OIDC client redirect URIs",
+        )?;
+        validate_string_count(self.assignments.len(), "identity OIDC client assignments")?;
+        if let Some(ttl) = &self.id_token_ttl {
+            validate_duration_parameter(ttl, "identity OIDC client id_token_ttl")?;
+        }
+        if let Some(ttl) = &self.access_token_ttl {
+            validate_duration_parameter(ttl, "identity OIDC client access_token_ttl")?;
+        }
+        Ok(())
+    }
+}
+
+/// Identity OIDC client information.
+#[derive(Clone, Default, Deserialize)]
+pub struct IdentityOidcClientInfo {
+    /// Access token TTL in seconds.
+    #[serde(default)]
+    pub access_token_ttl: Option<u64>,
+    /// Client assignments.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub assignments: Vec<String>,
+    /// Generated client ID.
+    #[serde(default)]
+    pub client_id: Option<String>,
+    /// Generated client secret for confidential clients.
+    #[serde(default)]
+    pub client_secret: Option<SecretString>,
+    /// Client type.
+    #[serde(default)]
+    pub client_type: Option<IdentityOidcClientType>,
+    /// ID token TTL in seconds.
+    #[serde(default)]
+    pub id_token_ttl: Option<u64>,
+    /// Signing key name.
+    #[serde(default)]
+    pub key: Option<String>,
+    /// Redirect URIs accepted by the client.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub redirect_uris: Vec<String>,
+}
+
+impl fmt::Debug for IdentityOidcClientInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityOidcClientInfo")
+            .field("access_token_ttl", &self.access_token_ttl)
+            .field("assignments", &self.assignments)
+            .field("client_id", &self.client_id)
+            .field(
+                "client_secret",
+                &self.client_secret.as_ref().map(|_| "<redacted>"),
+            )
+            .field("client_type", &self.client_type)
+            .field("id_token_ttl", &self.id_token_ttl)
+            .field("key", &self.key)
+            .field("redirect_uris", &self.redirect_uris)
+            .finish()
+    }
+}
+
+/// Identity OIDC client list response.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcClientList {
+    /// Client names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Client metadata keyed by client name.
+    #[serde(default, deserialize_with = "deserialize_bounded_oidc_client_info_map")]
+    pub key_info: BTreeMap<String, IdentityOidcClientInfo>,
+}
+
+impl ListEntries for IdentityOidcClientList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Request to create or update an Identity OIDC assignment.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct IdentityOidcAssignmentRequest {
+    /// Entity IDs allowed by the assignment.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub entity_ids: Vec<String>,
+    /// Group IDs allowed by the assignment.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub group_ids: Vec<String>,
+}
+
+impl IdentityOidcAssignmentRequest {
+    /// Creates an empty assignment request.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds an entity ID.
+    #[must_use]
+    pub fn with_entity_id(mut self, entity_id: impl Into<String>) -> Self {
+        self.entity_ids.push(entity_id.into());
+        self
+    }
+
+    /// Adds a group ID.
+    #[must_use]
+    pub fn with_group_id(mut self, group_id: impl Into<String>) -> Self {
+        self.group_ids.push(group_id.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_string_count(self.entity_ids.len(), "identity OIDC assignment entity IDs")?;
+        validate_string_count(self.group_ids.len(), "identity OIDC assignment group IDs")
+    }
+}
+
+/// Identity OIDC assignment information.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcAssignmentInfo {
+    /// Entity IDs allowed by the assignment.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub entity_ids: Vec<String>,
+    /// Group IDs allowed by the assignment.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub group_ids: Vec<String>,
+}
+
+/// Identity OIDC assignment list response.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct IdentityOidcAssignmentList {
+    /// Assignment names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for IdentityOidcAssignmentList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
 impl Client<Authenticated> {
     /// Uses the identity engine mounted at `identity`.
     pub fn identity(&self) -> Result<Identity<'_>> {
@@ -1595,6 +1996,207 @@ impl Identity<'_> {
             .await
     }
 
+    /// Creates or updates an Identity OIDC provider.
+    pub async fn write_oidc_provider(
+        &self,
+        name: &str,
+        request: &IdentityOidcProviderRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "provider", name])?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Reads an Identity OIDC provider.
+    pub async fn read_oidc_provider(&self, name: &str) -> Result<IdentityOidcProviderInfo> {
+        let envelope: ResponseEnvelope<IdentityOidcProviderInfo> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "provider", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists Identity OIDC providers.
+    pub async fn list_oidc_providers(&self) -> Result<IdentityOidcProviderList> {
+        self.list_oidc_providers_with_client_id(None).await
+    }
+
+    /// Lists Identity OIDC providers available to `client_id`.
+    pub async fn list_oidc_providers_for_client_id(
+        &self,
+        client_id: &str,
+    ) -> Result<IdentityOidcProviderList> {
+        if client_id.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "identity OIDC provider client_id must not be empty".into(),
+            ));
+        }
+        self.list_oidc_providers_with_client_id(Some(client_id))
+            .await
+    }
+
+    /// Deletes an Identity OIDC provider.
+    pub async fn delete_oidc_provider(&self, name: &str) -> Result<Empty> {
+        self.delete_at(&["oidc", "provider", name]).await
+    }
+
+    /// Creates or updates an Identity OIDC scope.
+    pub async fn write_oidc_scope(
+        &self,
+        name: &str,
+        request: &IdentityOidcScopeRequest,
+    ) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "scope", name])?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Reads an Identity OIDC scope.
+    pub async fn read_oidc_scope(&self, name: &str) -> Result<IdentityOidcScopeInfo> {
+        let envelope: ResponseEnvelope<IdentityOidcScopeInfo> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "scope", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists Identity OIDC scopes.
+    pub async fn list_oidc_scopes(&self) -> Result<IdentityOidcScopeList> {
+        self.list_at(&["oidc", "scope"]).await
+    }
+
+    /// Deletes an Identity OIDC scope.
+    pub async fn delete_oidc_scope(&self, name: &str) -> Result<Empty> {
+        self.delete_at(&["oidc", "scope", name]).await
+    }
+
+    /// Creates or updates an Identity OIDC client.
+    pub async fn write_oidc_client(
+        &self,
+        name: &str,
+        request: &IdentityOidcClientRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "client", name])?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Reads an Identity OIDC client.
+    pub async fn read_oidc_client(&self, name: &str) -> Result<IdentityOidcClientInfo> {
+        let envelope: ResponseEnvelope<IdentityOidcClientInfo> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "client", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists Identity OIDC clients.
+    pub async fn list_oidc_clients(&self) -> Result<IdentityOidcClientList> {
+        self.list_at(&["oidc", "client"]).await
+    }
+
+    /// Deletes an Identity OIDC client.
+    pub async fn delete_oidc_client(&self, name: &str) -> Result<Empty> {
+        self.delete_at(&["oidc", "client", name]).await
+    }
+
+    /// Creates or updates an Identity OIDC assignment.
+    pub async fn write_oidc_assignment(
+        &self,
+        name: &str,
+        request: &IdentityOidcAssignmentRequest,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["oidc", "assignment", name])?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Reads an Identity OIDC assignment.
+    pub async fn read_oidc_assignment(&self, name: &str) -> Result<IdentityOidcAssignmentInfo> {
+        let envelope: ResponseEnvelope<IdentityOidcAssignmentInfo> = self
+            .client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "assignment", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists Identity OIDC assignments.
+    pub async fn list_oidc_assignments(&self) -> Result<IdentityOidcAssignmentList> {
+        self.list_at(&["oidc", "assignment"]).await
+    }
+
+    /// Deletes an Identity OIDC assignment.
+    pub async fn delete_oidc_assignment(&self, name: &str) -> Result<Empty> {
+        self.delete_at(&["oidc", "assignment", name]).await
+    }
+
+    /// Reads OIDC discovery metadata for a named provider.
+    ///
+    /// The named-provider `/authorize`, `/token`, and `/userinfo` protocol
+    /// flows are intentionally outside this SDK; pass this metadata to a real
+    /// OIDC client library for browser-based flows.
+    pub async fn read_oidc_provider_discovery(&self, name: &str) -> Result<IdentityOidcDiscovery> {
+        self.client
+            .request_json(
+                Method::GET,
+                &self.path(&[
+                    "oidc",
+                    "provider",
+                    name,
+                    ".well-known",
+                    "openid-configuration",
+                ])?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads public OIDC JSON Web Keys for a named provider.
+    pub async fn read_oidc_provider_jwks(&self, name: &str) -> Result<IdentityOidcJwks> {
+        self.client
+            .request_json(
+                Method::GET,
+                &self.path(&["oidc", "provider", name, ".well-known", "keys"])?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
     async fn list_at<T>(&self, tail: &[&str]) -> Result<T>
     where
         T: serde::de::DeserializeOwned,
@@ -1607,6 +2209,29 @@ impl Identity<'_> {
                 method,
                 &self.path(tail)?,
                 &[],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    async fn list_oidc_providers_with_client_id(
+        &self,
+        client_id: Option<&str>,
+    ) -> Result<IdentityOidcProviderList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let mut query = Vec::new();
+        if let Some(client_id) = client_id {
+            query.push(("client_id", client_id.to_owned()));
+        }
+        let envelope: ResponseEnvelope<IdentityOidcProviderList> = self
+            .client
+            .request_json_query_accepting(
+                method,
+                &self.path(&["oidc", "provider"])?,
+                &query,
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
@@ -1707,6 +2332,131 @@ where
     deserializer.deserialize_option(Visitor)
 }
 
+fn deserialize_bounded_oidc_provider_info_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, IdentityOidcProviderInfo>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for Visitor {
+        type Value = BTreeMap<String, IdentityOidcProviderInfo>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a bounded Identity OIDC provider info map")
+        }
+
+        fn visit_none<E>(self) -> core::result::Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(BTreeMap::new())
+        }
+
+        fn visit_unit<E>(self) -> core::result::Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(BTreeMap::new())
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_map(self)
+        }
+
+        fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            let mut values = BTreeMap::new();
+            while values.len() < IDENTITY_LIST_LIMIT {
+                let Some((key, value)) = map.next_entry::<String, IdentityOidcProviderInfo>()?
+                else {
+                    return Ok(values);
+                };
+                values.insert(key, value);
+            }
+            if map
+                .next_entry::<serde::de::IgnoredAny, serde::de::IgnoredAny>()?
+                .is_some()
+            {
+                return Err(serde::de::Error::custom(
+                    "identity OIDC provider info map exceeds item limit",
+                ));
+            }
+            Ok(values)
+        }
+    }
+
+    deserializer.deserialize_option(Visitor)
+}
+
+fn deserialize_bounded_oidc_client_info_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, IdentityOidcClientInfo>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for Visitor {
+        type Value = BTreeMap<String, IdentityOidcClientInfo>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a bounded Identity OIDC client info map")
+        }
+
+        fn visit_none<E>(self) -> core::result::Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(BTreeMap::new())
+        }
+
+        fn visit_unit<E>(self) -> core::result::Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(BTreeMap::new())
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_map(self)
+        }
+
+        fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            let mut values = BTreeMap::new();
+            while values.len() < IDENTITY_LIST_LIMIT {
+                let Some((key, value)) = map.next_entry::<String, IdentityOidcClientInfo>()? else {
+                    return Ok(values);
+                };
+                values.insert(key, value);
+            }
+            if map
+                .next_entry::<serde::de::IgnoredAny, serde::de::IgnoredAny>()?
+                .is_some()
+            {
+                return Err(serde::de::Error::custom(
+                    "identity OIDC client info map exceeds item limit",
+                ));
+            }
+            Ok(values)
+        }
+    }
+
+    deserializer.deserialize_option(Visitor)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
@@ -1718,9 +2468,10 @@ mod tests {
 
     use super::{
         IdentityAliasList, IdentityEntityBatchDeleteRequest, IdentityEntityList,
-        IdentityEntityRequest, IdentityGroupList, IdentityGroupRequest,
-        IdentityOidcIntrospectRequest, IdentityOidcJwks, IdentityOidcKeyList, IdentityOidcRoleList,
-        IdentityOidcToken,
+        IdentityEntityRequest, IdentityGroupList, IdentityGroupRequest, IdentityOidcAssignmentList,
+        IdentityOidcClientInfo, IdentityOidcClientList, IdentityOidcIntrospectRequest,
+        IdentityOidcJwks, IdentityOidcKeyList, IdentityOidcProviderList, IdentityOidcRoleList,
+        IdentityOidcScopeList, IdentityOidcToken,
     };
 
     #[test]
@@ -1792,6 +2543,14 @@ mod tests {
         let debug = format!("{request:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("signed-id-token"));
+
+        let client = IdentityOidcClientInfo {
+            client_secret: Some(SecretString::from("client-secret")),
+            ..IdentityOidcClientInfo::default()
+        };
+        let debug = format!("{client:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("client-secret"));
     }
 
     #[test]
@@ -1803,7 +2562,18 @@ mod tests {
         let value = serde_json::json!({ "keys": keys });
 
         assert!(serde_json::from_value::<IdentityOidcKeyList>(value.clone()).is_err());
-        assert!(serde_json::from_value::<IdentityOidcRoleList>(value).is_err());
+        assert!(serde_json::from_value::<IdentityOidcRoleList>(value.clone()).is_err());
+        assert!(
+            serde_json::from_value::<IdentityOidcProviderList>(serde_json::json!({
+                "keys": value["keys"].clone(),
+                "key_info": {}
+            }))
+            .is_err()
+        );
+
+        assert!(serde_json::from_value::<IdentityOidcScopeList>(value.clone()).is_err());
+        assert!(serde_json::from_value::<IdentityOidcClientList>(value.clone()).is_err());
+        assert!(serde_json::from_value::<IdentityOidcAssignmentList>(value).is_err());
 
         let mut jwks = Vec::new();
         for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
@@ -1812,6 +2582,18 @@ mod tests {
         assert!(
             serde_json::from_value::<IdentityOidcJwks>(serde_json::json!({
                 "keys": jwks
+            }))
+            .is_err()
+        );
+
+        let mut key_info = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            key_info.insert(format!("client-{index}"), serde_json::json!({}));
+        }
+        assert!(
+            serde_json::from_value::<IdentityOidcClientList>(serde_json::json!({
+                "keys": [],
+                "key_info": key_info
             }))
             .is_err()
         );

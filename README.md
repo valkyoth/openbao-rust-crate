@@ -78,7 +78,9 @@ Implemented now:
   rotation, and credential helpers.
 - Identity entity, group, entity-alias, and group-alias lifecycle, lookup,
   entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD,
-  signed ID token generation, token introspection, discovery, and JWKS helpers.
+  signed ID token generation, token introspection, discovery, JWKS, OIDC
+  provider/scope/client/assignment admin, and named-provider discovery/JWKS
+  helpers.
 - LDAP secrets engine config, static role, dynamic role, credential, library
   checkout, and check-in helpers.
 - SSH role, zero-address role, IP lookup, OTP credential, issuer config,
@@ -285,7 +287,7 @@ openbao = { version = "0.10", features = ["time"] }
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
 For the current `0.10.0` line it records `644` documented endpoint rows, with
-`484/644` (`75.2%`) strict typed or operator-gated coverage.
+`502/644` (`78.0%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
 
@@ -339,7 +341,7 @@ For the current `0.10.0` line it records `644` documented endpoint rows, with
 | Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
-| Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, and JWKS helpers are implemented. OIDC provider admin CRUD and MFA management are still in progress for `0.10.0`; named-provider OIDC browser protocol flows stay external. |
+| Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, JWKS, OIDC provider/scope/client/assignment admin, and named-provider discovery/JWKS helpers are implemented. MFA management is still in progress for `0.10.0`; named-provider OIDC browser protocol flows stay external. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, and optional raw-byte helpers. Import/BYOK endpoint wrappers are planned for `0.11.0` with pre-wrapped `SecretString` ciphertext only; no raw key bytes enter those wrappers. Soft-delete/restore, cache/global config, CSR, certificate-install, and optional `transit-import` wrapping-helper work are planned before `1.0.0`. |

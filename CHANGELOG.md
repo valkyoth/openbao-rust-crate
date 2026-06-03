@@ -11,11 +11,19 @@ All notable changes to this project are documented here.
   signing key create/read/list/delete/rotate, role create/read/list/delete,
   signed ID token generation, token introspection, discovery metadata, and
   public JWKS reads.
+- Added typed Identity OIDC provider, scope, client, and assignment admin
+  helpers, including named-provider discovery and JWKS reads while keeping
+  browser OIDC protocol flows outside the SDK boundary.
 - Added secret-aware Identity OIDC token and introspection request types with
   redacted `Debug` output.
+- Added secret-aware Identity OIDC client response handling so returned client
+  secrets are stored as `SecretString` and redacted from `Debug`.
 - Added bounded deserialization for Identity OIDC signing-key lists, role lists,
-  nullable discovery metadata lists, and JWKS key arrays.
+  provider/client metadata maps, nullable discovery metadata lists, and JWKS key
+  arrays.
 - Added mock HTTP coverage for the documented Identity OIDC token backend paths.
+- Added mock HTTP coverage for the documented Identity OIDC provider admin
+  paths.
 
 ## 0.9.0 - 2026-06-03
 

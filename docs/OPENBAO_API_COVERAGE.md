@@ -73,11 +73,11 @@ The `0.10.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `644`;
-- strict typed coverage: `484/644` (`75.2%`);
-- typed plus partial coverage: `485/644` (`75.3%`);
-- addressed by typed, partial, raw, external, or rejected policy: `530/644`
-  (`82.3%`);
-- planned implementation rows before `1.0.0`: `114`;
+- strict typed coverage: `502/644` (`78.0%`);
+- typed plus partial coverage: `503/644` (`78.1%`);
+- addressed by typed, partial, raw, external, or rejected policy: `548/644`
+  (`85.1%`);
+- planned implementation rows before `1.0.0`: `96`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -237,12 +237,13 @@ into this SDK.
   implemented. Entity/group lookup and entity merge helpers are implemented in
   `0.8.0`. Identity OIDC token backend config, signing key CRUD/rotate, role
   CRUD/list, signed token generation, token introspection, discovery metadata,
-  and default JWKS reads are implemented in `0.10.0`. Identity OIDC provider
-  admin CRUD, MFA method management, MFA login enforcement, and
-  `sys/mfa/validate` remain planned for `0.10.0`; named-provider OIDC browser
-  protocol flows remain external. LDAP config, root rotation, static
-  roles/credentials, dynamic roles/credentials, and library check-out/check-in
-  helpers are implemented.
+  and default JWKS reads are implemented in `0.10.0`. Identity OIDC provider,
+  scope, client, assignment, named-provider discovery, and named-provider JWKS
+  helpers are implemented in `0.10.0`. MFA method management, MFA login
+  enforcement, and `sys/mfa/validate` remain planned for `0.10.0`;
+  named-provider OIDC browser protocol flows remain external. LDAP config,
+  root rotation, static roles/credentials, dynamic roles/credentials, and
+  library check-out/check-in helpers are implemented.
 
 ## System Backend
 

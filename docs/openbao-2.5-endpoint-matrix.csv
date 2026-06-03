@@ -543,24 +543,24 @@ secret,GET,/identity/oidc/.well-known/openid-configuration,typed,https://openbao
 secret,GET,/identity/oidc/.well-known/keys,typed,https://openbao.org/api-docs/secret/identity/tokens/,Typed Identity OIDC token backend helper exists.
 secret,POST,/identity/lookup/entity,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
 secret,POST,/identity/lookup/group,typed,https://openbao.org/api-docs/secret/identity/lookup/,Typed Identity entity/group/alias/lookup helper exists.
-secret,POST,/identity/oidc/provider/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/provider/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/provider,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/provider/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/scope/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/scope/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/scope,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/scope/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/client/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/client/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/client,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/client/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,POST,/identity/oidc/assignment/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/assignment/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,LIST,/identity/oidc/assignment,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,DELETE,/identity/oidc/assignment/:name,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
-secret,GET,/identity/oidc/provider/:name/.well-known/keys,planned,https://openbao.org/api-docs/secret/identity/oidc-provider/,Implement in 0.10.0 as Identity OIDC admin/discovery/token/introspection or MFA management.
+secret,POST,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,GET,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,LIST,/identity/oidc/provider,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,DELETE,/identity/oidc/provider/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,POST,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,GET,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,LIST,/identity/oidc/scope,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,DELETE,/identity/oidc/scope/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,POST,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,GET,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,LIST,/identity/oidc/client,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,DELETE,/identity/oidc/client/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,POST,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,GET,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,LIST,/identity/oidc/assignment,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,DELETE,/identity/oidc/assignment/:name,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed Identity OIDC provider admin helper exists.
+secret,GET,/identity/oidc/provider/:name/.well-known/openid-configuration,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed named-provider OIDC discovery helper exists.
+secret,GET,/identity/oidc/provider/:name/.well-known/keys,typed,https://openbao.org/api-docs/secret/identity/oidc-provider/,Typed named-provider OIDC JWKS helper exists.
 secret,GET/POST,/identity/oidc/provider/:name/authorize,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
 secret,POST,/identity/oidc/provider/:name/token,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
 secret,POST,/identity/oidc/provider/:name/userinfo,external,https://openbao.org/api-docs/secret/identity/oidc-provider/,OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.
