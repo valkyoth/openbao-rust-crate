@@ -31,10 +31,12 @@ zero `planned` and zero `decision` rows.
 - Added selective AdminBootstrap convergence for PKI, database, and SSH mounts,
   dynamic/static database roles, and SSH roles.
 
-## Planned Scope
+## Remaining Finalization
 
-- Final public API, documentation, migration, and stable-scope review before
-  `1.0.0`.
+- Local release-gate validation, external pentest feedback, and GitHub CI must
+  pass on the exact release candidate before tagging.
+- The final public API, documentation, migration, and stable-scope review must
+  remain clean before `1.0.0`.
 
 ## Security Notes
 

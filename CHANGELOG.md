@@ -16,6 +16,9 @@ All notable changes to this project are documented here.
   policies that require response wrapping.
 - Added AdminBootstrap convergence for PKI, database, and SSH mounts plus
   database dynamic/static roles and SSH roles.
+- Reconciled the release plan and API stability audit with the current
+  endpoint matrix: `597/643` strict typed or operator-gated rows, with zero
+  remaining `planned` or `decision` rows.
 
 ### Security
 

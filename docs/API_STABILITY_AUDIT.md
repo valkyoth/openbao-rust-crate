@@ -1,15 +1,16 @@
 # API Stability Audit
 
-This document tracks the `0.9.0` audit before the first stable `1.0.0`
+This document tracks the pre-stable API audit before the first stable `1.0.0`
 release. The goal is to avoid accidental public API commitments while keeping
 the crate useful for production trials.
 
 ## Status
 
-- Release line: `0.9.0`
+- Release line: `0.15.0`
 - Started: 2026-06-03
-- Audit status: `0.9.0` stabilization audit completed; remaining endpoint
-  implementation work is assigned to `0.10.0` through `0.15.0`
+- Audit status: endpoint-scope closure completed for the `0.15.0` stable
+  candidate; the OpenBao `2.5.x` endpoint matrix has zero `planned` and zero
+  `decision` rows.
 - Stable target: `1.0.0`
 - Planning assumption: the endpoint matrix expanded the pre-`1.0` plan through
   `0.15.0`. Use `0.9.0` for stabilization foundations, `0.10.0` through
@@ -17,8 +18,8 @@ the crate useful for production trials.
   `1.0.0` for the stable freeze. After `1.0.0`, assume only `1.0.x`
   maintenance and security fixes.
 - Coverage target: no OpenBao `2.5.x` endpoint row remains classified as
-  `decision` before `1.0.0`; not every row must become first-class typed if a
-  raw, external, partial, gated, or rejected boundary is safer.
+  `planned` or `decision` before `1.0.0`; not every row must become first-class
+  typed if a raw, external, partial, gated, or rejected boundary is safer.
 
 ## Stabilization Rules
 
@@ -36,10 +37,10 @@ the crate useful for production trials.
   raw storage values, and backup/export material must not be converted into
   ordinary loggable strings.
 
-## Committed `0.9.0` Work
+## Pre-Stable Closure Work
 
-The following `0.9.0` items are implementation commitments and do not need an
-owner decision unless a pentest or implementation blocker changes their risk:
+The following items were implementation commitments during the pre-stable audit
+and now have current API or documentation coverage:
 
 - explicit opt-in retry/backoff with single-shot requests as the default;
 - shared pagination for non-secret string list endpoints only;
@@ -86,7 +87,7 @@ must now have an explicit current decision.
 
 | Source | Limitation | Current Decision |
 | --- | --- | --- |
-| `0.1.0` | KV v2 metadata, token lifecycle, and Transit were incomplete. | Resolved by later releases. No `0.9.0` action. |
+| `0.1.0` | KV v2 metadata, token lifecycle, and Transit were incomplete. | Resolved by later releases. |
 | `0.1.0` to `0.5.0` | Exact certificate/public-key pinning was not implemented. | Rejected for stable scope. Use `OpenBaoConfig::only_root_certificates` or `OPENBAO_CACERT` plus `OPENBAO_TLS_ROOTS_ONLY=true` with an internal CA or self-signed OpenBao certificate. Leaf and SPKI pinning are operationally brittle and `reqwest` has no portable pinning API across TLS backends. |
 | `0.2.0` and `0.3.0` | HTTP/TLS/kernel/device buffers are outside crate zeroization control after handoff to `reqwest`. | Permanent documented boundary. No crate can guarantee zeroization for external transport buffers. |
 | `0.3.0` | Transit batch/export/backup/restore were not typed. | Resolved in `0.8.0`. BYOK/import HTTP wrappers are resolved in `0.11.0`; default endpoint wrappers accept pre-wrapped `SecretString` ciphertext or public-key-only import material, and raw private or symmetric key bytes stay outside those wrappers. Optional software wrapping is available only behind the non-default `transit-import` feature. |
@@ -97,37 +98,37 @@ must now have an explicit current decision.
 | `0.5.0` | OIDC browser/device flows were not implemented. | Resolved in `0.8.0`. |
 | `0.5.0` | Full JOSE/JWKS construction was out of scope. | Still out of scope; use Transit signing helpers with an application JWT/JWK library. |
 | `0.6.0` | Raw unauthenticated SSH public-key reads were not typed. | Intentional; use an external HTTP client for unauthenticated text/plain public-key endpoints. |
-| `0.6.0` | ACL builder did not cover advanced ACL parameter/wrapping constraints. | Keep direct `PolicyWriteRequest` for advanced policies; do not expand builder until a safe typed representation is designed. |
+| `0.6.0` | ACL builder did not cover advanced ACL parameter/wrapping constraints. | Wrapping TTL constraints are resolved in `0.15.0`. Keep direct `PolicyWriteRequest` for parameter constraints because safe generation requires a complete HCL value serializer. |
 | `0.7.0` | AppRole delegated per-property endpoints were not typed. | Resolved in `0.9.0` for every documented OpenBao `2.5.x` delegated property row. |
 | `0.7.0` | Custom plugin APIs were not modeled as a generic trait. | Intentional; plugin schemas are deployment-specific. Keep local typed wrappers. |
 | `0.7.0` | Bootstrap preview, typed capabilities, list traits, and timestamps were planned. | Resolved in `0.8.0`. |
 | `0.7.0` | Broader bootstrap convergence for LDAP/RabbitMQ/Kubernetes secrets/Identity remained planned. | PKI role and Identity entity/group convergence landed in `0.9.0`; selective PKI/database/SSH mount and role convergence lands in `0.15.0`; CA setup, connection configuration, and KV v1 convergence remain rejected in the bootstrap layer. |
 | `0.8.0` | Kerberos SPNEGO acquisition is left to platform tooling. | Intentional; the crate accepts the documented base64 token and does not embed Kerberos client stacks. |
-| `0.8.0` | Retry, auto-renewal, lease tracking, pagination, Identity OIDC/MFA, PKI root/named issuer, tracing, seal watcher, HTTP/2, and secret wrappers needed decisions. | Decisions are recorded in the API Areas table above and must be reflected in `0.9.0` release notes before tag. Tracing and HTTP/2 are resolved with optional features and no runtime transport hooks. |
+| `0.8.0` | Retry, auto-renewal, lease tracking, pagination, Identity OIDC/MFA, PKI root/named issuer, tracing, seal watcher, HTTP/2, and secret wrappers needed decisions. | Resolved in the API Areas table above. Background auto-renewal, background lease tracking, request-level seal back-pressure, runtime HTTP/2 knobs, and per-engine wrapped method duplication are rejected for stable scope. |
 
 ## Deferred Work Template
 
-When moving a feature out of `0.9.0`, record:
+When moving a feature out of the stable scope, record:
 
 - user-facing workflow affected;
-- whether it moves to `0.10.0` through `0.15.0`, is rejected for
-  stable scope, or is a permanent external boundary;
-- why the feature is unsafe, unstable, or too broad for `0.9.0`;
+- whether it is rejected for stable scope, becomes a permanent external
+  boundary, or is reserved for a future `1.x` feature discussion;
+- why the feature is unsafe, unstable, or too broad for the stable API;
 - whether `Client::request_json` can reach the endpoint safely meanwhile;
-- intended pre-`1.0` release decision point;
+- intended future decision point, if any;
 - security considerations for callers implementing it locally.
 
 ## Release Exit Criteria
 
 - All public modules have been reviewed for secret handling, builder
   consistency, feature gates, and semver expectations.
-- Migration guide covers `0.1` through `0.9`, `vaultrs`, bespoke `reqwest`
-  wrappers, and the `0.9.0` retry/pagination/bootstrap additions.
+- Migration guide covers `0.1` through `0.15`, `vaultrs`, bespoke `reqwest`
+  wrappers, and the pre-stable retry/pagination/bootstrap additions.
 - Retry, token auto-renewal, lease tracking, pagination, Identity OIDC/MFA,
   Transit advanced key management, PKI advanced scope, system completion,
   tracing, HTTP/2, fuzzing, fixtures, and quantum-readiness have explicit
   decisions in this document or linked docs.
-- Endpoint matrix has zero `planned` or `decision` rows by `0.15.0`.
+- Endpoint matrix has zero `planned` or `decision` rows.
 - README examples and docs examples compile.
 - The real OpenBao integration gate passes with default features.
 - A pentest report for the exact release candidate has been reviewed and

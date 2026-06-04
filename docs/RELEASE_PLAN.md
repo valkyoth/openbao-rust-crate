@@ -1,11 +1,13 @@
 # Release Plan
 
 This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
-The endpoint-by-endpoint OpenBao `2.5.x` matrix generated on 2026-06-03 found
-`643` documented endpoint rows, `537` strict typed or operator-gated rows,
-`60` planned implementation rows, and `0` open owner-decision rows. Because
-there is no rush to force stability, the pre-`1.0` line now extends through
-`0.15.0` so planned gaps can be closed deliberately.
+The endpoint-by-endpoint OpenBao `2.5.x` matrix currently tracks `643`
+documented endpoint rows, with `597/643` (`92.8%`) strict typed or
+operator-gated coverage and zero `planned` or `decision` rows. The remaining
+rows are intentionally addressed as `partial`, `raw`, `external`, or
+`rejected` where that boundary is safer than first-class typed SDK coverage.
+The pre-`1.0` line extends through `0.15.0` so this final scope can be trialed
+before the stable API freeze.
 
 After `1.0.0`, the expected line is `1.0.x` maintenance, security fixes,
 compatibility fixes, and documentation corrections only. Every pre-`1.0`
@@ -36,8 +38,7 @@ Every release:
 - The stable readiness target is not blindly `100% typed`; it is `100%`
   addressed endpoint rows. A row may be addressed as `typed`, `typed-gated`,
   `partial`, `raw`, `external`, or rejected with a documented safe alternative.
-  Rows classified as `planned` have a final owner decision but still need the
-  implementation work assigned in this plan.
+  The current `0.15.0` candidate has no remaining `planned` implementation rows.
 - No endpoint row may remain classified as `planned` or `decision` when
   `1.0.0` is tagged.
 - After `1.0.0`, new feature work is not planned. Only `1.0.x` security,
