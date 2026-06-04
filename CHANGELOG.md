@@ -16,6 +16,8 @@ All notable changes to this project are documented here.
   generation, and standalone key generation helpers.
 - Added PKI cluster config, auto-tidy config, and revoke-with-key helpers.
 - Added operator-gated PKI sign-verbatim helpers.
+- Expanded PKI role, URL, root/intermediate generation, CRL config, and tidy
+  request/status structs with current OpenBao fields.
 
 ### Maintenance
 

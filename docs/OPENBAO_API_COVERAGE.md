@@ -205,9 +205,9 @@ Support plan:
   issuer/key config, named-issuer issue/sign, root rotate/replace, standalone
   key generation, multi-issuer root/intermediate generation, and
   operator-gated default root deletion with explicit `PkiRootDeletion`
-  confirmation, cluster config, auto-tidy config, revoke-with-key, and
-  sign-verbatim behind operator gates are implemented. Current-doc field
-  expansion for PKI role/generation/CRL/tidy structs is planned for `0.12.0`.
+  confirmation, cluster config, auto-tidy config, revoke-with-key,
+  sign-verbatim behind operator gates, and current-doc field expansion for PKI
+  role/generation/CRL/tidy structs are implemented.
   Revocation/CRL management, CEL roles, named-issuer
   sign-intermediate/sign-self-issued, delta CRL rotation, and cross-sign rows
   are planned for `0.13.0`. Unauthenticated public CA/certificate/CRL reads and

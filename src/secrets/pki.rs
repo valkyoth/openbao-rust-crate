@@ -58,6 +58,9 @@ pub struct PkiRole {
     #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub allowed_domains: Vec<String>,
+    /// Allows ACL templating in allowed domains.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allowed_domains_template: Option<bool>,
     /// Allows issuing for the bare allowed domain.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub allow_bare_domains: Option<bool>,
@@ -73,6 +76,28 @@ pub struct PkiRole {
     /// Enforces hostnames in certificate names.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enforce_hostnames: Option<bool>,
+    /// Allows requested IP SANs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allow_ip_sans: Option<bool>,
+    /// CIDR ranges allowed for requested IP SANs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_ip_sans_cidr: Vec<String>,
+    /// URI SAN values or glob patterns allowed for requests.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_uri_sans: Vec<String>,
+    /// Allows ACL templating in allowed URI SANs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allowed_uri_sans_template: Option<bool>,
+    /// Other SAN values or glob patterns allowed for requests.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_other_sans: Vec<String>,
+    /// Subject serial-number values allowed for requests.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_serial_numbers: Vec<String>,
     /// Allows localhost names.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub allow_localhost: Option<bool>,
@@ -118,6 +143,18 @@ pub struct PkiRole {
     /// Not-before skew duration.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_before_duration: Option<String>,
+    /// Not-before request bound mode.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_before_bound: Option<String>,
+    /// Explicit not-before timestamp.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_before: Option<String>,
+    /// Not-after request bound mode or timestamp.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_after_bound: Option<String>,
+    /// Explicit not-after timestamp.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_after: Option<String>,
     /// Whether key usage is marked critical.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key_usage_critical: Option<bool>,
@@ -127,6 +164,52 @@ pub struct PkiRole {
     /// Whether issued certificates are not stored.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub no_store: Option<bool>,
+    /// Whether issued certificates receive OpenBao leases.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub generate_lease: Option<bool>,
+    /// Whether common name is required on issuance.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub require_cn: Option<bool>,
+    /// Certificate policy OIDs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub policy_identifiers: Vec<String>,
+    /// Common-name validation modes.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cn_validations: Vec<String>,
+    /// User ID subject values allowed for requests.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_user_ids: Vec<String>,
+    /// Subject organizational units for issued certificates.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ou: Vec<String>,
+    /// Subject organizations for issued certificates.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub organization: Vec<String>,
+    /// Subject countries for issued certificates.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub country: Vec<String>,
+    /// Subject localities for issued certificates.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub locality: Vec<String>,
+    /// Subject provinces for issued certificates.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub province: Vec<String>,
+    /// Subject street addresses for issued certificates.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub street_address: Vec<String>,
+    /// Subject postal codes for issued certificates.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub postal_code: Vec<String>,
 }
 
 /// PKI role list.
@@ -158,6 +241,10 @@ pub struct PkiUrlsConfig {
     #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub ocsp_servers: Vec<String>,
+    /// Delta CRL distribution point URLs.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub delta_crl_distribution_points: Vec<String>,
     /// Enables templating in configured URLs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enable_templating: Option<bool>,
@@ -262,6 +349,54 @@ pub struct PkiGenerateRootRequest {
     /// Excludes the common name from SANs.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exclude_cn_from_sans: Option<bool>,
+    /// Maximum path length to encode in the generated certificate.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_path_length: Option<i64>,
+    /// Permitted DNS domains for name constraints.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub permitted_dns_domains: Vec<String>,
+    /// Subject organizational units.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ou: Vec<String>,
+    /// Subject organizations.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub organization: Vec<String>,
+    /// Subject countries.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub country: Vec<String>,
+    /// Subject localities.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub locality: Vec<String>,
+    /// Subject provinces.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub province: Vec<String>,
+    /// Subject street addresses.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub street_address: Vec<String>,
+    /// Subject postal codes.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub postal_code: Vec<String>,
+    /// Subject serial number.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub serial_number: Option<String>,
+    /// Not-before skew duration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_before_duration: Option<String>,
+    /// Explicit not-before timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_before: Option<String>,
+    /// Explicit not-after timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_after: Option<String>,
+    /// Default key usages.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub key_usage: Vec<String>,
+    /// Default extended key usages.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ext_key_usage: Vec<String>,
+    /// Default extended key usage OIDs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ext_key_usage_oids: Vec<String>,
 }
 
 /// Request for generating an intermediate CA CSR.
@@ -302,6 +437,51 @@ pub struct PkiGenerateIntermediateRequest {
     /// Existing key reference for `existing` generation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub key_ref: Option<String>,
+    /// Permitted DNS domains for name constraints.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub permitted_dns_domains: Vec<String>,
+    /// Subject organizational units.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ou: Vec<String>,
+    /// Subject organizations.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub organization: Vec<String>,
+    /// Subject countries.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub country: Vec<String>,
+    /// Subject localities.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub locality: Vec<String>,
+    /// Subject provinces.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub province: Vec<String>,
+    /// Subject street addresses.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub street_address: Vec<String>,
+    /// Subject postal codes.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub postal_code: Vec<String>,
+    /// Subject serial number.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub serial_number: Option<String>,
+    /// Not-before skew duration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_before_duration: Option<String>,
+    /// Explicit not-before timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_before: Option<String>,
+    /// Explicit not-after timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_after: Option<String>,
+    /// Default key usages.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub key_usage: Vec<String>,
+    /// Default extended key usages.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ext_key_usage: Vec<String>,
+    /// Default extended key usage OIDs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ext_key_usage_oids: Vec<String>,
 }
 
 /// Request for generating standalone PKI key material.
@@ -591,6 +771,15 @@ pub struct PkiTidyStatus {
     /// Number of certificate-store entries deleted, when returned.
     #[serde(default)]
     pub cert_store_deleted_count: Option<u64>,
+    /// Number of revoked certificates missing a valid issuer reference.
+    #[serde(default)]
+    pub missing_issuer_cert_count: Option<u64>,
+    /// Number of revocation queue entries deleted.
+    #[serde(default)]
+    pub revocation_queue_deleted_count: Option<u64>,
+    /// Number of cross-cluster revoked certificate entries deleted.
+    #[serde(default)]
+    pub cross_revoked_cert_deleted_count: Option<u64>,
     /// Whether invalid certificate tidy is enabled.
     #[serde(default)]
     pub tidy_invalid_certs: Option<bool>,
@@ -603,6 +792,9 @@ pub struct PkiTidyStatus {
     /// Whether revoked certificate issuer association tidy is enabled.
     #[serde(default)]
     pub tidy_revoked_cert_issuer_associations: Option<bool>,
+    /// Whether cross-cluster revoked certificate tidy is enabled.
+    #[serde(default)]
+    pub tidy_cross_cluster_revoked_certs: Option<bool>,
     /// Whether revocation queue tidy is enabled.
     #[serde(default)]
     pub tidy_revocation_queue: Option<bool>,
@@ -615,6 +807,12 @@ pub struct PkiTidyStatus {
     /// Revocation queue safety buffer duration.
     #[serde(default, deserialize_with = "deserialize_optional_string_or_u64")]
     pub revocation_queue_safety_buffer: Option<String>,
+    /// Page size for tidy batches.
+    #[serde(default)]
+    pub page_size: Option<u64>,
+    /// Last automatic tidy finish time.
+    #[serde(default)]
+    pub last_auto_tidy_finished: Option<String>,
 }
 
 /// PKI automatic tidy configuration.
@@ -2251,18 +2449,56 @@ mod tests {
 
     use super::{
         PkiAcmeConfig, PkiAcmeEabList, PkiAcmeEabToken, PkiAuthorityBundle, PkiAutoTidyConfig,
-        PkiCertificateBundle, PkiImportResponse, PkiIssuerInfo, PkiIssuerList, PkiIssuersConfig,
-        PkiKeyList, PkiRevokeWithKeyRequest, PkiRole, PkiRoleList,
+        PkiCertificateBundle, PkiGenerateRootRequest, PkiImportResponse, PkiIssuerInfo,
+        PkiIssuerList, PkiIssuersConfig, PkiKeyList, PkiRevokeWithKeyRequest, PkiRole, PkiRoleList,
+        PkiTidyStatus,
     };
 
     #[test]
     fn pki_role_accepts_string_and_array_lists() {
         let role: PkiRole = serde_json::from_str(
-            r#"{"allowed_domains":"example.com,api.example.com","key_usage":["DigitalSignature"]}"#,
+            r#"{
+                "allowed_domains":"example.com,api.example.com",
+                "allowed_uri_sans":"spiffe://example.com/*",
+                "allowed_other_sans":["1.2.3.4;UTF8:*"],
+                "allowed_serial_numbers":"device-1,device-2",
+                "organization":["Example Org"],
+                "country":"SE",
+                "key_usage":["DigitalSignature"]
+            }"#,
         )
         .unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(role.allowed_domains, ["example.com", "api.example.com"]);
+        assert_eq!(role.allowed_uri_sans, ["spiffe://example.com/*"]);
+        assert_eq!(role.allowed_other_sans, ["1.2.3.4;UTF8:*"]);
+        assert_eq!(role.allowed_serial_numbers, ["device-1", "device-2"]);
+        assert_eq!(role.organization, ["Example Org"]);
+        assert_eq!(role.country, ["SE"]);
         assert_eq!(role.key_usage, ["DigitalSignature"]);
+    }
+
+    #[test]
+    fn pki_generation_requests_serialize_current_doc_fields() {
+        let request = PkiGenerateRootRequest {
+            common_name: "root.example.com".to_owned(),
+            permitted_dns_domains: vec!["example.com".to_owned()],
+            organization: vec!["Example Org".to_owned()],
+            country: vec!["SE".to_owned()],
+            serial_number: Some("subject-serial".to_owned()),
+            max_path_length: Some(1),
+            key_usage: vec!["CertSign".to_owned()],
+            ext_key_usage_oids: vec!["1.2.3.4".to_owned()],
+            ..Default::default()
+        };
+        let value = serde_json::to_value(request).unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(value["permitted_dns_domains"][0], "example.com");
+        assert_eq!(value["organization"][0], "Example Org");
+        assert_eq!(value["country"][0], "SE");
+        assert_eq!(value["serial_number"], "subject-serial");
+        assert_eq!(value["max_path_length"], 1);
+        assert_eq!(value["key_usage"][0], "CertSign");
+        assert_eq!(value["ext_key_usage_oids"][0], "1.2.3.4");
     }
 
     #[test]
@@ -2348,6 +2584,38 @@ mod tests {
         assert_eq!(config.interval_duration.as_deref(), Some("43200"));
         assert_eq!(config.safety_buffer.as_deref(), Some("259200"));
         assert_eq!(config.pause_duration.as_deref(), Some("0s"));
+    }
+
+    #[test]
+    fn pki_tidy_status_accepts_current_doc_fields() {
+        let status: PkiTidyStatus = serde_json::from_str(
+            r#"{
+                "safety_buffer":60,
+                "tidy_cross_cluster_revoked_certs":true,
+                "missing_issuer_cert_count":2,
+                "revocation_queue_deleted_count":3,
+                "cross_revoked_cert_deleted_count":4,
+                "issuer_safety_buffer":31536000,
+                "revocation_queue_safety_buffer":172800,
+                "page_size":50,
+                "last_auto_tidy_finished":"2026-06-04T00:00:00Z"
+            }"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(status.missing_issuer_cert_count, Some(2));
+        assert_eq!(status.revocation_queue_deleted_count, Some(3));
+        assert_eq!(status.cross_revoked_cert_deleted_count, Some(4));
+        assert_eq!(status.issuer_safety_buffer.as_deref(), Some("31536000"));
+        assert_eq!(
+            status.revocation_queue_safety_buffer.as_deref(),
+            Some("172800")
+        );
+        assert_eq!(status.page_size, Some(50));
+        assert_eq!(
+            status.last_auto_tidy_finished.as_deref(),
+            Some("2026-06-04T00:00:00Z")
+        );
     }
 
     #[test]

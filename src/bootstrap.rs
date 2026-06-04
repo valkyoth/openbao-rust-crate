@@ -77,7 +77,7 @@ enum BootstrapOperation {
     PkiRole {
         mount: String,
         name: String,
-        role: PkiRole,
+        role: Box<PkiRole>,
     },
     #[cfg(feature = "identity")]
     IdentityEntity {
@@ -516,7 +516,11 @@ impl AdminBootstrap {
     ) -> Result<&mut Self> {
         let mount = validate_mount_path(mount.as_ref())?.join("/");
         let name = validate_mount_path(name.as_ref())?.join("/");
-        self.push_operation(BootstrapOperation::PkiRole { mount, name, role })
+        self.push_operation(BootstrapOperation::PkiRole {
+            mount,
+            name,
+            role: Box::new(role),
+        })
     }
 
     /// Ensures an Identity entity exists at the default `identity` mount.
