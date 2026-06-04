@@ -21,6 +21,8 @@ All notable changes to this project are documented here.
   remaining `planned` or `decision` rows.
 - Updated the migration guide and bootstrap example for the `0.15.0`
   stable-candidate ergonomics.
+- Updated the pinned `taiki-e/install-action` CI action to the latest v2 tag
+  checked by `scripts/check_latest_crates.sh`.
 
 ### Security
 

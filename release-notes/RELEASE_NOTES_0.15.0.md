@@ -32,6 +32,8 @@ zero `planned` and zero `decision` rows.
   dynamic/static database roles, and SSH roles.
 - Updated the migration guide and bootstrap example to show the new `0.15.0`
   stable-candidate helpers.
+- Updated the pinned `taiki-e/install-action` CI action to the latest v2 tag
+  enforced by the local check script.
 
 ## Remaining Finalization
 
