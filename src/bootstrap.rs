@@ -625,10 +625,9 @@ impl AdminBootstrap {
         policy: impl Into<String>,
     ) -> Result<&mut Self> {
         let name = validate_mount_path(name.as_ref())?.join("/");
-        self.push_operation(BootstrapOperation::Policy {
-            name,
-            policy: policy.into(),
-        })
+        let policy = policy.into();
+        validate_bootstrap_policy_document(&policy)?;
+        self.push_operation(BootstrapOperation::Policy { name, policy })
     }
 
     /// Ensures a KV v2 secret contains the provided string values.
@@ -1763,16 +1762,28 @@ fn bootstrap_contention_error() -> Error {
 }
 
 fn secret_values_equal(current: &str, desired: &str) -> bool {
-    let current = current.as_bytes();
-    let desired = desired.as_bytes();
-    if current.len() > MAX_BOOTSTRAP_SECRET_VALUE_BYTES
-        || desired.len() > MAX_BOOTSTRAP_SECRET_VALUE_BYTES
-    {
+    constant_time_bounded_bytes_equal(
+        current.as_bytes(),
+        desired.as_bytes(),
+        MAX_BOOTSTRAP_SECRET_VALUE_BYTES,
+    )
+}
+
+fn policy_rules_equal(current: &str, desired: &str) -> bool {
+    constant_time_bounded_bytes_equal(
+        current.as_bytes(),
+        desired.as_bytes(),
+        crate::policy::MAX_POLICY_BYTES,
+    )
+}
+
+fn constant_time_bounded_bytes_equal(current: &[u8], desired: &[u8], max_bytes: usize) -> bool {
+    if current.len() > max_bytes || desired.len() > max_bytes {
         return false;
     }
 
     let mut equal = Choice::from((current.len() == desired.len()) as u8);
-    for index in 0..MAX_BOOTSTRAP_SECRET_VALUE_BYTES {
+    for index in 0..max_bytes {
         let current_byte = current.get(index).copied().unwrap_or(0);
         let desired_byte = desired.get(index).copied().unwrap_or(0);
         equal &= current_byte.ct_eq(&desired_byte);
@@ -1780,8 +1791,13 @@ fn secret_values_equal(current: &str, desired: &str) -> bool {
     bool::from(equal)
 }
 
-fn policy_rules_equal(current: &str, desired: &str) -> bool {
-    current.as_bytes().ct_eq(desired.as_bytes()).into()
+fn validate_bootstrap_policy_document(policy: &str) -> Result<()> {
+    if policy.len() > crate::policy::MAX_POLICY_BYTES {
+        return Err(Error::InvalidParameter(
+            "bootstrap ACL policy document exceeds maximum allowed length".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn validate_bootstrap_secret_values(values: &BTreeMap<String, SecretString>) -> Result<()> {
@@ -2036,7 +2052,7 @@ mod tests {
         bootstrap::{
             AdminBootstrap, BootstrapPreviewReport, BootstrapPreviewStatus, BootstrapPreviewStep,
             BootstrapStepStatus, MAX_BOOTSTRAP_OPERATIONS, is_already_exists_error,
-            secret_values_equal,
+            policy_rules_equal, secret_values_equal,
         },
         secrets::transit::TransitCreateKeyRequest,
     };
@@ -2078,6 +2094,13 @@ mod tests {
         assert!(
             bootstrap
                 .ensure_kv2_secret_values("secret", "app", oversized_values)
+                .is_err()
+        );
+
+        let oversized_policy = "a".repeat(crate::policy::MAX_POLICY_BYTES + 1);
+        assert!(
+            bootstrap
+                .ensure_policy_document("oversized-policy", oversized_policy)
                 .is_err()
         );
     }
@@ -2171,6 +2194,20 @@ mod tests {
         assert!(secret_values_equal(&at_limit, &at_limit));
         let oversized = "a".repeat(crate::validation::MAX_JSON_OBJECT_BYTES + 1);
         assert!(!secret_values_equal(&oversized, &oversized));
+
+        assert!(policy_rules_equal(
+            "path \"secret/*\" { capabilities = [\"read\"] }",
+            "path \"secret/*\" { capabilities = [\"read\"] }",
+        ));
+        assert!(!policy_rules_equal(
+            "path \"secret/*\" { capabilities = [\"read\"] }",
+            "path \"secret/*\" { capabilities = [\"update\"] }",
+        ));
+        assert!(!policy_rules_equal("path \"a\" {}", "path \"longer\" {}"));
+        let policy_at_limit = "a".repeat(crate::policy::MAX_POLICY_BYTES);
+        assert!(policy_rules_equal(&policy_at_limit, &policy_at_limit));
+        let oversized_policy = "a".repeat(crate::policy::MAX_POLICY_BYTES + 1);
+        assert!(!policy_rules_equal(&oversized_policy, &oversized_policy));
 
         let duplicate = Error::Api {
             status: StatusCode::BAD_REQUEST,

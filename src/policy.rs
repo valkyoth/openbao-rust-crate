@@ -12,7 +12,7 @@ use crate::{
 };
 
 const MAX_POLICY_RULES: usize = 128;
-const MAX_POLICY_BYTES: usize = 16 * 1024;
+pub(crate) const MAX_POLICY_BYTES: usize = 16 * 1024;
 
 /// OpenBao ACL capabilities supported by [`AclPolicyBuilder`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

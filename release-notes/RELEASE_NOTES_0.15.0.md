@@ -83,6 +83,9 @@ zero `planned` and zero `decision` rows.
 - AdminBootstrap KV v2 secret values are now bounded at plan construction, and
   secret convergence comparisons use a fixed-iteration comparison over that
   bound instead of variable-length slice comparison.
+- AdminBootstrap ACL policy documents are bounded to the typed policy builder
+  limit, and policy convergence uses the same padded bounded comparison helper
+  to avoid copying weaker comparison patterns into secret-bearing paths.
 - Static PEM CRLs can now be enforced for OpenBao server certificates when
   using `only_root_certificates`; callers still own CRL refresh, client rebuild
   timing, and OCSP/automatic revocation-discovery policy.
@@ -96,6 +99,15 @@ zero `planned` and zero `decision` rows.
 - `Error::BootstrapContention` remains a best-effort post-write verification
   signal. It is not a distributed lock; multi-runner bootstrap workflows must
   still use external serialization.
+- Request payloads are zeroized only up to the serialization buffer controlled
+  by the crate. After handoff to `reqwest::Body`, non-zeroizing transport, TLS,
+  kernel, and device buffers remain an accepted residual pending upstream body
+  support for zeroize-on-drop buffers.
+- Direct runtime randomness stays on `getrandom 0.4.2` and `rand 0.10.1`.
+  Older duplicate `getrandom`/`rand` lock entries are transitive
+  optional/build-dependency surface and remain monitored by `cargo deny`.
+- Retry jitter remains non-cryptographic timing only; the modulo operation is
+  accepted for retry spreading and the weak fallback remains feature-gated.
 
 ## Security And Stability Gate
 

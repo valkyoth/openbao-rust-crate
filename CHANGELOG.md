@@ -68,6 +68,12 @@ All notable changes to this project are documented here.
   wrapping and AdminBootstrap concurrency: OpenSSL-managed key copies are
   outside Rust zeroization control, and bootstrap contention detection is not a
   substitute for external locking.
+- Unified AdminBootstrap convergence comparisons so ACL policy comparison uses
+  the same padded bounded comparison discipline as KV v2 secret comparison, and
+  bounded AdminBootstrap policy documents to the typed ACL builder limit.
+- Tracked final audit residuals for non-zeroizing reqwest body buffers,
+  duplicate transitive randomness crate versions from optional/build
+  dependencies, and non-cryptographic retry jitter modulo bias.
 
 ## 0.14.0 - 2026-06-04
 
