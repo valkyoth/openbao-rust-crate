@@ -23,7 +23,7 @@ jobs:
     steps:
       - name: Checkout repository
         # actions/checkout v6.0.3
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Install Rust toolchain
         shell: bash
@@ -31,7 +31,7 @@ jobs:
 
       - name: Cache Rust build output
         # Swatinem/rust-cache v2.9.1
-        uses: Swatinem/rust-cache@23869a5bd66c73db3c0ac40331f3206eb23791dc
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
         with:
           cache-on-failure: true
 
