@@ -90,9 +90,20 @@ the relevant `SecretString` values are dropped and zeroized.
 ## Hardened Deployment Profile
 
 For high-assurance builds, keep the default `rustls-tls` backend, do not enable
-`native-tls` or `native-tls-acknowledged`, and do not call
-`OpenBaoConfig::min_tls_12`. Downstream applications can enforce this with CI
-policy checks that reject those feature flags and API calls.
+`native-tls` or `native-tls-acknowledged`, do not enable
+`tls12-acknowledged`, and do not call
+`OpenBaoConfig::min_tls_version(reqwest::tls::Version::TLS_1_2)`.
+Downstream applications can enforce this with CI policy checks that reject
+those feature flags and API calls.
+
+The rustls-backed HTTP client does not perform client-side OCSP or CRL
+revocation checking for the OpenBao server certificate. Treat revocation as an
+operator PKI-lifecycle control: use `OpenBaoConfig::only_root_certificates`
+with only the internal OpenBao CA or self-signed listener certificate, issue
+short-lived OpenBao listener leaf certificates, rotate that internal CA on
+compromise, and configure server-side certificate-auth CRL/OCSP controls where
+applicable. Relying on platform or public roots is not recommended for
+classified or high-assurance deployments.
 
 Use `Client::try_with_token` for tokens loaded from configuration or returned
 by another service so invalid header values fail before the first request.
@@ -119,6 +130,8 @@ MD5-based authenticators and is retained only for audited legacy compatibility.
 Enabling it requires the additional `radius-auth-acknowledged` feature. Do not
 use RADIUS for classified networks or new high-assurance deployments; prefer
 certificate auth, Kerberos, or LDAP over TLS with reviewed server validation.
+If RADIUS is unavoidable, enforce RadSec or equivalent RADIUS-over-TLS
+protection at the infrastructure layer.
 
 The `sensitive-http-test-only` feature is for this crate's mock HTTP tests
 only. It must not be enabled in production application builds. Release metadata
@@ -126,12 +139,6 @@ checks verify it is not part of the default feature set, and `build.rs` emits a
 warning whenever it is compiled. It also requires
 `sensitive-http-test-only-acknowledged` so accidental workspace feature
 propagation fails closed.
-
-The rustls-backed HTTP client does not perform OCSP or CRL revocation checking
-for the OpenBao server certificate. Use short-lived listener certificates,
-root-only internal CA trust stores, and OpenBao/server-side certificate-auth
-CRL/OCSP controls where certificate revocation is part of the deployment threat
-model.
 
 ## Dev Bootstrap Warning
 

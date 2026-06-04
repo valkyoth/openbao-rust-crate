@@ -28,6 +28,8 @@ const TRANSIT_WRAPPING_KEY_BYTES: usize = 512;
 const TRANSIT_IMPORT_EPHEMERAL_AES_KEY_BYTES: usize = 32;
 #[cfg(feature = "transit-import")]
 const MAX_TRANSIT_IMPORT_KEY_MATERIAL_BYTES: usize = 16 * 1024;
+/// Maximum number of items accepted in a Transit batch request.
+pub const MAX_TRANSIT_BATCH_ITEMS: usize = 1000;
 
 /// Handle for a mounted Transit secrets engine.
 #[derive(Debug)]
@@ -644,6 +646,7 @@ impl TransitImportVersionRequest {
 /// high-assurance production deployments.
 #[cfg(feature = "transit-import")]
 #[derive(Clone)]
+#[must_use = "Transit wrapped import ciphertext is secret-bearing material; pass it to an import request or zeroize/drop it promptly"]
 pub struct TransitWrappedImportKey {
     /// Base64 BYOK ciphertext accepted by OpenBao import endpoints.
     pub ciphertext: SecretString,
@@ -679,7 +682,10 @@ impl TransitWrappedImportKey {
     /// allocator. That copy is outside this crate's `zeroize` control. For
     /// FIPS-validated or hardware-security-boundary deployments, perform key
     /// wrapping inside an HSM or other audited boundary instead of using this
-    /// software helper.
+    /// software helper. The `wrap_key_material_with_rng` variant lets callers
+    /// inject reviewed randomness, but it is still a software OpenSSL wrapping
+    /// path and not an HSM boundary.
+    #[must_use = "import the returned ciphertext promptly; software-wrapped key material remains sensitive until consumed and dropped"]
     pub fn wrap_key_material(
         wrapping_key_pem: &str,
         key_material: Zeroizing<Vec<u8>>,
@@ -703,6 +709,7 @@ impl TransitWrappedImportKey {
     /// FIPS-validated or hardware-security-boundary deployments, perform key
     /// wrapping inside an HSM or other audited boundary instead of using this
     /// software helper.
+    #[must_use = "import the returned ciphertext promptly; software-wrapped key material remains sensitive until consumed and dropped"]
     pub fn wrap_key_material_with_rng<R>(
         rng: &mut R,
         wrapping_key_pem: &str,
@@ -1657,6 +1664,35 @@ pub struct TransitBatchVerifyRequest {
     /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
     pub batch_input: Vec<TransitVerifyRequest>,
 }
+
+macro_rules! impl_transit_batch_request {
+    ($request:ty, $item:ty) => {
+        impl $request {
+            /// Adds one batch item after enforcing the crate's local item limit.
+            ///
+            /// Prefer this method when batch contents are derived from
+            /// untrusted or externally supplied input. The public
+            /// `batch_input` field remains available for ordinary struct
+            /// construction, but Transit methods still reject empty or
+            /// oversized batches before dispatch.
+            pub fn try_push(&mut self, item: $item) -> Result<&mut Self> {
+                if self.batch_input.len() >= MAX_TRANSIT_BATCH_ITEMS {
+                    return Err(Error::InvalidParameter(
+                        "Transit batch_input exceeds item limit".into(),
+                    ));
+                }
+                self.batch_input.push(item);
+                Ok(self)
+            }
+        }
+    };
+}
+
+impl_transit_batch_request!(TransitBatchEncryptRequest, TransitEncryptRequest);
+impl_transit_batch_request!(TransitBatchDecryptRequest, TransitDecryptRequest);
+impl_transit_batch_request!(TransitBatchRewrapRequest, TransitRewrapRequest);
+impl_transit_batch_request!(TransitBatchSignRequest, TransitSignRequest);
+impl_transit_batch_request!(TransitBatchVerifyRequest, TransitVerifyRequest);
 
 /// One item returned by a batch encryption operation.
 #[derive(Clone, Deserialize)]
@@ -2748,7 +2784,7 @@ fn validate_batch_len(len: usize) -> Result<()> {
             "Transit batch_input must not be empty".into(),
         ));
     }
-    if len > crate::response::MAX_RESPONSE_STRINGS {
+    if len > MAX_TRANSIT_BATCH_ITEMS {
         return Err(Error::InvalidParameter(
             "Transit batch_input exceeds item limit".into(),
         ));
@@ -3316,6 +3352,27 @@ mod tests {
                 .unwrap_or_else(|error| panic!("{error}"));
         missing_material.ciphertext = None;
         assert!(missing_material.validate().is_err());
+    }
+
+    #[test]
+    fn transit_batch_try_push_enforces_item_limit() {
+        let mut request = super::TransitBatchEncryptRequest::default();
+        for _ in 0..super::MAX_TRANSIT_BATCH_ITEMS {
+            request
+                .try_push(super::TransitEncryptRequest::new(SecretString::from(
+                    "cGxhaW4=",
+                )))
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+
+        assert!(
+            request
+                .try_push(super::TransitEncryptRequest::new(SecretString::from(
+                    "cGxhaW4="
+                )))
+                .is_err()
+        );
+        assert_eq!(request.batch_input.len(), super::MAX_TRANSIT_BATCH_ITEMS);
     }
 
     #[cfg(feature = "transit-import")]

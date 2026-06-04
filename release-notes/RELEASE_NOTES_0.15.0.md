@@ -56,6 +56,19 @@ zero `planned` and zero `decision` rows.
 - PKI CA setup, database connection configuration, SSH CA setup, KV v1
   convergence, and ACL parameter-constraint HCL generation remain rejected for
   stable bootstrap/builder scope.
+- The deprecated production `Client::with_token` path was removed; use
+  `try_with_token` so token header validity is checked at construction time.
+- LDAP auth and LDAP secrets-engine config now reject non-ASCII LDAP path names
+  and plaintext `ldap://` URLs unless StartTLS or the insecure LDAP
+  acknowledgment feature is used.
+- Transit batch requests now expose checked `try_push` builders and a named
+  `MAX_TRANSIT_BATCH_ITEMS` limit; methods still reject empty or oversized
+  batches before dispatch.
+- TLS 1.2 compatibility now has an explicit `tls12-acknowledged` feature and
+  build warning. TLS 1.3 remains the default and recommended floor.
+- TLS server-certificate revocation remains a rustls/reqwest limitation.
+  High-assurance deployments should use root-only internal CA trust with
+  short-lived listener certificates and an operator CA-rotation process.
 
 ## Security And Stability Gate
 

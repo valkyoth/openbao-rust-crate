@@ -317,6 +317,7 @@ openbao = { version = "0.15", features = ["time"] }
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables Tokio convenience helpers such as `Sys::wait_until_unsealed`. Runtime-neutral variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
+| `tls12-acknowledged` | no | Explicit acknowledgment for legacy TLS 1.2 compatibility. TLS 1.3 remains the default and is strongly preferred for high-security OpenBao deployments. |
 | `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |

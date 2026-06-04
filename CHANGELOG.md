@@ -36,6 +36,17 @@ All notable changes to this project are documented here.
 - Kept PKI CA setup, database connection configuration, and SSH CA key setup
   outside AdminBootstrap because those workflows carry operator ceremony or
   production credential handling requirements.
+- Removed the deprecated production `Client::with_token` path so authenticated
+  clients must use `try_with_token` and validate token header safety at
+  construction time.
+- Added a `tls12-acknowledged` feature and build warning for legacy TLS 1.2
+  compatibility, while keeping TLS 1.3 as the default floor.
+- Tightened LDAP auth and LDAP secrets-engine configuration validation to
+  reject non-ASCII LDAP path names and unencrypted `ldap://` URLs unless
+  StartTLS or the insecure LDAP acknowledgment feature is used.
+- Added checked Transit batch `try_push` builders with a named
+  `MAX_TRANSIT_BATCH_ITEMS` limit and strengthened Transit import, retry
+  jitter, TLS revocation, RADIUS, and bootstrap contention documentation.
 
 ## 0.14.0 - 2026-06-04
 

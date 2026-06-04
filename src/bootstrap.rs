@@ -149,6 +149,7 @@ enum BootstrapOperation {
 
 /// Result of running an [`AdminBootstrap`] plan.
 #[derive(Debug, Default)]
+#[must_use = "inspect bootstrap reports so issued credentials, changed steps, and contention outcomes are handled"]
 pub struct BootstrapReport {
     /// Per-operation status entries.
     pub steps: Vec<BootstrapStepReport>,
@@ -1740,6 +1741,11 @@ fn is_already_exists_error(error: &Error) -> bool {
 }
 
 fn bootstrap_contention_error() -> Error {
+    #[cfg(feature = "tracing")]
+    tracing::warn!(
+        target: "openbao::bootstrap",
+        "bootstrap contention detected during post-write verification; rerun with external serialization"
+    );
     Error::Internal(
         "bootstrap convergence write was overwritten or changed by a concurrent writer; retry with external serialization",
     )

@@ -254,6 +254,10 @@ fn retry_jitter_nanos(max_nanos: u64, retry_index: usize) -> u64 {
 // security-sensitive randomness.
 fn retry_jitter_fallback_seed(retry_index: usize) -> u64 {
     let counter = RETRY_JITTER_COUNTER.fetch_add(1, Ordering::Relaxed);
+    // Non-security retry jitter only. If OS randomness is unavailable on a
+    // production OpenBao client host, that target is outside the hardened
+    // deployment profile; retry timing predictability is a residual concern
+    // rather than a cryptographic control.
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|duration| u64::try_from(duration.as_nanos()).unwrap_or(u64::MAX))
@@ -446,13 +450,20 @@ impl OpenBaoConfig {
 
     /// Sets the minimum TLS protocol version.
     ///
-    /// The default is TLS 1.3. Use [`Self::min_tls_12`] only for audited legacy servers.
+    /// The default is TLS 1.3. Passing TLS 1.2 is a legacy compatibility
+    /// downgrade. High-assurance builds should reject TLS 1.2 in downstream CI
+    /// unless the deployment has explicitly enabled `tls12-acknowledged`.
     pub fn min_tls_version(mut self, version: tls::Version) -> Self {
         self.min_tls_version = version;
         self
     }
 
     /// Explicitly permits TLS 1.2 for legacy OpenBao deployments.
+    ///
+    /// This method is only available with the `tls12-acknowledged` feature so
+    /// accidental use is visible in the downstream build graph. TLS 1.3 remains
+    /// the default and the recommended floor.
+    #[cfg(feature = "tls12-acknowledged")]
     pub fn min_tls_12(self) -> Self {
         self.min_tls_version(tls::Version::TLS_1_2)
     }
@@ -635,19 +646,6 @@ impl Client<Unauthenticated> {
         ClientBuilder::new(config).build()
     }
 
-    /// Converts the client into an authenticated client using a known token.
-    ///
-    /// This preserves the pre-0.5 infallible API. Prefer [`Self::try_with_token`]
-    /// when accepting token input from configuration or another service so
-    /// header-invalid tokens are rejected before the first request.
-    #[deprecated(
-        since = "0.6.0",
-        note = "use try_with_token to reject invalid token values at construction; with_token defers header validation and returns an error on the first request for tokens containing control characters"
-    )]
-    pub fn with_token(self, token: SecretString) -> Client<Authenticated> {
-        self.with_token_deferred_validation(token)
-    }
-
     fn with_token_deferred_validation(self, token: SecretString) -> Client<Authenticated> {
         Client {
             config: self.config,
@@ -656,6 +654,13 @@ impl Client<Unauthenticated> {
             token: Some(token),
             _state: PhantomData,
         }
+    }
+
+    #[cfg(test)]
+    #[allow(clippy::panic)]
+    pub(crate) fn with_token(self, token: SecretString) -> Client<Authenticated> {
+        self.try_with_token(token)
+            .unwrap_or_else(|error| panic!("{error}"))
     }
 
     /// Converts the client into an authenticated client after validating that

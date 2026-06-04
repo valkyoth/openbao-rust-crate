@@ -268,6 +268,8 @@ impl LdapAuthConfig {
                 "LDAP auth insecure_tls=true requires the insecure-ldap-tls-acknowledged Cargo feature because it disables LDAP TLS certificate verification".into(),
             ));
         }
+        #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
+        validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "LDAP auth")?;
         crate::validation::validate_cidr_list(
             &self.token_bound_cidrs,
             "LDAP auth token_bound_cidrs",
@@ -770,6 +772,11 @@ fn validate_ldap_path_name(name: &str) -> Result<&str> {
             "LDAP auth path name must not be empty".into(),
         ));
     }
+    if !name.is_ascii() {
+        return Err(Error::InvalidPath(
+            "LDAP auth path name must contain only ASCII characters".into(),
+        ));
+    }
     if bytes.iter().any(u8::is_ascii_control) {
         return Err(Error::InvalidPath(
             "LDAP auth path name must not contain control characters".into(),
@@ -797,6 +804,35 @@ fn validate_ldap_path_name(name: &str) -> Result<&str> {
         ));
     }
     Ok(name)
+}
+
+#[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
+fn validate_ldap_urls_use_encrypted_transport(
+    urls: &Option<String>,
+    starttls: Option<bool>,
+    label: &'static str,
+) -> Result<()> {
+    let Some(urls) = urls else {
+        return Ok(());
+    };
+    if starttls == Some(true) {
+        return Ok(());
+    }
+    for url in urls.split(',') {
+        let url = url.trim();
+        if url.is_empty() {
+            continue;
+        }
+        if !url
+            .get(..8)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("ldaps://"))
+        {
+            return Err(Error::InvalidParameter(format!(
+                "{label} URL must use ldaps:// or starttls=true unless insecure LDAP TLS is explicitly acknowledged"
+            )));
+        }
+    }
+    Ok(())
 }
 
 fn deserialize_optional_string_or_u64<'de, D>(
@@ -903,10 +939,24 @@ mod tests {
         assert!(validate_ldap_path_name(".").is_err());
         assert!(validate_ldap_path_name("..").is_err());
         assert!(validate_ldap_path_name("admins.").is_err());
+        assert!(validate_ldap_path_name("admins\u{202e}").is_err());
         assert!(validate_ldap_path_name("Team A").is_err());
         assert!(validate_ldap_path_name("team/admins").is_err());
         assert!(validate_ldap_path_name("admins?x=1").is_err());
         assert!(validate_ldap_path_name("admin*)(uid=*)").is_err());
+    }
+
+    #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
+    #[test]
+    fn ldap_auth_config_requires_encrypted_urls() {
+        let mut config = LdapAuthConfig::new().with_url("ldap://ldap.example.com");
+        assert!(config.validate().is_err());
+
+        config.starttls = Some(true);
+        assert!(config.validate().is_ok());
+
+        let config = LdapAuthConfig::new().with_url("ldaps://ldap.example.com");
+        assert!(config.validate().is_ok());
     }
 
     #[test]

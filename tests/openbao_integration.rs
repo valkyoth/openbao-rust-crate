@@ -6,7 +6,6 @@
 
 #![cfg(all(feature = "kv1", feature = "kv2", feature = "sys", feature = "token"))]
 #![allow(clippy::panic)]
-#![allow(deprecated)]
 
 use std::{
     collections::BTreeMap,
@@ -59,7 +58,7 @@ impl IntegrationEnv {
 
     fn client(self) -> Result<openbao::Client<openbao::Authenticated>, openbao::Error> {
         let config = OpenBaoConfig::new(self.addr)?.only_root_certificates(vec![self.ca_cert])?;
-        Ok(Client::from_config(config)?.with_token(self.token))
+        Client::from_config(config)?.try_with_token(self.token)
     }
 }
 

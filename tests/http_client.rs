@@ -17,8 +17,8 @@ use std::{
 };
 
 use openbao::{
-    Client, Error, Method, OpenBaoConfig, ResponseEnvelope, RetryPolicy, RetryableMethod,
-    sys::DevBootstrapOptions,
+    Authenticated, Client, Error, Method, OpenBaoConfig, ResponseEnvelope, RetryPolicy,
+    RetryableMethod, Unauthenticated, sys::DevBootstrapOptions,
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
@@ -45,6 +45,17 @@ fn allow_mock_http(config: OpenBaoConfig) -> openbao::Result<OpenBaoConfig> {
 
 fn test_secret(parts: &[&str]) -> SecretString {
     SecretString::from(parts.concat())
+}
+
+trait TestTokenExt {
+    fn with_token(self, token: SecretString) -> Client<Authenticated>;
+}
+
+impl TestTokenExt for Client<Unauthenticated> {
+    fn with_token(self, token: SecretString) -> Client<Authenticated> {
+        self.try_with_token(token)
+            .unwrap_or_else(|error| panic!("{error}"))
+    }
 }
 
 fn read_http_request(stream: &mut impl Read) -> String {

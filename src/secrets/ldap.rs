@@ -120,6 +120,8 @@ impl LdapConfig {
                 "ldap insecure_tls=true requires the insecure-ldap-tls-acknowledged Cargo feature because it disables LDAP TLS certificate verification".into(),
             ));
         }
+        #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
+        validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "LDAP")?;
         if let Some(value) = &self.connection_timeout {
             validate_duration_or_seconds(value, "LDAP connection_timeout", true)?;
         }
@@ -926,6 +928,35 @@ fn validate_duration_or_seconds(value: &str, field: &'static str, allow_zero: bo
     )))
 }
 
+#[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
+fn validate_ldap_urls_use_encrypted_transport(
+    urls: &Option<String>,
+    starttls: Option<bool>,
+    label: &'static str,
+) -> Result<()> {
+    let Some(urls) = urls else {
+        return Ok(());
+    };
+    if starttls == Some(true) {
+        return Ok(());
+    }
+    for url in urls.split(',') {
+        let url = url.trim();
+        if url.is_empty() {
+            continue;
+        }
+        if !url
+            .get(..8)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("ldaps://"))
+        {
+            return Err(Error::InvalidParameter(format!(
+                "{label} URL must use ldaps:// or starttls=true unless insecure LDAP TLS is explicitly acknowledged"
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn validate_count(count: usize, field: &'static str, require_non_empty: bool) -> Result<()> {
     if require_non_empty && count == 0 {
         return Err(Error::InvalidParameter(format!(
@@ -1177,5 +1208,20 @@ mod tests {
         config.insecure_tls = Some(true);
 
         assert!(config.validate().is_err());
+    }
+
+    #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
+    #[test]
+    fn ldap_config_requires_encrypted_urls() {
+        let mut config = LdapConfig::new("cn=openbao", SecretString::from("bind-password"))
+            .with_url("ldap://ldap.example.com");
+        assert!(config.validate().is_err());
+
+        config.starttls = Some(true);
+        assert!(config.validate().is_ok());
+
+        let config = LdapConfig::new("cn=openbao", SecretString::from("bind-password"))
+            .with_url("ldaps://ldap.example.com");
+        assert!(config.validate().is_ok());
     }
 }
