@@ -28,11 +28,11 @@ zero `planned` and zero `decision` rows.
 - Added ACL policy-builder wrapping TTL constraints through
   `allow_path_with_wrapping` and helper variants that require response
   wrapping on common KV v2 and Transit paths.
+- Added selective AdminBootstrap convergence for PKI, database, and SSH mounts,
+  dynamic/static database roles, and SSH roles.
 
 ## Planned Scope
 
-- Selective AdminBootstrap convergence for PKI, database, and SSH mount/role
-  workflows.
 - Final public API, documentation, migration, and stable-scope review before
   `1.0.0`.
 

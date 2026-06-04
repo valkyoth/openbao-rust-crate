@@ -12,12 +12,16 @@ use subtle::ConstantTimeEq;
 
 #[cfg(feature = "approle")]
 use crate::auth::approle::{AppRoleRoleRequest, AppRoleSecretId, AppRoleSecretIdRequest};
+#[cfg(feature = "database")]
+use crate::secrets::database::{DatabaseRole, DatabaseStaticRole};
 #[cfg(feature = "identity")]
 use crate::secrets::identity::{
     IdentityEntityInfo, IdentityEntityRequest, IdentityGroupInfo, IdentityGroupRequest,
 };
 #[cfg(feature = "pki")]
 use crate::secrets::pki::PkiRole;
+#[cfg(feature = "ssh")]
+use crate::secrets::ssh::{SshRoleInfo, SshRoleRequest};
 use crate::{
     AclPolicyBuilder, Authenticated, Client, Error, Result,
     auth::token::{TokenAuth, TokenCreateRequest},
@@ -59,6 +63,21 @@ enum BootstrapOperation {
         path: String,
         description: Option<String>,
     },
+    #[cfg(feature = "pki")]
+    PkiMount {
+        path: String,
+        description: Option<String>,
+    },
+    #[cfg(feature = "database")]
+    DatabaseMount {
+        path: String,
+        description: Option<String>,
+    },
+    #[cfg(feature = "ssh")]
+    SshMount {
+        path: String,
+        description: Option<String>,
+    },
     TransitKey {
         mount: String,
         name: String,
@@ -78,6 +97,24 @@ enum BootstrapOperation {
         mount: String,
         name: String,
         role: Box<PkiRole>,
+    },
+    #[cfg(feature = "database")]
+    DatabaseRole {
+        mount: String,
+        name: String,
+        role: DatabaseRole,
+    },
+    #[cfg(feature = "database")]
+    DatabaseStaticRole {
+        mount: String,
+        name: String,
+        role: DatabaseStaticRole,
+    },
+    #[cfg(feature = "ssh")]
+    SshRole {
+        mount: String,
+        name: String,
+        request: SshRoleRequest,
     },
     #[cfg(feature = "identity")]
     IdentityEntity {
@@ -319,6 +356,24 @@ impl fmt::Debug for BootstrapOperation {
                 .field("path", path)
                 .field("description", description)
                 .finish(),
+            #[cfg(feature = "pki")]
+            Self::PkiMount { path, description } => formatter
+                .debug_struct("PkiMount")
+                .field("path", path)
+                .field("description", description)
+                .finish(),
+            #[cfg(feature = "database")]
+            Self::DatabaseMount { path, description } => formatter
+                .debug_struct("DatabaseMount")
+                .field("path", path)
+                .field("description", description)
+                .finish(),
+            #[cfg(feature = "ssh")]
+            Self::SshMount { path, description } => formatter
+                .debug_struct("SshMount")
+                .field("path", path)
+                .field("description", description)
+                .finish(),
             Self::TransitKey { mount, name, .. } => formatter
                 .debug_struct("TransitKey")
                 .field("mount", mount)
@@ -342,6 +397,31 @@ impl fmt::Debug for BootstrapOperation {
                 .field("mount", mount)
                 .field("name", name)
                 .field("role", role)
+                .finish(),
+            #[cfg(feature = "database")]
+            Self::DatabaseRole { mount, name, role } => formatter
+                .debug_struct("DatabaseRole")
+                .field("mount", mount)
+                .field("name", name)
+                .field("role", role)
+                .finish(),
+            #[cfg(feature = "database")]
+            Self::DatabaseStaticRole { mount, name, role } => formatter
+                .debug_struct("DatabaseStaticRole")
+                .field("mount", mount)
+                .field("name", name)
+                .field("role", role)
+                .finish(),
+            #[cfg(feature = "ssh")]
+            Self::SshRole {
+                mount,
+                name,
+                request,
+            } => formatter
+                .debug_struct("SshRole")
+                .field("mount", mount)
+                .field("name", name)
+                .field("request", request)
                 .finish(),
             #[cfg(feature = "identity")]
             Self::IdentityEntity { mount, name, .. } => formatter
@@ -444,6 +524,57 @@ impl AdminBootstrap {
         })
     }
 
+    /// Ensures a PKI secrets engine mount exists at `path`.
+    ///
+    /// This does not generate or import CA material. PKI authority bootstrap is
+    /// an operator ceremony outside this application bootstrap helper.
+    #[cfg(feature = "pki")]
+    pub fn ensure_pki_mount(
+        &mut self,
+        path: impl AsRef<str>,
+        description: Option<&str>,
+    ) -> Result<&mut Self> {
+        let path = validate_mount_path(path.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::PkiMount {
+            path,
+            description: description.map(str::to_owned),
+        })
+    }
+
+    /// Ensures a database secrets engine mount exists at `path`.
+    ///
+    /// This intentionally does not configure database connections because
+    /// connection configuration carries production database credentials.
+    #[cfg(feature = "database")]
+    pub fn ensure_database_mount(
+        &mut self,
+        path: impl AsRef<str>,
+        description: Option<&str>,
+    ) -> Result<&mut Self> {
+        let path = validate_mount_path(path.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::DatabaseMount {
+            path,
+            description: description.map(str::to_owned),
+        })
+    }
+
+    /// Ensures an SSH secrets engine mount exists at `path`.
+    ///
+    /// This does not configure SSH CA key material. SSH authority setup remains
+    /// an operator ceremony outside this bootstrap helper.
+    #[cfg(feature = "ssh")]
+    pub fn ensure_ssh_mount(
+        &mut self,
+        path: impl AsRef<str>,
+        description: Option<&str>,
+    ) -> Result<&mut Self> {
+        let path = validate_mount_path(path.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::SshMount {
+            path,
+            description: description.map(str::to_owned),
+        })
+    }
+
     /// Ensures a Transit key exists.
     pub fn ensure_transit_key(
         &mut self,
@@ -530,6 +661,58 @@ impl AdminBootstrap {
             mount,
             name,
             role: Box::new(role),
+        })
+    }
+
+    /// Ensures a dynamic database role exists and matches desired fields.
+    ///
+    /// This converges role configuration only. It intentionally does not
+    /// configure database connections or rotate database credentials.
+    #[cfg(feature = "database")]
+    pub fn ensure_database_role(
+        &mut self,
+        mount: impl AsRef<str>,
+        name: impl AsRef<str>,
+        role: DatabaseRole,
+    ) -> Result<&mut Self> {
+        let mount = validate_mount_path(mount.as_ref())?.join("/");
+        let name = validate_mount_path(name.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::DatabaseRole { mount, name, role })
+    }
+
+    /// Ensures a static database role exists and matches desired fields.
+    ///
+    /// This converges role configuration only. Credential rotation remains an
+    /// explicit database-engine operation outside bootstrap convergence.
+    #[cfg(feature = "database")]
+    pub fn ensure_database_static_role(
+        &mut self,
+        mount: impl AsRef<str>,
+        name: impl AsRef<str>,
+        role: DatabaseStaticRole,
+    ) -> Result<&mut Self> {
+        let mount = validate_mount_path(mount.as_ref())?.join("/");
+        let name = validate_mount_path(name.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::DatabaseStaticRole { mount, name, role })
+    }
+
+    /// Ensures an SSH role exists and matches desired readable fields.
+    ///
+    /// This converges role configuration only. SSH CA key setup remains an
+    /// operator ceremony outside this bootstrap helper.
+    #[cfg(feature = "ssh")]
+    pub fn ensure_ssh_role(
+        &mut self,
+        mount: impl AsRef<str>,
+        name: impl AsRef<str>,
+        request: SshRoleRequest,
+    ) -> Result<&mut Self> {
+        let mount = validate_mount_path(mount.as_ref())?.join("/");
+        let name = validate_mount_path(name.as_ref())?.join("/");
+        self.push_operation(BootstrapOperation::SshRole {
+            mount,
+            name,
+            request,
         })
     }
 
@@ -700,6 +883,27 @@ impl AdminBootstrap {
                         .steps
                         .push(BootstrapPreviewStep::new("transit_mount", path, status));
                 }
+                #[cfg(feature = "pki")]
+                BootstrapOperation::PkiMount { path, .. } => {
+                    let status = preview_mount(client, path, "pki", None).await?;
+                    report
+                        .steps
+                        .push(BootstrapPreviewStep::new("pki_mount", path, status));
+                }
+                #[cfg(feature = "database")]
+                BootstrapOperation::DatabaseMount { path, .. } => {
+                    let status = preview_mount(client, path, "database", None).await?;
+                    report
+                        .steps
+                        .push(BootstrapPreviewStep::new("database_mount", path, status));
+                }
+                #[cfg(feature = "ssh")]
+                BootstrapOperation::SshMount { path, .. } => {
+                    let status = preview_mount(client, path, "ssh", None).await?;
+                    report
+                        .steps
+                        .push(BootstrapPreviewStep::new("ssh_mount", path, status));
+                }
                 BootstrapOperation::TransitKey { mount, name, .. } => {
                     let status = match client.transit(mount)?.read_key(name).await {
                         Ok(_) => BootstrapPreviewStatus::Unchanged,
@@ -771,6 +975,61 @@ impl AdminBootstrap {
                     };
                     report.steps.push(BootstrapPreviewStep::new(
                         "pki_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "database")]
+                BootstrapOperation::DatabaseRole { mount, name, role } => {
+                    let database = client.database(mount)?;
+                    let status = match database.read_role(name).await {
+                        Ok(existing) if database_role_matches_desired(&existing, role) => {
+                            BootstrapPreviewStatus::Unchanged
+                        }
+                        Ok(_) => BootstrapPreviewStatus::WouldUpdate,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "database_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "database")]
+                BootstrapOperation::DatabaseStaticRole { mount, name, role } => {
+                    let database = client.database(mount)?;
+                    let status = match database.read_static_role(name).await {
+                        Ok(existing) if database_static_role_matches_desired(&existing, role) => {
+                            BootstrapPreviewStatus::Unchanged
+                        }
+                        Ok(_) => BootstrapPreviewStatus::WouldUpdate,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "database_static_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "ssh")]
+                BootstrapOperation::SshRole {
+                    mount,
+                    name,
+                    request,
+                } => {
+                    let ssh = client.ssh(mount)?;
+                    let status = match ssh.read_role(name).await {
+                        Ok(existing) if ssh_role_matches_desired(&existing, request) => {
+                            BootstrapPreviewStatus::Unchanged
+                        }
+                        Ok(_) => BootstrapPreviewStatus::WouldUpdate,
+                        Err(error) if error.is_not_found() => BootstrapPreviewStatus::WouldCreate,
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapPreviewStep::new(
+                        "ssh_role",
                         format!("{mount}/{name}"),
                         status,
                     ));
@@ -899,6 +1158,36 @@ impl AdminBootstrap {
                     report
                         .steps
                         .push(BootstrapStepReport::new("transit_mount", path, status));
+                }
+                #[cfg(feature = "pki")]
+                BootstrapOperation::PkiMount { path, description } => {
+                    let status = ensure_mount(client, path, "pki", None, || {
+                        MountEnableRequest::new("pki").with_optional_description(description)
+                    })
+                    .await?;
+                    report
+                        .steps
+                        .push(BootstrapStepReport::new("pki_mount", path, status));
+                }
+                #[cfg(feature = "database")]
+                BootstrapOperation::DatabaseMount { path, description } => {
+                    let status = ensure_mount(client, path, "database", None, || {
+                        MountEnableRequest::new("database").with_optional_description(description)
+                    })
+                    .await?;
+                    report
+                        .steps
+                        .push(BootstrapStepReport::new("database_mount", path, status));
+                }
+                #[cfg(feature = "ssh")]
+                BootstrapOperation::SshMount { path, description } => {
+                    let status = ensure_mount(client, path, "ssh", None, || {
+                        MountEnableRequest::new("ssh").with_optional_description(description)
+                    })
+                    .await?;
+                    report
+                        .steps
+                        .push(BootstrapStepReport::new("ssh_mount", path, status));
                 }
                 BootstrapOperation::TransitKey {
                     mount,
@@ -1029,6 +1318,103 @@ impl AdminBootstrap {
                     };
                     report.steps.push(BootstrapStepReport::new(
                         "pki_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "database")]
+                BootstrapOperation::DatabaseRole { mount, name, role } => {
+                    let database = client.database(mount)?;
+                    let status = match database.read_role(name).await {
+                        Ok(existing) if database_role_matches_desired(&existing, role) => {
+                            BootstrapStepStatus::Unchanged
+                        }
+                        Ok(_) => {
+                            database.write_role(name, role).await?;
+                            let verification = database.read_role(name).await?;
+                            if !database_role_matches_desired(&verification, role) {
+                                return Err(bootstrap_contention_error());
+                            }
+                            BootstrapStepStatus::Updated
+                        }
+                        Err(error) if error.is_not_found() => {
+                            database.write_role(name, role).await?;
+                            let verification = database.read_role(name).await?;
+                            if !database_role_matches_desired(&verification, role) {
+                                return Err(bootstrap_contention_error());
+                            }
+                            BootstrapStepStatus::Created
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapStepReport::new(
+                        "database_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "database")]
+                BootstrapOperation::DatabaseStaticRole { mount, name, role } => {
+                    let database = client.database(mount)?;
+                    let status = match database.read_static_role(name).await {
+                        Ok(existing) if database_static_role_matches_desired(&existing, role) => {
+                            BootstrapStepStatus::Unchanged
+                        }
+                        Ok(_) => {
+                            database.write_static_role(name, role).await?;
+                            let verification = database.read_static_role(name).await?;
+                            if !database_static_role_matches_desired(&verification, role) {
+                                return Err(bootstrap_contention_error());
+                            }
+                            BootstrapStepStatus::Updated
+                        }
+                        Err(error) if error.is_not_found() => {
+                            database.write_static_role(name, role).await?;
+                            let verification = database.read_static_role(name).await?;
+                            if !database_static_role_matches_desired(&verification, role) {
+                                return Err(bootstrap_contention_error());
+                            }
+                            BootstrapStepStatus::Created
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapStepReport::new(
+                        "database_static_role",
+                        format!("{mount}/{name}"),
+                        status,
+                    ));
+                }
+                #[cfg(feature = "ssh")]
+                BootstrapOperation::SshRole {
+                    mount,
+                    name,
+                    request,
+                } => {
+                    let ssh = client.ssh(mount)?;
+                    let status = match ssh.read_role(name).await {
+                        Ok(existing) if ssh_role_matches_desired(&existing, request) => {
+                            BootstrapStepStatus::Unchanged
+                        }
+                        Ok(_) => {
+                            ssh.write_role(name, request).await?;
+                            let verification = ssh.read_role(name).await?;
+                            if !ssh_role_matches_desired(&verification, request) {
+                                return Err(bootstrap_contention_error());
+                            }
+                            BootstrapStepStatus::Updated
+                        }
+                        Err(error) if error.is_not_found() => {
+                            ssh.write_role(name, request).await?;
+                            let verification = ssh.read_role(name).await?;
+                            if !ssh_role_matches_desired(&verification, request) {
+                                return Err(bootstrap_contention_error());
+                            }
+                            BootstrapStepStatus::Created
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    report.steps.push(BootstrapStepReport::new(
+                        "ssh_role",
                         format!("{mount}/{name}"),
                         status,
                     ));
@@ -1397,6 +1783,84 @@ fn pki_role_matches_desired(existing: &PkiRole, desired: &PkiRole) -> bool {
             .is_none_or(|value| existing.key_bits == Some(value))
 }
 
+#[cfg(feature = "database")]
+fn database_role_matches_desired(existing: &DatabaseRole, desired: &DatabaseRole) -> bool {
+    (desired.db_name.is_empty() || existing.db_name == desired.db_name)
+        && vec_empty_or_equal(&existing.creation_statements, &desired.creation_statements)
+        && desired
+            .default_ttl
+            .as_ref()
+            .is_none_or(|value| existing.default_ttl.as_ref() == Some(value))
+        && desired
+            .max_ttl
+            .as_ref()
+            .is_none_or(|value| existing.max_ttl.as_ref() == Some(value))
+        && vec_empty_or_equal(
+            &existing.revocation_statements,
+            &desired.revocation_statements,
+        )
+        && vec_empty_or_equal(&existing.rollback_statements, &desired.rollback_statements)
+        && vec_empty_or_equal(&existing.renew_statements, &desired.renew_statements)
+        && desired
+            .credential_type
+            .as_ref()
+            .is_none_or(|value| existing.credential_type.as_ref() == Some(value))
+        && map_empty_or_contains(&existing.credential_config, &desired.credential_config)
+}
+
+#[cfg(feature = "database")]
+fn database_static_role_matches_desired(
+    existing: &DatabaseStaticRole,
+    desired: &DatabaseStaticRole,
+) -> bool {
+    (desired.db_name.is_empty() || existing.db_name == desired.db_name)
+        && (desired.username.is_empty() || existing.username == desired.username)
+        && desired
+            .rotation_period
+            .as_ref()
+            .is_none_or(|value| existing.rotation_period.as_ref() == Some(value))
+        && vec_empty_or_equal(&existing.rotation_statements, &desired.rotation_statements)
+        && desired
+            .credential_type
+            .as_ref()
+            .is_none_or(|value| existing.credential_type.as_ref() == Some(value))
+        && map_empty_or_contains(&existing.credential_config, &desired.credential_config)
+}
+
+#[cfg(feature = "ssh")]
+fn ssh_role_matches_desired(existing: &SshRoleInfo, desired: &SshRoleRequest) -> bool {
+    desired
+        .default_user
+        .as_ref()
+        .is_none_or(|value| existing.default_user.as_ref() == Some(value))
+        && desired
+            .cidr_list
+            .as_ref()
+            .is_none_or(|value| existing.cidr_list.as_ref() == Some(value))
+        && desired
+            .port
+            .is_none_or(|value| existing.port == Some(value))
+        && desired
+            .key_type
+            .is_none_or(|value| existing.key_type == Some(value))
+        && desired
+            .allowed_users
+            .as_ref()
+            .is_none_or(|value| existing.allowed_users.as_ref() == Some(value))
+        && desired
+            .ttl
+            .as_ref()
+            .is_none_or(|value| existing.ttl.as_ref() == Some(value))
+        && desired
+            .max_ttl
+            .as_ref()
+            .is_none_or(|value| existing.max_ttl.as_ref() == Some(value))
+        && desired
+            .issuer_ref
+            .as_ref()
+            .is_none_or(|value| existing.issuer_ref.as_ref() == Some(value))
+}
+
 #[cfg(feature = "identity")]
 fn identity_entity_matches_desired(
     existing: &IdentityEntityInfo,
@@ -1490,7 +1954,7 @@ fn vec_empty_or_equal(existing: &[String], desired: &[String]) -> bool {
     desired.is_empty() || existing == desired
 }
 
-#[cfg(feature = "identity")]
+#[cfg(any(feature = "database", feature = "identity"))]
 fn map_empty_or_contains(
     existing: &BTreeMap<String, String>,
     desired: &BTreeMap<String, String>,
@@ -1509,6 +1973,8 @@ mod tests {
 
     use secrecy::SecretString;
 
+    #[cfg(feature = "database")]
+    use crate::secrets::database::{DatabaseRole, DatabaseStaticRole};
     #[cfg(feature = "identity")]
     use crate::secrets::identity::{
         IdentityEntityInfo, IdentityEntityRequest, IdentityGroupInfo, IdentityGroupRequest,
@@ -1516,6 +1982,8 @@ mod tests {
     };
     #[cfg(feature = "pki")]
     use crate::secrets::pki::PkiRole;
+    #[cfg(feature = "ssh")]
+    use crate::secrets::ssh::{SshRoleInfo, SshRoleKeyType, SshRoleRequest};
     use crate::{
         AclCapability, AclPolicyBuilder, Authenticated, Client, Error, OpenBaoConfig,
         auth::token::TokenCreateRequest,
@@ -1535,6 +2003,24 @@ mod tests {
         assert!(
             bootstrap
                 .ensure_transit_key("transit", "../key", TransitCreateKeyRequest::default())
+                .is_err()
+        );
+        #[cfg(feature = "pki")]
+        assert!(bootstrap.ensure_pki_mount("pki/../bad", None).is_err());
+        #[cfg(feature = "database")]
+        assert!(
+            bootstrap
+                .ensure_database_role("database", "../role", DatabaseRole::new("postgres"))
+                .is_err()
+        );
+        #[cfg(feature = "ssh")]
+        assert!(
+            bootstrap
+                .ensure_ssh_role(
+                    "ssh",
+                    "role/../bad",
+                    SshRoleRequest::otp("alice", "127.0.0.1/32")
+                )
                 .is_err()
         );
     }
@@ -1659,6 +2145,57 @@ mod tests {
             ..PkiRole::default()
         };
         assert!(!super::pki_role_matches_desired(&existing, &different));
+    }
+
+    #[test]
+    #[cfg(feature = "database")]
+    fn database_role_convergence_compares_desired_fields_only() {
+        let existing = DatabaseRole::new("postgres")
+            .with_creation_statement("create user")
+            .with_creation_statement("grant select");
+        let desired = DatabaseRole::new("postgres")
+            .with_creation_statement("create user")
+            .with_creation_statement("grant select");
+        assert!(super::database_role_matches_desired(&existing, &desired));
+
+        let different = DatabaseRole::new("postgres").with_creation_statement("create user");
+        assert!(!super::database_role_matches_desired(&existing, &different));
+
+        let existing_static = DatabaseStaticRole {
+            rotation_period: Some("24h".to_owned()),
+            ..DatabaseStaticRole::new("postgres", "app_user")
+        };
+        let desired_static = DatabaseStaticRole::new("postgres", "app_user");
+        assert!(super::database_static_role_matches_desired(
+            &existing_static,
+            &desired_static
+        ));
+
+        let different_static = DatabaseStaticRole::new("postgres", "other_user");
+        assert!(!super::database_static_role_matches_desired(
+            &existing_static,
+            &different_static
+        ));
+    }
+
+    #[test]
+    #[cfg(feature = "ssh")]
+    fn ssh_role_convergence_compares_desired_fields_only() {
+        let existing = SshRoleInfo {
+            default_user: Some("alice".to_owned()),
+            cidr_list: Some("127.0.0.1/32".to_owned()),
+            port: None,
+            key_type: Some(SshRoleKeyType::Otp),
+            allowed_users: None,
+            ttl: Some("30m".to_owned()),
+            max_ttl: None,
+            issuer_ref: None,
+        };
+        let desired = SshRoleRequest::otp("alice", "127.0.0.1/32");
+        assert!(super::ssh_role_matches_desired(&existing, &desired));
+
+        let different = SshRoleRequest::otp("bob", "127.0.0.1/32");
+        assert!(!super::ssh_role_matches_desired(&existing, &different));
     }
 
     #[test]

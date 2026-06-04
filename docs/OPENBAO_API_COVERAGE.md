@@ -328,6 +328,8 @@ Implemented in `0.8.0`:
   shape.
 - ACL policy-builder wrapping TTL constraints and helper variants for policies
   that require response wrapping.
+- Selective AdminBootstrap convergence for PKI, database, and SSH mounts,
+  database dynamic/static roles, and SSH roles.
 - KV v2 historical reads were already covered by `read_version` and
   `read_data_version`.
 
@@ -354,10 +356,8 @@ Finalization work before `1.0.0`:
   retry-middleware policy.
 - reject per-engine wrapped response method duplication; callers use
   `Client::wrapping` for generic typed JSON response wrapping.
-- implement selective `0.15.0` AdminBootstrap convergence for PKI mounts/roles,
-  database mounts/dynamic and static roles, and SSH mounts/roles; reject PKI CA
-  setup, database connection config, SSH CA setup, and KV v1 convergence in the
-  bootstrap layer.
+- reject PKI CA setup, database connection config, SSH CA setup, and KV v1
+  convergence in the bootstrap layer.
 - reject ACL parameter-constraint generation because safe output requires a
   full HCL value serializer.
 - reject leaf certificate and SPKI pinning for stable scope; use root-only

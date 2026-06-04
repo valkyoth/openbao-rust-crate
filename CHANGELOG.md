@@ -14,6 +14,8 @@ All notable changes to this project are documented here.
   typed response-wrapped JSON requests.
 - Added ACL policy-builder wrapping TTL constraints and helper variants for
   policies that require response wrapping.
+- Added AdminBootstrap convergence for PKI, database, and SSH mounts plus
+  database dynamic/static roles and SSH roles.
 
 ### Security
 
@@ -24,6 +26,9 @@ All notable changes to this project are documented here.
 - Kept ACL parameter-constraint generation outside the typed policy builder;
   callers should still use raw policy documents for advanced HCL constraint
   maps.
+- Kept PKI CA setup, database connection configuration, and SSH CA key setup
+  outside AdminBootstrap because those workflows carry operator ceremony or
+  production credential handling requirements.
 
 ## 0.14.0 - 2026-06-04
 
