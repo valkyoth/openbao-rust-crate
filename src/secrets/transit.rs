@@ -992,6 +992,15 @@ impl ListEntries for TransitKeyList {
 }
 
 /// Request for Transit encryption.
+///
+/// # Security residual
+///
+/// The SDK serializes secret-bearing request bodies through a zeroizing
+/// intermediate buffer, but `reqwest::Body` owns a normal non-zeroizing copy
+/// after handoff to the HTTP stack. Treat the calling process heap as
+/// containing the base64 plaintext for the duration of the request lifecycle,
+/// and zeroize caller-owned plaintext buffers as soon as they are no longer
+/// needed.
 #[derive(Clone, Debug)]
 pub struct TransitEncryptRequest {
     /// Base64-encoded plaintext.

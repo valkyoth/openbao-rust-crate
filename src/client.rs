@@ -243,6 +243,8 @@ impl RetryPolicy {
 
 static RETRY_JITTER_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+// Intentionally non-cryptographic. Retry jitter is observable through network
+// timing; do not use this helper for security-sensitive randomness.
 fn retry_jitter_seed(retry_index: usize) -> u64 {
     let counter = RETRY_JITTER_COUNTER.fetch_add(1, Ordering::Relaxed);
     let nanos = SystemTime::now()
@@ -1114,7 +1116,7 @@ async fn execute_openbao_http_request(
     #[cfg(feature = "tracing")]
     let trace_method = outgoing.method().clone();
     #[cfg(feature = "tracing")]
-    let trace_path = outgoing.url().path().to_owned();
+    let trace_path = span_safe_path(outgoing.url().path());
 
     let pending = reqwest::RequestBuilder::from_parts(http.clone(), outgoing).send();
 
@@ -1291,12 +1293,8 @@ where
     validate_json_content_type(&response)?;
     let body = read_response_bytes(response, max_response_bytes).await?;
 
-    serde_json::from_slice(&body).map_err(|error| {
-        Error::Decode(format!(
-            "OpenBao response did not match expected schema ({})",
-            json_error_category(error)
-        ))
-    })
+    serde_json::from_slice(&body)
+        .map_err(|_| Error::Decode("OpenBao response did not match expected schema".into()))
 }
 
 async fn read_response_bytes(
@@ -1325,13 +1323,22 @@ async fn read_response_bytes(
     Ok(body)
 }
 
-fn json_error_category(error: serde_json::Error) -> &'static str {
-    match error.classify() {
-        serde_json::error::Category::Io => "io",
-        serde_json::error::Category::Syntax => "syntax",
-        serde_json::error::Category::Data => "data",
-        serde_json::error::Category::Eof => "eof",
+#[cfg(feature = "tracing")]
+fn span_safe_path(path: &str) -> String {
+    let mut segments = path.trim_start_matches('/').split('/');
+    let Some(version) = segments.next() else {
+        return "/<redacted>".to_owned();
+    };
+    let Some(mount) = segments.next() else {
+        return format!("/{version}");
+    };
+    let Some(operation) = segments.next() else {
+        return format!("/{version}/{mount}");
+    };
+    if segments.next().is_none() {
+        return format!("/{version}/{mount}/{operation}");
     }
+    format!("/{version}/{mount}/{operation}/<redacted>")
 }
 
 fn validate_json_content_type(response: &reqwest::Response) -> Result<()> {
@@ -1442,6 +1449,20 @@ mod tests {
 
         assert!(is_cleartext_url(&http));
         assert!(!is_cleartext_url(&https));
+    }
+
+    #[cfg(feature = "tracing")]
+    #[test]
+    fn tracing_path_sanitizer_redacts_secret_identifiers() {
+        assert_eq!(
+            super::span_safe_path("/v1/transit/encrypt/classified-payload-key"),
+            "/v1/transit/encrypt/<redacted>"
+        );
+        assert_eq!(
+            super::span_safe_path("/v1/secret/data/compartment-alpha/credentials"),
+            "/v1/secret/data/<redacted>"
+        );
+        assert_eq!(super::span_safe_path("/v1/sys/health"), "/v1/sys/health");
     }
 
     #[test]

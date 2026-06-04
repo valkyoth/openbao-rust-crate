@@ -9890,7 +9890,7 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for index in 0..10 {
+        for index in 0..12 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let mut buffer = [0_u8; 8192];
             let bytes = stream
@@ -9912,6 +9912,14 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
                     ("204 No Content", "{}".to_owned())
                 }
                 2 => {
+                    assert!(request.starts_with("GET /v1/sys/mounts/secret HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"type":"kv","description":"application secrets","config":{},"options":{"version":"2"}}}"#
+                            .to_owned(),
+                    )
+                }
+                3 => {
                     assert!(request.starts_with("GET /v1/sys/mounts/transit HTTP/1.1"));
                     (
                         "200 OK",
@@ -9919,34 +9927,42 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
                             .to_owned(),
                     )
                 }
-                3 => {
+                4 => {
                     assert!(request.starts_with("GET /v1/sys/policy/app-read HTTP/1.1"));
                     (
                         "404 Not Found",
                         r#"{"errors":["missing policy"]}"#.to_owned(),
                     )
                 }
-                4 => {
+                5 => {
                     assert!(request.starts_with("POST /v1/sys/policy/app-read HTTP/1.1"));
                     assert!(request.contains("secret/data/app"));
                     ("204 No Content", "{}".to_owned())
                 }
-                5 => {
+                6 => {
+                    assert!(request.starts_with("GET /v1/sys/policy/app-read HTTP/1.1"));
+                    let rules = "path \"secret/data/app/*\" {\n  capabilities = [\"read\"]\n}\npath \"secret/metadata/app/*\" {\n  capabilities = [\"list\"]\n}\n";
+                    (
+                        "200 OK",
+                        serde_json::json!({"name":"app-read","rules":rules}).to_string(),
+                    )
+                }
+                7 => {
                     assert!(request.starts_with("GET /v1/transit/keys/app-key HTTP/1.1"));
                     ("404 Not Found", r#"{"errors":["missing key"]}"#.to_owned())
                 }
-                6 => {
+                8 => {
                     assert!(request.starts_with("POST /v1/transit/keys/app-key HTTP/1.1"));
                     ("204 No Content", "{}".to_owned())
                 }
-                7 => {
+                9 => {
                     assert!(request.starts_with("GET /v1/secret/data/app/config HTTP/1.1"));
                     (
                         "404 Not Found",
                         r#"{"errors":["missing secret"]}"#.to_owned(),
                     )
                 }
-                8 => {
+                10 => {
                     assert!(request.starts_with("POST /v1/secret/data/app/config HTTP/1.1"));
                     assert!(request.contains(r#""options":{"cas":0}"#));
                     assert!(
@@ -9957,7 +9973,7 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
                         r#"{"data":{"created_time":"now","version":1}}"#.to_owned(),
                     )
                 }
-                9 => {
+                11 => {
                     assert!(request.starts_with("POST /v1/auth/token/create HTTP/1.1"));
                     assert!(request.contains(r#""policies":["app-read"]"#));
                     assert!(request.contains(r#""no_default_policy":true"#));
@@ -10124,7 +10140,7 @@ async fn admin_bootstrap_can_provision_approle_auth() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for index in 0..5 {
+        for index in 0..7 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let mut buffer = [0_u8; 8192];
             let bytes = stream
@@ -10143,16 +10159,31 @@ async fn admin_bootstrap_can_provision_approle_auth() {
                     ("204 No Content", "{}".to_owned())
                 }
                 2 => {
+                    assert!(request.starts_with("GET /v1/sys/auth HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"approle/":{"type":"approle","description":"machine auth"}}}"#
+                            .to_owned(),
+                    )
+                }
+                3 => {
                     assert!(request.starts_with("GET /v1/auth/approle/role/web HTTP/1.1"));
                     ("404 Not Found", r#"{"errors":["missing role"]}"#.to_owned())
                 }
-                3 => {
+                4 => {
                     assert!(request.starts_with("POST /v1/auth/approle/role/web HTTP/1.1"));
                     assert!(request.contains(r#""bind_secret_id":true"#));
                     assert!(request.contains(r#""token_policies":["web"]"#));
                     ("204 No Content", "{}".to_owned())
                 }
-                4 => {
+                5 => {
+                    assert!(request.starts_with("GET /v1/auth/approle/role/web HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"bind_secret_id":true,"token_policies":["web"]}}"#.to_owned(),
+                    )
+                }
+                6 => {
                     assert!(
                         request.starts_with("POST /v1/auth/approle/role/web/secret-id HTTP/1.1")
                     );

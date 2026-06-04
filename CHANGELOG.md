@@ -31,6 +31,13 @@ All notable changes to this project are documented here.
 - Added lease count query validation, a Raft snapshot request-size cap,
   statically constrained Raft peer operation path construction, and explicit
   Transit import software-wrapping residual-risk docs.
+- Redacted tracing span paths to avoid logging secret names or lease/entity
+  identifiers when the optional `tracing` feature is enabled.
+- Removed serde JSON decode categories from user-facing decode errors and
+  tightened RADIUS host validation against control characters.
+- Added post-write verification for non-CAS bootstrap convergence paths so a
+  concurrent writer no longer results in a successful report with a mismatched
+  final state.
 
 ## 0.13.0 - 2026-06-04
 

@@ -932,6 +932,10 @@ impl AdminBootstrap {
                                 .sys()
                                 .write_policy(name, &PolicyWriteRequest::new(policy.clone()))
                                 .await?;
+                            let verification = client.sys().read_policy(name).await?;
+                            if verification.rules != *policy {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Updated
                         }
                         Err(error) if error.is_not_found() => {
@@ -939,6 +943,10 @@ impl AdminBootstrap {
                                 .sys()
                                 .write_policy(name, &PolicyWriteRequest::new(policy.clone()))
                                 .await?;
+                            let verification = client.sys().read_policy(name).await?;
+                            if verification.rules != *policy {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Created
                         }
                         Err(error) => return Err(error),
@@ -1003,10 +1011,18 @@ impl AdminBootstrap {
                         }
                         Ok(_) => {
                             pki.write_role(name, role).await?;
+                            let verification = pki.read_role(name).await?;
+                            if !pki_role_matches_desired(&verification, role) {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Updated
                         }
                         Err(error) if error.is_not_found() => {
                             pki.write_role(name, role).await?;
+                            let verification = pki.read_role(name).await?;
+                            if !pki_role_matches_desired(&verification, role) {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Created
                         }
                         Err(error) => return Err(error),
@@ -1030,10 +1046,18 @@ impl AdminBootstrap {
                         }
                         Ok(_) => {
                             identity.write_entity_by_name(name, request).await?;
+                            let verification = identity.read_entity_by_name(name).await?;
+                            if !identity_entity_matches_desired(&verification, request) {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Updated
                         }
                         Err(error) if error.is_not_found() => {
                             identity.write_entity_by_name(name, request).await?;
+                            let verification = identity.read_entity_by_name(name).await?;
+                            if !identity_entity_matches_desired(&verification, request) {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Created
                         }
                         Err(error) => return Err(error),
@@ -1057,10 +1081,18 @@ impl AdminBootstrap {
                         }
                         Ok(_) => {
                             identity.write_group_by_name(name, request).await?;
+                            let verification = identity.read_group_by_name(name).await?;
+                            if !identity_group_matches_desired(&verification, request) {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Updated
                         }
                         Err(error) if error.is_not_found() => {
                             identity.write_group_by_name(name, request).await?;
+                            let verification = identity.read_group_by_name(name).await?;
+                            if !identity_group_matches_desired(&verification, request) {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Created
                         }
                         Err(error) => return Err(error),
@@ -1096,10 +1128,18 @@ impl AdminBootstrap {
                         }
                         Ok(_) => {
                             admin.write_role(name, request).await?;
+                            let verification = admin.read_role(name).await?;
+                            if !approle_role_matches_desired(&verification, request) {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Updated
                         }
                         Err(error) if error.is_not_found() => {
                             admin.write_role(name, request).await?;
+                            let verification = admin.read_role(name).await?;
+                            if !approle_role_matches_desired(&verification, request) {
+                                return Err(bootstrap_contention_error());
+                            }
                             BootstrapStepStatus::Created
                         }
                         Err(error) => return Err(error),
@@ -1179,7 +1219,17 @@ where
             Ok(BootstrapStepStatus::Unchanged)
         }
         None => match client.sys().enable_auth_method(path, &request()).await {
-            Ok(_) => Ok(BootstrapStepStatus::Created),
+            Ok(_) => {
+                let auth_methods = client.sys().list_auth_methods().await?;
+                let auth = auth_methods
+                    .get(&key)
+                    .or_else(|| auth_methods.get(path))
+                    .ok_or_else(bootstrap_contention_error)?;
+                if auth.backend_type != expected_type {
+                    return Err(bootstrap_contention_error());
+                }
+                Ok(BootstrapStepStatus::Created)
+            }
             Err(error) if is_already_exists_error(&error) => Ok(BootstrapStepStatus::Unchanged),
             Err(error) => Err(error),
         },
@@ -1241,7 +1291,23 @@ where
         }
         Err(error) if error.is_not_found() => {
             match client.sys().enable_mount(path, &request()).await {
-                Ok(_) => Ok(BootstrapStepStatus::Created),
+                Ok(_) => {
+                    let mount = client.sys().read_mount(path).await?;
+                    if mount.backend_type != expected_type {
+                        return Err(bootstrap_contention_error());
+                    }
+                    if let Some((key, value)) = expected_option
+                        && mount
+                            .options
+                            .as_ref()
+                            .and_then(|options| options.get(key))
+                            .map(String::as_str)
+                            != Some(value)
+                    {
+                        return Err(bootstrap_contention_error());
+                    }
+                    Ok(BootstrapStepStatus::Created)
+                }
                 Err(error) if is_already_exists_error(&error) => Ok(BootstrapStepStatus::Unchanged),
                 Err(error) => Err(error),
             }
@@ -1285,6 +1351,12 @@ async fn preview_mount(
 
 fn is_already_exists_error(error: &Error) -> bool {
     error.is_conflict()
+}
+
+fn bootstrap_contention_error() -> Error {
+    Error::Internal(
+        "bootstrap convergence write was overwritten or changed by a concurrent writer; retry with external serialization",
+    )
 }
 
 fn secret_values_equal(current: &str, desired: &str) -> bool {

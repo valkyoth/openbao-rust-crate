@@ -164,6 +164,11 @@ impl RadiusConfig {
                 "RADIUS host must not be empty".into(),
             ));
         }
+        if self.host.as_bytes().iter().any(u8::is_ascii_control) {
+            return Err(Error::InvalidParameter(
+                "RADIUS host must not contain control characters".into(),
+            ));
+        }
         crate::validation::validate_cidr_list(&self.token_bound_cidrs, "RADIUS token_bound_cidrs")?;
         if self.token_strictly_bind_ip == Some(true) && !self.token_bound_cidrs.is_empty() {
             return Err(Error::InvalidParameter(
@@ -620,6 +625,12 @@ mod tests {
             .with_token_bound_cidr("10.0.0.0/8")
             .unwrap_or_else(|error| panic!("{error}"));
         assert!(config.validate().is_ok());
+
+        let invalid_host = RadiusConfig::new(
+            "radius.example.com\r\nX-Custom: injected",
+            test_secret(&["secret"]),
+        );
+        assert!(invalid_host.validate().is_err());
 
         let mut conflicting = config;
         conflicting.token_strictly_bind_ip = Some(true);

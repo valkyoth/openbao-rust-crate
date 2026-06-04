@@ -50,6 +50,10 @@ and resultant ACL helpers.
 - Transit import software wrapping docs now call out the OpenSSL-managed heap
   residual for the ephemeral AES key; HSM or audited-boundary wrapping remains
   the recommended path for high-assurance deployments.
+- Second pentest follow-up redacted optional tracing span paths, removed JSON
+  decode categories from user-facing errors, tightened RADIUS host validation,
+  and added post-write verification for non-CAS bootstrap convergence paths.
+  The local second `PENTEST.md` report was deleted before commit.
 
 ## Security And Stability Gate
 
