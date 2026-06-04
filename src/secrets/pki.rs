@@ -1206,7 +1206,7 @@ pub struct PkiDetailedCertificateList {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
     /// Certificate metadata keyed by serial number.
-    #[serde(default, deserialize_with = "deserialize_bounded_json_map")]
+    #[serde(default, deserialize_with = "deserialize_bounded_primitive_json_map")]
     pub key_info: BTreeMap<String, JsonValue>,
 }
 
@@ -1223,7 +1223,7 @@ pub struct PkiRevocationQueueList {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
     /// Queue metadata keyed by serial number.
-    #[serde(default, deserialize_with = "deserialize_bounded_json_map")]
+    #[serde(default, deserialize_with = "deserialize_bounded_primitive_json_map")]
     pub key_info: BTreeMap<String, JsonValue>,
 }
 
@@ -1688,6 +1688,10 @@ impl Pki<'_> {
     }
 
     /// Signs a self-issued certificate with the default root.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`
+    /// because this can establish cross-trust with an external CA.
+    #[cfg(feature = "operator-ops")]
     pub async fn sign_self_issued(
         &self,
         request: &PkiSignSelfIssuedRequest,
@@ -1701,6 +1705,10 @@ impl Pki<'_> {
     }
 
     /// Signs a self-issued certificate with an explicit issuer.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`
+    /// because this can establish cross-trust with an external CA.
+    #[cfg(feature = "operator-ops")]
     pub async fn sign_self_issued_with_issuer(
         &self,
         issuer_ref: &str,
@@ -2821,6 +2829,17 @@ where
     deserializer.deserialize_map(BoundedJsonMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
 }
 
+fn deserialize_bounded_primitive_json_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, JsonValue>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(
+        BoundedPrimitiveJsonMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
 struct BoundedJsonMapVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedJsonMapVisitor<MAX> {
@@ -2839,6 +2858,43 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedJsonMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
                 return Ok(values);
             };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "OpenBao JSON metadata map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
+struct BoundedPrimitiveJsonMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedPrimitiveJsonMapVisitor<MAX> {
+    type Value = BTreeMap<String, JsonValue>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "a map of at most {MAX} primitive JSON metadata entries"
+        )
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
+                return Ok(values);
+            };
+            if value.is_array() || value.is_object() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao JSON metadata values must be primitive",
+                ));
+            }
             values.insert(key, value);
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
@@ -3141,10 +3197,7 @@ mod tests {
     fn pki_specialized_metadata_maps_are_bounded() {
         let mut exact_key_info = serde_json::Map::new();
         for index in 0..crate::response::MAX_RESPONSE_STRINGS {
-            exact_key_info.insert(
-                format!("{index:04x}"),
-                serde_json::json!({ "expiration": 1_893_456_000_u64 }),
-            );
+            exact_key_info.insert(format!("{index:04x}"), serde_json::json!(1_893_456_000_u64));
         }
         let exact = serde_json::json!({
             "keys": ["0000"],
@@ -3160,15 +3213,21 @@ mod tests {
 
         let mut overflow_key_info = serde_json::Map::new();
         for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
-            overflow_key_info.insert(
-                format!("{index:04x}"),
-                serde_json::json!({ "revocation_time": 1_893_456_000_u64 }),
-            );
+            overflow_key_info.insert(format!("{index:04x}"), serde_json::json!(1_893_456_000_u64));
         }
         let overflow = serde_json::json!({
             "keys": ["0000"],
             "key_info": overflow_key_info
         });
+        let error = match serde_json::from_value::<PkiDetailedCertificateList>(overflow.clone()) {
+            Ok(_) => panic!("oversized PKI detailed certificate list unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(
+            error
+                .to_string()
+                .contains("OpenBao JSON metadata map exceeds item limit")
+        );
         let error = match serde_json::from_value::<PkiRevocationQueueList>(overflow) {
             Ok(_) => panic!("oversized PKI revocation queue unexpectedly decoded"),
             Err(error) => error,
@@ -3177,6 +3236,22 @@ mod tests {
             error
                 .to_string()
                 .contains("OpenBao JSON metadata map exceeds item limit")
+        );
+
+        let nested = serde_json::json!({
+            "keys": ["0000"],
+            "key_info": {
+                "0000": { "expiration": 1_893_456_000_u64 }
+            }
+        });
+        let error = match serde_json::from_value::<PkiDetailedCertificateList>(nested) {
+            Ok(_) => panic!("nested PKI detailed certificate metadata unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(
+            error
+                .to_string()
+                .contains("OpenBao JSON metadata values must be primitive")
         );
     }
 

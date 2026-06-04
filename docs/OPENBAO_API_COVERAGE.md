@@ -208,8 +208,8 @@ Support plan:
   confirmation, cluster config, auto-tidy config, revoke-with-key,
   sign-verbatim behind operator gates, current-doc field expansion for PKI
   role/generation/CRL/tidy structs, revocation/CRL management, CEL roles,
-  named-issuer sign-intermediate/sign-self-issued, delta CRL rotation, and
-  operator-gated cross-sign rows are implemented.
+  named-issuer sign-intermediate, delta CRL rotation, and operator-gated
+  sign-self-issued/cross-sign rows are implemented.
   Unauthenticated public CA/certificate/CRL reads and OCSP responder endpoints
   are external protocol/public-distribution
   boundaries. Full ACME

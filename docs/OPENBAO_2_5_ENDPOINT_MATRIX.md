@@ -32,8 +32,8 @@ Sources:
 
 | Status | Count |
 | --- | ---: |
-| `typed` | 508 |
-| `typed-gated` | 47 |
+| `typed` | 521 |
+| `typed-gated` | 51 |
 | `partial` | 1 |
 | `raw` | 0 |
 | `external` | 33 |

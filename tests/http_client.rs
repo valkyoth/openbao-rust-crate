@@ -8032,7 +8032,7 @@ async fn pki_specialized_flows_use_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for step in 0..15 {
+        for step in 0..13 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match step {
@@ -8045,70 +8045,58 @@ async fn pki_specialized_flows_use_documented_paths() {
                     r#"{"data":{"certificate":"issuer-signed-intermediate","serial_number":"30:01"}}"#
                 }
                 1 => {
-                    assert!(request.starts_with("POST /v1/pki/root/sign-self-issued HTTP/1.1"));
-                    assert!(request.contains(r#""certificate":"self-issued-cert""#));
-                    r#"{"data":{"certificate":"signed-self-issued","serial_number":"30:02"}}"#
-                }
-                2 => {
-                    assert!(
-                        request
-                            .starts_with("POST /v1/pki/issuer/root-x1/sign-self-issued HTTP/1.1")
-                    );
-                    r#"{"data":{"certificate":"issuer-signed-self-issued","serial_number":"30:03"}}"#
-                }
-                3 => {
                     assert!(request.starts_with("POST /v1/pki/crl/rotate-delta HTTP/1.1"));
                     r#"{"data":{"success":true}}"#
                 }
-                4 => {
+                2 => {
                     assert!(request.starts_with("LIST /v1/pki/certs/revoked HTTP/1.1"));
                     r#"{"data":{"keys":["30:01"]}}"#
                 }
-                5 => {
+                3 => {
                     assert!(request.starts_with("LIST /v1/pki/certs/revocation-queue HTTP/1.1"));
-                    r#"{"data":{"keys":["30:02"],"key_info":{"30:02":{"revocation_time":1893456002}}}}"#
+                    r#"{"data":{"keys":["30:02"],"key_info":{"30:02":1893456002}}}"#
                 }
-                6 => {
+                4 => {
                     assert!(request.starts_with(
                         "LIST /v1/pki/certs/detailed?after=30%3A01&limit=10 HTTP/1.1"
                     ));
-                    r#"{"data":{"keys":["30:03"],"key_info":{"30:03":{"expiration":1893456003}}}}"#
+                    r#"{"data":{"keys":["30:03"],"key_info":{"30:03":1893456003}}}"#
                 }
-                7 => {
+                5 => {
                     assert!(
                         request.starts_with("POST /v1/pki/issuer/root-x1/resign-crls HTTP/1.1")
                     );
                     r#"{"data":{"crl":"-----BEGIN X509 CRL-----","serial_number":"30:04"}}"#
                 }
-                8 => {
+                6 => {
                     assert!(request.starts_with("POST /v1/pki/cel/roles/web-cel HTTP/1.1"));
                     assert!(request.contains(r#""expression":"subject.common_name.endsWith"#));
                     "{}"
                 }
-                9 => {
+                7 => {
                     assert!(request.starts_with("GET /v1/pki/cel/roles/web-cel HTTP/1.1"));
                     r#"{"data":{"expression":"subject.common_name.endsWith(\".example.com\")","description":"web CEL role","issuer_ref":"root-x1"}}"#
                 }
-                10 => {
+                8 => {
                     assert!(request.starts_with("LIST /v1/pki/cel/roles HTTP/1.1"));
                     r#"{"data":{"keys":["web-cel"]}}"#
                 }
-                11 => {
+                9 => {
                     assert!(request.starts_with("PATCH /v1/pki/cel/roles/web-cel HTTP/1.1"));
                     assert!(request.contains("application/merge-patch+json"));
                     r#"{"data":{"expression":"subject.common_name.endsWith(\".example.com\")","description":"patched"}}"#
                 }
-                12 => {
+                10 => {
                     assert!(request.starts_with("POST /v1/pki/cel/issue/web-cel HTTP/1.1"));
                     assert!(request.contains(r#""common_name":"api.example.com""#));
                     r#"{"data":{"certificate":"cel-issued","serial_number":"30:05"}}"#
                 }
-                13 => {
+                11 => {
                     assert!(request.starts_with("POST /v1/pki/cel/sign/web-cel HTTP/1.1"));
                     assert!(request.contains(r#""csr":"-----BEGIN CERTIFICATE REQUEST-----""#));
                     r#"{"data":{"certificate":"cel-signed","serial_number":"30:06"}}"#
                 }
-                14 => {
+                12 => {
                     assert!(request.starts_with("DELETE /v1/pki/cel/roles/web-cel HTTP/1.1"));
                     "{}"
                 }
@@ -8144,27 +8132,6 @@ async fn pki_specialized_flows_use_documented_paths() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(intermediate.serial_number.as_deref(), Some("30:01"));
-
-    let self_issued = openbao::secrets::pki::PkiSignSelfIssuedRequest {
-        certificate: "self-issued-cert".to_owned(),
-        issuer_name: Some("self-issued".to_owned()),
-    };
-    assert_eq!(
-        pki.sign_self_issued(&self_issued)
-            .await
-            .unwrap_or_else(|error| panic!("{error}"))
-            .serial_number
-            .as_deref(),
-        Some("30:02")
-    );
-    assert_eq!(
-        pki.sign_self_issued_with_issuer("root-x1", &self_issued)
-            .await
-            .unwrap_or_else(|error| panic!("{error}"))
-            .serial_number
-            .as_deref(),
-        Some("30:03")
-    );
 
     assert!(
         pki.rotate_delta_crl()
@@ -8281,23 +8248,35 @@ async fn pki_specialized_operator_flows_are_gated_and_use_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for step in 0..2 {
+        for step in 0..4 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match step {
                 0 => {
-                    assert!(request.starts_with("POST /v1/pki/intermediate/cross-sign HTTP/1.1"));
-                    assert!(request.contains(r#""csr":"cross-sign-csr""#));
-                    r#"{"data":{"certificate":"cross-signed","serial_number":"31:01"}}"#
+                    assert!(request.starts_with("POST /v1/pki/root/sign-self-issued HTTP/1.1"));
+                    assert!(request.contains(r#""certificate":"self-issued-cert""#));
+                    r#"{"data":{"certificate":"signed-self-issued","serial_number":"31:01"}}"#
                 }
                 1 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/pki/issuer/root-x1/sign-self-issued HTTP/1.1")
+                    );
+                    r#"{"data":{"certificate":"issuer-signed-self-issued","serial_number":"31:02"}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/pki/intermediate/cross-sign HTTP/1.1"));
+                    assert!(request.contains(r#""csr":"cross-sign-csr""#));
+                    r#"{"data":{"certificate":"cross-signed","serial_number":"31:03"}}"#
+                }
+                3 => {
                     assert!(
                         request.starts_with(
                             "POST /v1/pki/issuer/root-x1/sign-revocation-list HTTP/1.1"
                         )
                     );
-                    assert!(request.contains(r#""serial_number":"31:01""#));
-                    r#"{"data":{"crl":"-----BEGIN X509 CRL-----","serial_number":"31:02"}}"#
+                    assert!(request.contains(r#""serial_number":"31:03""#));
+                    r#"{"data":{"crl":"-----BEGIN X509 CRL-----","serial_number":"31:04"}}"#
                 }
                 _ => unreachable!(),
             };
@@ -8320,6 +8299,27 @@ async fn pki_specialized_operator_flows_are_gated_and_use_documented_paths() {
         .with_token(SecretString::from("root-token"));
     let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
 
+    let self_issued = openbao::secrets::pki::PkiSignSelfIssuedRequest {
+        certificate: "self-issued-cert".to_owned(),
+        issuer_name: Some("self-issued".to_owned()),
+    };
+    assert_eq!(
+        pki.sign_self_issued(&self_issued)
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .serial_number
+            .as_deref(),
+        Some("31:01")
+    );
+    assert_eq!(
+        pki.sign_self_issued_with_issuer("root-x1", &self_issued)
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .serial_number
+            .as_deref(),
+        Some("31:02")
+    );
+
     assert_eq!(
         pki.cross_sign_intermediate(&openbao::secrets::pki::PkiSignIntermediateRequest {
             csr: "cross-sign-csr".to_owned(),
@@ -8329,7 +8329,7 @@ async fn pki_specialized_operator_flows_are_gated_and_use_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"))
         .serial_number
         .as_deref(),
-        Some("31:01")
+        Some("31:03")
     );
 
     assert_eq!(
@@ -8338,7 +8338,7 @@ async fn pki_specialized_operator_flows_are_gated_and_use_documented_paths() {
             &openbao::secrets::pki::PkiSignRevocationListRequest {
                 crl_number: Some(7),
                 revoked_certs: vec![openbao::secrets::pki::PkiRevokedCertificateEntry {
-                    serial_number: "31:01".to_owned(),
+                    serial_number: "31:03".to_owned(),
                     revocation_time: 1_893_456_031,
                 }],
                 ..Default::default()
@@ -8348,7 +8348,7 @@ async fn pki_specialized_operator_flows_are_gated_and_use_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"))
         .serial_number
         .as_deref(),
-        Some("31:02")
+        Some("31:04")
     );
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));

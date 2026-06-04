@@ -207,8 +207,8 @@ secret,POST,/pki/sign/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed
 secret,POST,/pki/issuer/:issuer_ref/sign/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/root/sign-intermediate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/root/sign-self-issued,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/root/sign-self-issued,typed-gated,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists behind operator-operation gates.
+secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,typed-gated,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists behind operator-operation gates.
 secret,POST,/pki/sign-verbatim(/:name),typed-gated,https://openbao.org/api-docs/secret/pki/,Typed PKI sign-verbatim helper exists behind operator-operation gates.
 secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),typed-gated,https://openbao.org/api-docs/secret/pki/,Typed PKI sign-verbatim helper exists behind operator-operation gates.
 secret,LIST,/pki/cel/roles,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI CEL helper exists.
