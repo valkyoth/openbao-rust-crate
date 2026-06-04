@@ -1,23 +1,46 @@
 # Migration Guide
 
-This guide tracks migration work for the `0.15.0` stable-candidate line before
-the first `1.0.0` release. The endpoint matrix now has zero `planned` and zero
+This guide tracks migration work for the stable `1.0.0` release. The endpoint
+matrix now has zero `planned` and zero
 `decision` rows; remaining non-typed rows are intentionally documented as raw,
 external, partial, gated, or rejected boundaries.
 
-## From `openbao` 0.14 To 0.15
+## From `openbao` 0.15 To 1.0
 
-`0.15.0` is source-compatible with normal `0.14.0` application code and adds
-the final stable-scope ergonomics before `1.0.0`.
+`1.0.0` is source-compatible with normal `0.15.0` application code. It freezes
+the public API surface that was trialed in the `0.15.0` stable-candidate line.
 
 Update `Cargo.toml`:
 
 ```toml
 [dependencies]
-openbao = "0.15"
+openbao = "1"
 ```
 
-Adopt these `0.15` additions where they fit:
+Recommended checks before deploying the stable release:
+
+- run your existing `0.15.0` integration tests with `openbao = "1"`;
+- keep feature selections explicit for operator APIs, legacy TLS, RADIUS,
+  Transit import software wrapping, and test-only HTTP escape hatches;
+- review `SECURITY.md` for accepted residuals around transport buffers,
+  bootstrap locking, and software BYOK wrapping;
+- use `docs/API_STABILITY_AUDIT.md` and
+  `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` as the stable endpoint-boundary
+  reference.
+
+## From `openbao` 0.14 To 1.0
+
+`1.0.0` is source-compatible with normal `0.14.0` application code, through the
+`0.15.0` stable-candidate additions.
+
+Update `Cargo.toml`:
+
+```toml
+[dependencies]
+openbao = "1"
+```
+
+Adopt these final stable-scope additions where they fit:
 
 - use `Sys::wait_until_unsealed_with_delay` for bounded startup or recovery
   polling. Enable `tokio-helpers` only when the direct
@@ -47,7 +70,7 @@ Update `Cargo.toml`:
 
 ```toml
 [dependencies]
-openbao = "0.15"
+openbao = "1"
 ```
 
 Keep these `0.8` patterns:

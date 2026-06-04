@@ -1,25 +1,22 @@
 # API Stability Audit
 
-This document tracks the pre-stable API audit before the first stable `1.0.0`
-release. The goal is to avoid accidental public API commitments while keeping
-the crate useful for production trials.
+This document records the API stability audit for the first stable `1.0.0`
+release. The goal is to make the public API commitments explicit while keeping
+documented safety boundaries for endpoints that remain raw, external, partial,
+gated, or rejected.
 
 ## Status
 
-- Release line: `0.15.0`
+- Release line: `1.0.0`
 - Started: 2026-06-03
-- Audit status: endpoint-scope closure completed for the `0.15.0` stable
-  candidate; the OpenBao `2.5.x` endpoint matrix has zero `planned` and zero
-  `decision` rows.
-- Stable target: `1.0.0`
-- Planning assumption: the endpoint matrix expanded the pre-`1.0` plan through
-  `0.15.0`. Use `0.9.0` for stabilization foundations, `0.10.0` through
-  `0.14.0` for remaining endpoint families, `0.15.0` for closure, and
-  `1.0.0` for the stable freeze. After `1.0.0`, assume only `1.0.x`
-  maintenance and security fixes.
+- Audit status: stable API freeze prepared; the OpenBao `2.5.x` endpoint
+  matrix has zero `planned` and zero `decision` rows.
+- Stable target: reached by `1.0.0`.
+- Planning assumption: after `1.0.0`, assume only `1.0.x` maintenance,
+  security fixes, compatibility fixes, and documentation corrections.
 - Coverage target: no OpenBao `2.5.x` endpoint row remains classified as
-  `planned` or `decision` before `1.0.0`; not every row must become first-class
-  typed if a raw, external, partial, gated, or rejected boundary is safer.
+  `planned` or `decision`; not every row must become first-class typed if a
+  raw, external, partial, gated, or rejected boundary is safer.
 
 ## Stabilization Rules
 

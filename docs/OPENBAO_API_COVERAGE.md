@@ -69,7 +69,7 @@ Sources:
 
 ## Endpoint Matrix
 
-The `0.14.0` release line uses a mechanical endpoint matrix instead
+The stable `1.0.0` release line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
@@ -333,7 +333,7 @@ Implemented in `0.8.0`:
 - KV v2 historical reads were already covered by `read_version` and
   `read_data_version`.
 
-Finalization work before `1.0.0`:
+Finalization work completed before `1.0.0`:
 
 - explicit opt-in retry policy with exponential backoff and bounded jitter is
   implemented through `RetryPolicy`, `RetryableMethod`, and
@@ -364,8 +364,8 @@ Finalization work before `1.0.0`:
   trust with an internal OpenBao CA or self-signed OpenBao certificate instead.
 - use `0.10.0` through `0.14.0` for Identity/auth, Transit, PKI, and System
   endpoint-family completion;
-- use `0.15.0` as the endpoint-closure release where no matrix row may remain
-  `decision`.
+- used `0.15.0` as the endpoint-closure release where no matrix row could
+  remain `decision`.
 
 ## OpenBao-Specific Notes
 

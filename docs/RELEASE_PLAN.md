@@ -6,7 +6,7 @@ documented endpoint rows, with `597/643` (`92.8%`) strict typed or
 operator-gated coverage and zero `planned` or `decision` rows. The remaining
 rows are intentionally addressed as `partial`, `raw`, `external`, or
 `rejected` where that boundary is safer than first-class typed SDK coverage.
-The pre-`1.0` line extends through `0.15.0` so this final scope can be trialed
+The pre-`1.0` line extended through `0.15.0`; that final scope was trialed
 before the stable API freeze.
 
 After `1.0.0`, the expected line is `1.0.x` maintenance, security fixes,
@@ -33,12 +33,12 @@ Every release:
 
 ## Finalization Policy
 
-- Anything valuable enough for the stable crate must land between `0.9.0` and
-  `0.15.0`, or be explicitly rejected/delegated before `1.0.0`.
+- Anything valuable enough for the stable crate landed between `0.9.0` and
+  `0.15.0`, or was explicitly rejected/delegated before `1.0.0`.
 - The stable readiness target is not blindly `100% typed`; it is `100%`
   addressed endpoint rows. A row may be addressed as `typed`, `typed-gated`,
   `partial`, `raw`, `external`, or rejected with a documented safe alternative.
-  The current `0.15.0` candidate has no remaining `planned` implementation rows.
+  The `1.0.0` candidate has no remaining `planned` implementation rows.
 - No endpoint row may remain classified as `planned` or `decision` when
   `1.0.0` is tagged.
 - After `1.0.0`, new feature work is not planned. Only `1.0.x` security,

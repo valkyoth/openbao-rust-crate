@@ -3,9 +3,9 @@
 ## Version
 
 - Version: 0.15.0
-- Status: in development
-- Git tag: pending
-- Git commit: pending
+- Release date: 2026-06-04
+- Git tag: `v0.15.0`
+- Git commit: see the signed `v0.15.0` tag object
 - License: MIT OR Apache-2.0
 
 ## Summary

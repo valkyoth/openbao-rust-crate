@@ -37,8 +37,8 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the in-development `0.15.0` API. `0.15.0` builds on the
-`0.14.0` API with stable-candidate ergonomics and final closure work.
+This README documents the stable `1.0.0` API. `1.0.0` freezes the public API
+surface trialed through the `0.15.0` stable-candidate release line.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -186,10 +186,10 @@ Delivered in `0.14.0`:
   generate-recovery-token, decode-token, legacy recovery-key rekey, and
   in-flight request inspection, plus password policy and resultant ACL helpers.
 
-Current `0.15.0` line:
+Stable `1.0.0` line:
 
-- `0.15.0`: stable-scope ergonomics and final closure before the stable API
-  freeze. Bounded unseal readiness polling is available through
+- `1.0.0`: stable API freeze with zero endpoint matrix rows left as
+  `planned` or `decision`. Bounded unseal readiness polling is available through
   `wait_until_unsealed_with_delay`, with `wait_until_unsealed` behind the
   `tokio-helpers` feature. Typed response wrapping is available through
   `Client::wrapping`, ACL policy rules can enforce response-wrapping TTL
@@ -197,12 +197,11 @@ Current `0.15.0` line:
   mount/role workflows. Request-level back-pressure, full OpenTelemetry SDK
   integration, certificate pinning, KV v1 bootstrap convergence, and ACL
   parameter-constraint HCL generation are rejected for stable scope.
-- `1.0.0`: stable API freeze after the endpoint matrix has zero `planned` or
-  `decision` rows; after `1.0.0`, only `1.0.x` maintenance and security fixes
-  are planned.
+- After `1.0.0`, the planned line is `1.0.x` maintenance, security fixes,
+  compatibility fixes, and documentation corrections.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
-[Release Plan](docs/RELEASE_PLAN.md) for the road to `1.0.0`.
+[Release Plan](docs/RELEASE_PLAN.md) for the stable support policy.
 
 ## Trust Dashboard
 
@@ -233,7 +232,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.15.0` release line tracks compatibility evidence across this supported
+The `1.0.0` release line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -250,7 +249,7 @@ range:
 
 ```toml
 [dependencies]
-openbao = "0.15"
+openbao = "1"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
 ```
@@ -262,11 +261,40 @@ Some advanced examples below use JSON helper types directly:
 serde_json = "1.0.150"
 ```
 
+## Quick Start
+
+Read a KV v2 secret using the secure environment-based constructor:
+
+```rust,no_run
+use openbao::{Client, Result, SecretString};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct DbCredentials {
+    username: String,
+    password: SecretString,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Reads OPENBAO_ADDR/BAO_ADDR/VAULT_ADDR plus token, namespace, and CA aliases.
+    let client = Client::from_env_with_token()?;
+    let secret = client
+        .kv2("secret")?
+        .read::<DbCredentials>("production/database")
+        .await?;
+
+    println!("loaded credentials for {}", secret.data.username);
+    let _password = secret.data.password;
+    Ok(())
+}
+```
+
 The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.15", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "1", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -274,7 +302,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.15", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "1", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 Optional RFC3339 timestamp parsing is available behind the lightweight `time`
@@ -282,7 +310,7 @@ feature:
 
 ```toml
 [dependencies]
-openbao = { version = "0.15", features = ["time"] }
+openbao = { version = "1", features = ["time"] }
 ```
 
 ## Features
@@ -334,7 +362,7 @@ openbao = { version = "0.15", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the current `0.15.0` line it records `643` documented endpoint rows, with
+For the stable `1.0.0` line it records `643` documented endpoint rows, with
 `597/643` (`92.8%`) strict typed or operator-gated coverage. All rows are now
 addressed by typed, operator-gated, partial, external, or rejected policy, with
 zero `planned` and zero `decision` rows.

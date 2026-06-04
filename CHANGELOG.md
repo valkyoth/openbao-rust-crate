@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented here.
 
+## 1.0.0 - Unreleased
+
+### Added
+
+- Promoted the crate to the first stable `1.0.0` release line.
+- Added `1.0.0` release notes and a stable release gate.
+- Updated README install snippets, quick-start example, migration guide,
+  release plan, API stability audit, and API coverage docs for the stable
+  release.
+
+### Security
+
+- Preserved the `0.15.0` stable-candidate security posture: HTTPS by default,
+  redirects disabled, TLS 1.3 default floor, bounded responses, sanitized
+  decode errors, secret-aware public types, and explicit feature gates for
+  operator, legacy, and software key-wrapping workflows.
+- Recorded that no OpenBao `2.5.x` endpoint matrix rows remain `planned` or
+  `decision`; remaining non-typed rows are stable documented boundaries.
+
 ## 0.15.0 - 2026-06-04
 
 ### Added
