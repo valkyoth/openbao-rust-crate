@@ -1742,12 +1742,13 @@ fn is_already_exists_error(error: &Error) -> bool {
 
 fn bootstrap_contention_error() -> Error {
     #[cfg(feature = "tracing")]
-    tracing::warn!(
+    tracing::error!(
         target: "openbao::bootstrap",
-        "bootstrap contention detected during post-write verification; rerun with external serialization"
+        severity = "critical",
+        "bootstrap contention detected during post-write verification; rerun with external serialization and investigate concurrent writers"
     );
-    Error::Internal(
-        "bootstrap convergence write was overwritten or changed by a concurrent writer; retry with external serialization",
+    Error::BootstrapContention(
+        "bootstrap convergence write was overwritten or changed by a concurrent writer; rerun with external serialization and investigate concurrent writers",
     )
 }
 

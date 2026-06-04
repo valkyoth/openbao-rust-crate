@@ -36,6 +36,10 @@ zero `planned` and zero `decision` rows.
   enforced by the local check script.
 - Added rustls-backed static PEM CRL configuration for OpenBao server
   certificate checks when using a root-only trust store.
+- Added final pentest hardening for RADIUS user policy validation, Transit
+  import wrapping-key validation, token and user-agent header validation,
+  retry jitter fallback visibility, Transit batch invariants, and bootstrap
+  contention classification.
 
 ## Remaining Finalization
 
@@ -71,6 +75,11 @@ zero `planned` and zero `decision` rows.
 - Static PEM CRLs can now be enforced for OpenBao server certificates when
   using `only_root_certificates`; callers still own CRL refresh, client rebuild
   timing, and OCSP/automatic revocation-discovery policy.
+- RADIUS remains prohibited for classified and new high-assurance deployments
+  despite legacy compatibility support; use certificate auth, Kerberos, or LDAP
+  over TLS instead.
+- `transit-import` remains a software wrapping helper only; classified or
+  high-assurance key wrapping must use an HSM or equivalent audited boundary.
 
 ## Security And Stability Gate
 

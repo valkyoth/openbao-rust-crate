@@ -239,6 +239,19 @@ impl RadiusUserRequest {
         self.policies.push(policy.into());
         self
     }
+
+    /// Adds a policy after validating it cannot change the comma-delimited
+    /// policy list sent to OpenBao.
+    pub fn try_with_policy(mut self, policy: impl Into<String>) -> Result<Self> {
+        let policy = policy.into();
+        validate_radius_policy_name(&policy, "RADIUS user policies")?;
+        self.policies.push(policy);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        validate_radius_policy_names(&self.policies, "RADIUS user policies")
+    }
 }
 
 #[derive(Serialize)]
@@ -429,6 +442,7 @@ impl RadiusAuthAdmin<'_> {
     /// Creates or updates a RADIUS user policy mapping.
     pub async fn write_user(&self, username: &str, user: &RadiusUserRequest) -> Result<Empty> {
         let username = validate_radius_username(username)?;
+        user.validate()?;
         let payload = RadiusUserPayload {
             policies: user.policies.join(","),
         };
@@ -554,6 +568,32 @@ fn validate_radius_username(username: &str) -> Result<&str> {
     Ok(username)
 }
 
+fn validate_radius_policy_names(policies: &[String], field: &'static str) -> Result<()> {
+    for policy in policies {
+        validate_radius_policy_name(policy, field)?;
+    }
+    Ok(())
+}
+
+fn validate_radius_policy_name(policy: &str, field: &'static str) -> Result<()> {
+    if policy.trim().is_empty() {
+        return Err(Error::InvalidParameter(format!(
+            "{field} policy name must not be empty"
+        )));
+    }
+    if policy.contains(',') {
+        return Err(Error::InvalidParameter(format!(
+            "{field} policy name must not contain a comma"
+        )));
+    }
+    if policy.as_bytes().iter().any(u8::is_ascii_control) {
+        return Err(Error::InvalidParameter(format!(
+            "{field} policy name must not contain control characters"
+        )));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
@@ -562,7 +602,7 @@ mod tests {
 
     use super::{
         RadiusConfig, RadiusLoginResponse, RadiusUserList, RadiusUserRequest,
-        validate_radius_username,
+        validate_radius_policy_name, validate_radius_policy_names, validate_radius_username,
     };
 
     fn test_secret(parts: &[&str]) -> SecretString {
@@ -641,5 +681,25 @@ mod tests {
     fn radius_user_request_joins_policies() {
         let request = RadiusUserRequest::new("dev").with_policy("prod");
         assert_eq!(request.policies.join(","), "dev,prod");
+    }
+
+    #[test]
+    fn radius_user_policy_names_reject_injection_boundaries() {
+        assert!(
+            validate_radius_policy_names(&["dev".to_owned(), "prod".to_owned()], "RADIUS").is_ok()
+        );
+        assert!(validate_radius_policy_name("dev,admin", "RADIUS").is_err());
+        assert!(validate_radius_policy_name(" ", "RADIUS").is_err());
+        assert!(validate_radius_policy_name("dev\nadmin", "RADIUS").is_err());
+        assert!(
+            RadiusUserRequest::new("dev")
+                .try_with_policy("prod")
+                .is_ok()
+        );
+        assert!(
+            RadiusUserRequest::new("dev")
+                .try_with_policy("prod,admin")
+                .is_err()
+        );
     }
 }

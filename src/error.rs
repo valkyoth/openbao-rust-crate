@@ -25,6 +25,9 @@ pub enum Error {
     InvalidParameter(String),
     /// A crate invariant was violated.
     Internal(&'static str),
+    /// Bootstrap convergence detected that a concurrent writer changed the
+    /// target during read-compare-write.
+    BootstrapContention(&'static str),
     /// The request failed before an OpenBao response could be decoded.
     ///
     /// Transport errors intentionally avoid retaining the underlying HTTP
@@ -67,6 +70,12 @@ impl fmt::Display for Error {
                 write!(formatter, "invalid OpenBao request parameter: {message}")
             }
             Self::Internal(message) => write!(formatter, "internal OpenBao SDK error: {message}"),
+            Self::BootstrapContention(message) => {
+                write!(
+                    formatter,
+                    "OpenBao bootstrap contention detected: {message}"
+                )
+            }
             Self::Transport(message) => write!(formatter, "OpenBao transport error: {message}"),
             Self::Decode(error) => write!(formatter, "OpenBao decode error: {error}"),
             Self::Api { status, errors } if errors.is_empty() => {
@@ -115,6 +124,11 @@ impl Error {
     /// Returns true when OpenBao reported a malformed or invalid request.
     pub fn is_bad_request(&self) -> bool {
         self.status() == Some(StatusCode::BAD_REQUEST)
+    }
+
+    /// Returns true when bootstrap convergence detected a concurrent writer.
+    pub fn is_bootstrap_contention(&self) -> bool {
+        matches!(self, Self::BootstrapContention(_))
     }
 
     /// Returns true when OpenBao rate-limited the request.

@@ -1633,35 +1633,65 @@ pub struct TransitVerifyResponse {
 /// Batch encryption request using the same endpoint as single-item encryption.
 #[derive(Clone, Debug, Default)]
 pub struct TransitBatchEncryptRequest {
-    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    /// Batch items.
+    ///
+    /// # Invariant
+    ///
+    /// Length must not exceed [`MAX_TRANSIT_BATCH_ITEMS`]. Use
+    /// [`Self::try_push`] for externally supplied input. Dispatch methods
+    /// enforce this limit regardless of direct field assignment.
     pub batch_input: Vec<TransitEncryptRequest>,
 }
 
 /// Batch decryption request using the same endpoint as single-item decryption.
 #[derive(Clone, Debug, Default)]
 pub struct TransitBatchDecryptRequest {
-    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    /// Batch items.
+    ///
+    /// # Invariant
+    ///
+    /// Length must not exceed [`MAX_TRANSIT_BATCH_ITEMS`]. Use
+    /// [`Self::try_push`] for externally supplied input. Dispatch methods
+    /// enforce this limit regardless of direct field assignment.
     pub batch_input: Vec<TransitDecryptRequest>,
 }
 
 /// Batch rewrap request using the same endpoint as single-item rewrap.
 #[derive(Clone, Debug, Default)]
 pub struct TransitBatchRewrapRequest {
-    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    /// Batch items.
+    ///
+    /// # Invariant
+    ///
+    /// Length must not exceed [`MAX_TRANSIT_BATCH_ITEMS`]. Use
+    /// [`Self::try_push`] for externally supplied input. Dispatch methods
+    /// enforce this limit regardless of direct field assignment.
     pub batch_input: Vec<TransitRewrapRequest>,
 }
 
 /// Batch signing request using the same endpoint as single-item signing.
 #[derive(Clone, Debug, Default)]
 pub struct TransitBatchSignRequest {
-    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    /// Batch items.
+    ///
+    /// # Invariant
+    ///
+    /// Length must not exceed [`MAX_TRANSIT_BATCH_ITEMS`]. Use
+    /// [`Self::try_push`] for externally supplied input. Dispatch methods
+    /// enforce this limit regardless of direct field assignment.
     pub batch_input: Vec<TransitSignRequest>,
 }
 
 /// Batch verification request using the same endpoint as single-item verification.
 #[derive(Clone, Debug, Default)]
 pub struct TransitBatchVerifyRequest {
-    /// Batch items. OpenBao enforces its own maximum; the crate bounds locally.
+    /// Batch items.
+    ///
+    /// # Invariant
+    ///
+    /// Length must not exceed [`MAX_TRANSIT_BATCH_ITEMS`]. Use
+    /// [`Self::try_push`] for externally supplied input. Dispatch methods
+    /// enforce this limit regardless of direct field assignment.
     pub batch_input: Vec<TransitVerifyRequest>,
 }
 
@@ -1671,10 +1701,9 @@ macro_rules! impl_transit_batch_request {
             /// Adds one batch item after enforcing the crate's local item limit.
             ///
             /// Prefer this method when batch contents are derived from
-            /// untrusted or externally supplied input. The public
-            /// `batch_input` field remains available for ordinary struct
-            /// construction, but Transit methods still reject empty or
-            /// oversized batches before dispatch.
+            /// untrusted or externally supplied input. Transit methods still
+            /// reject empty or oversized batches before dispatch, even if the
+            /// public `batch_input` field was assigned directly.
             pub fn try_push(&mut self, item: $item) -> Result<&mut Self> {
                 if self.batch_input.len() >= MAX_TRANSIT_BATCH_ITEMS {
                     return Err(Error::InvalidParameter(
@@ -2946,11 +2975,8 @@ where
     wrapped_target.truncate(wrapped_target_len);
     key_material.zeroize();
 
-    let wrapped_aes_key = Zeroizing::new(rsa_oaep_wrap_aes_key(
-        wrapping_key_pem,
-        &ephemeral_aes_key[..],
-        hash_function,
-    )?);
+    let wrapped_aes_key =
+        rsa_oaep_wrap_aes_key(wrapping_key_pem, &ephemeral_aes_key[..], hash_function)?;
 
     let mut combined = Zeroizing::new(Vec::with_capacity(
         wrapped_aes_key.len() + wrapped_target.len(),
@@ -2970,16 +2996,21 @@ fn rsa_oaep_wrap_aes_key(
     wrapping_key_pem: &str,
     ephemeral_aes_key: &[u8],
     hash_function: TransitImportHashFunction,
-) -> Result<Vec<u8>> {
+) -> Result<Zeroizing<Vec<u8>>> {
     use openssl::{
         md::Md,
-        pkey::{PKey, Public},
+        pkey::{Id, PKey, Public},
         pkey_ctx::PkeyCtx,
         rsa::Padding,
     };
 
     let wrapping_key: PKey<Public> = PKey::public_key_from_pem(wrapping_key_pem.as_bytes())
         .map_err(|_| Error::InvalidParameter("Transit wrapping key PEM is invalid".into()))?;
+    if wrapping_key.id() != Id::RSA {
+        return Err(Error::InvalidParameter(
+            "Transit wrapping key must be an RSA public key".into(),
+        ));
+    }
     if wrapping_key.size() != TRANSIT_WRAPPING_KEY_BYTES {
         return Err(Error::InvalidParameter(
             "Transit wrapping key must be a 4096-bit RSA public key".into(),
@@ -3011,7 +3042,7 @@ fn rsa_oaep_wrap_aes_key(
         .set_rsa_mgf1_md(digest)
         .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
 
-    let mut encrypted = Vec::new();
+    let mut encrypted = Zeroizing::new(Vec::new());
     context
         .encrypt_to_vec(ephemeral_aes_key, &mut encrypted)
         .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
@@ -3421,6 +3452,33 @@ mod tests {
             version_request.hash_function,
             Some(super::TransitImportHashFunction::Sha256)
         );
+    }
+
+    #[cfg(feature = "transit-import")]
+    #[test]
+    fn transit_import_helper_rejects_non_rsa_wrapping_key() {
+        use openssl::{ec::EcKey, nid::Nid};
+        use zeroize::Zeroizing;
+
+        let ec_group = openssl::ec::EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let public_key_pem = EcKey::generate(&ec_group)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .public_key_to_pem()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let public_key_pem =
+            String::from_utf8(public_key_pem).unwrap_or_else(|error| panic!("{error}"));
+
+        let error = match super::TransitWrappedImportKey::wrap_key_material(
+            &public_key_pem,
+            Zeroizing::new(b"key-material-for-import".to_vec()),
+            super::TransitImportHashFunction::Sha256,
+        ) {
+            Ok(_) => panic!("non-RSA wrapping key was unexpectedly accepted"),
+            Err(error) => error,
+        };
+
+        assert!(error.to_string().contains("RSA public key"));
     }
 
     #[test]

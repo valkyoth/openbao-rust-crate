@@ -247,7 +247,14 @@ static RETRY_JITTER_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn retry_jitter_nanos(max_nanos: u64, retry_index: usize) -> u64 {
     let modulus = max_nanos.saturating_add(1);
-    let seed = getrandom::u64().unwrap_or_else(|_| retry_jitter_fallback_seed(retry_index));
+    let seed = getrandom::u64().unwrap_or_else(|_| {
+        #[cfg(feature = "tracing")]
+        tracing::warn!(
+            target: "openbao::client",
+            "getrandom failed for retry jitter; falling back to a time-based non-security seed; check the OS entropy source"
+        );
+        retry_jitter_fallback_seed(retry_index)
+    });
     seed % modulus
 }
 
@@ -1250,6 +1257,11 @@ fn validate_user_agent(user_agent: &str) -> Result<()> {
             "user agent must not be empty".into(),
         ));
     }
+    if !user_agent.is_ascii() {
+        return Err(Error::InvalidParameter(
+            "user agent must contain only ASCII characters".into(),
+        ));
+    }
     if user_agent.bytes().any(|byte| byte < 0x20 || byte == 0x7f) {
         return Err(Error::InvalidParameter(
             "user agent must not contain control characters".into(),
@@ -1266,22 +1278,28 @@ fn token_header_for(
     token: &SecretString,
     header_mode: HeaderMode,
 ) -> Result<(HeaderName, HeaderValue)> {
-    if token.expose_secret().trim().is_empty() {
+    let token_value = token.expose_secret();
+    let trimmed = token_value.trim();
+    if trimmed.is_empty() {
         return Err(Error::InvalidHeader(
             "authentication token must not be empty".into(),
+        ));
+    }
+    if trimmed.len() != token_value.len() {
+        return Err(Error::InvalidHeader(
+            "authentication token must not contain leading or trailing whitespace".into(),
         ));
     }
     match header_mode {
         HeaderMode::VaultToken => Ok((
             HeaderName::from_static("x-vault-token"),
-            sensitive_header_value(token.expose_secret())?,
+            sensitive_header_value(token_value)?,
         )),
         HeaderMode::Bearer => {
-            let mut bearer = Zeroizing::new(String::with_capacity(
-                "Bearer ".len() + token.expose_secret().len(),
-            ));
+            let mut bearer =
+                Zeroizing::new(String::with_capacity("Bearer ".len() + token_value.len()));
             bearer.push_str("Bearer ");
-            bearer.push_str(token.expose_secret());
+            bearer.push_str(token_value);
             let value = sensitive_header_value(&bearer).map_err(|_| {
                 Error::InvalidHeader("token must be valid for Authorization header use".into())
             })?;
@@ -1612,6 +1630,11 @@ mod tests {
                 .and_then(|config| config.user_agent("good\nbad"))
                 .is_err()
         );
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.user_agent("déjà-vu"))
+                .is_err()
+        );
     }
 
     #[test]
@@ -1627,6 +1650,20 @@ mod tests {
             validate_token_for_header(
                 &SecretString::from("token\nvalue"),
                 super::HeaderMode::VaultToken
+            )
+            .is_err()
+        );
+        assert!(
+            validate_token_for_header(
+                &SecretString::from(" token-value"),
+                super::HeaderMode::VaultToken
+            )
+            .is_err()
+        );
+        assert!(
+            validate_token_for_header(
+                &SecretString::from("token-value "),
+                super::HeaderMode::Bearer
             )
             .is_err()
         );

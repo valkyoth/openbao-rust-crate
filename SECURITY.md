@@ -125,17 +125,18 @@ key ceremony and custody model.
 The `transit-import` feature is a software BYOK wrapping helper. It depends on
 the host OpenSSL runtime through the `openssl` crate and requires an audited
 OpenSSL 1.1.1 or newer deployment baseline. It is not an HSM, FIPS,
-certification, or post-quantum claim. It also requires the
+certification, post-quantum, or security-boundary claim. It also requires the
 `transit-import-acknowledged` feature so downstream builds explicitly review
 that raw key material and the ephemeral AES wrapping key pass through software
 memory and OpenSSL-managed heap. Classified or high-assurance key wrapping
-should be performed in an HSM or equivalent audited boundary instead.
+must not use this software helper; perform wrapping in an HSM or equivalent
+audited boundary instead.
 
 The `radius-auth` feature is not enabled by default. RADIUS relies on
 MD5-based authenticators and is retained only for audited legacy compatibility.
-Enabling it requires the additional `radius-auth-acknowledged` feature. Do not
-use RADIUS for classified networks or new high-assurance deployments; prefer
-certificate auth, Kerberos, or LDAP over TLS with reviewed server validation.
+Enabling it requires the additional `radius-auth-acknowledged` feature.
+Classified networks and new high-assurance deployments must not use RADIUS;
+prefer certificate auth, Kerberos, or LDAP over TLS with reviewed server validation.
 If RADIUS is unavoidable, enforce RadSec or equivalent RADIUS-over-TLS
 protection at the infrastructure layer.
 

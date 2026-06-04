@@ -49,6 +49,12 @@ All notable changes to this project are documented here.
   jitter, TLS revocation, RADIUS, and bootstrap contention documentation.
 - Added rustls-backed static PEM CRL configuration for OpenBao server
   certificate checks when using a root-only trust store.
+- Hardened final pentest findings: RADIUS user policy names reject
+  comma-injection boundaries, Transit import wrapping keys must be RSA before
+  OAEP encryption, token/user-agent header validation rejects ambiguous values
+  earlier, retry jitter entropy fallback emits a tracing warning, Transit batch
+  invariants are documented, and bootstrap contention now has a distinct error
+  classification.
 
 ## 0.14.0 - 2026-06-04
 

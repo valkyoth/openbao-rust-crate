@@ -296,7 +296,7 @@ openbao = { version = "0.15", features = ["time"] }
 | `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, and group mapping helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
-| `radius-auth` | no | RADIUS login/config/user mapping helpers. Legacy RADIUS uses MD5-based authenticators and requires `radius-auth-acknowledged`; avoid it for classified networks and new high-assurance deployments. |
+| `radius-auth` | no | RADIUS login/config/user mapping helpers. Legacy RADIUS uses MD5-based authenticators and requires `radius-auth-acknowledged`; do not use it for classified networks or new high-assurance deployments. |
 | `radius-auth-acknowledged` | no | Explicit acknowledgment for audited legacy RADIUS compatibility builds. |
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
@@ -310,7 +310,7 @@ openbao = { version = "0.15", features = ["time"] }
 | `totp` | yes | TOTP key and code helpers. |
 | `transit` | yes | Transit key lifecycle, batch cryptography, and single-operation cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
-| `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Requires `transit-import-acknowledged`; uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, or post-quantum claim. |
+| `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Requires `transit-import-acknowledged`; uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, post-quantum, or security-boundary claim. Do not use it for classified or high-assurance key wrapping. |
 | `transit-import-acknowledged` | no | Explicit acknowledgment that Transit BYOK software wrapping passes key material through software memory and OpenSSL-managed heap. |
 | `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
