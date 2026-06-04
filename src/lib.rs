@@ -331,8 +331,8 @@ pub mod prelude {
         PasswordPolicyList, PasswordPolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration,
         RaftJoinRequest, RaftJoinResponse, RaftPeerRequest, RaftServer, RateLimitQuotaConfig,
         RateLimitQuotaInfo, RateLimitQuotaList, RateLimitQuotaRequest, RemountMigrationInfo,
-        RemountRequest, RemountResponse, RemountStatus, ResultantAcl, ResultantAclPath, Sys,
-        UiMountDetails, UiMountSummary, UiMounts, UiNamespaces, VersionHistory,
+        RemountRequest, RemountResponse, RemountStatus, ResultantAcl, ResultantAclPath, SealStatus,
+        Sys, UiMountDetails, UiMountSummary, UiMounts, UiNamespaces, VersionHistory,
         VersionHistoryEntry,
     };
     #[cfg(all(feature = "sys", feature = "operator-ops"))]

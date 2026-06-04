@@ -320,6 +320,9 @@ Implemented in `0.8.0`:
   `Error::is_permission_denied` helpers.
 - Runtime-neutral `Sys::wait_ready_with_delay` for startup and integration
   tests.
+- Runtime-neutral `Sys::wait_until_unsealed_with_delay` plus
+  `tokio-helpers`-gated `Sys::wait_until_unsealed` for bounded startup and
+  recovery polling.
 - KV v2 historical reads were already covered by `read_version` and
   `read_data_version`.
 
@@ -342,9 +345,8 @@ Finalization work before `1.0.0`:
   reject OpenTelemetry SDK dependencies and custom request hooks for stable
   scope, defer W3C `traceparent` propagation, add non-default `http2` support
   without a runtime transport knob, and reject HTTP/3 for stable scope.
-- implement a bounded `wait_until_unsealed` helper in `0.15.0` behind an
-  explicit Tokio helper feature; reject ongoing request-level seal
-  back-pressure as application retry-middleware policy.
+- reject ongoing request-level seal back-pressure as application
+  retry-middleware policy.
 - implement typed response-wrapping ergonomics in `0.15.0` with redacted
   wrapping tokens and typed unwrap; reject per-engine wrapped method
   duplication.

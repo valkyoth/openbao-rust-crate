@@ -183,6 +183,52 @@ async fn transport_errors_do_not_display_request_url() {
 }
 
 #[tokio::test]
+async fn wait_until_unsealed_uses_seal_status_until_ready() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for sealed in [true, false] {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("GET /v1/sys/seal-status HTTP/1.1"));
+            let body = format!(
+                r#"{{"type":"shamir","initialized":true,"sealed":{sealed},"n":1,"t":1,"progress":0,"version":"2.5.4"}}"#
+            );
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+    let status = client
+        .sys()
+        .wait_until_unsealed_with_delay(
+            Duration::from_secs(1),
+            Duration::from_millis(1),
+            |_| async {},
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert!(status.initialized);
+    assert!(!status.sealed);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn explicit_retry_policy_retries_temporary_api_errors() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

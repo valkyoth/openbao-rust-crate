@@ -1,6 +1,6 @@
 [package]
 name = "openbao"
-version = "0.14.0"
+version = "0.15.0"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -94,6 +94,7 @@ transit-import-acknowledged = []
 sys = []
 http2 = ["reqwest/http2"]
 time = ["dep:time"]
+tokio-helpers = ["dep:tokio"]
 tracing = ["dep:tracing"]
 # Production operator APIs for init/unseal/rekey/rotate and PKI root deletion.
 # These endpoints can expose, mutate, or destroy root, unseal, recovery,
@@ -134,11 +135,12 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 subtle = "2.6.1"
 time = { version = "0.3.47", default-features = false, features = ["parsing"], optional = true }
+tokio = { version = "1.52.3", default-features = false, features = ["time"], optional = true }
 tracing = { version = "0.1.44", default-features = false, features = ["std"], optional = true }
 zeroize = "1.8.2"
 
 [dev-dependencies]
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "net", "io-util"] }
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
 
 [lints.rust]
 unsafe_code = "forbid"

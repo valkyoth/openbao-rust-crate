@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## 0.15.0 - Unreleased
+
+### Added
+
+- Started the `0.15.0` stable-candidate ergonomics and endpoint-closure line.
+- Added the `0.15.0` release gate script and metadata checks.
+- Added runtime-neutral `Sys::wait_until_unsealed_with_delay` and the
+  `tokio-helpers`-gated `Sys::wait_until_unsealed` convenience helper.
+
+### Security
+
+- Kept seal-status waiting caller-initiated and bounded; request-level
+  back-pressure remains an application middleware responsibility.
+
 ## 0.14.0 - 2026-06-04
 
 ### Added

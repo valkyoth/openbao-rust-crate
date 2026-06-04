@@ -37,8 +37,8 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.14.0` API. `0.14.0` builds on the `0.13.0` API
-with system backend completion work.
+This README documents the in-development `0.15.0` API. `0.15.0` builds on the
+`0.14.0` API with stable-candidate ergonomics and final closure work.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -184,12 +184,14 @@ Delivered in `0.14.0`:
   generate-recovery-token, decode-token, legacy recovery-key rekey, and
   in-flight request inspection, plus password policy and resultant ACL helpers.
 
-Planned next:
+Current `0.15.0` line:
 
 - `0.15.0`: stable-scope ergonomics and final closure before the stable API
-  freeze. Request-level back-pressure, full OpenTelemetry SDK integration,
-  certificate pinning, KV v1 bootstrap convergence, and ACL parameter-constraint
-  HCL generation are rejected for stable scope.
+  freeze. Bounded unseal readiness polling is available through
+  `wait_until_unsealed_with_delay`, with `wait_until_unsealed` behind the
+  `tokio-helpers` feature. Request-level back-pressure, full OpenTelemetry SDK
+  integration, certificate pinning, KV v1 bootstrap convergence, and ACL
+  parameter-constraint HCL generation are rejected for stable scope.
 - `1.0.0`: stable API freeze after the endpoint matrix has zero `planned` or
   `decision` rows; after `1.0.0`, only `1.0.x` maintenance and security fixes
   are planned.
@@ -226,7 +228,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.14.0` release line tracks compatibility evidence across this supported
+The `0.15.0` release line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -243,7 +245,7 @@ range:
 
 ```toml
 [dependencies]
-openbao = "0.14"
+openbao = "0.15"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
 ```
@@ -259,7 +261,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.14", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.15", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -267,7 +269,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.14", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.15", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 Optional RFC3339 timestamp parsing is available behind the lightweight `time`
@@ -275,7 +277,7 @@ feature:
 
 ```toml
 [dependencies]
-openbao = { version = "0.14", features = ["time"] }
+openbao = { version = "0.15", features = ["time"] }
 ```
 
 ## Features
@@ -310,6 +312,7 @@ openbao = { version = "0.14", features = ["time"] }
 | `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
+| `tokio-helpers` | no | Enables Tokio convenience helpers such as `Sys::wait_until_unsealed`. Runtime-neutral variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
 | `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `rustls-tls` | yes | Rustls transport configuration. |
@@ -324,7 +327,7 @@ openbao = { version = "0.14", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the current `0.14.0` line it records `643` documented endpoint rows, with
+For the current `0.15.0` line it records `643` documented endpoint rows, with
 `597/643` (`92.8%`) strict typed or operator-gated coverage. All rows are now
 addressed by typed, operator-gated, partial, external, or rejected policy, with
 zero `planned` and zero `decision` rows.
@@ -1251,6 +1254,30 @@ async fn main() -> Result<()> {
         .await?;
 
     println!("OpenBao is ready for authenticated requests");
+    Ok(())
+}
+```
+
+Wait until an initialized OpenBao node is unsealed:
+
+```rust,no_run
+use openbao::{Client, Result};
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let client = Client::new("https://bao.example.com:8200")?;
+
+    let status = client
+        .sys()
+        .wait_until_unsealed_with_delay(
+            Duration::from_secs(60),
+            Duration::from_millis(250),
+            tokio::time::sleep,
+        )
+        .await?;
+
+    println!("OpenBao {} is unsealed", status.version);
     Ok(())
 }
 ```

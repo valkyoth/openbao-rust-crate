@@ -3640,6 +3640,69 @@ impl<State> Sys<'_, State> {
             .await
     }
 
+    /// Polls `/sys/seal-status` until OpenBao is initialized and unsealed.
+    ///
+    /// Available only with the non-default `tokio-helpers` feature. This is a
+    /// bounded startup/recovery helper: it returns the first unsealed status or
+    /// an SDK timeout error after `timeout` elapses. It does not install
+    /// request-level back-pressure, retry middleware, or background polling;
+    /// applications remain responsible for ongoing sealed-node behavior.
+    ///
+    /// The caller's Tokio runtime must have time enabled.
+    #[cfg(feature = "tokio-helpers")]
+    pub async fn wait_until_unsealed(
+        &self,
+        timeout: std::time::Duration,
+        interval: std::time::Duration,
+    ) -> Result<SealStatus> {
+        self.wait_until_unsealed_with_delay(timeout, interval, tokio::time::sleep)
+            .await
+    }
+
+    /// Polls `/sys/seal-status` until OpenBao is initialized and unsealed.
+    ///
+    /// This runtime-neutral variant lets callers provide their own async delay
+    /// function. It is useful for custom runtimes and deterministic tests.
+    /// Transport failures are retried until `timeout`; non-transient errors are
+    /// returned immediately.
+    pub async fn wait_until_unsealed_with_delay<F, Fut>(
+        &self,
+        timeout: std::time::Duration,
+        interval: std::time::Duration,
+        mut delay: F,
+    ) -> Result<SealStatus>
+    where
+        F: FnMut(std::time::Duration) -> Fut,
+        Fut: core::future::Future<Output = ()>,
+    {
+        if timeout.is_zero() {
+            return Err(Error::InvalidTimeout(
+                "OpenBao unseal wait timeout must be greater than zero",
+            ));
+        }
+        if interval.is_zero() {
+            return Err(Error::InvalidTimeout(
+                "OpenBao unseal wait poll interval must be greater than zero",
+            ));
+        }
+        let start = std::time::Instant::now();
+        loop {
+            match self.seal_status().await {
+                Ok(status) if status.initialized && !status.sealed => return Ok(status),
+                Ok(_) => {}
+                Err(error) if error.is_temporary() => {}
+                Err(error) => return Err(error),
+            }
+            let elapsed = start.elapsed();
+            if elapsed >= timeout {
+                return Err(Error::InvalidTimeout(
+                    "OpenBao did not become unsealed within timeout",
+                ));
+            }
+            delay(interval.min(timeout.saturating_sub(elapsed))).await;
+        }
+    }
+
     /// Reads `/sys/leader`.
     pub async fn leader_status(&self) -> Result<LeaderStatus> {
         self.client
@@ -7198,6 +7261,26 @@ mod tests {
             .await
         {
             Ok(_) => panic!("closed port should not become ready"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(error, crate::Error::InvalidTimeout(_)));
+    }
+
+    #[tokio::test]
+    async fn wait_until_unsealed_retries_temporary_transport_errors_until_timeout() {
+        let client =
+            crate::Client::new("https://127.0.0.1:1").unwrap_or_else(|error| panic!("{error}"));
+        let error = match client
+            .sys()
+            .wait_until_unsealed_with_delay(
+                std::time::Duration::from_millis(1),
+                std::time::Duration::from_millis(1),
+                |_| async {},
+            )
+            .await
+        {
+            Ok(_) => panic!("closed port should not become unsealed"),
             Err(error) => error,
         };
 
