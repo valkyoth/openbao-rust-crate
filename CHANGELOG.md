@@ -19,6 +19,8 @@ All notable changes to this project are documented here.
 - Reconciled the release plan and API stability audit with the current
   endpoint matrix: `597/643` strict typed or operator-gated rows, with zero
   remaining `planned` or `decision` rows.
+- Updated the migration guide and bootstrap example for the `0.15.0`
+  stable-candidate ergonomics.
 
 ### Security
 

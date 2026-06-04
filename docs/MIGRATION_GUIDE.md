@@ -1,7 +1,42 @@
 # Migration Guide
 
-This guide tracks migration work for the `0.9.0` stabilization line before the
-pre-`1.0.0` endpoint-completion releases.
+This guide tracks migration work for the `0.15.0` stable-candidate line before
+the first `1.0.0` release. The endpoint matrix now has zero `planned` and zero
+`decision` rows; remaining non-typed rows are intentionally documented as raw,
+external, partial, gated, or rejected boundaries.
+
+## From `openbao` 0.14 To 0.15
+
+`0.15.0` is source-compatible with normal `0.14.0` application code and adds
+the final stable-scope ergonomics before `1.0.0`.
+
+Update `Cargo.toml`:
+
+```toml
+[dependencies]
+openbao = "0.15"
+```
+
+Adopt these `0.15` additions where they fit:
+
+- use `Sys::wait_until_unsealed_with_delay` for bounded startup or recovery
+  polling. Enable `tokio-helpers` only when the direct
+  `Sys::wait_until_unsealed` Tokio convenience method is useful;
+- use `Client::wrapping("5m")?` and `WrappedResponse<T>` when an application
+  needs OpenBao response wrapping without dropping to untyped JSON. Delivery of
+  the one-use wrapping token remains caller-owned;
+- use `AclPolicyBuilder::allow_path_with_wrapping` or the
+  `_with_required_wrapping` helper variants to require response wrapping in
+  path rules. Continue using reviewed `PolicyWriteRequest` documents for
+  advanced ACL parameter constraints;
+- use `AdminBootstrap::ensure_pki_mount`, `ensure_database_mount`, and
+  `ensure_ssh_mount` for idempotent mount convergence;
+- use `AdminBootstrap::ensure_database_role`,
+  `ensure_database_static_role`, and `ensure_ssh_role` for role convergence
+  where those engines are already configured;
+- keep PKI CA setup, database connection configuration, SSH CA key setup,
+  request-level seal back-pressure, and KV v1 convergence outside
+  `AdminBootstrap`. Those remain operator or application-policy workflows.
 
 ## From `openbao` 0.8 To 0.9
 
@@ -12,7 +47,7 @@ Update `Cargo.toml`:
 
 ```toml
 [dependencies]
-openbao = "0.9"
+openbao = "0.15"
 ```
 
 Keep these `0.8` patterns:

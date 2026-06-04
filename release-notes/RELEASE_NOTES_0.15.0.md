@@ -30,6 +30,8 @@ zero `planned` and zero `decision` rows.
   wrapping on common KV v2 and Transit paths.
 - Added selective AdminBootstrap convergence for PKI, database, and SSH mounts,
   dynamic/static database roles, and SSH roles.
+- Updated the migration guide and bootstrap example to show the new `0.15.0`
+  stable-candidate helpers.
 
 ## Remaining Finalization
 

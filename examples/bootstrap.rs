@@ -28,6 +28,9 @@ async fn main() -> Result<()> {
     let mut bootstrap = AdminBootstrap::new();
     bootstrap
         .ensure_kv2_mount("secret", Some("application secrets"))?
+        .ensure_pki_mount("pki", Some("application certificate roles"))?
+        .ensure_database_mount("database", Some("application database roles"))?
+        .ensure_ssh_mount("ssh", Some("application SSH roles"))?
         .ensure_policy("app-read", &policy)?
         .ensure_kv2_secret_values("secret", "app/config", values)?
         .issue_service_token("app", token_request)?;
