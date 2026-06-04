@@ -37,8 +37,8 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the in-development `0.14.0` API. `0.14.0` builds on the
-`0.13.0` API with system backend completion work.
+This README documents the `0.14.0` API. `0.14.0` builds on the `0.13.0` API
+with system backend completion work.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -178,7 +178,7 @@ Delivered in `0.13.0`:
   issue/sign, named-issuer hierarchy signing, delta-CRL rotation, and
   operator-gated cross-certification helpers.
 
-Current `0.14.0` line:
+Delivered in `0.14.0`:
 
 - System backend completion: operator-gated generate-root,
   generate-recovery-token, decode-token, legacy recovery-key rekey, and

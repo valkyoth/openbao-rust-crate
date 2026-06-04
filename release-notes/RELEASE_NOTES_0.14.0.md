@@ -66,5 +66,5 @@ and resultant ACL helpers.
 
 - Release gate script: `scripts/release_0_14_gate.sh`
 - OpenBao integration command: `scripts/openbao_integration.sh`
-- Do not tag `v0.14.0` until local validation, external pentest feedback, and
-  GitHub CI are green.
+- Local validation, external pentest feedback, and GitHub CI are green for
+  tagging `v0.14.0`.
