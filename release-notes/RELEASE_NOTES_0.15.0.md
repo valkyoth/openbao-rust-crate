@@ -44,12 +44,12 @@ zero `planned` and zero `decision` rows.
   `allow-weak-jitter-fallback-acknowledged`, and rotated CI cache keys on
   toolchain or lockfile changes.
 
-## Remaining Finalization
+## Finalization
 
-- Local release-gate validation, external pentest feedback, and GitHub CI must
-  pass on the exact release candidate before tagging.
-- The final public API, documentation, migration, and stable-scope review must
-  remain clean before `1.0.0`.
+- Local release-gate validation, external pentest feedback, documentation
+  review, and GitHub CI passed on the release candidate before tagging.
+- This is the final substantial pre-stable release before the `1.0.0`
+  stabilization pass.
 
 ## Security Notes
 
@@ -113,5 +113,5 @@ zero `planned` and zero `decision` rows.
 
 - Release gate script: `scripts/release_0_15_gate.sh`
 - OpenBao integration command: `scripts/openbao_integration.sh`
-- Do not tag `v0.15.0` until local validation, external pentest feedback, and
-  GitHub CI are green.
+- Local validation, external pentest feedback, and GitHub CI were green before
+  tagging `v0.15.0`.
