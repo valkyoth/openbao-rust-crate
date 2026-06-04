@@ -73,11 +73,11 @@ The `0.12.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `553/643` (`86.0%`);
-- typed plus partial coverage: `554/643` (`86.2%`);
-- addressed by typed, partial, raw, external, or rejected policy: `599/643`
-  (`93.2%`);
-- planned implementation rows before `1.0.0`: `44`;
+- strict typed coverage: `555/643` (`86.3%`);
+- typed plus partial coverage: `556/643` (`86.5%`);
+- addressed by typed, partial, raw, external, or rejected policy: `601/643`
+  (`93.5%`);
+- planned implementation rows before `1.0.0`: `42`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -205,9 +205,9 @@ Support plan:
   issuer/key config, named-issuer issue/sign, root rotate/replace, standalone
   key generation, multi-issuer root/intermediate generation, and
   operator-gated default root deletion with explicit `PkiRootDeletion`
-  confirmation, cluster config, auto-tidy config, and revoke-with-key are
-  implemented. Sign-verbatim behind operator gates and current-doc field
-  expansion for PKI role/generation/CRL/tidy structs are planned for `0.12.0`.
+  confirmation, cluster config, auto-tidy config, revoke-with-key, and
+  sign-verbatim behind operator gates are implemented. Current-doc field
+  expansion for PKI role/generation/CRL/tidy structs is planned for `0.12.0`.
   Revocation/CRL management, CEL roles, named-issuer
   sign-intermediate/sign-self-issued, delta CRL rotation, and cross-sign rows
   are planned for `0.13.0`. Unauthenticated public CA/certificate/CRL reads and

@@ -7700,6 +7700,91 @@ async fn pki_delete_root_is_operator_gated_and_uses_documented_path() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
+async fn pki_sign_verbatim_helpers_are_operator_gated_and_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..4 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/pki/sign-verbatim HTTP/1.1"));
+                    assert!(request.contains(r#""csr":"-----BEGIN CERTIFICATE REQUEST-----""#));
+                    r#"{"data":{"certificate":"verbatim-default","serial_number":"20:01"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/pki/sign-verbatim/web HTTP/1.1"));
+                    r#"{"data":{"certificate":"verbatim-role","serial_number":"20:02"}}"#
+                }
+                2 => {
+                    assert!(
+                        request.starts_with("POST /v1/pki/issuer/root-x1/sign-verbatim HTTP/1.1")
+                    );
+                    r#"{"data":{"certificate":"verbatim-issuer","serial_number":"20:03"}}"#
+                }
+                3 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/pki/issuer/root-x1/sign-verbatim/web HTTP/1.1")
+                    );
+                    r#"{"data":{"certificate":"verbatim-issuer-role","serial_number":"20:04"}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+    let request =
+        openbao::secrets::pki::PkiSignVerbatimRequest::new("-----BEGIN CERTIFICATE REQUEST-----");
+
+    let default = pki
+        .sign_verbatim(&request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(default.serial_number.as_deref(), Some("20:01"));
+
+    let role = pki
+        .sign_verbatim_at_role("web", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role.serial_number.as_deref(), Some("20:02"));
+
+    let issuer = pki
+        .sign_verbatim_with_issuer("root-x1", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer.serial_number.as_deref(), Some("20:03"));
+
+    let issuer_role = pki
+        .sign_verbatim_with_issuer_at_role("root-x1", "web", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer_role.serial_number.as_deref(), Some("20:04"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[tokio::test]
 async fn pki_default_issuer_and_key_config_paths_are_documented() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));

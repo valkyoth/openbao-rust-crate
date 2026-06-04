@@ -209,8 +209,8 @@ secret,POST,/pki/root/sign-intermediate,typed,https://openbao.org/api-docs/secre
 secret,POST,/pki/issuer/:issuer_ref/sign-intermediate,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/root/sign-self-issued,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/issuer/:issuer_ref/sign-self-issued,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
-secret,POST,/pki/sign-verbatim(/:name),planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/sign-verbatim(/:name),typed-gated,https://openbao.org/api-docs/secret/pki/,Typed PKI sign-verbatim helper exists behind operator-operation gates.
+secret,POST,/pki/issuer/:issuer_ref/sign-verbatim(/:name),typed-gated,https://openbao.org/api-docs/secret/pki/,Typed PKI sign-verbatim helper exists behind operator-operation gates.
 secret,LIST,/pki/cel/roles,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,GET,/pki/cel/roles/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/cel/issue/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."

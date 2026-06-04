@@ -15,6 +15,7 @@ All notable changes to this project are documented here.
 - Added PKI root rotate, root replace, multi-issuer root/intermediate
   generation, and standalone key generation helpers.
 - Added PKI cluster config, auto-tidy config, and revoke-with-key helpers.
+- Added operator-gated PKI sign-verbatim helpers.
 
 ### Maintenance
 

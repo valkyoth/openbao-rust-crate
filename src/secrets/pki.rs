@@ -771,6 +771,65 @@ pub struct PkiSignRequest {
     pub format: Option<String>,
 }
 
+/// Request for sign-verbatim certificate signing.
+///
+/// Sign-verbatim bypasses normal role constraints and takes certificate
+/// content largely from the CSR. Methods using this request are available only
+/// behind the `operator-ops` feature gate.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiSignVerbatimRequest {
+    /// PEM-format certificate signing request.
+    pub csr: String,
+    /// Default key usage values used when the CSR omits key usage.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub key_usage: Vec<String>,
+    /// Default extended key usage values used when the CSR omits extended key usage.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ext_key_usage: Vec<String>,
+    /// Default extended key usage OIDs used when the CSR omits extended key usage.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ext_key_usage_oids: Vec<String>,
+    /// Requested TTL such as `24h`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ttl: Option<String>,
+    /// Certificate return format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+    /// Explicit not-before timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_before: Option<String>,
+    /// Explicit not-after timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_after: Option<String>,
+    /// RSA signature digest size.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature_bits: Option<u64>,
+    /// Uses RSA-PSS signatures where supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub use_pss: Option<bool>,
+    /// Removes self-signed roots from the returned chain.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remove_roots_from_chain: Option<bool>,
+    /// Requested User ID subject values.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub user_ids: Vec<String>,
+    /// Marks basic constraints valid on non-CA certificates.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub basic_constraints_valid_for_non_ca: Option<bool>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl PkiSignVerbatimRequest {
+    /// Creates a sign-verbatim request from a PEM CSR.
+    pub fn new(csr: impl Into<String>) -> Self {
+        Self {
+            csr: csr.into(),
+            ..Self::default()
+        }
+    }
+}
+
 /// Response from PKI issue/sign endpoints.
 #[derive(Clone, Deserialize)]
 pub struct PkiCertificateBundle {
@@ -1535,6 +1594,78 @@ impl Pki<'_> {
         self.enveloped(
             Method::POST,
             &self.path(&["issuer", issuer_ref, "sign", role])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Signs a CSR verbatim with the default issuer.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This bypasses normal PKI role constraints and should be restricted to
+    /// highly trusted operator automation.
+    #[cfg(feature = "operator-ops")]
+    pub async fn sign_verbatim(
+        &self,
+        request: &PkiSignVerbatimRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(Method::POST, &self.path(&["sign-verbatim"])?, Some(request))
+            .await
+    }
+
+    /// Signs a CSR verbatim while routing through a named sign-verbatim path.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This bypasses normal PKI role constraints and should be restricted to
+    /// highly trusted operator automation.
+    #[cfg(feature = "operator-ops")]
+    pub async fn sign_verbatim_at_role(
+        &self,
+        role: &str,
+        request: &PkiSignVerbatimRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["sign-verbatim", role])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Signs a CSR verbatim with an explicit issuer.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This bypasses normal PKI role constraints and should be restricted to
+    /// highly trusted operator automation.
+    #[cfg(feature = "operator-ops")]
+    pub async fn sign_verbatim_with_issuer(
+        &self,
+        issuer_ref: &str,
+        request: &PkiSignVerbatimRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "sign-verbatim"])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Signs a CSR verbatim with an explicit issuer and named path.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This bypasses normal PKI role constraints and should be restricted to
+    /// highly trusted operator automation.
+    #[cfg(feature = "operator-ops")]
+    pub async fn sign_verbatim_with_issuer_at_role(
+        &self,
+        issuer_ref: &str,
+        role: &str,
+        request: &PkiSignVerbatimRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "sign-verbatim", role])?,
             Some(request),
         )
         .await
