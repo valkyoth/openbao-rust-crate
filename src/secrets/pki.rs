@@ -1464,22 +1464,38 @@ impl ListEntries for PkiAcmeEabList {
     }
 }
 
-/// PKI CEL role configuration.
+/// Request for creating or patching a PKI CEL role.
 ///
 /// CEL roles are newer OpenBao PKI functionality. Their endpoint paths are
 /// typed here, while the CEL program text remains caller-owned and is passed
 /// to OpenBao unchanged.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct PkiCelRole {
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiCelRoleRequest {
     /// CEL expression evaluated by OpenBao.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expression: Option<String>,
     /// Optional description for this CEL role.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+}
+
+/// PKI CEL role configuration returned by OpenBao.
+///
+/// CEL roles are newer OpenBao PKI functionality. Unknown fields are retained
+/// in `extra` for forward-compatible reads, but writes use
+/// [`PkiCelRoleRequest`] so callers do not accidentally smuggle arbitrary JSON
+/// through a typed helper.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiCelRole {
+    /// CEL expression evaluated by OpenBao.
+    #[serde(default)]
+    pub expression: Option<String>,
+    /// Optional description for this CEL role.
+    #[serde(default)]
+    pub description: Option<String>,
     /// Additional OpenBao-documented role fields not yet modelled explicitly.
     #[serde(default, deserialize_with = "deserialize_bounded_json_map")]
-    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    #[serde(flatten)]
     pub extra: BTreeMap<String, JsonValue>,
 }
 
@@ -2424,7 +2440,7 @@ impl Pki<'_> {
     ///
     /// CEL roles are newer OpenBao PKI functionality; callers should test this
     /// workflow against the OpenBao version they deploy.
-    pub async fn write_cel_role(&self, name: &str, role: &PkiCelRole) -> Result<Empty> {
+    pub async fn write_cel_role(&self, name: &str, role: &PkiCelRoleRequest) -> Result<Empty> {
         self.client
             .request_json(
                 Method::POST,
@@ -2435,7 +2451,11 @@ impl Pki<'_> {
     }
 
     /// Patches a PKI CEL role with JSON Merge Patch semantics.
-    pub async fn patch_cel_role(&self, name: &str, patch: &PkiCelRole) -> Result<PkiCelRole> {
+    pub async fn patch_cel_role(
+        &self,
+        name: &str,
+        patch: &PkiCelRoleRequest,
+    ) -> Result<PkiCelRole> {
         self.enveloped_with_headers(
             Method::PATCH,
             &self.path(&["cel", "roles", name])?,
@@ -2841,9 +2861,9 @@ mod tests {
 
     use super::{
         PkiAcmeConfig, PkiAcmeEabList, PkiAcmeEabToken, PkiAuthorityBundle, PkiAutoTidyConfig,
-        PkiCertificateBundle, PkiGenerateRootRequest, PkiImportResponse, PkiIssuerInfo,
-        PkiIssuerList, PkiIssuersConfig, PkiKeyList, PkiRevokeWithKeyRequest, PkiRole, PkiRoleList,
-        PkiTidyStatus,
+        PkiCelRole, PkiCertificateBundle, PkiDetailedCertificateList, PkiGenerateRootRequest,
+        PkiImportResponse, PkiIssuerInfo, PkiIssuerList, PkiIssuersConfig, PkiKeyList,
+        PkiRevocationQueueList, PkiRevokeWithKeyRequest, PkiRole, PkiRoleList, PkiTidyStatus,
     };
 
     #[test]
@@ -3115,6 +3135,84 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn pki_specialized_metadata_maps_are_bounded() {
+        let mut exact_key_info = serde_json::Map::new();
+        for index in 0..crate::response::MAX_RESPONSE_STRINGS {
+            exact_key_info.insert(
+                format!("{index:04x}"),
+                serde_json::json!({ "expiration": 1_893_456_000_u64 }),
+            );
+        }
+        let exact = serde_json::json!({
+            "keys": ["0000"],
+            "key_info": exact_key_info
+        });
+        let detailed: PkiDetailedCertificateList =
+            serde_json::from_value(exact).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(detailed.keys, ["0000"]);
+        assert_eq!(
+            detailed.key_info.len(),
+            crate::response::MAX_RESPONSE_STRINGS
+        );
+
+        let mut overflow_key_info = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            overflow_key_info.insert(
+                format!("{index:04x}"),
+                serde_json::json!({ "revocation_time": 1_893_456_000_u64 }),
+            );
+        }
+        let overflow = serde_json::json!({
+            "keys": ["0000"],
+            "key_info": overflow_key_info
+        });
+        let error = match serde_json::from_value::<PkiRevocationQueueList>(overflow) {
+            Ok(_) => panic!("oversized PKI revocation queue unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(
+            error
+                .to_string()
+                .contains("OpenBao JSON metadata map exceeds item limit")
+        );
+    }
+
+    #[test]
+    fn pki_cel_role_preserves_bounded_extra_fields() {
+        let role: PkiCelRole = serde_json::from_str(
+            r#"{
+                "expression":"subject.common_name.endsWith(\".example.com\")",
+                "description":"web CEL role",
+                "issuer_ref":"root-x1"
+            }"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(role.description.as_deref(), Some("web CEL role"));
+        assert_eq!(
+            role.extra
+                .get("issuer_ref")
+                .and_then(|value| value.as_str()),
+            Some("root-x1")
+        );
+
+        let mut overflow_extra = serde_json::Map::new();
+        overflow_extra.insert("expression".to_owned(), serde_json::json!("true"));
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            overflow_extra.insert(format!("field_{index}"), serde_json::json!("value"));
+        }
+        let error =
+            match serde_json::from_value::<PkiCelRole>(serde_json::Value::Object(overflow_extra)) {
+                Ok(_) => panic!("oversized PKI CEL role extras unexpectedly decoded"),
+                Err(error) => error,
+            };
+        assert!(
+            error
+                .to_string()
+                .contains("OpenBao JSON metadata map exceeds item limit")
+        );
     }
 
     #[test]

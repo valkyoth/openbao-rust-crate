@@ -8202,10 +8202,9 @@ async fn pki_specialized_flows_use_documented_paths() {
         Some("30:04")
     );
 
-    let cel_role = openbao::secrets::pki::PkiCelRole {
+    let cel_role = openbao::secrets::pki::PkiCelRoleRequest {
         expression: Some("subject.common_name.endsWith(\".example.com\")".to_owned()),
         description: Some("web CEL role".to_owned()),
-        ..Default::default()
     };
     pki.write_cel_role("web-cel", &cel_role)
         .await
@@ -8230,7 +8229,7 @@ async fn pki_specialized_flows_use_documented_paths() {
     assert_eq!(
         pki.patch_cel_role(
             "web-cel",
-            &openbao::secrets::pki::PkiCelRole {
+            &openbao::secrets::pki::PkiCelRoleRequest {
                 description: Some("patched".to_owned()),
                 ..Default::default()
             },
