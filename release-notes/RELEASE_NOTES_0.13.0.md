@@ -18,18 +18,20 @@ cross-sign helpers.
 ## Added
 
 - Started the `0.13.0` release line.
+- Named-issuer PKI sign-intermediate and sign-self-issued helpers for
+  multi-issuer hierarchy and cross-signed trust-anchor workflows.
+- Revoked certificate list, revocation queue list, and detailed certificate
+  list helpers.
+- Issuer CRL resign and delta CRL rotation helpers.
+- PKI CEL role list/read/write/patch/delete plus CEL issue/sign helpers, with
+  a version-stability note for this newer OpenBao feature.
+- Operator-gated intermediate cross-sign and sign-revocation-list helpers.
+- Endpoint matrix update for the implemented `0.13.0` PKI rows, bringing
+  strict typed coverage to `572/643` (`89.0%`).
 
 ## Planned Scope
 
-- Revoked certificate list, revocation queue list, detailed certificate list,
-  issuer CRL resign, and sign-revocation-list helpers.
-- CEL role list/read/write/patch/delete plus CEL issue/sign helpers, with a
-  version-stability note for this newer OpenBao feature.
-- Named-issuer sign-intermediate and sign-self-issued variants for
-  multi-issuer hierarchy and cross-signed trust-anchor workflows.
-- Intermediate cross-sign helpers behind `operator-ops` plus
-  `operator-ops-acknowledged`.
-- Delta CRL rotation to complete the typed CRL rotation surface.
+- No remaining `0.13.0` PKI specialized-flow implementation rows are open.
 - OCSP GET/POST rows documented as external OCSP responder protocol endpoints
   for OCSP/TLS client tooling.
 

@@ -24,10 +24,10 @@ Sources:
 ## Summary
 
 - Total documented endpoint rows: `643`
-- Strict typed coverage: `555/643` (86.3%)
-- Typed plus partial coverage: `556/643` (86.5%)
-- Addressed by typed, partial, raw, external, or rejected policy: `601/643` (93.5%)
-- Planned implementation rows before `1.0.0`: `42`
+- Strict typed coverage: `572/643` (89.0%)
+- Typed plus partial coverage: `573/643` (89.1%)
+- Addressed by typed, partial, raw, external, or rejected policy: `619/643` (96.3%)
+- Planned implementation rows before `1.0.0`: `25`
 - Open owner decisions before `1.0.0`: `0`
 
 | Status | Count |
@@ -75,7 +75,7 @@ Sources:
 - Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
 - `sys/mfa/validate` is implemented in `0.10.0` because MFA-enforced login flows cannot complete without it.
 - Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are implemented in `0.11.0`; the optional `transit-import` wrapping helper prepares OpenBao BYOK blobs with AES-KWP/RSA-OAEP behind feature-gated `openssl` and `aes-kw` dependencies.
-- PKI default issuer/key config, named-issuer issue/sign, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, revoke-with-key, cluster config, auto-tidy config, operator-gated sign-verbatim rows, and current-doc struct-field expansion are implemented in `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
+- PKI default issuer/key config, named-issuer issue/sign, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, revoke-with-key, cluster config, auto-tidy config, operator-gated sign-verbatim rows, current-doc struct-field expansion, and Tier 2 revocation/CEL/cross-sign/delta-CRL rows are implemented through `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
 - System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are planned for `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.
 - `0.15.0` is the closure release where planned endpoint rows are implemented or intentionally reclassified before `1.0.0`.
 

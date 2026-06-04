@@ -15,10 +15,10 @@ use serde::{
 };
 
 use crate::{
-    Authenticated, Client, Error, Result,
+    Authenticated, Client, Error, JsonValue, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map,
+        Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_map,
         deserialize_bounded_string_vec,
     },
 };
@@ -634,6 +634,16 @@ pub struct PkiSignIntermediateRequest {
     pub permitted_dns_domains: Vec<String>,
 }
 
+/// Request for signing a self-issued certificate.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiSignSelfIssuedRequest {
+    /// PEM-format self-issued certificate.
+    pub certificate: String,
+    /// Issuer display name for the generated issuer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_name: Option<String>,
+}
+
 /// Request for installing a signed intermediate certificate.
 #[derive(Clone, Debug, Serialize)]
 pub struct PkiSetSignedIntermediateRequest {
@@ -906,6 +916,51 @@ pub struct PkiRotateCrlResponse {
     pub success: bool,
 }
 
+/// Response from CRL signing and resigning endpoints.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiCrlBundle {
+    /// PEM or DER encoded CRL material returned by OpenBao.
+    #[serde(default)]
+    pub crl: Option<String>,
+    /// PEM encoded delta CRL material returned by OpenBao.
+    #[serde(default)]
+    pub delta_crl: Option<String>,
+    /// CRL serial number, when returned.
+    #[serde(default)]
+    pub serial_number: Option<String>,
+}
+
+/// Request for manually signing a revocation list.
+///
+/// This bypasses OpenBao's ordinary CRL construction path and is available
+/// only behind the `operator-ops` feature gate.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiSignRevocationListRequest {
+    /// CRL number to place in the generated CRL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crl_number: Option<u64>,
+    /// Base CRL number when generating a delta CRL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delta_crl_base_number: Option<u64>,
+    /// Requested CRL format, such as `pem` or `der`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+    /// Revoked certificate entries to include.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub revoked_certs: Vec<PkiRevokedCertificateEntry>,
+}
+
+/// Revoked certificate entry used by manual CRL signing.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiRevokedCertificateEntry {
+    /// Certificate serial number.
+    pub serial_number: String,
+    /// Revocation time as Unix seconds.
+    pub revocation_time: u64,
+}
+
 /// Request for issuing a certificate and private key.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct PkiIssueRequest {
@@ -1144,6 +1199,40 @@ impl ListEntries for PkiCertificateList {
     }
 }
 
+/// Detailed certificate list response.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiDetailedCertificateList {
+    /// Certificate serial numbers.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Certificate metadata keyed by serial number.
+    #[serde(default, deserialize_with = "deserialize_bounded_json_map")]
+    pub key_info: BTreeMap<String, JsonValue>,
+}
+
+impl ListEntries for PkiDetailedCertificateList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Revocation queue list response.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiRevocationQueueList {
+    /// Queued certificate serial numbers.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Queue metadata keyed by serial number.
+    #[serde(default, deserialize_with = "deserialize_bounded_json_map")]
+    pub key_info: BTreeMap<String, JsonValue>,
+}
+
+impl ListEntries for PkiRevocationQueueList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
 /// Read certificate response.
 #[derive(Clone, Debug, Deserialize)]
 pub struct PkiCertificate {
@@ -1375,6 +1464,39 @@ impl ListEntries for PkiAcmeEabList {
     }
 }
 
+/// PKI CEL role configuration.
+///
+/// CEL roles are newer OpenBao PKI functionality. Their endpoint paths are
+/// typed here, while the CEL program text remains caller-owned and is passed
+/// to OpenBao unchanged.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct PkiCelRole {
+    /// CEL expression evaluated by OpenBao.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expression: Option<String>,
+    /// Optional description for this CEL role.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Additional OpenBao-documented role fields not yet modelled explicitly.
+    #[serde(default, deserialize_with = "deserialize_bounded_json_map")]
+    #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extra: BTreeMap<String, JsonValue>,
+}
+
+/// PKI CEL role list.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiCelRoleList {
+    /// CEL role names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for PkiCelRoleList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
 impl Client<Authenticated> {
     /// Uses the PKI engine mounted at `mount`.
     pub fn pki(&self, mount: impl Into<String>) -> Result<Pki<'_>> {
@@ -1530,6 +1652,63 @@ impl Pki<'_> {
         self.enveloped(
             Method::POST,
             &self.path(&["root", "sign-intermediate"])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Signs an intermediate CA CSR with an explicit issuer.
+    pub async fn sign_intermediate_with_issuer(
+        &self,
+        issuer_ref: &str,
+        request: &PkiSignIntermediateRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "sign-intermediate"])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Signs a self-issued certificate with the default root.
+    pub async fn sign_self_issued(
+        &self,
+        request: &PkiSignSelfIssuedRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["root", "sign-self-issued"])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Signs a self-issued certificate with an explicit issuer.
+    pub async fn sign_self_issued_with_issuer(
+        &self,
+        issuer_ref: &str,
+        request: &PkiSignSelfIssuedRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "sign-self-issued"])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Cross-signs an intermediate CA CSR for CA migration workflows.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn cross_sign_intermediate(
+        &self,
+        request: &PkiSignIntermediateRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["intermediate", "cross-sign"])?,
             Some(request),
         )
         .await
@@ -1698,6 +1877,16 @@ impl Pki<'_> {
         self.enveloped(
             Method::POST,
             &self.path(&["crl", "rotate"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Rotates the delta CRL.
+    pub async fn rotate_delta_crl(&self) -> Result<PkiRotateCrlResponse> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["crl", "rotate-delta"])?,
             Option::<&Empty>::None,
         )
         .await
@@ -1901,12 +2090,87 @@ impl Pki<'_> {
             .await
     }
 
+    /// Lists revoked certificate serial numbers.
+    pub async fn list_revoked_certificates(&self) -> Result<PkiCertificateList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.enveloped(
+            method,
+            &self.path(&["certs", "revoked"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Lists certificate revocation queue entries.
+    pub async fn list_revocation_queue(&self) -> Result<PkiRevocationQueueList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.enveloped(
+            method,
+            &self.path(&["certs", "revocation-queue"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Lists certificate serial numbers with detailed metadata.
+    pub async fn list_certificates_detailed(
+        &self,
+        after: Option<&str>,
+        limit: Option<u64>,
+    ) -> Result<PkiDetailedCertificateList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
+        let envelope: ResponseEnvelope<PkiDetailedCertificateList> = self
+            .client
+            .request_json_query_accepting(
+                method,
+                &self.path(&["certs", "detailed"])?,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Reads a certificate by serial number.
     pub async fn read_certificate(&self, serial: &str) -> Result<PkiCertificate> {
         self.enveloped(
             Method::GET,
             &self.path(&["cert", serial])?,
             Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Resigns CRLs for an issuer.
+    pub async fn resign_crls(&self, issuer_ref: &str) -> Result<PkiCrlBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "resign-crls"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Manually signs a revocation list with an issuer.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This can create arbitrary CRL material and should be restricted to
+    /// trusted PKI operator automation.
+    #[cfg(feature = "operator-ops")]
+    pub async fn sign_revocation_list(
+        &self,
+        issuer_ref: &str,
+        request: &PkiSignRevocationListRequest,
+    ) -> Result<PkiCrlBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "sign-revocation-list"])?,
+            Some(request),
         )
         .await
     }
@@ -2154,6 +2418,96 @@ impl Pki<'_> {
                 &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
             .await
+    }
+
+    /// Writes a PKI CEL role.
+    ///
+    /// CEL roles are newer OpenBao PKI functionality; callers should test this
+    /// workflow against the OpenBao version they deploy.
+    pub async fn write_cel_role(&self, name: &str, role: &PkiCelRole) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["cel", "roles", name])?,
+                Some(role),
+            )
+            .await
+    }
+
+    /// Patches a PKI CEL role with JSON Merge Patch semantics.
+    pub async fn patch_cel_role(&self, name: &str, patch: &PkiCelRole) -> Result<PkiCelRole> {
+        self.enveloped_with_headers(
+            Method::PATCH,
+            &self.path(&["cel", "roles", name])?,
+            &[(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/merge-patch+json"),
+            )],
+            Some(patch),
+        )
+        .await
+    }
+
+    /// Reads a PKI CEL role.
+    pub async fn read_cel_role(&self, name: &str) -> Result<PkiCelRole> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["cel", "roles", name])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Lists PKI CEL role names.
+    pub async fn list_cel_roles(&self) -> Result<PkiCelRoleList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.enveloped(
+            method,
+            &self.path(&["cel", "roles"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Deletes a PKI CEL role.
+    pub async fn delete_cel_role(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &self.path(&["cel", "roles", name])?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Issues a certificate and private key using a PKI CEL role.
+    pub async fn cel_issue(
+        &self,
+        role: &str,
+        request: &PkiIssueRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["cel", "issue", role])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Signs a caller-provided CSR using a PKI CEL role.
+    pub async fn cel_sign(
+        &self,
+        role: &str,
+        request: &PkiSignRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["cel", "sign", role])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Returns the default ACME directory URL for use with ACME clients.
@@ -2432,6 +2786,44 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedEabInfoMapVisitor<MAX> {
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(serde::de::Error::custom(
                 "OpenBao ACME EAB metadata exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
+fn deserialize_bounded_json_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, JsonValue>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(BoundedJsonMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+struct BoundedJsonMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedJsonMapVisitor<MAX> {
+    type Value = BTreeMap<String, JsonValue>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} JSON metadata entries")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "OpenBao JSON metadata map exceeds item limit",
             ));
         }
         Ok(values)

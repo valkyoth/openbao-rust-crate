@@ -73,11 +73,11 @@ The `0.13.0` release line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `555/643` (`86.3%`);
-- typed plus partial coverage: `556/643` (`86.5%`);
-- addressed by typed, partial, raw, external, or rejected policy: `601/643`
-  (`93.5%`);
-- planned implementation rows before `1.0.0`: `42`;
+- strict typed coverage: `572/643` (`89.0%`);
+- typed plus partial coverage: `573/643` (`89.1%`);
+- addressed by typed, partial, raw, external, or rejected policy: `619/643`
+  (`96.3%`);
+- planned implementation rows before `1.0.0`: `25`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -206,12 +206,12 @@ Support plan:
   key generation, multi-issuer root/intermediate generation, and
   operator-gated default root deletion with explicit `PkiRootDeletion`
   confirmation, cluster config, auto-tidy config, revoke-with-key,
-  sign-verbatim behind operator gates, and current-doc field expansion for PKI
-  role/generation/CRL/tidy structs are implemented.
-  Revocation/CRL management, CEL roles, named-issuer
-  sign-intermediate/sign-self-issued, delta CRL rotation, and cross-sign rows
-  are planned for `0.13.0`. Unauthenticated public CA/certificate/CRL reads and
-  OCSP responder endpoints are external protocol/public-distribution
+  sign-verbatim behind operator gates, current-doc field expansion for PKI
+  role/generation/CRL/tidy structs, revocation/CRL management, CEL roles,
+  named-issuer sign-intermediate/sign-self-issued, delta CRL rotation, and
+  operator-gated cross-sign rows are implemented.
+  Unauthenticated public CA/certificate/CRL reads and OCSP responder endpoints
+  are external protocol/public-distribution
   boundaries. Full ACME
   account/order/authorization/challenge client flows are permanently external:
   use the typed ACME config, EAB, and directory URL helpers to hand off to a

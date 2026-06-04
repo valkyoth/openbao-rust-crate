@@ -42,6 +42,7 @@ check_file release-notes/RELEASE_NOTES_0.9.0.md
 check_file release-notes/RELEASE_NOTES_0.10.0.md
 check_file release-notes/RELEASE_NOTES_0.11.0.md
 check_file release-notes/RELEASE_NOTES_0.12.0.md
+check_file release-notes/RELEASE_NOTES_0.13.0.md
 check_file scripts/release_0_6_gate.sh
 check_file scripts/release_0_7_gate.sh
 check_file scripts/release_0_8_gate.sh
@@ -49,10 +50,11 @@ check_file scripts/release_0_9_gate.sh
 check_file scripts/release_0_10_gate.sh
 check_file scripts/release_0_11_gate.sh
 check_file scripts/release_0_12_gate.sh
+check_file scripts/release_0_13_gate.sh
 check_file .github/workflows/ci.yml
 
 check_grep 'name = "openbao"' Cargo.toml
-check_grep 'version = "0.12.0"' Cargo.toml
+check_grep 'version = "0.13.0"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
@@ -69,8 +71,10 @@ check_grep '0.9.0 - API Stabilization Candidate' docs/RELEASE_PLAN.md
 check_grep '0.10.0 - Identity And Auth Completion' docs/RELEASE_PLAN.md
 check_grep '0.11.0 - Transit Advanced Key Management' docs/RELEASE_PLAN.md
 check_grep '0.12.0 - PKI Tier 1 Multi-Issuer And Authority Lifecycle' docs/RELEASE_PLAN.md
+check_grep '0.13.0 - PKI Specialized Flows' docs/RELEASE_PLAN.md
 check_grep '1.0.0 - First Stable Release' docs/RELEASE_PLAN.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.12.0.md
+check_grep 'Status: in development' release-notes/RELEASE_NOTES_0.13.0.md
 check_grep 'Audit status:' docs/API_STABILITY_AUDIT.md
 check_grep 'From `vaultrs`' docs/MIGRATION_GUIDE.md
 

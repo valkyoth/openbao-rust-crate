@@ -7,6 +7,13 @@ All notable changes to this project are documented here.
 ### Added
 
 - Started the `0.13.0` PKI specialized-flow line.
+- Added named-issuer PKI sign-intermediate and sign-self-issued helpers.
+- Added revoked certificate, revocation queue, and detailed certificate list
+  helpers.
+- Added issuer CRL resign and delta CRL rotation helpers.
+- Added PKI CEL role write/read/list/patch/delete plus CEL issue/sign helpers.
+- Added operator-gated PKI cross-sign and sign-revocation-list helpers.
+- Added the `0.13.0` release gate script and metadata checks.
 
 ## 0.12.0 - 2026-06-04
 
