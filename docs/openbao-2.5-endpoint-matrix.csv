@@ -277,11 +277,11 @@ secret,PATCH,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typ
 secret,DELETE,/pki/roles/:name,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/issuers,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/config/issuers,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/config/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/root/replace,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,GET,/pki/config/keys,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/config/keys,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/config/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/cluster,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,POST,/pki/config/cluster,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
 secret,GET,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.

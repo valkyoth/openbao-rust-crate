@@ -7,6 +7,8 @@ All notable changes to this project are documented here.
 ### Added
 
 - Started the `0.12.0` PKI Tier 1 multi-issuer and authority lifecycle line.
+- Added PKI default issuer and default key configuration read/write helpers
+  for `/pki/config/issuers` and `/pki/config/keys`.
 
 ### Maintenance
 

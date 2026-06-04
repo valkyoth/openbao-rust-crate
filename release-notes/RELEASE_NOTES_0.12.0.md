@@ -22,13 +22,19 @@ root rotation and replacement, standalone key generation, sign-verbatim
 operator helpers, revoke-with-key, cluster and auto-tidy config, and
 current-doc PKI struct-field expansion.
 
-Remaining `0.12.0` planned work: PKI implementation and test coverage for the
-Tier 1 rows, regenerated endpoint matrix, documentation updates, local release
-gate, external pentest, and GitHub CI validation.
+Remaining `0.12.0` planned work: the rest of the PKI Tier 1 implementation and
+test coverage, documentation updates, local release gate, external pentest, and
+GitHub CI validation.
+
+## Added
+
+- PKI default issuer and default key configuration read/write helpers for
+  `/pki/config/issuers` and `/pki/config/keys`.
+- Endpoint matrix regeneration for the implemented default issuer/key config
+  rows, bringing strict typed coverage to `541/643` (`84.1%`).
 
 ## Planned Scope
 
-- PKI default issuer and default key config read/write helpers.
 - Named-issuer certificate issue and sign helpers.
 - Root rotate, multi-issuer root generation, root replace, standalone key
   generation, and intermediate issuer generation helpers.

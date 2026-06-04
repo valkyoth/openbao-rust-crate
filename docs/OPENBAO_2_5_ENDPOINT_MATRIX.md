@@ -1,6 +1,6 @@
 # OpenBao 2.5.x Endpoint Coverage Matrix
 
-Generated on 2026-06-03 from the official OpenBao 2.5.x API documentation.
+Generated on 2026-06-04 from the official OpenBao 2.5.x API documentation.
 The full endpoint row matrix is stored in
 `docs/openbao-2.5-endpoint-matrix.csv`.
 
@@ -24,21 +24,21 @@ Sources:
 ## Summary
 
 - Total documented endpoint rows: `643`
-- Strict typed coverage: `537/643` (83.5%)
-- Typed plus partial coverage: `538/643` (83.7%)
-- Addressed by typed, partial, raw, external, or rejected policy: `583/643` (90.7%)
-- Planned implementation rows before `1.0.0`: `60`
+- Strict typed coverage: `541/643` (84.1%)
+- Typed plus partial coverage: `542/643` (84.3%)
+- Addressed by typed, partial, raw, external, or rejected policy: `587/643` (91.3%)
+- Planned implementation rows before `1.0.0`: `56`
 - Open owner decisions before `1.0.0`: `0`
 
 | Status | Count |
 | --- | ---: |
-| `typed` | 492 |
+| `typed` | 496 |
 | `typed-gated` | 45 |
 | `partial` | 1 |
 | `raw` | 0 |
 | `external` | 33 |
 | `rejected` | 12 |
-| `planned` | 60 |
+| `planned` | 56 |
 | `decision` | 0 |
 
 ## Area Totals
@@ -46,7 +46,7 @@ Sources:
 | Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Planned | Decision | Strict % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 99.0% |
-| `secret` | 347 | 278 | 1 | 0 | 0 | 33 | 0 | 35 | 0 | 80.4% |
+| `secret` | 347 | 282 | 1 | 0 | 0 | 33 | 0 | 31 | 0 | 81.6% |
 | `system` | 191 | 110 | 44 | 0 | 0 | 0 | 12 | 25 | 0 | 80.6% |
 
 ## Pages With Non-Typed Rows
@@ -55,7 +55,7 @@ Sources:
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | [/api-docs/auth/token/](https://openbao.org/api-docs/auth/token/) | 18 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 | [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 18 | 0 | 0 | 0 | 3 | 0 | 0 | 0 |
-| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 44 | 1 | 0 | 0 | 28 | 0 | 35 | 0 |
+| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 48 | 1 | 0 | 0 | 28 | 0 | 31 | 0 |
 | [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 | 0 | 0 |
 | [/api-docs/system/config-ui/](https://openbao.org/api-docs/system/config-ui/) | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 |
 | [/api-docs/system/generate-recovery-token/](https://openbao.org/api-docs/system/generate-recovery-token/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
@@ -75,7 +75,7 @@ Sources:
 - Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
 - `sys/mfa/validate` is implemented in `0.10.0` because MFA-enforced login flows cannot complete without it.
 - Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are implemented in `0.11.0`; the optional `transit-import` wrapping helper prepares OpenBao BYOK blobs with AES-KWP/RSA-OAEP behind feature-gated `openssl` and `aes-kw` dependencies.
-- PKI Tier 1 multi-issuer/config/root/sign-verbatim/revoke-with-key and current-doc struct-field completion are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
+- PKI default issuer/key config rows are implemented in `0.12.0`; remaining PKI Tier 1 multi-issuer/root/sign-verbatim/revoke-with-key and current-doc struct-field completion rows are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
 - System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are planned for `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.
 - `0.15.0` is the closure release where planned endpoint rows are implemented or intentionally reclassified before `1.0.0`.
 

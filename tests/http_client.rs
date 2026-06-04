@@ -7460,6 +7460,85 @@ async fn pki_delete_root_is_operator_gated_and_uses_documented_path() {
 }
 
 #[tokio::test]
+async fn pki_default_issuer_and_key_config_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..4 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/pki/config/issuers HTTP/1.1"));
+                    r#"{"data":{"default":"issuer-1","default_follows_latest_issuer":"false"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/pki/config/issuers HTTP/1.1"));
+                    assert!(request.contains(r#""default":"issuer-2""#));
+                    assert!(request.contains(r#""default_follows_latest_issuer":true"#));
+                    "{}"
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/pki/config/keys HTTP/1.1"));
+                    r#"{"data":{"default":"key-1"}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/pki/config/keys HTTP/1.1"));
+                    assert!(request.contains(r#""default":"key-2""#));
+                    "{}"
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let issuers = pki
+        .read_issuers_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuers.default.as_deref(), Some("issuer-1"));
+    assert_eq!(issuers.default_follows_latest_issuer, Some(false));
+    pki.write_issuers_config(&openbao::secrets::pki::PkiIssuersConfig {
+        default: Some("issuer-2".to_owned()),
+        default_follows_latest_issuer: Some(true),
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    let keys = pki
+        .read_keys_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(keys.default.as_deref(), Some("key-1"));
+    pki.write_keys_config(&openbao::secrets::pki::PkiKeysConfig {
+        default: Some("key-2".to_owned()),
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn pki_issuer_and_key_lifecycle_paths_are_documented() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

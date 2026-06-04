@@ -73,11 +73,11 @@ The `0.12.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `537/643` (`83.5%`);
-- typed plus partial coverage: `538/643` (`83.7%`);
-- addressed by typed, partial, raw, external, or rejected policy: `583/643`
-  (`90.7%`);
-- planned implementation rows before `1.0.0`: `60`;
+- strict typed coverage: `541/643` (`84.1%`);
+- typed plus partial coverage: `542/643` (`84.3%`);
+- addressed by typed, partial, raw, external, or rejected policy: `587/643`
+  (`91.3%`);
+- planned implementation rows before `1.0.0`: `56`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and

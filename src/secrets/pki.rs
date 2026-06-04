@@ -162,6 +162,29 @@ pub struct PkiUrlsConfig {
     pub enable_templating: Option<bool>,
 }
 
+/// PKI issuer configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct PkiIssuersConfig {
+    /// Default issuer reference, by issuer name or ID.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+    /// Whether new root/import operations update the default issuer.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_bool_or_string",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub default_follows_latest_issuer: Option<bool>,
+}
+
+/// PKI key configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct PkiKeysConfig {
+    /// Default key reference, by key name or ID.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default: Option<String>,
+}
+
 /// PKI authority key generation mode.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PkiKeyGenerationType {
@@ -953,6 +976,44 @@ impl Pki<'_> {
             .await
     }
 
+    /// Reads the default PKI issuer configuration.
+    pub async fn read_issuers_config(&self) -> Result<PkiIssuersConfig> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["config", "issuers"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Sets the default PKI issuer configuration.
+    pub async fn write_issuers_config(&self, config: &PkiIssuersConfig) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["config", "issuers"])?,
+                Some(config),
+            )
+            .await
+    }
+
+    /// Reads the default PKI key configuration.
+    pub async fn read_keys_config(&self) -> Result<PkiKeysConfig> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["config", "keys"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Sets the default PKI key configuration.
+    pub async fn write_keys_config(&self, config: &PkiKeysConfig) -> Result<Empty> {
+        self.client
+            .request_json(Method::POST, &self.path(&["config", "keys"])?, Some(config))
+            .await
+    }
+
     /// Reads PKI CRL configuration.
     pub async fn read_crl_config(&self) -> Result<PkiCrlConfig> {
         self.enveloped(
@@ -1394,6 +1455,30 @@ where
     deserializer.deserialize_any(StringOrListVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
 }
 
+fn deserialize_optional_bool_or_string<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<bool>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum BoolOrString {
+        Bool(bool),
+        String(String),
+    }
+
+    match Option::<BoolOrString>::deserialize(deserializer)? {
+        None => Ok(None),
+        Some(BoolOrString::Bool(value)) => Ok(Some(value)),
+        Some(BoolOrString::String(value)) if value == "true" => Ok(Some(true)),
+        Some(BoolOrString::String(value)) if value == "false" => Ok(Some(false)),
+        Some(BoolOrString::String(_)) => Err(serde::de::Error::custom(
+            "expected boolean or boolean string for field",
+        )),
+    }
+}
+
 struct StringOrListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for StringOrListVisitor<MAX> {
@@ -1512,7 +1597,8 @@ mod tests {
 
     use super::{
         PkiAcmeConfig, PkiAcmeEabList, PkiAcmeEabToken, PkiAuthorityBundle, PkiCertificateBundle,
-        PkiImportResponse, PkiIssuerInfo, PkiIssuerList, PkiKeyList, PkiRole, PkiRoleList,
+        PkiImportResponse, PkiIssuerInfo, PkiIssuerList, PkiIssuersConfig, PkiKeyList, PkiRole,
+        PkiRoleList,
     };
 
     #[test]
@@ -1585,6 +1671,17 @@ mod tests {
             issuer.issuing_certificates,
             ["https://bao.example/v1/pki/ca"]
         );
+    }
+
+    #[test]
+    fn pki_issuers_config_accepts_documented_string_boolean() {
+        let config: PkiIssuersConfig = serde_json::from_str(
+            r#"{"default":"issuer-1","default_follows_latest_issuer":"false"}"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(config.default.as_deref(), Some("issuer-1"));
+        assert_eq!(config.default_follows_latest_issuer, Some(false));
     }
 
     #[test]
