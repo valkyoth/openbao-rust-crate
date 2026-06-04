@@ -333,7 +333,7 @@ pub mod prelude {
         RateLimitQuotaInfo, RateLimitQuotaList, RateLimitQuotaRequest, RemountMigrationInfo,
         RemountRequest, RemountResponse, RemountStatus, ResultantAcl, ResultantAclPath, SealStatus,
         Sys, UiMountDetails, UiMountSummary, UiMounts, UiNamespaces, VersionHistory,
-        VersionHistoryEntry,
+        VersionHistoryEntry, WrappedResponse, WrappingContext,
     };
     #[cfg(all(feature = "sys", feature = "operator-ops"))]
     pub use crate::sys::{

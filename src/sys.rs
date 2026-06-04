@@ -10,7 +10,7 @@ use reqwest::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
-    de::{Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
+    de::{DeserializeOwned, Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
 use zeroize::Zeroizing;
 
@@ -2346,6 +2346,169 @@ pub struct WrappingLookup {
     /// Wrapping token creation TTL in seconds.
     #[serde(default)]
     pub creation_ttl: u64,
+}
+
+/// Context for requesting response-wrapped OpenBao JSON responses.
+///
+/// Use [`Client::wrapping`](crate::Client::wrapping) to construct this type.
+/// Each request adds `X-Vault-Wrap-TTL` and returns [`WrappedResponse<T>`],
+/// where `T` is the original response shape you would have requested with
+/// [`Client::request_json`](crate::Client::request_json).
+pub struct WrappingContext<'a> {
+    client: &'a Client<Authenticated>,
+    ttl: HeaderValue,
+}
+
+impl<'a> WrappingContext<'a> {
+    pub(crate) fn new(client: &'a Client<Authenticated>, ttl: &str) -> Result<Self> {
+        validate_wrapping_ttl(ttl)?;
+        let ttl =
+            HeaderValue::from_str(ttl).map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        Ok(Self { client, ttl })
+    }
+
+    /// Sends a wrapped JSON request and returns wrapping token metadata.
+    ///
+    /// The returned [`WrappedResponse<T>`] does not contain the inner response
+    /// body. The inner response remains in OpenBao's cubbyhole storage until a
+    /// holder of the single-use wrapping token unwraps it.
+    pub async fn request_json<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+    ) -> Result<WrappedResponse<'a, T>>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_json_accepting(method, path, body, &[StatusCode::OK])
+            .await
+    }
+
+    /// Sends a wrapped JSON request with explicit accepted statuses.
+    pub async fn request_json_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<WrappedResponse<'a, T>>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_json_query_accepting(method, path, &[], body, accepted_statuses)
+            .await
+    }
+
+    /// Sends a wrapped JSON request with validated query parameters.
+    pub async fn request_json_query_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<WrappedResponse<'a, T>>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let headers = [(
+            HeaderName::from_static("x-vault-wrap-ttl"),
+            self.ttl.clone(),
+        )];
+        let envelope: ResponseEnvelope<Option<Empty>> = self
+            .client
+            .request_json_query_headers_accepting(
+                method,
+                path,
+                query,
+                &headers,
+                body,
+                accepted_statuses,
+            )
+            .await?;
+        let wrap_info = envelope.wrap_info.ok_or(Error::MissingField("wrap_info"))?;
+        Ok(WrappedResponse {
+            client: self.client,
+            wrap_info,
+            _response: PhantomData,
+        })
+    }
+}
+
+impl fmt::Debug for WrappingContext<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("WrappingContext")
+            .field("ttl", &"<validated>")
+            .finish_non_exhaustive()
+    }
+}
+
+/// Metadata for a wrapped OpenBao response of type `T`.
+///
+/// The inner response is not stored in this value. Only the single-use
+/// wrapping token metadata is returned, and all token/accessor fields are
+/// redacted by `Debug`.
+pub struct WrappedResponse<'a, T> {
+    client: &'a Client<Authenticated>,
+    wrap_info: WrapInfo,
+    _response: PhantomData<T>,
+}
+
+impl<'a, T> WrappedResponse<'a, T> {
+    /// Returns the wrapping metadata.
+    #[must_use]
+    pub fn wrap_info(&self) -> &WrapInfo {
+        &self.wrap_info
+    }
+
+    /// Returns the single-use wrapping token.
+    #[must_use]
+    pub fn token(&self) -> &SecretString {
+        &self.wrap_info.token
+    }
+
+    /// Returns the wrapping token accessor, when OpenBao returned one.
+    #[must_use]
+    pub fn accessor(&self) -> Option<&SecretString> {
+        self.wrap_info.accessor.as_ref()
+    }
+
+    /// Returns the wrapping token TTL in seconds.
+    #[must_use]
+    pub fn ttl(&self) -> u64 {
+        self.wrap_info.ttl
+    }
+
+    /// Consumes the wrapping token and decodes the original response shape.
+    ///
+    /// This returns the same response shape requested from
+    /// [`WrappingContext::request_json`]. For ordinary OpenBao data endpoints,
+    /// use `T = ResponseEnvelope<MyData>` and then inspect `envelope.data`.
+    pub async fn unwrap(self) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        let payload = WrappingTokenPayload {
+            token: self.wrap_info.token.expose_secret(),
+        };
+        self.client
+            .request_json(Method::POST, "sys/wrapping/unwrap", Some(&payload))
+            .await
+    }
+}
+
+impl<T> fmt::Debug for WrappedResponse<'_, T> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("WrappedResponse")
+            .field("wrap_info", &self.wrap_info)
+            .finish_non_exhaustive()
+    }
 }
 
 /// ACL policy list response.

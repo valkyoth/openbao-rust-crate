@@ -323,6 +323,9 @@ Implemented in `0.8.0`:
 - Runtime-neutral `Sys::wait_until_unsealed_with_delay` plus
   `tokio-helpers`-gated `Sys::wait_until_unsealed` for bounded startup and
   recovery polling.
+- `Client::wrapping`, `WrappingContext`, and `WrappedResponse<T>` for typed
+  response-wrapped JSON requests and typed unwrap of the original response
+  shape.
 - KV v2 historical reads were already covered by `read_version` and
   `read_data_version`.
 
@@ -347,9 +350,8 @@ Finalization work before `1.0.0`:
   without a runtime transport knob, and reject HTTP/3 for stable scope.
 - reject ongoing request-level seal back-pressure as application
   retry-middleware policy.
-- implement typed response-wrapping ergonomics in `0.15.0` with redacted
-  wrapping tokens and typed unwrap; reject per-engine wrapped method
-  duplication.
+- reject per-engine wrapped response method duplication; callers use
+  `Client::wrapping` for generic typed JSON response wrapping.
 - implement selective `0.15.0` AdminBootstrap convergence for PKI mounts/roles,
   database mounts/dynamic and static roles, and SSH mounts/roles; reject PKI CA
   setup, database connection config, SSH CA setup, and KV v1 convergence in the

@@ -10,11 +10,15 @@ All notable changes to this project are documented here.
 - Added the `0.15.0` release gate script and metadata checks.
 - Added runtime-neutral `Sys::wait_until_unsealed_with_delay` and the
   `tokio-helpers`-gated `Sys::wait_until_unsealed` convenience helper.
+- Added `Client::wrapping`, `WrappingContext`, and `WrappedResponse<T>` for
+  typed response-wrapped JSON requests.
 
 ### Security
 
 - Kept seal-status waiting caller-initiated and bounded; request-level
   back-pressure remains an application middleware responsibility.
+- Kept wrapping tokens and accessors as `SecretString` values with redacted
+  `Debug`; token delivery policy remains caller-owned.
 
 ## 0.14.0 - 2026-06-04
 

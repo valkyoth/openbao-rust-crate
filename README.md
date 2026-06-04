@@ -189,7 +189,8 @@ Current `0.15.0` line:
 - `0.15.0`: stable-scope ergonomics and final closure before the stable API
   freeze. Bounded unseal readiness polling is available through
   `wait_until_unsealed_with_delay`, with `wait_until_unsealed` behind the
-  `tokio-helpers` feature. Request-level back-pressure, full OpenTelemetry SDK
+  `tokio-helpers` feature. Typed response wrapping is available through
+  `Client::wrapping`. Request-level back-pressure, full OpenTelemetry SDK
   integration, certificate pinning, KV v1 bootstrap convergence, and ACL
   parameter-constraint HCL generation are rejected for stable scope.
 - `1.0.0`: stable API freeze after the endpoint matrix has zero `planned` or
@@ -1278,6 +1279,40 @@ async fn main() -> Result<()> {
         .await?;
 
     println!("OpenBao {} is unsealed", status.version);
+    Ok(())
+}
+```
+
+Request a typed response-wrapped JSON result:
+
+```rust,no_run
+use openbao::{Client, Method, ResponseEnvelope, Result, SecretString};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct DbCredential {
+    username: String,
+    password: SecretString,
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+
+    let wrapped = client
+        .wrapping("5m")?
+        .request_json::<ResponseEnvelope<DbCredential>, openbao::Empty>(
+            Method::GET,
+            "database/creds/reporting",
+            None,
+        )
+        .await?;
+
+    // Deliver wrapped.token() to the intended recipient. The recipient can
+    // unwrap once; Debug output redacts the token and accessor.
+    let response = wrapped.unwrap().await?;
+    println!("issued credential for {}", response.data.username);
     Ok(())
 }
 ```

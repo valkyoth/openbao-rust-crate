@@ -17,7 +17,8 @@ use std::{
 };
 
 use openbao::{
-    Client, Error, OpenBaoConfig, RetryPolicy, RetryableMethod, sys::DevBootstrapOptions,
+    Client, Error, Method, OpenBaoConfig, ResponseEnvelope, RetryPolicy, RetryableMethod,
+    sys::DevBootstrapOptions,
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
@@ -225,6 +226,78 @@ async fn wait_until_unsealed_uses_seal_status_until_ready() {
 
     assert!(status.initialized);
     assert!(!status.sealed);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/secret/custom HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: test-token"));
+                    assert!(request.contains("x-vault-wrap-ttl: 5m"));
+                    assert!(request.contains(r#""value":"wrap-me""#));
+                    r#"{"data":null,"wrap_info":{"token":"wrap-token","accessor":"wrap-accessor","ttl":300,"creation_time":"2026-06-04T00:00:00Z","creation_path":"secret/custom"}}"#.to_owned()
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/wrapping/unwrap HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: test-token"));
+                    assert!(request.contains(r#""token":"wrap-token""#));
+                    r#"{"data":{"value":"ok"},"lease_duration":0,"renewable":false}"#.to_owned()
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let wrapped = client
+        .wrapping("5m")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .request_json::<ResponseEnvelope<SecretData>, _>(
+            Method::POST,
+            "secret/custom",
+            Some(&WrappedData {
+                value: "wrap-me".to_owned(),
+            }),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(wrapped.ttl(), 300);
+    assert_eq!(wrapped.token().expose_secret(), "wrap-token");
+    let debug = format!("{wrapped:?}");
+    assert!(!debug.contains("wrap-token"));
+    assert!(!debug.contains("wrap-accessor"));
+
+    let envelope = wrapped
+        .unwrap()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(envelope.data.value, "ok");
+
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 

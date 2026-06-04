@@ -885,7 +885,7 @@ impl<State> Client<State> {
         read_response_bytes(response, self.config.max_response_bytes).await
     }
 
-    async fn request_json_query_headers_accepting<T, B>(
+    pub(crate) async fn request_json_query_headers_accepting<T, B>(
         &self,
         method: Method,
         path: &str,
@@ -1097,6 +1097,18 @@ impl<State> Client<State> {
 }
 
 impl Client<Authenticated> {
+    /// Creates a response-wrapping context for JSON requests.
+    ///
+    /// Requests sent through the returned context include `X-Vault-Wrap-TTL`.
+    /// OpenBao stores the original response body in cubbyhole storage and
+    /// returns only single-use wrapping token metadata. This crate does not add
+    /// background delivery, retry, or token forwarding policy; callers decide
+    /// who receives and unwraps the token.
+    #[cfg(feature = "sys")]
+    pub fn wrapping(&self, ttl: &str) -> Result<crate::sys::WrappingContext<'_>> {
+        crate::sys::WrappingContext::new(self, ttl)
+    }
+
     /// Wraps this authenticated client in an [`std::sync::Arc`] for sharing
     /// across async tasks without cloning token material.
     #[must_use]

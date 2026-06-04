@@ -22,11 +22,12 @@ zero `planned` and zero `decision` rows.
 - Added runtime-neutral `Sys::wait_until_unsealed_with_delay` and the
   `tokio-helpers`-gated `Sys::wait_until_unsealed` convenience helper for
   bounded startup and recovery polling.
+- Added `Client::wrapping`, `WrappingContext`, and `WrappedResponse<T>` for
+  typed response-wrapped JSON requests and typed unwrap of the original
+  response shape.
 
 ## Planned Scope
 
-- Typed response-wrapping ergonomics with redacted wrapping tokens and typed
-  unwrap.
 - Selective AdminBootstrap convergence for PKI, database, and SSH mount/role
   workflows.
 - ACL policy-builder wrapping TTL constraints and helper variants.
@@ -39,6 +40,9 @@ zero `planned` and zero `decision` rows.
   and concurrency policy belong to application middleware.
 - Unseal polling is bounded and caller-initiated only; the crate does not
   install background seal polling or delay unrelated requests.
+- Wrapped response metadata keeps wrapping tokens and accessors in
+  `SecretString` and redacts them from `Debug`; delivery and recipient policy
+  remain caller-owned.
 - PKI CA setup, database connection configuration, SSH CA setup, KV v1
   convergence, and ACL parameter-constraint HCL generation remain rejected for
   stable bootstrap/builder scope.
