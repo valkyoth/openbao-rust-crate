@@ -1675,6 +1675,206 @@ impl fmt::Debug for OperatorKeyShareUpdateResponse {
     }
 }
 
+/// Root or recovery token generation progress.
+///
+/// Available only with `operator-ops` and `operator-ops-acknowledged`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct OperatorTokenGenerationStatus {
+    /// Whether an attempt has started.
+    #[serde(default)]
+    pub started: bool,
+    /// Operation nonce.
+    #[serde(default)]
+    pub nonce: Option<String>,
+    /// Current key-share progress.
+    #[serde(default)]
+    pub progress: Option<u64>,
+    /// Required key-share threshold.
+    #[serde(default)]
+    pub required: Option<u64>,
+    /// Encoded root or recovery token, present only when complete.
+    #[serde(default)]
+    pub encoded_token: Option<SecretString>,
+    /// PGP fingerprint when a PGP key was used instead of an OTP.
+    #[serde(default)]
+    pub pgp_fingerprint: Option<String>,
+    /// OTP length when OTP encoding is used.
+    #[serde(default)]
+    pub otp_length: Option<u64>,
+    /// Whether the attempt has completed.
+    #[serde(default)]
+    pub complete: bool,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for OperatorTokenGenerationStatus {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OperatorTokenGenerationStatus")
+            .field("started", &self.started)
+            .field("nonce", &self.nonce)
+            .field("progress", &self.progress)
+            .field("required", &self.required)
+            .field("encoded_token", &"<redacted>")
+            .field("pgp_fingerprint", &self.pgp_fingerprint)
+            .field("otp_length", &self.otp_length)
+            .field("complete", &self.complete)
+            .finish()
+    }
+}
+
+/// Request for starting root or recovery token generation.
+///
+/// The optional PGP key is public material. When omitted, OpenBao returns a
+/// one-time password in the start response. Treat that OTP as sensitive
+/// operator material.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct OperatorTokenGenerationStartRequest {
+    /// Base64-encoded PGP public key used to encrypt the final token.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pgp_key: Option<String>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl OperatorTokenGenerationStartRequest {
+    /// Creates an OTP-based token generation start request.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Creates a PGP-encrypted token generation start request.
+    #[must_use]
+    pub fn with_pgp_key(mut self, pgp_key: impl Into<String>) -> Self {
+        self.pgp_key = Some(pgp_key.into());
+        self
+    }
+}
+
+/// Start response for root or recovery token generation.
+///
+/// The OTP is returned once by OpenBao. Store it in an operator custody system
+/// and never log it.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct OperatorTokenGenerationStart {
+    /// Progress status for the started attempt.
+    #[serde(flatten)]
+    pub status: OperatorTokenGenerationStatus,
+    /// One-time password used to decode the final encoded token.
+    #[serde(default)]
+    pub otp: Option<SecretString>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for OperatorTokenGenerationStart {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OperatorTokenGenerationStart")
+            .field("status", &self.status)
+            .field("otp", &"<redacted>")
+            .finish()
+    }
+}
+
+/// Request for `/sys/decode-token`.
+///
+/// Both fields are sensitive operator ceremony material.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone)]
+pub struct DecodeTokenRequest {
+    /// Encoded token returned by a completed generate-root or
+    /// generate-recovery-token operation.
+    pub encoded_token: SecretString,
+    /// OTP returned when the generation attempt was started.
+    pub otp: SecretString,
+}
+
+#[cfg(feature = "operator-ops")]
+impl DecodeTokenRequest {
+    /// Creates a token decode request.
+    #[must_use]
+    pub fn new(encoded_token: SecretString, otp: SecretString) -> Self {
+        Self { encoded_token, otp }
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for DecodeTokenRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DecodeTokenRequest")
+            .field("encoded_token", &"<redacted>")
+            .field("otp", &"<redacted>")
+            .finish()
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+impl Serialize for DecodeTokenRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        #[derive(Serialize)]
+        struct Payload<'a> {
+            encoded_token: &'a str,
+            otp: &'a str,
+        }
+
+        Payload {
+            encoded_token: self.encoded_token.expose_secret(),
+            otp: self.otp.expose_secret(),
+        }
+        .serialize(serializer)
+    }
+}
+
+/// Decoded root or recovery token returned by `/sys/decode-token`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct DecodeTokenResponse {
+    /// Decoded token. Treat as root- or recovery-level credential material.
+    pub token: SecretString,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for DecodeTokenResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DecodeTokenResponse")
+            .field("token", &"<redacted>")
+            .finish()
+    }
+}
+
+/// PGP-encrypted recovery-key backup returned by legacy recovery rekey.
+///
+/// Available only with `operator-ops` and `operator-ops-acknowledged`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct OperatorRecoveryKeyBackup {
+    /// Operation nonce associated with the backup.
+    #[serde(default)]
+    pub nonce: Option<String>,
+    /// PGP key fingerprint to encrypted share material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_map")]
+    pub keys: BTreeMap<String, SecretString>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for OperatorRecoveryKeyBackup {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OperatorRecoveryKeyBackup")
+            .field("nonce", &self.nonce)
+            .field("keys_count", &self.keys.len())
+            .finish()
+    }
+}
+
 /// Target for authenticated OpenBao v2.4+ key-share rotation endpoints.
 #[cfg(feature = "operator-ops")]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -2150,6 +2350,63 @@ impl PolicyWriteRequest {
     }
 }
 
+/// Password policy list response.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct PasswordPolicyList {
+    /// Password policy names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for PasswordPolicyList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Password policy read response.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct PasswordPolicy {
+    /// Password policy document.
+    ///
+    /// OpenBao accepts the policy language as an opaque document. The SDK does
+    /// not parse or reinterpret it.
+    pub policy: String,
+}
+
+/// Password policy write request.
+#[derive(Clone, Debug, Serialize)]
+pub struct PasswordPolicyWriteRequest {
+    /// Password policy document.
+    pub policy: String,
+}
+
+impl PasswordPolicyWriteRequest {
+    /// Creates a password policy write request.
+    #[must_use]
+    pub fn new(policy: impl Into<String>) -> Self {
+        Self {
+            policy: policy.into(),
+        }
+    }
+}
+
+/// Generated password returned by `/sys/policies/password/:name/generate`.
+#[derive(Clone, Deserialize)]
+pub struct GeneratedPassword {
+    /// Generated password. Treat as credential material.
+    pub password: SecretString,
+}
+
+impl fmt::Debug for GeneratedPassword {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("GeneratedPassword")
+            .field("password", &"<redacted>")
+            .finish()
+    }
+}
+
 /// Capability name returned by OpenBao capability inspection endpoints.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Capability {
@@ -2322,6 +2579,98 @@ pub struct Capabilities {
     #[serde(flatten)]
     pub by_path: BTreeMap<String, Vec<String>>,
 }
+
+/// Capabilities attached to one resultant ACL path.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ResultantAclPath {
+    /// Capability names for the path.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub capabilities: Vec<String>,
+}
+
+impl ResultantAclPath {
+    /// Borrows the capability list as typed helper methods.
+    #[must_use]
+    pub fn capabilities(&self) -> CapabilityView<'_> {
+        CapabilityView {
+            capabilities: &self.capabilities,
+        }
+    }
+}
+
+/// Resultant ACL returned by `/sys/internal/ui/resultant-acl`.
+///
+/// OpenBao documents this as an internal UI endpoint with no backwards
+/// compatibility guarantee. The SDK models only the stable-in-practice path
+/// maps and root flag; new fields are ignored.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ResultantAcl {
+    /// Exact paths keyed by OpenBao path.
+    #[serde(default, deserialize_with = "deserialize_bounded_resultant_acl_map")]
+    pub exact_paths: BTreeMap<String, ResultantAclPath>,
+    /// Glob/prefix paths keyed by OpenBao path.
+    #[serde(default, deserialize_with = "deserialize_bounded_resultant_acl_map")]
+    pub glob_paths: BTreeMap<String, ResultantAclPath>,
+    /// Whether the requesting token has root-level access.
+    #[serde(default)]
+    pub root: bool,
+    /// Namespace root used by UI callers, when returned.
+    #[serde(default)]
+    pub chroot_namespace: Option<String>,
+}
+
+/// In-flight OpenBao request metadata.
+///
+/// Treat this as sensitive operational data: paths, client addresses, and
+/// token accessors can reveal active workloads and secret topology.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct InFlightRequest {
+    /// Request start timestamp.
+    #[serde(default)]
+    pub start_time: Option<String>,
+    /// Client remote address.
+    #[serde(default, alias = "remote_address")]
+    pub client_remote_address: Option<String>,
+    /// Request path.
+    #[serde(default, alias = "path")]
+    pub request_path: Option<String>,
+    /// HTTP method.
+    #[serde(default, alias = "method")]
+    pub request_method: Option<String>,
+    /// Client identifier, when returned.
+    #[serde(default)]
+    pub client_id: Option<String>,
+    /// Token accessor for the active request, when returned by OpenBao.
+    #[serde(default, alias = "client_token_accessor")]
+    pub accessor: Option<SecretString>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for InFlightRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InFlightRequest")
+            .field("start_time", &self.start_time)
+            .field("client_remote_address", &self.client_remote_address)
+            .field("request_path", &self.request_path)
+            .field("request_method", &self.request_method)
+            .field("client_id", &self.client_id)
+            .field("accessor", &"<redacted>")
+            .finish()
+    }
+}
+
+/// In-flight request map keyed by OpenBao request ID.
+///
+/// Available only with `operator-ops` and `operator-ops-acknowledged`.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct InFlightRequests(
+    /// Request metadata keyed by request ID.
+    #[serde(deserialize_with = "deserialize_bounded_in_flight_request_map")]
+    pub BTreeMap<String, InFlightRequest>,
+);
 
 /// Login MFA validation request for `/sys/mfa/validate`.
 #[derive(Clone)]
@@ -2599,6 +2948,86 @@ impl<'de> Visitor<'de> for CapabilitiesVisitor {
             capabilities: capabilities.unwrap_or_default(),
             by_path,
         })
+    }
+}
+
+fn deserialize_bounded_resultant_acl_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, ResultantAclPath>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(BoundedMapVisitor::<
+        ResultantAclPath,
+        { crate::response::MAX_RESPONSE_STRINGS },
+    > {
+        message: "OpenBao resultant ACL map exceeds item limit",
+        _marker: PhantomData,
+    })
+}
+
+#[cfg(feature = "operator-ops")]
+fn deserialize_bounded_secret_string_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(BoundedMapVisitor::<
+        SecretString,
+        { crate::response::MAX_RESPONSE_STRINGS },
+    > {
+        message: "OpenBao secret string map exceeds item limit",
+        _marker: PhantomData,
+    })
+}
+
+#[cfg(feature = "operator-ops")]
+fn deserialize_bounded_in_flight_request_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, InFlightRequest>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(BoundedMapVisitor::<
+        InFlightRequest,
+        { crate::response::MAX_RESPONSE_STRINGS },
+    > {
+        message: "OpenBao in-flight request map exceeds item limit",
+        _marker: PhantomData,
+    })
+}
+
+struct BoundedMapVisitor<T, const MAX: usize> {
+    message: &'static str,
+    _marker: PhantomData<T>,
+}
+
+impl<'de, T, const MAX: usize> Visitor<'de> for BoundedMapVisitor<T, MAX>
+where
+    T: Deserialize<'de>,
+{
+    type Value = BTreeMap<String, T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} OpenBao entries")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, T>()? else {
+                return Ok(values);
+            };
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(self.message));
+        }
+        Ok(values)
     }
 }
 
@@ -3653,6 +4082,306 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Reads generate-root progress from `/sys/generate-root/attempt`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_generate_root_status(&self) -> Result<OperatorTokenGenerationStatus> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/generate-root/attempt",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Starts root token generation through `/sys/generate-root/attempt`.
+    ///
+    /// The returned OTP, when present, is returned only once by OpenBao and
+    /// must be kept as root-level operator ceremony material.
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_generate_root_start(
+        &self,
+        request: &OperatorTokenGenerationStartRequest,
+    ) -> Result<OperatorTokenGenerationStart> {
+        self.client
+            .request_json(Method::POST, "sys/generate-root/attempt", Some(request))
+            .await
+    }
+
+    /// Cancels root token generation through `/sys/generate-root/attempt`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_generate_root_cancel(&self) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::DELETE,
+                "sys/generate-root/attempt",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Submits one key share to root token generation.
+    ///
+    /// The completed response contains an encoded root token that must be
+    /// decoded with [`Sys::operator_decode_token`] and the OTP from the start
+    /// response, unless a PGP key was used.
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_generate_root_update(
+        &self,
+        request: &OperatorKeyShareUpdateRequest,
+    ) -> Result<OperatorTokenGenerationStatus> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/generate-root/update",
+                Some(&OperatorKeyShareUpdatePayload {
+                    key: request.key.expose_secret(),
+                    nonce: &request.nonce,
+                }),
+            )
+            .await
+    }
+
+    /// Reads recovery-token generation progress from
+    /// `/sys/generate-recovery-token/attempt`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_generate_recovery_token_status(
+        &self,
+    ) -> Result<OperatorTokenGenerationStatus> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/generate-recovery-token/attempt",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Starts recovery-token generation through
+    /// `/sys/generate-recovery-token/attempt`.
+    ///
+    /// Recovery tokens are root-level credentials for recovery mode and live
+    /// only in memory until the next OpenBao restart.
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_generate_recovery_token_start(
+        &self,
+        request: &OperatorTokenGenerationStartRequest,
+    ) -> Result<OperatorTokenGenerationStart> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/generate-recovery-token/attempt",
+                Some(request),
+            )
+            .await
+    }
+
+    /// Cancels recovery-token generation through
+    /// `/sys/generate-recovery-token/attempt`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_generate_recovery_token_cancel(&self) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::DELETE,
+                "sys/generate-recovery-token/attempt",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Submits one key share to recovery-token generation.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_generate_recovery_token_update(
+        &self,
+        request: &OperatorKeyShareUpdateRequest,
+    ) -> Result<OperatorTokenGenerationStatus> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/generate-recovery-token/update",
+                Some(&OperatorKeyShareUpdatePayload {
+                    key: request.key.expose_secret(),
+                    nonce: &request.nonce,
+                }),
+            )
+            .await
+    }
+
+    /// Decodes an encoded root or recovery token through `/sys/decode-token`.
+    ///
+    /// The returned token is root- or recovery-level credential material.
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_decode_token(
+        &self,
+        request: &DecodeTokenRequest,
+    ) -> Result<DecodeTokenResponse> {
+        let envelope: ResponseEnvelope<DecodeTokenResponse> = self
+            .client
+            .request_json(Method::POST, "sys/decode-token", Some(request))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads legacy recovery-key rekey status from
+    /// `/sys/rekey-recovery-key/init`.
+    ///
+    /// This legacy unauthenticated endpoint family is deprecated by OpenBao as
+    /// of 2.4. Prefer [`Sys::operator_rotate_status`] with
+    /// [`OperatorRotateTarget::Recovery`] when available.
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_status(&self) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/rekey-recovery-key/init",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Starts legacy recovery-key rekey through `/sys/rekey-recovery-key/init`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_start(
+        &self,
+        request: &OperatorKeySharesRequest,
+    ) -> Result<OperatorKeySharesStatus> {
+        validate_key_share_options(request.secret_shares, request.secret_threshold)?;
+        self.client
+            .request_json(Method::POST, "sys/rekey-recovery-key/init", Some(request))
+            .await
+    }
+
+    /// Cancels legacy recovery-key rekey through `/sys/rekey-recovery-key/init`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_cancel(&self) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::DELETE,
+                "sys/rekey-recovery-key/init",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Submits one current recovery key share to legacy recovery-key rekey.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_update(
+        &self,
+        request: &OperatorKeyShareUpdateRequest,
+    ) -> Result<OperatorKeyShareUpdateResponse> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/rekey-recovery-key/update",
+                Some(&OperatorKeyShareUpdatePayload {
+                    key: request.key.expose_secret(),
+                    nonce: &request.nonce,
+                }),
+            )
+            .await
+    }
+
+    /// Reads legacy recovery-key rekey verification status.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_verify_status(
+        &self,
+    ) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/rekey-recovery-key/verify",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Cancels legacy recovery-key rekey verification.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_verify_cancel(
+        &self,
+    ) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_json(
+                Method::DELETE,
+                "sys/rekey-recovery-key/verify",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Submits one new recovery key share to legacy rekey verification.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_verify_update(
+        &self,
+        request: &OperatorKeyShareUpdateRequest,
+    ) -> Result<OperatorKeyShareUpdateResponse> {
+        self.client
+            .request_json(
+                Method::POST,
+                "sys/rekey-recovery-key/verify",
+                Some(&OperatorKeyShareUpdatePayload {
+                    key: request.key.expose_secret(),
+                    nonce: &request.nonce,
+                }),
+            )
+            .await
+    }
+
+    /// Reads the PGP-encrypted backup from legacy recovery-key rekey.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_backup(&self) -> Result<OperatorRecoveryKeyBackup> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/rekey/recovery-key-backup",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Deletes the PGP-encrypted backup from legacy recovery-key rekey.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_recovery_key_delete_backup(&self) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::DELETE,
+                "sys/rekey/recovery-key-backup",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
     /// Reads one raw storage backend key through `/sys/raw/:path`.
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
@@ -3973,6 +4702,67 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Lists password policies.
+    pub async fn list_password_policies(&self) -> Result<PasswordPolicyList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.client
+            .request_json(method, "sys/policies/password", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads one password policy.
+    pub async fn read_password_policy(&self, name: &str) -> Result<PasswordPolicy> {
+        self.client
+            .request_json(
+                Method::GET,
+                &sys_path("sys/policies/password", name, None)?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Creates or updates a password policy.
+    ///
+    /// OpenBao validates that the policy can generate passwords before saving
+    /// it. The SDK treats the policy body as an opaque document.
+    pub async fn write_password_policy(
+        &self,
+        name: &str,
+        request: &PasswordPolicyWriteRequest,
+    ) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &sys_path("sys/policies/password", name, None)?,
+                Some(request),
+            )
+            .await
+    }
+
+    /// Deletes one password policy.
+    pub async fn delete_password_policy(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_json_accepting(
+                Method::DELETE,
+                &sys_path("sys/policies/password", name, None)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Generates a password from an existing password policy.
+    pub async fn generate_password(&self, name: &str) -> Result<GeneratedPassword> {
+        self.client
+            .request_json(
+                Method::GET,
+                &sys_path("sys/policies/password", name, Some("generate"))?,
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
     /// Queries capabilities for the caller's token.
     pub async fn capabilities_self<I, P>(&self, paths: I) -> Result<Capabilities>
     where
@@ -4032,6 +4822,35 @@ impl Sys<'_, Authenticated> {
             .request_json(Method::POST, "sys/capabilities-accessor", Some(&payload))
             .await?;
         Ok(envelope.data)
+    }
+
+    /// Reads the resultant ACL for the requesting token.
+    ///
+    /// OpenBao documents `/sys/internal/ui/resultant-acl` as an internal UI
+    /// endpoint without a backwards-compatibility guarantee. The SDK models
+    /// the stable-in-practice exact/glob path maps conservatively and ignores
+    /// future fields.
+    pub async fn resultant_acl(&self) -> Result<ResultantAcl> {
+        self.client
+            .request_json(
+                Method::GET,
+                "sys/internal/ui/resultant-acl",
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads currently in-flight OpenBao request metadata.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This diagnostic endpoint can reveal active request paths, remote
+    /// addresses, and token accessors. Treat the response as sensitive
+    /// operational data.
+    #[cfg(feature = "operator-ops")]
+    pub async fn in_flight_requests(&self) -> Result<InFlightRequests> {
+        self.client
+            .request_json(Method::GET, "sys/in-flight-req", Option::<&Empty>::None)
+            .await
     }
 
     /// Validates a login MFA request and returns the resulting auth token.
@@ -6160,20 +6979,25 @@ mod tests {
 
     use super::{
         AuditEnableRequest, AuditedRequestHeaders, AuthEnableRequest, Capabilities, Capability,
-        CorsConfig, CorsConfigRequest, HaStatus, LeaseDuration, LockedUsers, LoggerLevel,
-        MfaValidateAuth, MfaValidateRequest, MountEnableRequest, NamespaceList, NamespaceRequest,
-        PolicyList, PolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
-        RaftPeerRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
-        RemountRequest, SysHashAlgorithm, SysHashRequest, SysRandomRequest, SysRandomResponse,
-        SysRandomSource, UiMounts, UiNamespaces, VersionHistory, audited_request_header_path,
-        internal_ui_mount_path, locked_user_unlock_path, namespace_path, rate_limit_quota_path,
-        remount_status_path, sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
+        CorsConfig, CorsConfigRequest, GeneratedPassword, HaStatus, LeaseDuration, LockedUsers,
+        LoggerLevel, MfaValidateAuth, MfaValidateRequest, MountEnableRequest, NamespaceList,
+        NamespaceRequest, PolicyList, PolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration,
+        RaftJoinRequest, RaftPeerRequest, RateLimitQuotaConfig, RateLimitQuotaList,
+        RateLimitQuotaRequest, RemountRequest, ResultantAcl, SysHashAlgorithm, SysHashRequest,
+        SysRandomRequest, SysRandomResponse, SysRandomSource, UiMounts, UiNamespaces,
+        VersionHistory, audited_request_header_path, internal_ui_mount_path,
+        locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
+        sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
         validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
         validate_raft_server_id, validate_raft_snapshot, validate_rate_limit_quota_config,
         validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
-    use super::{OperatorInitResponse, OperatorKeyShareUpdateResponse, OperatorKeySharesRequest};
+    use super::{
+        DecodeTokenRequest, DecodeTokenResponse, InFlightRequests, OperatorInitResponse,
+        OperatorKeyShareUpdateResponse, OperatorKeySharesRequest, OperatorRecoveryKeyBackup,
+        OperatorTokenGenerationStart, OperatorTokenGenerationStatus,
+    };
     #[cfg(feature = "operator-ops")]
     use super::{
         PprofOptions, PprofProfile, RawCompression, RawEncoding, RawList, RawReadOptions,
@@ -6356,6 +7180,134 @@ mod tests {
                 ("secret/data/app".to_owned(), 3),
                 ("secret/data/blocked".to_owned(), 1)
             ]
+        );
+    }
+
+    #[test]
+    fn password_and_resultant_acl_responses_are_bounded_and_redacted() {
+        let generated = GeneratedPassword {
+            password: SecretString::from("generated-password"),
+        };
+        let debug = format!("{generated:?}");
+        assert!(!debug.contains("generated-password"));
+
+        let acl = serde_json::from_value::<ResultantAcl>(serde_json::json!({
+            "root": false,
+            "exact_paths": {
+                "secret/data/app": { "capabilities": ["read", "update"] }
+            },
+            "glob_paths": {
+                "secret/metadata/app/": { "capabilities": ["list"] }
+            }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(acl.exact_paths["secret/data/app"].capabilities().can_read());
+        assert!(
+            acl.glob_paths["secret/metadata/app/"]
+                .capabilities()
+                .can_list()
+        );
+
+        let mut overflow = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            overflow.insert(
+                format!("secret/data/{index}"),
+                serde_json::json!({ "capabilities": ["read"] }),
+            );
+        }
+        let error = match serde_json::from_value::<ResultantAcl>(serde_json::json!({
+            "exact_paths": overflow
+        })) {
+            Ok(_) => panic!("oversized resultant ACL unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(
+            error
+                .to_string()
+                .contains("OpenBao resultant ACL map exceeds item limit")
+        );
+    }
+
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn operator_token_and_in_flight_responses_redact_secrets_and_bound_maps() {
+        let status = OperatorTokenGenerationStatus {
+            started: true,
+            nonce: Some(["nonce-", "unit"].concat()),
+            progress: Some(1),
+            required: Some(1),
+            encoded_token: Some(SecretString::from("encoded-root-token")),
+            pgp_fingerprint: None,
+            otp_length: Some(24),
+            complete: true,
+        };
+        let debug = format!("{status:?}");
+        assert!(!debug.contains("encoded-root-token"));
+
+        let start = OperatorTokenGenerationStart {
+            status,
+            otp: Some(SecretString::from("otp-secret")),
+        };
+        let debug = format!("{start:?}");
+        assert!(!debug.contains("otp-secret"));
+
+        let decode_request = DecodeTokenRequest::new(
+            SecretString::from("encoded-root-token"),
+            SecretString::from("otp-secret"),
+        );
+        let debug = format!("{decode_request:?}");
+        assert!(!debug.contains("encoded-root-token"));
+        assert!(!debug.contains("otp-secret"));
+
+        let decoded = DecodeTokenResponse {
+            token: SecretString::from("root-token"),
+        };
+        assert!(!format!("{decoded:?}").contains("root-token"));
+
+        let backup = serde_json::from_value::<OperatorRecoveryKeyBackup>(serde_json::json!({
+            "nonce": "backup-nonce",
+            "keys": { "fingerprint": "encrypted-share" }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            backup.keys["fingerprint"].expose_secret(),
+            "encrypted-share"
+        );
+        assert!(!format!("{backup:?}").contains("encrypted-share"));
+
+        let requests = serde_json::from_value::<InFlightRequests>(serde_json::json!({
+            "request-id": {
+                "start_time": "2026-06-04T12:00:00Z",
+                "client_remote_address": "127.0.0.1:9940",
+                "request_path": "/v1/secret/data/app",
+                "request_method": "GET",
+                "client_token_accessor": "token-accessor"
+            }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        let request = &requests.0["request-id"];
+        assert_eq!(
+            request.accessor.as_ref().map(SecretString::expose_secret),
+            Some("token-accessor")
+        );
+        assert!(!format!("{request:?}").contains("token-accessor"));
+
+        let mut overflow = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            overflow.insert(
+                format!("request-{index}"),
+                serde_json::json!({ "request_method": "GET" }),
+            );
+        }
+        let error =
+            match serde_json::from_value::<InFlightRequests>(serde_json::Value::Object(overflow)) {
+                Ok(_) => panic!("oversized in-flight request map unexpectedly decoded"),
+                Err(error) => error,
+            };
+        assert!(
+            error
+                .to_string()
+                .contains("OpenBao in-flight request map exceeds item limit")
         );
     }
 

@@ -69,15 +69,15 @@ Sources:
 
 ## Endpoint Matrix
 
-The `0.13.0` release line uses a mechanical endpoint matrix instead
+The `0.14.0` release line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `572/643` (`89.0%`);
-- typed plus partial coverage: `573/643` (`89.1%`);
-- addressed by typed, partial, raw, external, or rejected policy: `619/643`
-  (`96.3%`);
-- planned implementation rows before `1.0.0`: `25`;
+- strict typed coverage: `597/643` (`92.8%`);
+- typed plus partial coverage: `598/643` (`93.0%`);
+- addressed by typed, partial, raw, external, or rejected policy: `643/643`
+  (`100.0%`);
+- planned implementation rows before `1.0.0`: `0`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -299,12 +299,12 @@ Support plan:
   helpers and pprof diagnostic byte helpers are implemented behind explicit
   operator-operation feature gates. Lease prefix revoke, force prefix revoke,
   lease count, lease tidy, and `RenewalHint` timing helpers are implemented.
-  CORS wildcard origins are rejected locally. System config UI, streaming
-  monitor, internal router inspection, internal counters, and internal request
-  inspection are rejected for stable scope. Generate-root/recovery-token,
-  decode-token, password policies, resultant ACL, legacy recovery-key rekey,
-  and typed operator-gated in-flight request inspection are planned for
-  `0.14.0`.
+  CORS wildcard origins are rejected locally. Password policies, resultant ACL,
+  operator-gated generate-root/recovery-token, decode-token, legacy
+  recovery-key rekey, and typed operator-gated in-flight request inspection are
+  implemented in `0.14.0`. System config UI, streaming monitor, internal router
+  inspection, internal counters, and internal request inspection are rejected
+  for stable scope.
 
 ## Ergonomics And Capability Roadmap
 

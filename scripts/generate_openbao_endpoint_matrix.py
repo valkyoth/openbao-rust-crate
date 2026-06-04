@@ -340,24 +340,31 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
             )
         pki_0_13_paths = {
             "/pki/issuer/:issuer_ref/sign-intermediate",
-            "/pki/root/sign-self-issued",
-            "/pki/issuer/:issuer_ref/sign-self-issued",
             "/certs/revoked",
             "/certs/revocation-queue",
             "/pki/certs/detailed?detailed=true",
             "/pki/issuer/:issuer_ref/resign-crls",
-            "/pki/issuer/:issuer_ref/sign-revocation-list",
             "/pki/crl/rotate-delta",
             "/pki/cel/roles",
             "/pki/cel/roles/:name",
             "/pki/cel/issue/:name",
             "/pki/cel/sign/:name",
-            "/pki/intermediate/cross-sign",
         }
         if path in pki_0_13_paths:
             return (
-                "planned",
-                "Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage.",
+                "typed",
+                "Typed PKI specialized revocation, CEL, named-issuer hierarchy, or delta-CRL helper exists.",
+            )
+        pki_0_13_gated_paths = {
+            "/pki/root/sign-self-issued",
+            "/pki/issuer/:issuer_ref/sign-self-issued",
+            "/pki/issuer/:issuer_ref/sign-revocation-list",
+            "/pki/intermediate/cross-sign",
+        }
+        if path in pki_0_13_gated_paths:
+            return (
+                "typed-gated",
+                "Typed PKI high-risk hierarchy or revocation-list helper exists behind operator-operation gates.",
             )
         return (
             "decision",
@@ -405,26 +412,26 @@ def classify_system(page: str, path: str) -> tuple[str, str]:
         "/api-docs/system/rekey-recovery-key/",
     ):
         return (
-            "planned",
-            "Implement in 0.14.0 behind operator-ops plus operator-ops-acknowledged as an operator ceremony endpoint.",
+            "typed-gated",
+            "Typed operator ceremony helper exists behind operator-ops plus operator-ops-acknowledged.",
         )
 
     if page == "/api-docs/system/policies-password/":
         return (
-            "planned",
-            "Implement in 0.14.0 without a feature gate; password policies are standard configuration automation and generated passwords return SecretString.",
+            "typed",
+            "Typed password policy helpers exist; generated passwords return SecretString.",
         )
 
     if page == "/api-docs/system/internal-ui-resultant-acl/":
         return (
-            "planned",
-            "Implement in 0.14.0 with an internal-endpoint stability caveat and conservative capability maps.",
+            "typed",
+            "Typed resultant ACL helper exists with an internal-endpoint stability caveat and conservative capability maps.",
         )
 
     if "in-flight-req" in page:
         return (
-            "planned",
-            "Implement in 0.14.0 as a typed operator-gated diagnostic helper; client token accessors are SecretString and the response map is bounded.",
+            "typed-gated",
+            "Typed operator-gated diagnostic helper exists; client token accessors are SecretString and the response map is bounded.",
         )
 
     if "internal-counters" in page:
@@ -605,8 +612,8 @@ def write_markdown(endpoints: list[Endpoint]) -> None:
             "- Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.",
             "- `sys/mfa/validate` is implemented in `0.10.0` because MFA-enforced login flows cannot complete without it.",
             "- Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are implemented in `0.11.0`; the optional `transit-import` wrapping helper prepares OpenBao BYOK blobs with AES-KWP/RSA-OAEP behind feature-gated `openssl` and `aes-kw` dependencies.",
-            "- PKI default issuer/key config, named-issuer issue/sign, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, revoke-with-key, cluster config, auto-tidy config, operator-gated sign-verbatim rows, and current-doc struct-field expansion are implemented in `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.",
-            "- System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are planned for `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.",
+            "- PKI default issuer/key config, named-issuer issue/sign, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, revoke-with-key, cluster config, auto-tidy config, operator-gated sign-verbatim rows, and current-doc struct-field expansion are implemented in `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is implemented in `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.",
+            "- System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are implemented in `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.",
             "- `0.15.0` is the closure release where planned endpoint rows are implemented or intentionally reclassified before `1.0.0`.",
             "",
             "Regenerate with:",

@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here.
 
+## 0.14.0 - Unreleased
+
+### Added
+
+- Started the `0.14.0` system backend completion line.
+- Added operator-gated generate-root, generate-recovery-token, decode-token,
+  and legacy recovery-key rekey helpers with secret-aware OTP, encoded-token,
+  key-share, and decoded-token handling.
+- Added operator-gated in-flight request inspection with bounded response maps
+  and redacted token accessors.
+- Added password policy list/read/write/delete/generate helpers. Generated
+  passwords are returned as `SecretString`.
+- Added resultant ACL inspection with conservative capability maps and an
+  internal-endpoint stability caveat.
+- Updated the OpenBao `2.5.x` endpoint matrix to record zero `planned` and
+  zero `decision` rows after the system backend pass.
+- Added the `0.14.0` release gate script and metadata checks.
+
 ## 0.13.0 - 2026-06-04
 
 ### Added
@@ -173,7 +191,8 @@ All notable changes to this project are documented here.
   root lifecycle, sign-verbatim, revoke-with-key, and current-doc struct-field
   completion were assigned to `0.12.0` and are now implemented in the
   `0.12.0` line; Tier 2 revocation/CRL management, CEL, named-issuer
-  hierarchy, delta-CRL, and cross-sign rows are planned for `0.13.0`;
+  hierarchy, delta-CRL, and cross-sign rows were assigned to and later
+  implemented in `0.13.0`;
   unauthenticated public CA/CRL/cert and OCSP protocol reads are external
   boundaries.
 - Recorded the Transit import/BYOK boundary: wrapping-key, import and
@@ -213,7 +232,8 @@ All notable changes to this project are documented here.
   inspection, internal counters, and internal request inspection are rejected
   for stable scope; root/recovery token ceremonies, decode-token, password
   policies, resultant ACL, legacy recovery-key rekey, and typed operator-gated
-  in-flight request inspection are planned for `0.14.0`.
+  in-flight request inspection were assigned to and later implemented in
+  `0.14.0`.
 - Recorded the `0.15.0` stable-scope ergonomics decisions: bounded
   `wait_until_unsealed` polling, typed response-wrapping ergonomics, selective
   PKI/database/SSH bootstrap convergence, and ACL wrapping-TTL policy builder

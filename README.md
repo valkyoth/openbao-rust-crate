@@ -37,8 +37,8 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.13.0` API. `0.13.0` builds on the `0.12.0` API
-with PKI specialized-flow coverage.
+This README documents the in-development `0.14.0` API. `0.14.0` builds on the
+`0.13.0` API with system backend completion work.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -98,8 +98,8 @@ Implemented now:
   and optional raw-byte helpers.
 - System health, readiness polling, seal status, leader status, OpenAPI
   discovery, JSON metrics, runtime logger level, version history, namespace
-  management, rate-limit quota management, and loopback-only dev bootstrap
-  helpers.
+  management, rate-limit quota management, password policies, resultant ACL
+  inspection, and loopback-only dev bootstrap helpers.
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
 - ACL policy list, read, write, delete, and prefix list helpers.
@@ -117,7 +117,8 @@ Implemented now:
 - Plugin catalog list, type-list, register, read, delete, and backend reload
   helpers.
 - Explicitly gated production init, unseal, seal, rekey, key-share rotation,
-  and keyring rotation operator APIs.
+  keyring rotation, root/recovery-token generation, decode-token, legacy
+  recovery-key rekey, and in-flight request inspection operator APIs.
 - Environment-based client construction from common OpenBao/Vault variables.
 - Shared authenticated client and Rust `Duration` to OpenBao duration string
   helpers for async application ergonomics.
@@ -170,16 +171,24 @@ Delivered in `0.12.0`:
   generation, sign-verbatim operator helpers, revoke-with-key, cluster and
   auto-tidy config, and current-doc PKI struct-field expansion.
 
+Delivered in `0.13.0`:
+
+- PKI specialized flows, including revocation/CRL management, CEL roles and
+  issue/sign, named-issuer hierarchy signing, delta-CRL rotation, and
+  operator-gated cross-certification helpers.
+
+Current `0.14.0` line:
+
+- System backend completion: operator-gated generate-root,
+  generate-recovery-token, decode-token, legacy recovery-key rekey, and
+  in-flight request inspection, plus password policy and resultant ACL helpers.
+
 Planned next:
 
-- Current `0.13.0` line: PKI specialized flows, including revocation/CRL
-  management, CEL roles and issue/sign, named-issuer hierarchy signing,
-  delta-CRL rotation, and operator-gated cross-certification helpers.
-- `0.14.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
-  remaining system backend rows, then final endpoint closure and stable
-  ergonomics. Request-level back-pressure, full OpenTelemetry SDK integration,
-  certificate pinning, KV v1 bootstrap convergence, and ACL
-  parameter-constraint HCL generation are rejected for stable scope.
+- `0.15.0`: stable-scope ergonomics and final closure before the stable API
+  freeze. Request-level back-pressure, full OpenTelemetry SDK integration,
+  certificate pinning, KV v1 bootstrap convergence, and ACL parameter-constraint
+  HCL generation are rejected for stable scope.
 - `1.0.0`: stable API freeze after the endpoint matrix has zero `planned` or
   `decision` rows; after `1.0.0`, only `1.0.x` maintenance and security fixes
   are planned.
@@ -216,7 +225,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.13.0` release line tracks compatibility evidence across this supported
+The `0.14.0` release line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -233,7 +242,7 @@ range:
 
 ```toml
 [dependencies]
-openbao = "0.12"
+openbao = "0.14"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
 ```
@@ -249,7 +258,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.12", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.14", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -257,7 +266,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.12", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.14", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 Optional RFC3339 timestamp parsing is available behind the lightweight `time`
@@ -265,7 +274,7 @@ feature:
 
 ```toml
 [dependencies]
-openbao = { version = "0.12", features = ["time"] }
+openbao = { version = "0.14", features = ["time"] }
 ```
 
 ## Features
@@ -311,8 +320,10 @@ openbao = { version = "0.12", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the current `0.13.0` line it records `643` documented endpoint rows, with
-`572/643` (`89.0%`) strict typed or operator-gated coverage.
+For the current `0.14.0` line it records `643` documented endpoint rows, with
+`597/643` (`92.8%`) strict typed or operator-gated coverage. All rows are now
+addressed by typed, operator-gated, partial, external, or rejected policy, with
+zero `planned` and zero `decision` rows.
 
 ### Client, Transport, And TLS
 
@@ -405,7 +416,7 @@ For the current `0.13.0` line it records `643` documented endpoint rows, with
 | Dev bootstrap | Yes | Fresh numeric-loopback dev instances only; not for production or HSM/KMS deployments. |
 | Mount management | Yes | Secret and auth mount enable/list/read/tune/disable helpers. |
 | Response wrapping | Yes | Lookup, wrap, unwrap, and rewrap helpers. |
-| Policies and capabilities | Yes | ACL policy read/write/list/delete, bounded policy builder helpers, self/token/accessor capability checks, and typed capability views. |
+| Policies and capabilities | Yes | ACL policy read/write/list/delete, password policy list/read/write/delete/generate, bounded policy builder helpers, self/token/accessor capability checks, resultant ACL inspection, and typed capability views. |
 | MFA validation | Yes | Typed `/sys/mfa/validate` helper for MFA-enforced login flows with secret-aware passcodes, returned tokens, and accessors. |
 | Admin bootstrap | Yes | Idempotent plan builder, read-only preview, mounts, Transit keys, ACL policies, KV v2 string values, auth methods, AppRole roles, explicit token issuance, and explicit AppRole SecretID issuance. |
 | FIPS posture helper | Advisory | Best-effort report for crate-visible Transit choices and deployment assumptions. Does not certify OpenBao or the deployment. |
@@ -413,8 +424,8 @@ For the current `0.13.0` line it records `643` documented endpoint rows, with
 | Audit devices | Yes | Enable, list, disable, and audit hash helpers. |
 | Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, count, tidy, and `RenewalHint` timing helpers for caller-owned renewal loops. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
-| Production init, unseal, rekey, rotate, PKI root deletion | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. PKI root deletion also requires `PkiRootDeletion::confirm()` at the call site. |
-| Remaining system rows | Partial | Password policies, root/recovery token ceremonies, resultant ACL, and legacy recovery-key rekey are planned before `1.0.0`; config-ui, monitor streaming, and internal router inspection are rejected for stable scope. |
+| Production init, unseal, rekey, rotate, token ceremonies, in-flight diagnostics, PKI root deletion | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. PKI root deletion also requires `PkiRootDeletion::confirm()` at the call site. |
+| System backend closure | Yes | Password policies, root/recovery token ceremonies, decode-token, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are implemented; config-ui, monitor streaming, internal router/request inspection, and internal counters are rejected for stable scope. |
 
 ## Examples
 
