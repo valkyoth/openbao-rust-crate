@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## 0.13.0 - Unreleased
+
+### Added
+
+- Started the `0.13.0` PKI specialized-flow line.
+
 ## 0.12.0 - 2026-06-04
 
 ### Added

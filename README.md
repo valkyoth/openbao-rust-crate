@@ -37,8 +37,8 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the released `0.12.0` API. `0.12.0` builds on the
-`0.11.0` API with PKI Tier 1 multi-issuer and authority lifecycle coverage.
+This README documents the in-development `0.13.0` API. `0.13.0` builds on the
+`0.12.0` API with PKI specialized-flow coverage.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -163,7 +163,7 @@ Delivered in `0.11.0`:
   outside the default wrapper APIs. The non-default `transit-import` feature
   adds a software AES-KWP/RSA-OAEP wrapping helper.
 
-Current `0.12.0` line:
+Delivered in `0.12.0`:
 
 - PKI Tier 1 multi-issuer and authority lifecycle work: default issuer/key
   config, named-issuer issue/sign, root rotate/replace, standalone key
@@ -172,12 +172,14 @@ Current `0.12.0` line:
 
 Planned next:
 
-- `0.13.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
-  PKI specialized flows, remaining system backend rows, then
-  final endpoint closure and stable ergonomics. Request-level back-pressure,
-  full OpenTelemetry SDK integration, certificate pinning, KV v1 bootstrap
-  convergence, and ACL parameter-constraint HCL generation are rejected for
-  stable scope.
+- Current `0.13.0` line: PKI specialized flows, including revocation/CRL
+  management, CEL roles and issue/sign, named-issuer hierarchy signing,
+  delta-CRL rotation, and cross-signing.
+- `0.14.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
+  remaining system backend rows, then final endpoint closure and stable
+  ergonomics. Request-level back-pressure, full OpenTelemetry SDK integration,
+  certificate pinning, KV v1 bootstrap convergence, and ACL
+  parameter-constraint HCL generation are rejected for stable scope.
 - `1.0.0`: stable API freeze after the endpoint matrix has zero `planned` or
   `decision` rows; after `1.0.0`, only `1.0.x` maintenance and security fixes
   are planned.
@@ -214,7 +216,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.12.0` release line tracks compatibility evidence across this supported
+The `0.13.0` release line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -309,7 +311,7 @@ openbao = { version = "0.12", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the current `0.12.0` line it records `643` documented endpoint rows, with
+For the current `0.13.0` line it records `643` documented endpoint rows, with
 `555/643` (`86.3%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS
