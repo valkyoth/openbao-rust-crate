@@ -671,6 +671,15 @@ impl TransitWrappedImportKey {
     /// AES-KWP, wrap the ephemeral AES key with the 4096-bit Transit RSA
     /// wrapping key using RSA-OAEP, concatenate the two binary blobs, and
     /// base64 encode the result.
+    ///
+    /// # Security residual
+    ///
+    /// The ephemeral AES key is passed to OpenSSL's RSA-OAEP encrypt path,
+    /// which may copy it into OpenSSL-managed heap memory outside Rust's
+    /// allocator. That copy is outside this crate's `zeroize` control. For
+    /// FIPS-validated or hardware-security-boundary deployments, perform key
+    /// wrapping inside an HSM or other audited boundary instead of using this
+    /// software helper.
     pub fn wrap_key_material(
         wrapping_key_pem: &str,
         key_material: Zeroizing<Vec<u8>>,
@@ -685,6 +694,15 @@ impl TransitWrappedImportKey {
     /// This variant exists for tests and deployments that inject a reviewed
     /// cryptographic RNG. Production callers that do not need custom RNG
     /// policy should use [`TransitWrappedImportKey::wrap_key_material`].
+    ///
+    /// # Security residual
+    ///
+    /// The ephemeral AES key is passed to OpenSSL's RSA-OAEP encrypt path,
+    /// which may copy it into OpenSSL-managed heap memory outside Rust's
+    /// allocator. That copy is outside this crate's `zeroize` control. For
+    /// FIPS-validated or hardware-security-boundary deployments, perform key
+    /// wrapping inside an HSM or other audited boundary instead of using this
+    /// software helper.
     pub fn wrap_key_material_with_rng<R>(
         rng: &mut R,
         wrapping_key_pem: &str,

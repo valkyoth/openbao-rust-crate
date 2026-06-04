@@ -22,6 +22,16 @@ All notable changes to this project are documented here.
   zero `decision` rows after the system backend pass.
 - Added the `0.14.0` release gate script and metadata checks.
 
+### Security
+
+- Made retry jitter timestamp conversion explicitly saturating instead of using
+  a silent narrowing cast.
+- Hardened CORS origin validation to reject wildcard, `null`, non-HTTPS, and
+  non-origin URL values before dispatching config writes.
+- Added lease count query validation, a Raft snapshot request-size cap,
+  statically constrained Raft peer operation path construction, and explicit
+  Transit import software-wrapping residual-risk docs.
+
 ## 0.13.0 - 2026-06-04
 
 ### Added

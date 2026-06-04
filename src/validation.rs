@@ -24,7 +24,7 @@ pub(crate) fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
 
     let bytes = value.as_bytes();
     let mut index = 0;
-    let mut last_unit_order = None;
+    let mut last_unit_scale = None;
     while index < bytes.len() {
         let digit_start = index;
         while index < bytes.len() && bytes[index].is_ascii_digit() {
@@ -46,16 +46,16 @@ pub(crate) fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
         if index >= bytes.len() {
             return false;
         }
-        let unit_order = match bytes[index] {
+        let unit_scale = match bytes[index] {
             b'h' => 0,
             b'm' => 1,
             b's' => 2,
             _ => return false,
         };
-        if last_unit_order.is_some_and(|previous| unit_order <= previous) {
+        if last_unit_scale.is_some_and(|previous| unit_scale <= previous) {
             return false;
         }
-        last_unit_order = Some(unit_order);
+        last_unit_scale = Some(unit_scale);
         index += 1;
     }
     true

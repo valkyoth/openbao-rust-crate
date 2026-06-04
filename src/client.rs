@@ -247,7 +247,7 @@ fn retry_jitter_seed(retry_index: usize) -> u64 {
     let counter = RETRY_JITTER_COUNTER.fetch_add(1, Ordering::Relaxed);
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos() as u64)
+        .map(|duration| u64::try_from(duration.as_nanos()).unwrap_or(u64::MAX))
         .unwrap_or(0);
     nanos ^ counter.rotate_left(17) ^ (retry_index as u64).rotate_left(31)
 }

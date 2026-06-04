@@ -44,6 +44,12 @@ and resultant ACL helpers.
   and redacted from `Debug`.
 - Internal endpoints that are kept for practical automation must carry explicit
   stability caveats.
+- Pentest follow-up hardened retry jitter conversion, CORS origin validation,
+  lease count query validation, Raft snapshot request bounds, and Raft peer path
+  construction. The local `PENTEST.md` report was deleted before commit.
+- Transit import software wrapping docs now call out the OpenSSL-managed heap
+  residual for the ephemeral AES key; HSM or audited-boundary wrapping remains
+  the recommended path for high-assurance deployments.
 
 ## Security And Stability Gate
 

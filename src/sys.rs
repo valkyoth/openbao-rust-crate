@@ -26,6 +26,7 @@ use crate::{
 };
 
 const MAX_SYS_RANDOM_BYTES: u64 = 1_048_576;
+const MAX_RAFT_SNAPSHOT_BYTES: usize = 256 * 1024 * 1024;
 #[cfg(feature = "operator-ops")]
 const MAX_SYS_PPROF_SECONDS: u16 = 300;
 
@@ -891,6 +892,19 @@ impl RateLimitQuotaConfig {
         self.rate_limit_exempt_paths.push(path.into());
         self
     }
+
+    /// Adds one exempt path after validating it.
+    pub fn try_with_exempt_path(mut self, path: impl Into<String>) -> Result<Self> {
+        let path = path.into();
+        if path.trim_matches('/').is_empty() {
+            return Err(Error::InvalidPath(
+                "rate limit exempt path must not be empty".into(),
+            ));
+        }
+        let _validated = validate_endpoint_path(&path)?;
+        self.rate_limit_exempt_paths.push(path);
+        Ok(self)
+    }
 }
 
 /// Locked users grouped by namespace.
@@ -1170,11 +1184,36 @@ impl RaftAutopilotConfig {
         self
     }
 
+    /// Sets the last-contact threshold after validating it.
+    pub fn try_with_last_contact_threshold(mut self, threshold: impl Into<String>) -> Result<Self> {
+        let threshold = threshold.into();
+        crate::validation::validate_duration_parameter(
+            &threshold,
+            "raft autopilot last_contact_threshold",
+        )?;
+        self.last_contact_threshold = Some(threshold);
+        Ok(self)
+    }
+
     /// Sets the server stabilization time.
     #[must_use]
     pub fn with_server_stabilization_time(mut self, duration: impl Into<String>) -> Self {
         self.server_stabilization_time = Some(duration.into());
         self
+    }
+
+    /// Sets the server stabilization time after validating it.
+    pub fn try_with_server_stabilization_time(
+        mut self,
+        duration: impl Into<String>,
+    ) -> Result<Self> {
+        let duration = duration.into();
+        crate::validation::validate_duration_parameter(
+            &duration,
+            "raft autopilot server_stabilization_time",
+        )?;
+        self.server_stabilization_time = Some(duration);
+        Ok(self)
     }
 
     fn validate(&self) -> Result<()> {
@@ -1344,6 +1383,14 @@ impl RateLimitQuotaRequest {
         self
     }
 
+    /// Sets the quota path or namespace after validating it.
+    pub fn try_with_path(mut self, path: impl Into<String>) -> Result<Self> {
+        let path = path.into();
+        let _validated = validate_endpoint_path(&path)?;
+        self.path = Some(path);
+        Ok(self)
+    }
+
     /// Sets the positive rate-limit interval.
     #[must_use]
     pub fn with_interval(mut self, interval: impl Into<String>) -> Self {
@@ -1351,11 +1398,30 @@ impl RateLimitQuotaRequest {
         self
     }
 
+    /// Sets the positive rate-limit interval after validating it.
+    pub fn try_with_interval(mut self, interval: impl Into<String>) -> Result<Self> {
+        let interval = interval.into();
+        crate::validation::validate_duration_parameter(&interval, "rate limit interval")?;
+        self.interval = Some(interval);
+        Ok(self)
+    }
+
     /// Sets the positive blocking interval.
     #[must_use]
     pub fn with_block_interval(mut self, block_interval: impl Into<String>) -> Self {
         self.block_interval = Some(block_interval.into());
         self
+    }
+
+    /// Sets the positive blocking interval after validating it.
+    pub fn try_with_block_interval(mut self, block_interval: impl Into<String>) -> Result<Self> {
+        let block_interval = block_interval.into();
+        crate::validation::validate_duration_parameter(
+            &block_interval,
+            "rate limit block_interval",
+        )?;
+        self.block_interval = Some(block_interval);
+        Ok(self)
     }
 
     /// Sets the auth role restriction.
@@ -2516,6 +2582,15 @@ impl<'a> CapabilityView<'a> {
         self.contains_name(Capability::Deny.as_str())
     }
 
+    /// Returns true when this list contains at least one effective capability.
+    ///
+    /// Empty lists and explicit `deny` responses are not permitted. A `root`
+    /// capability is considered permitted.
+    #[must_use]
+    pub fn is_permitted(self) -> bool {
+        !self.capabilities.is_empty() && !self.is_denied()
+    }
+
     /// Returns true when the capability list allows create.
     #[must_use]
     pub fn can_create(self) -> bool {
@@ -2858,6 +2933,13 @@ impl Capabilities {
         CapabilityView {
             capabilities: &self.capabilities,
         }
+    }
+
+    /// Returns true when the single-path compatibility list has any effective
+    /// capability.
+    #[must_use]
+    pub fn is_permitted(&self) -> bool {
+        self.single_path().is_permitted()
     }
 
     /// Returns capabilities for one queried path.
@@ -3425,6 +3507,23 @@ struct RaftPeerPayload<'a> {
     server_id: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     dr_operation_token: Option<&'a str>,
+}
+
+#[derive(Clone, Copy)]
+enum RaftPeerOperation {
+    Remove,
+    Promote,
+    Demote,
+}
+
+impl RaftPeerOperation {
+    const fn as_path_segment(self) -> &'static str {
+        match self {
+            Self::Remove => "remove-peer",
+            Self::Promote => "promote",
+            Self::Demote => "demote",
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -5090,9 +5189,13 @@ impl Sys<'_, Authenticated> {
 
     /// Counts active leases, optionally filtered by OpenBao lease type.
     pub async fn count_leases(&self, lease_type: Option<&str>) -> Result<LeaseCount> {
-        let query = lease_type
-            .map(|lease_type| vec![("type", lease_type.to_owned())])
-            .unwrap_or_default();
+        let query = match lease_type {
+            Some(lease_type) => {
+                validate_query_string_value(lease_type, "lease type")?;
+                vec![("type", lease_type.to_owned())]
+            }
+            None => Vec::new(),
+        };
         let envelope: ResponseEnvelope<LeaseCount> = self
             .client
             .request_json_query_accepting(
@@ -5538,17 +5641,20 @@ impl Sys<'_, Authenticated> {
 
     /// Removes one server from the Raft cluster.
     pub async fn raft_remove_peer(&self, request: &RaftPeerRequest) -> Result<Empty> {
-        self.raft_peer_operation("remove-peer", request).await
+        self.raft_peer_operation(RaftPeerOperation::Remove, request)
+            .await
     }
 
     /// Promotes a permanent Raft non-voter to voter.
     pub async fn raft_promote_peer(&self, request: &RaftPeerRequest) -> Result<Empty> {
-        self.raft_peer_operation("promote", request).await
+        self.raft_peer_operation(RaftPeerOperation::Promote, request)
+            .await
     }
 
     /// Demotes a Raft voter to permanent non-voter.
     pub async fn raft_demote_peer(&self, request: &RaftPeerRequest) -> Result<Empty> {
-        self.raft_peer_operation("demote", request).await
+        self.raft_peer_operation(RaftPeerOperation::Demote, request)
+            .await
     }
 
     /// Bootstraps Raft when it is used exclusively for HA storage.
@@ -5682,7 +5788,7 @@ impl Sys<'_, Authenticated> {
 
     async fn raft_peer_operation(
         &self,
-        operation: &str,
+        operation: RaftPeerOperation,
         request: &RaftPeerRequest,
     ) -> Result<Empty> {
         request.validate()?;
@@ -5696,7 +5802,7 @@ impl Sys<'_, Authenticated> {
         self.client
             .request_json_accepting(
                 Method::POST,
-                &format!("sys/storage/raft/{operation}"),
+                &format!("sys/storage/raft/{}", operation.as_path_segment()),
                 Some(&payload),
                 &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
@@ -6027,19 +6133,45 @@ fn validate_cors_origins(origins: &[String]) -> Result<()> {
         ));
     }
     for origin in origins {
-        if origin.trim().is_empty() {
+        let trimmed = origin.trim();
+        if trimmed.is_empty() {
             return Err(Error::InvalidParameter(
                 "CORS allowed origin must not be empty".into(),
             ));
         }
-        if origin.trim() == "*" {
+        if trimmed != origin {
             return Err(Error::InvalidParameter(
-                "CORS wildcard '*' is not allowed because it permits any origin to make authenticated requests to OpenBao".into(),
+                "CORS allowed origin must not contain leading or trailing whitespace".into(),
+            ));
+        }
+        if trimmed == "*" || trimmed.eq_ignore_ascii_case("null") {
+            return Err(Error::InvalidParameter(
+                "CORS wildcard '*' and 'null' origins are not allowed because they permit ambiguous authenticated requests to OpenBao".into(),
             ));
         }
         if origin.as_bytes().iter().any(u8::is_ascii_control) {
             return Err(Error::InvalidParameter(
                 "CORS allowed origin must not contain control characters".into(),
+            ));
+        }
+        let parsed = Url::parse(origin).map_err(|_| {
+            Error::InvalidParameter("CORS allowed origin must be a valid https:// URL".into())
+        })?;
+        if parsed.scheme() != "https" {
+            return Err(Error::InvalidParameter(
+                "CORS allowed origin must use the https:// scheme".into(),
+            ));
+        }
+        if parsed.host_str().is_none()
+            || parsed.username() != ""
+            || parsed.password().is_some()
+            || parsed.query().is_some()
+            || parsed.fragment().is_some()
+            || parsed.path() != "/"
+        {
+            return Err(Error::InvalidParameter(
+                "CORS allowed origin must be an origin only, such as https://app.example.com"
+                    .into(),
             ));
         }
     }
@@ -6138,6 +6270,11 @@ fn validate_raft_snapshot(snapshot: &[u8]) -> Result<()> {
         return Err(Error::InvalidParameter(
             "Raft snapshot payload must not be empty".into(),
         ));
+    }
+    if snapshot.len() > MAX_RAFT_SNAPSHOT_BYTES {
+        return Err(Error::InvalidParameter(format!(
+            "Raft snapshot payload exceeds maximum allowed size of {MAX_RAFT_SNAPSHOT_BYTES} bytes"
+        )));
     }
     Ok(())
 }
@@ -7042,6 +7179,9 @@ mod tests {
             "sys/remount/status/ef3ba21c-8be8-4e5f-8d00-cb46a532c665"
         );
         assert!(remount_status_path("migration/nested").is_err());
+        assert!(super::validate_query_string_value("service", "lease type").is_ok());
+        assert!(super::validate_query_string_value("", "lease type").is_err());
+        assert!(super::validate_query_string_value("service\n", "lease type").is_err());
     }
 
     #[tokio::test]
@@ -7160,10 +7300,23 @@ mod tests {
         .unwrap_or_else(|error| panic!("{error}"));
 
         assert!(capabilities.single_path().can_delete());
+        assert!(capabilities.is_permitted());
         assert!(capabilities.can_read_path("/secret/data/app"));
         assert!(capabilities.can_list_path("secret/data/app"));
         assert!(!capabilities.can_delete_path("secret/data/app"));
         assert!(!capabilities.can_read_path("secret/data/blocked"));
+        assert!(
+            capabilities
+                .for_path("secret/data/app")
+                .unwrap_or_else(|| panic!("missing capability view"))
+                .is_permitted()
+        );
+        assert!(
+            !capabilities
+                .for_path("secret/data/blocked")
+                .unwrap_or_else(|| panic!("missing capability view"))
+                .is_permitted()
+        );
         assert!(
             capabilities
                 .for_path("secret/data/app")
@@ -7537,6 +7690,16 @@ mod tests {
             .with_exempt_path("sys/health")
             .with_exempt_path("sys/seal-status");
         assert!(validate_rate_limit_quota_config(&config).is_ok());
+        assert!(
+            RateLimitQuotaConfig::new()
+                .try_with_exempt_path("sys/health")
+                .is_ok()
+        );
+        assert!(
+            RateLimitQuotaConfig::new()
+                .try_with_exempt_path("")
+                .is_err()
+        );
 
         let config = RateLimitQuotaConfig::new().with_exempt_path("");
         assert!(validate_rate_limit_quota_config(&config).is_err());
@@ -7547,6 +7710,23 @@ mod tests {
             .with_block_interval("5m")
             .with_role("web");
         assert!(validate_rate_limit_quota_request(&request).is_ok());
+        assert!(
+            RateLimitQuotaRequest::new(100.0)
+                .try_with_path("auth/approle/login")
+                .and_then(|request| request.try_with_interval("2m"))
+                .and_then(|request| request.try_with_block_interval("5m"))
+                .is_ok()
+        );
+        assert!(
+            RateLimitQuotaRequest::new(100.0)
+                .try_with_interval("forever")
+                .is_err()
+        );
+        assert!(
+            RateLimitQuotaRequest::new(100.0)
+                .try_with_block_interval("forever")
+                .is_err()
+        );
         assert!(validate_rate_limit_quota_request(&RateLimitQuotaRequest::new(0.0)).is_err());
         assert!(
             validate_rate_limit_quota_request(&RateLimitQuotaRequest::new(f64::INFINITY)).is_err()
@@ -7677,6 +7857,15 @@ mod tests {
         assert!(validate_raft_server_id("raft\n1").is_err());
         assert!(validate_raft_snapshot(b"snapshot").is_ok());
         assert!(validate_raft_snapshot(b"").is_err());
+        assert_eq!(
+            super::RaftPeerOperation::Remove.as_path_segment(),
+            "remove-peer"
+        );
+        assert_eq!(
+            super::RaftPeerOperation::Promote.as_path_segment(),
+            "promote"
+        );
+        assert_eq!(super::RaftPeerOperation::Demote.as_path_segment(), "demote");
     }
 
     #[test]
@@ -7724,6 +7913,22 @@ mod tests {
         .unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(autopilot.max_trailing_logs.as_deref(), Some("1000"));
         assert!(autopilot.validate().is_ok());
+        assert!(
+            RaftAutopilotConfig::new()
+                .try_with_last_contact_threshold("10s")
+                .and_then(|config| config.try_with_server_stabilization_time("30s"))
+                .is_ok()
+        );
+        assert!(
+            RaftAutopilotConfig::new()
+                .try_with_last_contact_threshold("0s")
+                .is_err()
+        );
+        assert!(
+            RaftAutopilotConfig::new()
+                .try_with_server_stabilization_time("0s")
+                .is_err()
+        );
 
         let invalid = RaftAutopilotConfig::new().with_last_contact_threshold("0s");
         assert!(invalid.validate().is_err());
@@ -7816,6 +8021,27 @@ mod tests {
         assert!(CorsConfigRequest::new([""]).validate().is_err());
         assert!(
             CorsConfigRequest::new(["https://app.example.com\n"])
+                .validate()
+                .is_err()
+        );
+        assert!(CorsConfigRequest::new(["null"]).validate().is_err());
+        assert!(
+            CorsConfigRequest::new(["http://app.example.com"])
+                .validate()
+                .is_err()
+        );
+        assert!(
+            CorsConfigRequest::new(["javascript:alert(1)"])
+                .validate()
+                .is_err()
+        );
+        assert!(
+            CorsConfigRequest::new(["https://app.example.com/path"])
+                .validate()
+                .is_err()
+        );
+        assert!(
+            CorsConfigRequest::new([" https://app.example.com"])
                 .validate()
                 .is_err()
         );
