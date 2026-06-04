@@ -318,7 +318,8 @@ openbao = { version = "0.15", features = ["time"] }
 | `tokio-helpers` | no | Enables Tokio convenience helpers such as `Sys::wait_until_unsealed`. Runtime-neutral variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
 | `tls12-acknowledged` | no | Explicit acknowledgment for legacy TLS 1.2 compatibility. TLS 1.3 remains the default and is strongly preferred for high-security OpenBao deployments. |
-| `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
+| `allow-sha1-acknowledged` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
+| `allow-weak-jitter-fallback-acknowledged` | no | Explicit acknowledgment for using a timing-based retry jitter fallback if OS randomness fails. Default builds skip jitter rather than use the weak fallback. |
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
 | `native-tls-acknowledged` | no | Explicit acknowledgment for audited native TLS builds. |

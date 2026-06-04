@@ -140,7 +140,7 @@ impl FipsPosture {
     ) -> &mut Self {
         let subject = subject.into();
         match algorithm {
-            #[cfg(feature = "allow-sha1")]
+            #[cfg(feature = "allow-sha1-acknowledged")]
             #[allow(deprecated)]
             TransitHashAlgorithm::Sha1 => self.add_finding(
                 FipsPostureSeverity::Reject,

@@ -37,12 +37,18 @@ const MAX_BOOTSTRAP_OPERATIONS: usize = 512;
 
 /// Builder for a small, idempotent OpenBao admin bootstrap plan.
 ///
+/// # Locking requirement
+///
 /// All `ensure_*` operations use read-compare-write convergence without
-/// distributed locking. If multiple bootstrap runners execute concurrently
-/// against the same OpenBao cluster, serialize them with an external lock.
-/// This is especially important for ACL policies and secret values, where a
-/// concurrent write can overwrite security-critical configuration between the
-/// read and write phases.
+/// distributed locking. This helper must be called with external mutual
+/// exclusion in multi-operator, GitOps, CI/CD, or otherwise concurrent
+/// environments. Use a Kubernetes Lease, CI environment lock, database advisory
+/// lock, OpenBao-backed coordination primitive, or another operator-owned lock
+/// before calling [`Self::run`]. Omitting that lock can allow a concurrent
+/// writer to inject or overwrite security-critical configuration between the
+/// read and write phases. KV v2 secret convergence uses CAS where OpenBao
+/// exposes it; ACL policies, AppRole roles, PKI roles, SSH roles, database
+/// roles, Identity entities, and groups do not have equivalent OpenBao CAS.
 #[derive(Clone, Debug, Default)]
 pub struct AdminBootstrap {
     operations: Vec<BootstrapOperation>,
@@ -919,7 +925,7 @@ impl AdminBootstrap {
                 }
                 BootstrapOperation::Policy { name, policy } => {
                     let status = match client.sys().read_policy(name).await {
-                        Ok(existing) if existing.rules == *policy => {
+                        Ok(existing) if policy_rules_equal(&existing.rules, policy) => {
                             BootstrapPreviewStatus::Unchanged
                         }
                         Ok(_) => BootstrapPreviewStatus::WouldUpdate,
@@ -1216,14 +1222,16 @@ impl AdminBootstrap {
                 }
                 BootstrapOperation::Policy { name, policy } => {
                     let status = match client.sys().read_policy(name).await {
-                        Ok(existing) if existing.rules == *policy => BootstrapStepStatus::Unchanged,
+                        Ok(existing) if policy_rules_equal(&existing.rules, policy) => {
+                            BootstrapStepStatus::Unchanged
+                        }
                         Ok(_) => {
                             client
                                 .sys()
                                 .write_policy(name, &PolicyWriteRequest::new(policy.clone()))
                                 .await?;
                             let verification = client.sys().read_policy(name).await?;
-                            if verification.rules != *policy {
+                            if !policy_rules_equal(&verification.rules, policy) {
                                 return Err(bootstrap_contention_error());
                             }
                             BootstrapStepStatus::Updated
@@ -1234,7 +1242,7 @@ impl AdminBootstrap {
                                 .write_policy(name, &PolicyWriteRequest::new(policy.clone()))
                                 .await?;
                             let verification = client.sys().read_policy(name).await?;
-                            if verification.rules != *policy {
+                            if !policy_rules_equal(&verification.rules, policy) {
                                 return Err(bootstrap_contention_error());
                             }
                             BootstrapStepStatus::Created
@@ -1753,6 +1761,10 @@ fn bootstrap_contention_error() -> Error {
 }
 
 fn secret_values_equal(current: &str, desired: &str) -> bool {
+    current.as_bytes().ct_eq(desired.as_bytes()).into()
+}
+
+fn policy_rules_equal(current: &str, desired: &str) -> bool {
     current.as_bytes().ct_eq(desired.as_bytes()).into()
 }
 

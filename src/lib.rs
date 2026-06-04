@@ -63,7 +63,7 @@ compile_error!(
 compile_error!(
     "The radius-auth feature enables the legacy RADIUS authentication protocol, which relies on MD5-based RADIUS authenticators. \
      RADIUS is not recommended for new or classified deployments; prefer cert-auth, kerberos-auth, or ldap-auth with TLS. \
-     Add feature \"radius-auth-acknowledged\" to confirm this compatibility choice was audited."
+     Add feature \"radius-auth-acknowledged\" to confirm this compatibility choice was audited and RadSec or equivalent transport protection is enforced."
 );
 
 #[cfg(all(

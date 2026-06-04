@@ -120,6 +120,11 @@ impl LdapConfig {
                 "ldap insecure_tls=true requires the insecure-ldap-tls-acknowledged Cargo feature because it disables LDAP TLS certificate verification".into(),
             ));
         }
+        if self.insecure_tls == Some(true) {
+            return Err(crate::Error::InvalidParameter(
+                "ldap insecure_tls=true must not be combined with bindpass because credentials would cross an unverified TLS connection".into(),
+            ));
+        }
         #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
         validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "LDAP")?;
         if let Some(value) = &self.connection_timeout {
@@ -1204,6 +1209,15 @@ mod tests {
     #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
     #[test]
     fn ldap_insecure_tls_requires_acknowledgement_feature() {
+        let mut config = LdapConfig::new("cn=openbao", SecretString::from("bind-password"));
+        config.insecure_tls = Some(true);
+
+        assert!(config.validate().is_err());
+    }
+
+    #[cfg(feature = "insecure-ldap-tls-acknowledged")]
+    #[test]
+    fn ldap_insecure_tls_rejects_bind_credentials_even_when_acknowledged() {
         let mut config = LdapConfig::new("cn=openbao", SecretString::from("bind-password"));
         config.insecure_tls = Some(true);
 

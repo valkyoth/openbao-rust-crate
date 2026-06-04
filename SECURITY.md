@@ -96,6 +96,12 @@ For high-assurance builds, keep the default `rustls-tls` backend, do not enable
 Downstream applications can enforce this with CI policy checks that reject
 those feature flags and API calls.
 
+If a legacy deployment must use TLS 1.2, the OpenBao server and any
+terminating proxy must disable NULL, EXPORT, anonymous, DES/3DES, RC4, and
+CBC-mode cipher suites. Prefer AEAD suites such as
+`ECDHE-ECDSA-AES256-GCM-SHA384` or `ECDHE-RSA-AES256-GCM-SHA384`. TLS 1.3
+remains the hardened default.
+
 The rustls-backed HTTP client supports static PEM certificate revocation lists
 with `OpenBaoConfig::add_certificate_revocation_list_pem` or
 `OpenBaoConfig::add_certificate_revocation_list_pem_bundle`, but only when
@@ -139,6 +145,21 @@ Classified networks and new high-assurance deployments must not use RADIUS;
 prefer certificate auth, Kerberos, or LDAP over TLS with reviewed server validation.
 If RADIUS is unavoidable, enforce RadSec or equivalent RADIUS-over-TLS
 protection at the infrastructure layer.
+
+LDAP `insecure_tls=true` is rejected unless
+`insecure-ldap-tls-acknowledged` is enabled. Even with that acknowledgment, the
+crate rejects `insecure_tls=true` when LDAP bind credentials or client private
+key material would cross an unverified TLS connection.
+
+Transit SHA-1 selection is unavailable unless
+`allow-sha1-acknowledged` is enabled. Do not enable that feature for new or
+high-assurance deployments; use SHA-2 or stronger algorithms.
+
+Retry jitter uses OS randomness when available. If OS randomness fails, default
+builds skip jitter rather than use a timing-derived fallback. The
+`allow-weak-jitter-fallback-acknowledged` feature enables that weak fallback
+only for audited platforms where OS randomness is unavailable and retry timing
+is not a security control.
 
 The `sensitive-http-test-only` feature is for this crate's mock HTTP tests
 only. It must not be enabled in production application builds. Release metadata

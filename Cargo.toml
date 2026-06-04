@@ -97,6 +97,7 @@ time = ["dep:time"]
 tokio-helpers = ["dep:tokio"]
 tracing = ["dep:tracing"]
 tls12-acknowledged = []
+allow-weak-jitter-fallback-acknowledged = []
 # Production operator APIs for init/unseal/rekey/rotate and PKI root deletion.
 # These endpoints can expose, mutate, or destroy root, unseal, recovery,
 # certificate-authority, and encryption-key material. They are disabled by
@@ -105,7 +106,7 @@ operator-ops = []
 operator-ops-acknowledged = []
 # Legacy Transit SHA-1 support. Disabled by default so new builds cannot select
 # SHA-1 without an explicit Cargo feature review.
-allow-sha1 = []
+allow-sha1-acknowledged = []
 # Default TLS backend. Keep this enabled unless a deployment has audited a
 # different transport stack.
 rustls-tls = ["reqwest/rustls"]

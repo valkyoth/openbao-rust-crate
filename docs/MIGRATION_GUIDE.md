@@ -173,7 +173,8 @@ unbounded list response types.
 - Do not use loopback HTTP outside fresh local development instances.
 - Do not use `bootstrap_dev` for production, shared environments, HSM/KMS
   auto-unseal deployments, or any instance requiring an operator ceremony.
-- Do not enable `native-tls`, `operator-ops`, `allow-sha1`, `radius-auth`,
+- Do not enable `native-tls`, `operator-ops`, `allow-sha1-acknowledged`,
+  `allow-weak-jitter-fallback-acknowledged`, `radius-auth`,
   `radius-auth-acknowledged`, or `insecure-ldap-tls-acknowledged` without
   recording the deployment reason.
 - Keep response-size limits low for small-response services.

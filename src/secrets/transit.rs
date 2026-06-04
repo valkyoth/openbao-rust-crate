@@ -119,7 +119,7 @@ impl TransitRandomSource {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TransitHashAlgorithm {
     /// SHA-1. Legacy only.
-    #[cfg(feature = "allow-sha1")]
+    #[cfg(feature = "allow-sha1-acknowledged")]
     #[deprecated(since = "0.3.0", note = "SHA-1 is broken; use SHA2-256 or stronger")]
     Sha1,
     /// SHA2-224.
@@ -145,7 +145,7 @@ pub enum TransitHashAlgorithm {
 impl TransitHashAlgorithm {
     fn as_path_segment(self) -> &'static str {
         match self {
-            #[cfg(feature = "allow-sha1")]
+            #[cfg(feature = "allow-sha1-acknowledged")]
             #[allow(deprecated)]
             Self::Sha1 => "sha1",
             Self::Sha2_224 => "sha2-224",
@@ -348,7 +348,7 @@ impl TransitUpdateKeyRequest {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 pub enum TransitImportHashFunction {
     /// SHA-1. Legacy only.
-    #[cfg(feature = "allow-sha1")]
+    #[cfg(feature = "allow-sha1-acknowledged")]
     #[serde(rename = "SHA1")]
     #[deprecated(since = "0.11.0", note = "SHA-1 is broken; use SHA256 or stronger")]
     Sha1,
@@ -369,7 +369,7 @@ pub enum TransitImportHashFunction {
 impl TransitImportHashFunction {
     fn as_query_value(self) -> &'static str {
         match self {
-            #[cfg(feature = "allow-sha1")]
+            #[cfg(feature = "allow-sha1-acknowledged")]
             #[allow(deprecated)]
             Self::Sha1 => "SHA1",
             Self::Sha224 => "SHA224",
@@ -680,11 +680,13 @@ impl TransitWrappedImportKey {
     /// The ephemeral AES key is passed to OpenSSL's RSA-OAEP encrypt path,
     /// which may copy it into OpenSSL-managed heap memory outside Rust's
     /// allocator. That copy is outside this crate's `zeroize` control. For
-    /// FIPS-validated or hardware-security-boundary deployments, perform key
-    /// wrapping inside an HSM or other audited boundary instead of using this
-    /// software helper. The `wrap_key_material_with_rng` variant lets callers
-    /// inject reviewed randomness, but it is still a software OpenSSL wrapping
-    /// path and not an HSM boundary.
+    /// deployments that require cryptographic key-boundary assurance, perform
+    /// key wrapping inside an HSM or dedicated key-wrapping service instead of
+    /// using this function. This helper is suitable only for development, CI,
+    /// and audited non-HSM automation environments. The
+    /// `wrap_key_material_with_rng` variant lets callers inject reviewed
+    /// randomness, but it is still a software OpenSSL wrapping path and not an
+    /// HSM boundary.
     #[must_use = "import the returned ciphertext promptly; software-wrapped key material remains sensitive until consumed and dropped"]
     pub fn wrap_key_material(
         wrapping_key_pem: &str,
@@ -706,9 +708,10 @@ impl TransitWrappedImportKey {
     /// The ephemeral AES key is passed to OpenSSL's RSA-OAEP encrypt path,
     /// which may copy it into OpenSSL-managed heap memory outside Rust's
     /// allocator. That copy is outside this crate's `zeroize` control. For
-    /// FIPS-validated or hardware-security-boundary deployments, perform key
-    /// wrapping inside an HSM or other audited boundary instead of using this
-    /// software helper.
+    /// deployments that require cryptographic key-boundary assurance, perform
+    /// key wrapping inside an HSM or dedicated key-wrapping service instead of
+    /// using this function. This helper is suitable only for development, CI,
+    /// and audited non-HSM automation environments.
     #[must_use = "import the returned ciphertext promptly; software-wrapped key material remains sensitive until consumed and dropped"]
     pub fn wrap_key_material_with_rng<R>(
         rng: &mut R,
@@ -1006,8 +1009,10 @@ impl ListEntries for TransitKeyList {
 /// intermediate buffer, but `reqwest::Body` owns a normal non-zeroizing copy
 /// after handoff to the HTTP stack. Treat the calling process heap as
 /// containing the base64 plaintext for the duration of the request lifecycle,
-/// and zeroize caller-owned plaintext buffers as soon as they are no longer
-/// needed.
+/// and possibly longer depending on allocator behavior. Disable core dumps,
+/// restrict `ptrace`/process memory inspection, avoid swap or use encrypted
+/// swap, and zeroize caller-owned plaintext buffers as soon as they are no
+/// longer needed.
 #[derive(Clone, Debug)]
 pub struct TransitEncryptRequest {
     /// Base64-encoded plaintext.
@@ -1093,7 +1098,10 @@ impl fmt::Debug for TransitEncryptResponse {
 /// intermediate buffer, but `reqwest::Body` owns a normal non-zeroizing copy
 /// after handoff to the HTTP stack. Treat the calling process heap as
 /// containing the ciphertext and any base64 associated data, derivation
-/// context, or nonce for the duration of the request lifecycle.
+/// context, or nonce for the duration of the request lifecycle, and possibly
+/// longer depending on allocator behavior. Disable core dumps, restrict
+/// `ptrace`/process memory inspection, avoid swap or use encrypted swap, and
+/// zeroize caller-owned buffers promptly.
 #[derive(Clone, Debug)]
 pub struct TransitDecryptRequest {
     /// OpenBao ciphertext.
@@ -3018,7 +3026,7 @@ fn rsa_oaep_wrap_aes_key(
     }
 
     let digest = match hash_function {
-        #[cfg(feature = "allow-sha1")]
+        #[cfg(feature = "allow-sha1-acknowledged")]
         #[allow(deprecated)]
         TransitImportHashFunction::Sha1 => Md::sha1(),
         TransitImportHashFunction::Sha224 => Md::sha224(),

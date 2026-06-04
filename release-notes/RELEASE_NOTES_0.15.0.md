@@ -40,6 +40,9 @@ zero `planned` and zero `decision` rows.
   import wrapping-key validation, token and user-agent header validation,
   retry jitter fallback visibility, Transit batch invariants, and bootstrap
   contention classification.
+- Renamed the legacy Transit SHA-1 opt-in to `allow-sha1-acknowledged`, added
+  `allow-weak-jitter-fallback-acknowledged`, and rotated CI cache keys on
+  toolchain or lockfile changes.
 
 ## Remaining Finalization
 
@@ -66,12 +69,17 @@ zero `planned` and zero `decision` rows.
   `try_with_token` so token header validity is checked at construction time.
 - LDAP auth and LDAP secrets-engine config now reject non-ASCII LDAP path names
   and plaintext `ldap://` URLs unless StartTLS or the insecure LDAP
-  acknowledgment feature is used.
+  acknowledgment feature is used. Even with the acknowledgment feature,
+  `insecure_tls=true` is rejected when LDAP credentials would cross an
+  unverified TLS connection.
 - Transit batch requests now expose checked `try_push` builders and a named
   `MAX_TRANSIT_BATCH_ITEMS` limit; methods still reject empty or oversized
   batches before dispatch.
 - TLS 1.2 compatibility now has an explicit `tls12-acknowledged` feature and
   build warning. TLS 1.3 remains the default and recommended floor.
+- Legacy Transit SHA-1 selection now requires `allow-sha1-acknowledged`.
+- Default builds skip retry jitter if OS randomness fails rather than using a
+  weak timing-derived fallback.
 - Static PEM CRLs can now be enforced for OpenBao server certificates when
   using `only_root_certificates`; callers still own CRL refresh, client rebuild
   timing, and OCSP/automatic revocation-discovery policy.

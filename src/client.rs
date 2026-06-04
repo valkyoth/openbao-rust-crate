@@ -1,9 +1,9 @@
 //! OpenBao client construction and raw request helpers.
 
 use core::{fmt, marker::PhantomData, time::Duration};
+use std::{env, fs, net::IpAddr};
+#[cfg(feature = "allow-weak-jitter-fallback-acknowledged")]
 use std::{
-    env, fs,
-    net::IpAddr,
     sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -237,30 +237,46 @@ impl RetryPolicy {
         if max_nanos == 0 {
             return base;
         }
-        let jitter_nanos = retry_jitter_nanos(max_nanos, retry_index);
+        let Some(jitter_nanos) = retry_jitter_nanos(max_nanos, retry_index) else {
+            return base;
+        };
         base.saturating_add(Duration::from_nanos(jitter_nanos))
             .min(self.max_delay)
     }
 }
 
+#[cfg(feature = "allow-weak-jitter-fallback-acknowledged")]
 static RETRY_JITTER_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-fn retry_jitter_nanos(max_nanos: u64, retry_index: usize) -> u64 {
+fn retry_jitter_nanos(max_nanos: u64, retry_index: usize) -> Option<u64> {
+    #[cfg(not(feature = "allow-weak-jitter-fallback-acknowledged"))]
+    let _ = retry_index;
     let modulus = max_nanos.saturating_add(1);
-    let seed = getrandom::u64().unwrap_or_else(|_| {
-        #[cfg(feature = "tracing")]
-        tracing::warn!(
-            target: "openbao::client",
-            "getrandom failed for retry jitter; falling back to a time-based non-security seed; check the OS entropy source"
-        );
-        retry_jitter_fallback_seed(retry_index)
-    });
-    seed % modulus
+    let seed = match getrandom::u64() {
+        Ok(seed) => seed,
+        Err(_) => {
+            #[cfg(feature = "tracing")]
+            tracing::warn!(
+                target: "openbao::client",
+                "getrandom failed for retry jitter; check the OS entropy source"
+            );
+            #[cfg(feature = "allow-weak-jitter-fallback-acknowledged")]
+            {
+                retry_jitter_fallback_seed(retry_index)
+            }
+            #[cfg(not(feature = "allow-weak-jitter-fallback-acknowledged"))]
+            {
+                return None;
+            }
+        }
+    };
+    Some(seed % modulus)
 }
 
 // Fallback only for platforms where OS randomness is unavailable. Retry jitter
 // is observable through network timing and must not be reused for
 // security-sensitive randomness.
+#[cfg(feature = "allow-weak-jitter-fallback-acknowledged")]
 fn retry_jitter_fallback_seed(retry_index: usize) -> u64 {
     let counter = RETRY_JITTER_COUNTER.fetch_add(1, Ordering::Relaxed);
     // Non-security retry jitter only. If OS randomness is unavailable on a
@@ -470,6 +486,13 @@ impl OpenBaoConfig {
     }
 
     /// Explicitly permits TLS 1.2 for legacy OpenBao deployments.
+    ///
+    /// # High-assurance TLS 1.2 configuration
+    ///
+    /// If TLS 1.2 is required, configure the OpenBao server and any
+    /// terminating proxy to disable NULL, EXPORT, anonymous, DES/3DES, RC4,
+    /// and CBC-mode cipher suites. Prefer AEAD suites such as
+    /// `ECDHE-ECDSA-AES256-GCM-SHA384` or `ECDHE-RSA-AES256-GCM-SHA384`.
     ///
     /// This method is only available with the `tls12-acknowledged` feature so
     /// accidental use is visible in the downstream build graph. TLS 1.3 remains

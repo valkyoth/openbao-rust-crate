@@ -55,6 +55,12 @@ All notable changes to this project are documented here.
   earlier, retry jitter entropy fallback emits a tracing warning, Transit batch
   invariants are documented, and bootstrap contention now has a distinct error
   classification.
+- Renamed legacy Transit SHA-1 opt-in to `allow-sha1-acknowledged`, disabled
+  weak retry-jitter fallback by default unless
+  `allow-weak-jitter-fallback-acknowledged` is enabled, rejected LDAP
+  `insecure_tls=true` with credentials even when acknowledged, switched policy
+  bootstrap comparisons to constant-time byte comparison, and added CI cache
+  key rotation on toolchain or lockfile changes.
 
 ## 0.14.0 - 2026-06-04
 
@@ -708,7 +714,7 @@ All notable changes to this project are documented here.
   compatibility checked through Rust `1.96.0`.
 - `OpenBaoConfig::user_agent` now validates header control characters at
   configuration time and returns `Result<Self>`.
-- Legacy Transit SHA-1 selection now requires the explicit `allow-sha1`
+- Legacy Transit SHA-1 selection now requires the explicit `allow-sha1-acknowledged`
   feature.
 
 ### Fixed
