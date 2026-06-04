@@ -36,11 +36,11 @@
 //! the request lifecycle.
 //!
 //! With the optional `tracing` feature, request spans include HTTP method,
-//! status, and the validated URL path. Bodies, tokens, and namespaces are not
-//! logged, but paths can contain opaque operational identifiers such as secret
-//! paths, lease IDs, entity IDs, or accessors. Deployments with strict
-//! path-confidentiality requirements should filter `openbao.request` spans or
-//! suppress the path field in their tracing layer.
+//! status, and a redacted URL path shape. Bodies, tokens, and namespaces are
+//! not logged, but even path shapes can reveal operational activity. Deployments
+//! with strict path-confidentiality requirements should suppress debug-level
+//! `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`,
+//! or install a tracing layer that omits the `path` field.
 
 #![forbid(unsafe_code)]
 
@@ -62,7 +62,28 @@ compile_error!(
 #[cfg(all(feature = "radius-auth", not(feature = "radius-auth-acknowledged")))]
 compile_error!(
     "The radius-auth feature enables the legacy RADIUS authentication protocol, which relies on MD5-based RADIUS authenticators. \
+     RADIUS is not recommended for new or classified deployments; prefer cert-auth, kerberos-auth, or ldap-auth with TLS. \
      Add feature \"radius-auth-acknowledged\" to confirm this compatibility choice was audited."
+);
+
+#[cfg(all(
+    feature = "transit-import",
+    not(feature = "transit-import-acknowledged")
+))]
+compile_error!(
+    "The transit-import feature enables software BYOK wrapping with OpenSSL-managed heap residuals. \
+     Prefer HSM-backed wrapping for high-assurance key material. \
+     Add feature \"transit-import-acknowledged\" to confirm this software wrapping choice was audited."
+);
+
+#[cfg(all(
+    feature = "sensitive-http-test-only",
+    not(feature = "sensitive-http-test-only-acknowledged")
+))]
+compile_error!(
+    "The sensitive-http-test-only feature disables HTTPS enforcement for credential-bearing loopback mock tests. \
+     It must never be enabled in production application builds. \
+     Add feature \"sensitive-http-test-only-acknowledged\" only for this crate's audited test harness."
 );
 
 #[cfg(all(

@@ -161,8 +161,9 @@ Delivered in `0.11.0`:
   certificate-chain install helpers. Endpoint wrappers accept externally
   wrapped ciphertext or public-key-only import material; raw private or
   symmetric key bytes remain
-  outside the default wrapper APIs. The non-default `transit-import` feature
-  adds a software AES-KWP/RSA-OAEP wrapping helper.
+  outside the default wrapper APIs. The non-default `transit-import` plus
+  `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP
+  wrapping helper.
 
 Delivered in `0.12.0`:
 
@@ -290,7 +291,7 @@ openbao = { version = "0.14", features = ["time"] }
 | `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, and group mapping helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
-| `radius-auth` | no | RADIUS login/config/user mapping helpers. Legacy RADIUS uses MD5-based authenticators and requires `radius-auth-acknowledged`. |
+| `radius-auth` | no | RADIUS login/config/user mapping helpers. Legacy RADIUS uses MD5-based authenticators and requires `radius-auth-acknowledged`; avoid it for classified networks and new high-assurance deployments. |
 | `radius-auth-acknowledged` | no | Explicit acknowledgment for audited legacy RADIUS compatibility builds. |
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
@@ -304,15 +305,18 @@ openbao = { version = "0.14", features = ["time"] }
 | `totp` | yes | TOTP key and code helpers. |
 | `transit` | yes | Transit key lifecycle, batch cryptography, and single-operation cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
-| `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, or post-quantum claim. |
+| `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Requires `transit-import-acknowledged`; uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, or post-quantum claim. |
+| `transit-import-acknowledged` | no | Explicit acknowledgment that Transit BYOK software wrapping passes key material through software memory and OpenSSL-managed heap. |
 | `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
-| `tracing` | no | Optional request/response instrumentation with method, validated path, and status only. No bodies, tokens, or namespaces are logged; paths may still contain opaque IDs such as lease IDs or entity IDs, so treat debug traces as operationally sensitive. No OpenTelemetry SDK dependency. |
+| `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
 | `allow-sha1` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
 | `native-tls-acknowledged` | no | Explicit acknowledgment for audited native TLS builds. |
+| `sensitive-http-test-only` | no | Hidden test escape hatch for this crate's loopback HTTP mock tests. Requires `sensitive-http-test-only-acknowledged`; never enable in application builds. |
+| `sensitive-http-test-only-acknowledged` | no | Explicit acknowledgment for this crate's audited loopback HTTP test harness. |
 | `operator-ops` | no | Production init, unseal, seal, rekey, key-share rotate, keyring rotate, raw storage, and destructive PKI root deletion APIs. Requires `operator-ops-acknowledged`. |
 | `operator-ops-acknowledged` | no | Explicit acknowledgment for audited operator-operation builds. |
 
@@ -380,7 +384,7 @@ zero `planned` and zero `decision` rows.
 | Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, JWKS, OIDC provider/scope/client/assignment admin, named-provider discovery/JWKS, MFA method management, TOTP MFA generation/admin actions, and MFA login-enforcement helpers are implemented. Named-provider OIDC browser protocol flows stay external. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
-| Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional raw-byte helpers, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR generation, and certificate-chain install helpers. Import wrappers accept externally wrapped `SecretString` ciphertext or public-key-only import material; raw private or symmetric key bytes stay outside the default endpoint wrappers. The non-default `transit-import` feature adds a software AES-KWP/RSA-OAEP wrapping helper for audited development and automation use. |
+| Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional raw-byte helpers, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR generation, and certificate-chain install helpers. Import wrappers accept externally wrapped `SecretString` ciphertext or public-key-only import material; raw private or symmetric key bytes stay outside the default endpoint wrappers. The non-default `transit-import` plus `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP wrapping helper for audited development and automation use. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, named-issuer issue/sign, named-issuer sign-intermediate, revoke, revoke-with-key, revoked/revocation-queue/detailed certificate lists, issuer CRL resign, certificate list/read, issuer/key list/read/delete/update, issuer revoke, default issuer/key config, cluster config, auto-tidy config, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, operator-gated default root deletion with explicit confirmation, operator-gated sign-verbatim/sign-self-issued/cross-sign/sign-revocation-list, CEL role management and CEL issue/sign, current-doc field expansion for role/generation/CRL/tidy structs, CA/key import, ACME config/EAB/directory URL, CRL rotate, delta CRL rotate, tidy, tidy status, and tidy cancel are implemented. Unauthenticated public CA/CRL/cert and OCSP protocol reads stay external. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
@@ -494,7 +498,7 @@ async fn main() -> Result<()> {
 
 Retry is never global. `RetryableMethod` exposes only GET, HEAD, and OpenBao
 LIST so the helper cannot retry write verbs by accident. Exponential retry
-delays include bounded non-cryptographic jitter by default to avoid
+delays include OS-random bounded jitter by default to avoid
 synchronized retry waves after temporary OpenBao outages.
 
 Configure a stricter client with a namespace and root-only trust store:
@@ -504,6 +508,10 @@ CA and reject every platform or public CA root. This is intentionally preferred
 over leaf certificate or public-key pinning because your CA can rotate server
 certificates without requiring every client to update a pin. For a self-signed
 OpenBao listener certificate, pass that certificate as the sole trusted root.
+The rustls-backed HTTP client does not perform OCSP or CRL checking for the
+server certificate, so deployments that rely on revocation should issue
+short-lived listener certificates and enforce certificate-auth revocation
+server-side.
 
 ```rust,no_run
 use openbao::{Client, OpenBaoConfig, Result};
@@ -1010,7 +1018,8 @@ async fn main() -> Result<()> {
 }
 ```
 
-Prepare a wrapped import blob with the optional `transit-import` feature:
+Prepare a wrapped import blob with the optional `transit-import` and
+`transit-import-acknowledged` features:
 
 ```rust,ignore
 use openbao::secrets::transit::{

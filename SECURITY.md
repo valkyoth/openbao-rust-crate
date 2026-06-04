@@ -108,16 +108,30 @@ key ceremony and custody model.
 The `transit-import` feature is a software BYOK wrapping helper. It depends on
 the host OpenSSL runtime through the `openssl` crate and requires an audited
 OpenSSL 1.1.1 or newer deployment baseline. It is not an HSM, FIPS,
-certification, or post-quantum claim.
+certification, or post-quantum claim. It also requires the
+`transit-import-acknowledged` feature so downstream builds explicitly review
+that raw key material and the ephemeral AES wrapping key pass through software
+memory and OpenSSL-managed heap. Classified or high-assurance key wrapping
+should be performed in an HSM or equivalent audited boundary instead.
 
 The `radius-auth` feature is not enabled by default. RADIUS relies on
 MD5-based authenticators and is retained only for audited legacy compatibility.
-Enabling it requires the additional `radius-auth-acknowledged` feature.
+Enabling it requires the additional `radius-auth-acknowledged` feature. Do not
+use RADIUS for classified networks or new high-assurance deployments; prefer
+certificate auth, Kerberos, or LDAP over TLS with reviewed server validation.
 
 The `sensitive-http-test-only` feature is for this crate's mock HTTP tests
 only. It must not be enabled in production application builds. Release metadata
 checks verify it is not part of the default feature set, and `build.rs` emits a
-warning whenever it is compiled.
+warning whenever it is compiled. It also requires
+`sensitive-http-test-only-acknowledged` so accidental workspace feature
+propagation fails closed.
+
+The rustls-backed HTTP client does not perform OCSP or CRL revocation checking
+for the OpenBao server certificate. Use short-lived listener certificates,
+root-only internal CA trust stores, and OpenBao/server-side certificate-auth
+CRL/OCSP controls where certificate revocation is part of the deployment threat
+model.
 
 ## Dev Bootstrap Warning
 

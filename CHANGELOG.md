@@ -38,6 +38,12 @@ All notable changes to this project are documented here.
 - Added post-write verification for non-CAS bootstrap convergence paths so a
   concurrent writer no longer results in a successful report with a mismatched
   final state.
+- Sanitized OpenBao response warnings before exposing them to callers, including
+  terminal control characters and bidirectional display controls.
+- Switched retry jitter to direct OS randomness with a non-panicking fallback.
+- Added acknowledgment gates for `transit-import` and
+  `sensitive-http-test-only`, and strengthened TLS revocation, RADIUS, tracing,
+  and Transit request-body residual-risk documentation.
 
 ## 0.13.0 - 2026-06-04
 

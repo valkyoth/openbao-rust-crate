@@ -832,6 +832,7 @@ version = "0.14.0"
 dependencies = [
  "aes-kw",
  "base64-ng",
+ "getrandom 0.4.2",
  "openssl",
  "rand 0.10.1",
  "reqwest",

@@ -54,6 +54,13 @@ and resultant ACL helpers.
   decode categories from user-facing errors, tightened RADIUS host validation,
   and added post-write verification for non-CAS bootstrap convergence paths.
   The local second `PENTEST.md` report was deleted before commit.
+- Third pentest follow-up sanitizes OpenBao response warnings before exposing
+  them to callers, moves retry jitter to direct OS randomness, adds
+  acknowledgment gates for `transit-import` and `sensitive-http-test-only`, and
+  strengthens documentation for TLS revocation limits, RADIUS suitability,
+  tracing path-shape metadata, Transit request-body residuals, and BYOK
+  software wrapping residuals. The local third `PENTEST.md` report was deleted
+  before commit.
 
 ## Security And Stability Gate
 

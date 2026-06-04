@@ -189,7 +189,10 @@ pub(crate) fn sanitize_api_error(error: &str) -> String {
     const MAX_API_ERROR_BYTES: usize = 512;
 
     let mut sanitized = String::new();
-    for character in error.chars().filter(|character| !character.is_control()) {
+    for character in error
+        .chars()
+        .filter(|character| !is_display_control(*character))
+    {
         let next_len = sanitized.len() + character.len_utf8();
         if next_len > MAX_API_ERROR_BYTES {
             break;
@@ -197,6 +200,18 @@ pub(crate) fn sanitize_api_error(error: &str) -> String {
         sanitized.push(character);
     }
     sanitized
+}
+
+fn is_display_control(character: char) -> bool {
+    character.is_control()
+        || matches!(
+            character,
+            '\u{061c}'
+                | '\u{200e}'
+                | '\u{200f}'
+                | '\u{202a}'..='\u{202e}'
+                | '\u{2066}'..='\u{2069}'
+        )
 }
 
 impl std::error::Error for Error {}

@@ -137,9 +137,9 @@ impl RetryPolicy {
     ///
     /// `max_attempts` includes the first request. A value of `1` is valid and
     /// means no retry. Delays are capped at `max_delay` and both durations must
-    /// be non-zero. Retry delays include bounded non-cryptographic jitter so
-    /// many clients do not retry in synchronized waves after a temporary
-    /// OpenBao outage.
+    /// be non-zero. Retry delays include OS-random bounded jitter so many
+    /// clients do not retry in synchronized waves after a temporary OpenBao
+    /// outage.
     pub fn exponential(
         max_attempts: usize,
         initial_delay: Duration,
@@ -235,7 +235,7 @@ impl RetryPolicy {
         if max_nanos == 0 {
             return base;
         }
-        let jitter_nanos = retry_jitter_seed(retry_index) % (max_nanos + 1);
+        let jitter_nanos = retry_jitter_nanos(max_nanos, retry_index);
         base.saturating_add(Duration::from_nanos(jitter_nanos))
             .min(self.max_delay)
     }
@@ -243,9 +243,16 @@ impl RetryPolicy {
 
 static RETRY_JITTER_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-// Intentionally non-cryptographic. Retry jitter is observable through network
-// timing; do not use this helper for security-sensitive randomness.
-fn retry_jitter_seed(retry_index: usize) -> u64 {
+fn retry_jitter_nanos(max_nanos: u64, retry_index: usize) -> u64 {
+    let modulus = max_nanos.saturating_add(1);
+    let seed = getrandom::u64().unwrap_or_else(|_| retry_jitter_fallback_seed(retry_index));
+    seed % modulus
+}
+
+// Fallback only for platforms where OS randomness is unavailable. Retry jitter
+// is observable through network timing and must not be reused for
+// security-sensitive randomness.
+fn retry_jitter_fallback_seed(retry_index: usize) -> u64 {
     let counter = RETRY_JITTER_COUNTER.fetch_add(1, Ordering::Relaxed);
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -486,6 +493,12 @@ impl OpenBaoConfig {
     /// client certificate. Prefer identities loaded from tightly permissioned
     /// files and avoid logging certificate/key parsing errors that include
     /// secret paths.
+    ///
+    /// The `reqwest`/rustls client stack does not perform client-side OCSP or
+    /// CRL revocation checking for the OpenBao server certificate. Treat
+    /// revocation as an OpenBao/listener and PKI-lifecycle control: use
+    /// short-lived certificates, root-only trust stores, and server-side
+    /// certificate-auth CRL/OCSP settings where applicable.
     pub fn client_identity(mut self, identity: Identity) -> Self {
         self.client_identity = Some(identity);
         self

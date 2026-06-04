@@ -154,7 +154,10 @@ pub struct ResponseEnvelope<T> {
     #[serde(default)]
     pub renewable: bool,
     /// Warnings emitted by OpenBao.
-    #[serde(default, deserialize_with = "deserialize_optional_bounded_string_vec")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_sanitized_bounded_string_vec"
+    )]
     pub warnings: Option<Vec<String>>,
     /// Response wrapping metadata, when OpenBao returns a wrapped response.
     #[serde(default)]
@@ -242,6 +245,16 @@ where
     Option::<BoundedStringList>::deserialize(deserializer).map(|value| value.map(|value| value.0))
 }
 
+fn deserialize_optional_sanitized_bounded_string_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<SanitizedBoundedStringList>::deserialize(deserializer)
+        .map(|value| value.map(|value| value.0))
+}
+
 #[allow(dead_code)]
 pub(crate) fn deserialize_bounded_string_map<'de, D>(
     deserializer: D,
@@ -322,6 +335,20 @@ struct BoundedStringMap(
     #[serde(deserialize_with = "deserialize_bounded_string_map")] BTreeMap<String, String>,
 );
 
+#[derive(Deserialize)]
+struct SanitizedBoundedStringList(
+    #[serde(deserialize_with = "deserialize_sanitized_bounded_string_vec")] Vec<String>,
+);
+
+fn deserialize_sanitized_bounded_string_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_seq(SanitizedBoundedStringListVisitor::<MAX_RESPONSE_STRINGS>)
+}
+
 #[allow(dead_code)]
 pub(crate) fn deserialize_bounded_secret_string_vec<'de, D>(
     deserializer: D,
@@ -333,6 +360,8 @@ where
 }
 
 struct BoundedStringListVisitor<const MAX: usize>;
+
+struct SanitizedBoundedStringListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedStringListVisitor<MAX> {
     type Value = Vec<String>;
@@ -351,6 +380,31 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedStringListVisitor<MAX> {
                 return Ok(values);
             };
             values.push(value);
+        }
+        if seq.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("OpenBao string list exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
+impl<'de, const MAX: usize> Visitor<'de> for SanitizedBoundedStringListVisitor<MAX> {
+    type Value = Vec<String>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a sanitized list of at most {MAX} strings")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < MAX {
+            let Some(value) = seq.next_element::<String>()? else {
+                return Ok(values);
+            };
+            values.push(crate::error::sanitize_api_error(&value));
         }
         if seq.next_element::<IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao string list exceeds item limit"));
@@ -530,6 +584,25 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn response_warnings_are_sanitized_for_display() {
+        let value = serde_json::json!({
+            "data": "ok",
+            "warnings": ["safe\u{001b}[31m\r\nforged\u{202e}"]
+        });
+        let envelope: ResponseEnvelope<String> =
+            serde_json::from_value(value).unwrap_or_else(|error| panic!("{error}"));
+        let warning = envelope
+            .warnings
+            .as_ref()
+            .and_then(|warnings| warnings.first())
+            .unwrap_or_else(|| panic!("missing warning"));
+
+        assert_eq!(warning, "safe[31mforged");
+        assert!(!warning.chars().any(char::is_control));
+        assert!(!warning.contains('\u{202e}'));
     }
 
     #[test]

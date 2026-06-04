@@ -90,6 +90,7 @@ totp = []
 transit = []
 transit-bytes = ["dep:base64-ng"]
 transit-import = ["dep:aes-kw", "dep:base64-ng", "dep:openssl", "dep:rand"]
+transit-import-acknowledged = []
 sys = []
 http2 = ["reqwest/http2"]
 time = ["dep:time"]
@@ -117,10 +118,14 @@ insecure-ldap-tls-acknowledged = []
 # Test-only escape hatch for this crate's HTTP mock tests. Do not enable in
 # applications; it permits sensitive requests over numeric loopback HTTP.
 sensitive-http-test-only = []
+# Must be enabled together with sensitive-http-test-only to confirm the
+# loopback HTTP credential transport test escape hatch was audited.
+sensitive-http-test-only-acknowledged = []
 
 [dependencies]
 aes-kw = { version = "0.3.1", default-features = false, features = ["zeroize"], optional = true }
 base64-ng = { version = "1.0.6", default-features = false, features = ["alloc"], optional = true }
+getrandom = "0.4.2"
 rand = { version = "0.10.1", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 openssl = { version = "0.10.80", optional = true }

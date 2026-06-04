@@ -1079,6 +1079,14 @@ impl fmt::Debug for TransitEncryptResponse {
 }
 
 /// Request for Transit decryption.
+///
+/// # Security residual
+///
+/// The SDK serializes secret-bearing request bodies through a zeroizing
+/// intermediate buffer, but `reqwest::Body` owns a normal non-zeroizing copy
+/// after handoff to the HTTP stack. Treat the calling process heap as
+/// containing the ciphertext and any base64 associated data, derivation
+/// context, or nonce for the duration of the request lifecycle.
 #[derive(Clone, Debug)]
 pub struct TransitDecryptRequest {
     /// OpenBao ciphertext.
