@@ -25,12 +25,14 @@ zero `planned` and zero `decision` rows.
 - Added `Client::wrapping`, `WrappingContext`, and `WrappedResponse<T>` for
   typed response-wrapped JSON requests and typed unwrap of the original
   response shape.
+- Added ACL policy-builder wrapping TTL constraints through
+  `allow_path_with_wrapping` and helper variants that require response
+  wrapping on common KV v2 and Transit paths.
 
 ## Planned Scope
 
 - Selective AdminBootstrap convergence for PKI, database, and SSH mount/role
   workflows.
-- ACL policy-builder wrapping TTL constraints and helper variants.
 - Final public API, documentation, migration, and stable-scope review before
   `1.0.0`.
 
@@ -43,6 +45,8 @@ zero `planned` and zero `decision` rows.
 - Wrapped response metadata keeps wrapping tokens and accessors in
   `SecretString` and redacts them from `Debug`; delivery and recipient policy
   remain caller-owned.
+- ACL parameter-constraint HCL generation remains rejected for typed builder
+  scope because correct output requires a full HCL value serializer.
 - PKI CA setup, database connection configuration, SSH CA setup, KV v1
   convergence, and ACL parameter-constraint HCL generation remain rejected for
   stable bootstrap/builder scope.

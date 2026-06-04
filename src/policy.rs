@@ -60,6 +60,8 @@ impl fmt::Display for AclCapability {
 struct AclRule {
     path: String,
     capabilities: Vec<AclCapability>,
+    min_wrapping_ttl: Option<String>,
+    max_wrapping_ttl: Option<String>,
 }
 
 /// Builder for bounded, typed OpenBao ACL policy documents.
@@ -87,6 +89,30 @@ impl AclPolicyBuilder {
         self.push_rule(path.as_ref(), capabilities)
     }
 
+    /// Adds a path rule with response-wrapping TTL constraints.
+    ///
+    /// `min_wrapping_ttl` and `max_wrapping_ttl` use OpenBao duration syntax
+    /// such as `30s`, `5m`, or `1h`. At least one bound must be provided.
+    /// Parameter constraints remain outside this builder's scope because safe
+    /// generation requires a full HCL value serializer.
+    pub fn allow_path_with_wrapping<I>(
+        &mut self,
+        path: impl AsRef<str>,
+        capabilities: I,
+        min_wrapping_ttl: Option<&str>,
+        max_wrapping_ttl: Option<&str>,
+    ) -> Result<&mut Self>
+    where
+        I: IntoIterator<Item = AclCapability>,
+    {
+        self.push_rule_with_wrapping(
+            path.as_ref(),
+            capabilities,
+            min_wrapping_ttl,
+            max_wrapping_ttl,
+        )
+    }
+
     /// Adds a deny rule for a path.
     pub fn deny_path(&mut self, path: impl AsRef<str>) -> Result<&mut Self> {
         self.push_rule(path.as_ref(), [AclCapability::Deny])
@@ -107,6 +133,25 @@ impl AclPolicyBuilder {
         let data_path = prefixed_engine_path(mount.as_ref(), "data", prefix.as_ref())?;
         let metadata_path = prefixed_engine_path(mount.as_ref(), "metadata", prefix.as_ref())?;
         self.push_rule(&data_path, [AclCapability::Read])?;
+        self.push_rule(&metadata_path, [AclCapability::List])
+    }
+
+    /// Allows KV v2 read/list access below a literal prefix and requires
+    /// response wrapping on the data path.
+    pub fn allow_kv2_read_prefix_with_required_wrapping(
+        &mut self,
+        mount: impl AsRef<str>,
+        prefix: impl AsRef<str>,
+        min_wrapping_ttl: &str,
+    ) -> Result<&mut Self> {
+        let data_path = prefixed_engine_path(mount.as_ref(), "data", prefix.as_ref())?;
+        let metadata_path = prefixed_engine_path(mount.as_ref(), "metadata", prefix.as_ref())?;
+        self.push_rule_with_wrapping(
+            &data_path,
+            [AclCapability::Read],
+            Some(min_wrapping_ttl),
+            None,
+        )?;
         self.push_rule(&metadata_path, [AclCapability::List])
     }
 
@@ -139,6 +184,39 @@ impl AclPolicyBuilder {
         )
     }
 
+    /// Allows KV v2 read/write/list/delete access below a literal prefix and
+    /// requires response wrapping on the data path.
+    pub fn allow_kv2_read_write_prefix_with_required_wrapping(
+        &mut self,
+        mount: impl AsRef<str>,
+        prefix: impl AsRef<str>,
+        min_wrapping_ttl: &str,
+    ) -> Result<&mut Self> {
+        let data_path = prefixed_engine_path(mount.as_ref(), "data", prefix.as_ref())?;
+        let metadata_path = prefixed_engine_path(mount.as_ref(), "metadata", prefix.as_ref())?;
+        self.push_rule_with_wrapping(
+            &data_path,
+            [
+                AclCapability::Create,
+                AclCapability::Read,
+                AclCapability::Update,
+                AclCapability::Patch,
+                AclCapability::Delete,
+            ],
+            Some(min_wrapping_ttl),
+            None,
+        )?;
+        self.push_rule(
+            &metadata_path,
+            [
+                AclCapability::Read,
+                AclCapability::Update,
+                AclCapability::Delete,
+                AclCapability::List,
+            ],
+        )
+    }
+
     /// Allows Transit encrypt/decrypt access for one key.
     pub fn allow_transit_encrypt_decrypt(
         &mut self,
@@ -155,6 +233,27 @@ impl AclPolicyBuilder {
         )
     }
 
+    /// Allows Transit encrypt/decrypt access and requires response wrapping.
+    pub fn allow_transit_encrypt_decrypt_with_required_wrapping(
+        &mut self,
+        mount: impl AsRef<str>,
+        key: impl AsRef<str>,
+        min_wrapping_ttl: &str,
+    ) -> Result<&mut Self> {
+        self.push_rule_with_wrapping(
+            &engine_key_path(mount.as_ref(), "encrypt", key.as_ref())?,
+            [AclCapability::Update],
+            Some(min_wrapping_ttl),
+            None,
+        )?;
+        self.push_rule_with_wrapping(
+            &engine_key_path(mount.as_ref(), "decrypt", key.as_ref())?,
+            [AclCapability::Update],
+            Some(min_wrapping_ttl),
+            None,
+        )
+    }
+
     /// Allows Transit sign/verify access for one key.
     pub fn allow_transit_sign_verify(
         &mut self,
@@ -168,6 +267,27 @@ impl AclPolicyBuilder {
         self.push_rule(
             &engine_key_path(mount.as_ref(), "verify", key.as_ref())?,
             [AclCapability::Update],
+        )
+    }
+
+    /// Allows Transit sign/verify access and requires response wrapping.
+    pub fn allow_transit_sign_verify_with_required_wrapping(
+        &mut self,
+        mount: impl AsRef<str>,
+        key: impl AsRef<str>,
+        min_wrapping_ttl: &str,
+    ) -> Result<&mut Self> {
+        self.push_rule_with_wrapping(
+            &engine_key_path(mount.as_ref(), "sign", key.as_ref())?,
+            [AclCapability::Update],
+            Some(min_wrapping_ttl),
+            None,
+        )?;
+        self.push_rule_with_wrapping(
+            &engine_key_path(mount.as_ref(), "verify", key.as_ref())?,
+            [AclCapability::Update],
+            Some(min_wrapping_ttl),
+            None,
         )
     }
 
@@ -202,7 +322,49 @@ impl AclPolicyBuilder {
         }
         let capabilities = validate_capabilities(capabilities)?;
         let path = validate_policy_path(path)?;
-        self.rules.push(AclRule { path, capabilities });
+        self.rules.push(AclRule {
+            path,
+            capabilities,
+            min_wrapping_ttl: None,
+            max_wrapping_ttl: None,
+        });
+        Ok(self)
+    }
+
+    fn push_rule_with_wrapping<I>(
+        &mut self,
+        path: &str,
+        capabilities: I,
+        min_wrapping_ttl: Option<&str>,
+        max_wrapping_ttl: Option<&str>,
+    ) -> Result<&mut Self>
+    where
+        I: IntoIterator<Item = AclCapability>,
+    {
+        if min_wrapping_ttl.is_none() && max_wrapping_ttl.is_none() {
+            return Err(Error::InvalidParameter(
+                "ACL wrapping rule must include min_wrapping_ttl or max_wrapping_ttl".into(),
+            ));
+        }
+        if self.rules.len() >= MAX_POLICY_RULES {
+            return Err(Error::InvalidParameter(
+                "ACL policy rule count exceeds maximum allowed length".into(),
+            ));
+        }
+        let capabilities = validate_capabilities(capabilities)?;
+        let path = validate_policy_path(path)?;
+        let min_wrapping_ttl = min_wrapping_ttl
+            .map(|ttl| validate_wrapping_policy_ttl(ttl, "min_wrapping_ttl"))
+            .transpose()?;
+        let max_wrapping_ttl = max_wrapping_ttl
+            .map(|ttl| validate_wrapping_policy_ttl(ttl, "max_wrapping_ttl"))
+            .transpose()?;
+        self.rules.push(AclRule {
+            path,
+            capabilities,
+            min_wrapping_ttl,
+            max_wrapping_ttl,
+        });
         Ok(self)
     }
 }
@@ -223,6 +385,11 @@ where
         ));
     }
     Ok(capabilities)
+}
+
+fn validate_wrapping_policy_ttl(ttl: &str, field: &'static str) -> Result<String> {
+    crate::validation::validate_duration_parameter(ttl, field)?;
+    Ok(ttl.to_owned())
 }
 
 fn validate_policy_path(path: &str) -> Result<String> {
@@ -276,7 +443,18 @@ fn push_rule(document: &mut String, rule: &AclRule) {
         document.push_str(capability.as_str());
         document.push('"');
     }
-    document.push_str("]\n}\n");
+    document.push_str("]\n");
+    if let Some(ttl) = rule.min_wrapping_ttl.as_ref() {
+        document.push_str("  min_wrapping_ttl = \"");
+        push_hcl_string(document, ttl);
+        document.push_str("\"\n");
+    }
+    if let Some(ttl) = rule.max_wrapping_ttl.as_ref() {
+        document.push_str("  max_wrapping_ttl = \"");
+        push_hcl_string(document, ttl);
+        document.push_str("\"\n");
+    }
+    document.push_str("}\n");
 }
 
 fn push_hcl_string(output: &mut String, value: &str) {
@@ -359,5 +537,57 @@ mod tests {
     fn helper_paths_reject_wildcard_inputs() {
         let mut builder = AclPolicyBuilder::new();
         assert!(builder.allow_kv2_read_prefix("secret", "app/*").is_err());
+    }
+
+    #[test]
+    fn builds_path_policy_with_wrapping_ttls() {
+        let mut builder = AclPolicyBuilder::new();
+        let policy = builder
+            .allow_path_with_wrapping(
+                "secret/data/app/*",
+                [AclCapability::Read],
+                Some("30s"),
+                Some("5m"),
+            )
+            .and_then(|builder| builder.build())
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        assert!(policy.contains("path \"secret/data/app/*\""));
+        assert!(policy.contains("capabilities = [\"read\"]"));
+        assert!(policy.contains("min_wrapping_ttl = \"30s\""));
+        assert!(policy.contains("max_wrapping_ttl = \"5m\""));
+    }
+
+    #[test]
+    fn helper_policy_can_require_wrapping() {
+        let mut builder = AclPolicyBuilder::new();
+        let policy = builder
+            .allow_kv2_read_prefix_with_required_wrapping("secret", "app", "1m")
+            .and_then(|builder| builder.build())
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        assert!(policy.contains("path \"secret/data/app/*\""));
+        assert!(policy.contains("min_wrapping_ttl = \"1m\""));
+        assert!(policy.contains("path \"secret/metadata/app/*\""));
+    }
+
+    #[test]
+    fn wrapping_policy_ttls_are_validated() {
+        let mut builder = AclPolicyBuilder::new();
+        assert!(
+            builder
+                .allow_path_with_wrapping(
+                    "secret/data/app/*",
+                    [AclCapability::Read],
+                    Some("0s"),
+                    None
+                )
+                .is_err()
+        );
+        assert!(
+            builder
+                .allow_path_with_wrapping("secret/data/app/*", [AclCapability::Read], None, None)
+                .is_err()
+        );
     }
 }

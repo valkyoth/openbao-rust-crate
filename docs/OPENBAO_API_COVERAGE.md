@@ -326,6 +326,8 @@ Implemented in `0.8.0`:
 - `Client::wrapping`, `WrappingContext`, and `WrappedResponse<T>` for typed
   response-wrapped JSON requests and typed unwrap of the original response
   shape.
+- ACL policy-builder wrapping TTL constraints and helper variants for policies
+  that require response wrapping.
 - KV v2 historical reads were already covered by `read_version` and
   `read_data_version`.
 
@@ -356,9 +358,8 @@ Finalization work before `1.0.0`:
   database mounts/dynamic and static roles, and SSH mounts/roles; reject PKI CA
   setup, database connection config, SSH CA setup, and KV v1 convergence in the
   bootstrap layer.
-- implement ACL policy-builder wrapping-TTL constraints in `0.15.0`; reject
-  parameter-constraint generation because safe output requires a full HCL value
-  serializer.
+- reject ACL parameter-constraint generation because safe output requires a
+  full HCL value serializer.
 - reject leaf certificate and SPKI pinning for stable scope; use root-only
   trust with an internal OpenBao CA or self-signed OpenBao certificate instead.
 - use `0.10.0` through `0.14.0` for Identity/auth, Transit, PKI, and System

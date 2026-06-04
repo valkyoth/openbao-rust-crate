@@ -12,6 +12,8 @@ All notable changes to this project are documented here.
   `tokio-helpers`-gated `Sys::wait_until_unsealed` convenience helper.
 - Added `Client::wrapping`, `WrappingContext`, and `WrappedResponse<T>` for
   typed response-wrapped JSON requests.
+- Added ACL policy-builder wrapping TTL constraints and helper variants for
+  policies that require response wrapping.
 
 ### Security
 
@@ -19,6 +21,9 @@ All notable changes to this project are documented here.
   back-pressure remains an application middleware responsibility.
 - Kept wrapping tokens and accessors as `SecretString` values with redacted
   `Debug`; token delivery policy remains caller-owned.
+- Kept ACL parameter-constraint generation outside the typed policy builder;
+  callers should still use raw policy documents for advanced HCL constraint
+  maps.
 
 ## 0.14.0 - 2026-06-04
 

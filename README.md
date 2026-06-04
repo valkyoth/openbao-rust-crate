@@ -190,8 +190,9 @@ Current `0.15.0` line:
   freeze. Bounded unseal readiness polling is available through
   `wait_until_unsealed_with_delay`, with `wait_until_unsealed` behind the
   `tokio-helpers` feature. Typed response wrapping is available through
-  `Client::wrapping`. Request-level back-pressure, full OpenTelemetry SDK
-  integration, certificate pinning, KV v1 bootstrap convergence, and ACL
+  `Client::wrapping`, and ACL policy rules can enforce response-wrapping TTL
+  constraints. Request-level back-pressure, full OpenTelemetry SDK integration,
+  certificate pinning, KV v1 bootstrap convergence, and ACL
   parameter-constraint HCL generation are rejected for stable scope.
 - `1.0.0`: stable API freeze after the endpoint matrix has zero `planned` or
   `decision` rows; after `1.0.0`, only `1.0.x` maintenance and security fixes
@@ -1395,6 +1396,26 @@ async fn main() -> Result<()> {
     let capabilities = client.sys().capabilities_self(["secret/data/app"]).await?;
     let _for_path = capabilities.by_path.get("secret/data/app");
     Ok(())
+}
+```
+
+Require response wrapping in an ACL policy:
+
+```rust,no_run
+use openbao::{AclCapability, AclPolicyBuilder, Result};
+
+fn build_policy() -> Result<String> {
+    let mut policy = AclPolicyBuilder::new();
+    policy
+        .allow_path_with_wrapping(
+            "secret/data/app/*",
+            [AclCapability::Read],
+            Some("30s"),
+            Some("5m"),
+        )?
+        .allow_kv2_read_prefix_with_required_wrapping("secret", "ops", "1m")?;
+
+    policy.build()
 }
 ```
 
