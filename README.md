@@ -37,10 +37,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the `0.11.0` release line. `0.11.0` builds on the
-released `0.10.0` API with Transit advanced key-management coverage for
-BYOK/import, reversible soft-delete, cache/global configuration, CSR
-generation, and certificate-chain install helpers.
+This README documents the `0.12.0` development line. `0.12.0` builds on the
+released `0.11.0` API and focuses on PKI Tier 1 multi-issuer and authority
+lifecycle coverage.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -165,10 +164,17 @@ Delivered in `0.11.0`:
   outside the default wrapper APIs. The non-default `transit-import` feature
   adds a software AES-KWP/RSA-OAEP wrapping helper.
 
+Current `0.12.0` line:
+
+- PKI Tier 1 multi-issuer and authority lifecycle work: default issuer/key
+  config, named-issuer issue/sign, root rotate/replace, standalone key
+  generation, sign-verbatim operator helpers, revoke-with-key, cluster and
+  auto-tidy config, and current-doc PKI struct-field expansion.
+
 Planned next:
 
-- `0.12.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
-  PKI advanced/public/specialized flows, remaining system backend rows, then
+- `0.13.0` through `0.15.0`: close the remaining endpoint matrix deliberately:
+  PKI specialized flows, remaining system backend rows, then
   final endpoint closure and stable ergonomics. Request-level back-pressure,
   full OpenTelemetry SDK integration, certificate pinning, KV v1 bootstrap
   convergence, and ACL parameter-constraint HCL generation are rejected for
@@ -209,7 +215,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `0.11.0` release line tracks compatibility evidence across this supported
+The `0.12.0` development line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -226,7 +232,7 @@ range:
 
 ```toml
 [dependencies]
-openbao = "0.10"
+openbao = "0.12"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
 ```
@@ -242,7 +248,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.10", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.12", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -250,7 +256,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "0.10", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "0.12", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 Optional RFC3339 timestamp parsing is available behind the lightweight `time`
@@ -258,7 +264,7 @@ feature:
 
 ```toml
 [dependencies]
-openbao = { version = "0.10", features = ["time"] }
+openbao = { version = "0.12", features = ["time"] }
 ```
 
 ## Features
@@ -303,7 +309,7 @@ openbao = { version = "0.10", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the current `0.11.0` line it records `643` documented endpoint rows, with
+For the current `0.12.0` line it records `643` documented endpoint rows, with
 `537/643` (`83.5%`) strict typed or operator-gated coverage.
 
 ### Client, Transport, And TLS

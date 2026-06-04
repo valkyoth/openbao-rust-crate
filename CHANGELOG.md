@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## 0.12.0 - Unreleased
+
+### Added
+
+- Started the `0.12.0` PKI Tier 1 multi-issuer and authority lifecycle line.
+
+### Maintenance
+
+- Updated GitHub Actions pins for `Swatinem/rust-cache` and
+  `taiki-e/install-action`, and bumped the CI `cargo-deny` install version.
+
 ## 0.11.0 - 2026-06-03
 
 ### Added

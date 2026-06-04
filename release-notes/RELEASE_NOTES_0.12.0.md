@@ -1,0 +1,58 @@
+# OpenBao Rust SDK 0.12.0 Release Notes
+
+Status: in development.
+
+Readiness: implementation is in progress. Do not tag until local release gates,
+GitHub CI, and the external pentest report are green for the exact release
+candidate.
+
+## Version
+
+- Version: 0.12.0
+- Release date: pending
+- Git tag: pending
+- Git commit: pending
+- License: MIT OR Apache-2.0
+
+## Summary
+
+`0.12.0` is the PKI Tier 1 multi-issuer and authority lifecycle line. The
+planned scope is default issuer/key configuration, named-issuer issue/sign,
+root rotation and replacement, standalone key generation, sign-verbatim
+operator helpers, revoke-with-key, cluster and auto-tidy config, and
+current-doc PKI struct-field expansion.
+
+Remaining `0.12.0` planned work: PKI implementation and test coverage for the
+Tier 1 rows, regenerated endpoint matrix, documentation updates, local release
+gate, external pentest, and GitHub CI validation.
+
+## Planned Scope
+
+- PKI default issuer and default key config read/write helpers.
+- Named-issuer certificate issue and sign helpers.
+- Root rotate, multi-issuer root generation, root replace, standalone key
+  generation, and intermediate issuer generation helpers.
+- Operator-gated sign-verbatim helpers.
+- Revoke-with-key proof-of-possession revocation helper.
+- PKI cluster config and auto-tidy config helpers.
+- Current OpenBao field expansion for PKI role, root/intermediate generation,
+  CRL config, and tidy request/status types.
+- Endpoint matrix regeneration after the Tier 1 rows are implemented.
+
+## Security Notes
+
+- Sign-verbatim helpers must remain behind `operator-ops` plus
+  `operator-ops-acknowledged` because they bypass normal role constraints.
+- Raw private key material must remain `SecretString` when any PKI response or
+  request field can carry it.
+- Public certificate, CSR, and CA material may remain `String` or byte buffers
+  when OpenBao documents it as public material.
+- The existing `Pki::delete_root(PkiRootDeletion::confirm())` decision remains
+  the destructive default-root deletion boundary.
+
+## Security And Stability Gate
+
+- Release gate script: `scripts/release_0_12_gate.sh`
+- OpenBao integration command: `scripts/openbao_integration.sh`
+- Do not tag until external pentest feedback is reviewed and GitHub CI is
+  green.

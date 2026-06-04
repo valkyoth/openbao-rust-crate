@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        # actions/checkout v6
+        # actions/checkout v6.0.2
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Install Rust toolchain
@@ -30,16 +30,16 @@ jobs:
         run: scripts/ci_install_rust.sh
 
       - name: Cache Rust build output
-        # Swatinem/rust-cache v2.7.8
-        uses: Swatinem/rust-cache@aa7c1c80a07a27a84c0aa76d0cef0aad3830e330
+        # Swatinem/rust-cache v2.8.1
+        uses: Swatinem/rust-cache@bc2d2e71bd35c5549942babaa51a89c586b981d1
         with:
           cache-on-failure: true
 
       - name: Install security tools
-        # taiki-e/install-action v2.75.14
-        uses: taiki-e/install-action@0c7a94999971db56e9df89df226240aab222e776
+        # taiki-e/install-action v2.79.11
+        uses: taiki-e/install-action@13608cbb45b01feb47ef444ab1a42dc41ad56f1a
         with:
-          tool: cargo-deny@0.19.6,cargo-audit@0.22.1,cargo-sbom@0.10.0
+          tool: cargo-deny@0.19.8,cargo-audit@0.22.1,cargo-sbom@0.10.0
 
       - name: Run checks
         run: scripts/checks.sh
