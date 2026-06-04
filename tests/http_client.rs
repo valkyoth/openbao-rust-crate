@@ -7780,6 +7780,109 @@ async fn pki_default_issuer_and_key_config_paths_are_documented() {
 }
 
 #[tokio::test]
+async fn pki_cluster_auto_tidy_and_revoke_with_key_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/pki/config/cluster HTTP/1.1"));
+                    r#"{"data":{"path":"https://bao.example.com/v1/pki","aia_path":"https://aia.example.com/pki"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/pki/config/cluster HTTP/1.1"));
+                    assert!(request.contains(r#""path":"https://bao.example.com/v1/pki""#));
+                    "{}"
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/pki/config/auto-tidy HTTP/1.1"));
+                    r#"{"data":{"enabled":true,"interval_duration":43200,"safety_buffer":259200,"pause_duration":"0s","page_size":50,"tidy_revoked_certs":true}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/pki/config/auto-tidy HTTP/1.1"));
+                    assert!(request.contains(r#""enabled":true"#));
+                    assert!(request.contains(r#""interval_duration":"12h""#));
+                    "{}"
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/pki/revoke-with-key HTTP/1.1"));
+                    assert!(request.contains(r#""serial_number":"01:02""#));
+                    assert!(request.contains(r#""private_key":"-----BEGIN PRIVATE KEY-----""#));
+                    r#"{"data":{"revocation_time":1893456001,"revocation_time_rfc3339":"2030-01-01T00:00:01Z"}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let cluster = pki
+        .read_cluster_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        cluster.path.as_deref(),
+        Some("https://bao.example.com/v1/pki")
+    );
+
+    pki.write_cluster_config(&openbao::secrets::pki::PkiClusterConfig {
+        path: Some("https://bao.example.com/v1/pki".to_owned()),
+        aia_path: Some("https://aia.example.com/pki".to_owned()),
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    let auto_tidy = pki
+        .read_auto_tidy_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(auto_tidy.interval_duration.as_deref(), Some("43200"));
+    assert_eq!(auto_tidy.safety_buffer.as_deref(), Some("259200"));
+
+    pki.write_auto_tidy_config(&openbao::secrets::pki::PkiAutoTidyConfig {
+        enabled: Some(true),
+        interval_duration: Some("12h".to_owned()),
+        safety_buffer: Some("72h".to_owned()),
+        tidy_revoked_certs: Some(true),
+        ..Default::default()
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    let revoked = pki
+        .revoke_with_key(&openbao::secrets::pki::PkiRevokeWithKeyRequest::new(
+            "01:02",
+            SecretString::from("-----BEGIN PRIVATE KEY-----"),
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(revoked.revocation_time, Some(1_893_456_001));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn pki_issuer_and_key_lifecycle_paths_are_documented() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

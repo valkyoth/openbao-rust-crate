@@ -216,7 +216,7 @@ secret,GET,/pki/cel/roles/:name,planned,https://openbao.org/api-docs/secret/pki/
 secret,POST,/pki/cel/issue/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/cel/sign/:name,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/revoke,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/revoke-with-key,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/revoke-with-key,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,LIST,/certs/revoked,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,LIST,/certs/revocation-queue,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,LIST,/pki/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
@@ -282,8 +282,8 @@ secret,POST,/pki/config/issuers,typed,https://openbao.org/api-docs/secret/pki/,T
 secret,POST,/pki/root/replace,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/cluster,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/config/cluster,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/cluster,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/config/cluster,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/crl,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/crl/rotate,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
@@ -291,8 +291,8 @@ secret,GET,/pki/crl/rotate-delta,planned,https://openbao.org/api-docs/secret/pki
 secret,POST,/pki/issuer/:issuer_ref/resign-crls,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/issuer/:issuer_ref/sign-revocation-list,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/tidy,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,GET,/pki/config/auto-tidy,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/config/auto-tidy,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,GET,/pki/config/auto-tidy,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/config/auto-tidy,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/tidy-status,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/tidy-cancel,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/rabbitmq/config/connection,typed,https://openbao.org/api-docs/secret/rabbitmq/,Typed secrets-engine helper exists.

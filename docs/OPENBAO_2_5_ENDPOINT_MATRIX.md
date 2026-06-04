@@ -24,21 +24,21 @@ Sources:
 ## Summary
 
 - Total documented endpoint rows: `643`
-- Strict typed coverage: `548/643` (85.2%)
-- Typed plus partial coverage: `549/643` (85.4%)
-- Addressed by typed, partial, raw, external, or rejected policy: `594/643` (92.4%)
-- Planned implementation rows before `1.0.0`: `49`
+- Strict typed coverage: `553/643` (86.0%)
+- Typed plus partial coverage: `554/643` (86.2%)
+- Addressed by typed, partial, raw, external, or rejected policy: `599/643` (93.2%)
+- Planned implementation rows before `1.0.0`: `44`
 - Open owner decisions before `1.0.0`: `0`
 
 | Status | Count |
 | --- | ---: |
-| `typed` | 503 |
+| `typed` | 508 |
 | `typed-gated` | 45 |
 | `partial` | 1 |
 | `raw` | 0 |
 | `external` | 33 |
 | `rejected` | 12 |
-| `planned` | 49 |
+| `planned` | 44 |
 | `decision` | 0 |
 
 ## Area Totals
@@ -46,7 +46,7 @@ Sources:
 | Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Planned | Decision | Strict % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 99.0% |
-| `secret` | 347 | 289 | 1 | 0 | 0 | 33 | 0 | 24 | 0 | 83.6% |
+| `secret` | 347 | 294 | 1 | 0 | 0 | 33 | 0 | 19 | 0 | 85.0% |
 | `system` | 191 | 110 | 44 | 0 | 0 | 0 | 12 | 25 | 0 | 80.6% |
 
 ## Pages With Non-Typed Rows
@@ -55,7 +55,7 @@ Sources:
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | [/api-docs/auth/token/](https://openbao.org/api-docs/auth/token/) | 18 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 | [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 18 | 0 | 0 | 0 | 3 | 0 | 0 | 0 |
-| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 55 | 1 | 0 | 0 | 28 | 0 | 24 | 0 |
+| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 60 | 1 | 0 | 0 | 28 | 0 | 19 | 0 |
 | [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 | 0 | 0 |
 | [/api-docs/system/config-ui/](https://openbao.org/api-docs/system/config-ui/) | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 |
 | [/api-docs/system/generate-recovery-token/](https://openbao.org/api-docs/system/generate-recovery-token/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |
@@ -75,7 +75,7 @@ Sources:
 - Named-provider OIDC browser protocol rows (`authorize`, `token`, `userinfo`) are classified as `external` because they belong to a dedicated OIDC client library.
 - `sys/mfa/validate` is implemented in `0.10.0` because MFA-enforced login flows cannot complete without it.
 - Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are implemented in `0.11.0`; the optional `transit-import` wrapping helper prepares OpenBao BYOK blobs with AES-KWP/RSA-OAEP behind feature-gated `openssl` and `aes-kw` dependencies.
-- PKI default issuer/key config, named-issuer issue/sign, root rotate/replace, standalone key generation, and multi-issuer root/intermediate generation rows are implemented in `0.12.0`; remaining PKI Tier 1 sign-verbatim/revoke-with-key/config and current-doc struct-field completion rows are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
+- PKI default issuer/key config, named-issuer issue/sign, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, revoke-with-key, cluster config, and auto-tidy config rows are implemented in `0.12.0`; remaining PKI Tier 1 sign-verbatim and current-doc struct-field completion rows are planned for `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is planned for `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
 - System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are planned for `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.
 - `0.15.0` is the closure release where planned endpoint rows are implemented or intentionally reclassified before `1.0.0`.
 

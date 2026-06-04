@@ -14,6 +14,7 @@ All notable changes to this project are documented here.
   `/pki/issuer/:issuer_ref/sign/:name`.
 - Added PKI root rotate, root replace, multi-issuer root/intermediate
   generation, and standalone key generation helpers.
+- Added PKI cluster config, auto-tidy config, and revoke-with-key helpers.
 
 ### Maintenance
 

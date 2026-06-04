@@ -35,15 +35,15 @@ GitHub CI validation.
   `/pki/issuer/:issuer_ref/sign/:name`.
 - PKI authority lifecycle helpers for root rotation, root replacement,
   multi-issuer root/intermediate generation, and standalone key generation.
+- PKI cluster config, auto-tidy config, and revoke-with-key helpers.
 - Endpoint matrix regeneration for the implemented default issuer/key config
-  rows, named-issuer issue/sign rows, and authority lifecycle rows, bringing
-  strict typed coverage to `548/643` (`85.2%`).
+  rows, named-issuer issue/sign rows, authority lifecycle rows, config rows,
+  and revoke-with-key row, bringing strict typed coverage to `553/643`
+  (`86.0%`).
 
 ## Planned Scope
 
 - Operator-gated sign-verbatim helpers.
-- Revoke-with-key proof-of-possession revocation helper.
-- PKI cluster config and auto-tidy config helpers.
 - Current OpenBao field expansion for PKI role, root/intermediate generation,
   CRL config, and tidy request/status types.
 - Endpoint matrix regeneration after the Tier 1 rows are implemented.

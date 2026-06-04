@@ -9,8 +9,9 @@ use reqwest::{
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
-    Deserialize, Deserializer, Serialize,
+    Deserialize, Deserializer, Serialize, Serializer,
     de::{IgnoredAny, MapAccess, SeqAccess, Visitor},
+    ser::SerializeStruct,
 };
 
 use crate::{
@@ -183,6 +184,17 @@ pub struct PkiKeysConfig {
     /// Default key reference, by key name or ID.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<String>,
+}
+
+/// PKI cluster-local configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct PkiClusterConfig {
+    /// OpenBao API URL for this PKI mount on the current cluster.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    /// AIA distribution URL for public CA/CRL material.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aia_path: Option<String>,
 }
 
 /// PKI authority key generation mode.
@@ -473,6 +485,18 @@ pub struct PkiCrlConfig {
     /// Delta CRL rebuild interval.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub delta_rebuild_interval: Option<String>,
+    /// OCSP expiry duration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ocsp_expiry: Option<String>,
+    /// Enables unified CRL building.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unified_crl: Option<bool>,
+    /// Serves unified CRLs on legacy paths.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unified_crl_on_existing_paths: Option<bool>,
+    /// Enables cross-cluster revocation where supported.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cross_cluster_revocation: Option<bool>,
 }
 
 /// PKI tidy request.
@@ -493,6 +517,42 @@ pub struct PkiTidyRequest {
     /// Tidies ACME state where supported.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tidy_acme: Option<bool>,
+    /// Tidies invalid certificates where supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_invalid_certs: Option<bool>,
+    /// Tidies expired issuer metadata where supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_expired_issuers: Option<bool>,
+    /// Tidies moved issuer metadata where supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_move_legacy_ca_bundle: Option<bool>,
+    /// Tidies cross-cluster revoked certificates where supported.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_cross_cluster_revoked_certs: Option<bool>,
+    /// Tidies revoked certificate issuer associations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tidy_revoked_cert_issuer_associations: Option<bool>,
+    /// Revocation queue safety buffer duration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revocation_queue_safety_buffer: Option<String>,
+    /// Issuer safety buffer duration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer_safety_buffer: Option<String>,
+    /// Pause duration between tidy batches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pause_duration: Option<String>,
+    /// Page size for tidy operations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_size: Option<u64>,
+    /// Whether to maintain stored certificate counts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub maintain_stored_certificate_counts: Option<bool>,
+    /// Whether to publish stored certificate count metrics.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub publish_stored_certificate_count_metrics: Option<bool>,
+    /// ACME account safety buffer duration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub acme_account_safety_buffer: Option<String>,
 }
 
 /// PKI tidy status returned by `/pki/tidy-status`.
@@ -531,6 +591,113 @@ pub struct PkiTidyStatus {
     /// Number of certificate-store entries deleted, when returned.
     #[serde(default)]
     pub cert_store_deleted_count: Option<u64>,
+    /// Whether invalid certificate tidy is enabled.
+    #[serde(default)]
+    pub tidy_invalid_certs: Option<bool>,
+    /// Whether expired issuer tidy is enabled.
+    #[serde(default)]
+    pub tidy_expired_issuers: Option<bool>,
+    /// Whether moved issuer tidy is enabled.
+    #[serde(default)]
+    pub tidy_move_legacy_ca_bundle: Option<bool>,
+    /// Whether revoked certificate issuer association tidy is enabled.
+    #[serde(default)]
+    pub tidy_revoked_cert_issuer_associations: Option<bool>,
+    /// Whether revocation queue tidy is enabled.
+    #[serde(default)]
+    pub tidy_revocation_queue: Option<bool>,
+    /// Pause duration between tidy batches.
+    #[serde(default, deserialize_with = "deserialize_optional_string_or_u64")]
+    pub pause_duration: Option<String>,
+    /// Issuer safety buffer duration.
+    #[serde(default, deserialize_with = "deserialize_optional_string_or_u64")]
+    pub issuer_safety_buffer: Option<String>,
+    /// Revocation queue safety buffer duration.
+    #[serde(default, deserialize_with = "deserialize_optional_string_or_u64")]
+    pub revocation_queue_safety_buffer: Option<String>,
+}
+
+/// PKI automatic tidy configuration.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct PkiAutoTidyConfig {
+    /// Enables automatic tidy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    /// Duration between automatic tidy operations.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub interval_duration: Option<String>,
+    /// Tidies stored certificates.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidy_cert_store: Option<bool>,
+    /// Tidies revoked certificates.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidy_revoked_certs: Option<bool>,
+    /// Tidies revocation queue entries.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidy_revocation_queue: Option<bool>,
+    /// Tidies invalid certificates.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidy_invalid_certs: Option<bool>,
+    /// Tidies expired issuer metadata.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidy_expired_issuers: Option<bool>,
+    /// Tidies moved legacy CA bundles.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidy_move_legacy_ca_bundle: Option<bool>,
+    /// Tidies cross-cluster revoked certificates.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidy_cross_cluster_revoked_certs: Option<bool>,
+    /// Tidies revoked certificate issuer associations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tidy_revoked_cert_issuer_associations: Option<bool>,
+    /// Safety buffer duration.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub safety_buffer: Option<String>,
+    /// Revocation queue safety buffer duration.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub revocation_queue_safety_buffer: Option<String>,
+    /// Issuer safety buffer duration.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub issuer_safety_buffer: Option<String>,
+    /// Pause duration between batches.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub pause_duration: Option<String>,
+    /// Page size for tidy batches.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_size: Option<u64>,
+    /// Whether to maintain stored certificate counts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub maintain_stored_certificate_counts: Option<bool>,
+    /// Whether to publish stored certificate count metrics.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub publish_stored_certificate_count_metrics: Option<bool>,
+    /// ACME account safety buffer duration.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub acme_account_safety_buffer: Option<String>,
 }
 
 /// CRL rotation response.
@@ -663,6 +830,47 @@ pub struct PkiRevokeResponse {
     /// Revocation time formatted as RFC3339, when returned.
     #[serde(default)]
     pub revocation_time_rfc3339: Option<String>,
+}
+
+/// Request for revoking a certificate by proving private-key possession.
+#[derive(Clone)]
+pub struct PkiRevokeWithKeyRequest {
+    /// Certificate serial number.
+    pub serial_number: String,
+    /// Private key corresponding to the certificate being revoked.
+    pub private_key: SecretString,
+}
+
+impl PkiRevokeWithKeyRequest {
+    /// Creates a revoke-with-key request.
+    pub fn new(serial_number: impl Into<String>, private_key: SecretString) -> Self {
+        Self {
+            serial_number: serial_number.into(),
+            private_key,
+        }
+    }
+}
+
+impl fmt::Debug for PkiRevokeWithKeyRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PkiRevokeWithKeyRequest")
+            .field("serial_number", &self.serial_number)
+            .field("private_key", &"<redacted>")
+            .finish()
+    }
+}
+
+impl Serialize for PkiRevokeWithKeyRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("PkiRevokeWithKeyRequest", 2)?;
+        state.serialize_field("serial_number", &self.serial_number)?;
+        state.serialize_field("private_key", self.private_key.expose_secret())?;
+        state.end()
+    }
 }
 
 /// Certificate list response.
@@ -1190,6 +1398,27 @@ impl Pki<'_> {
             .await
     }
 
+    /// Reads PKI cluster-local configuration.
+    pub async fn read_cluster_config(&self) -> Result<PkiClusterConfig> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["config", "cluster"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Sets PKI cluster-local configuration.
+    pub async fn write_cluster_config(&self, config: &PkiClusterConfig) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["config", "cluster"])?,
+                Some(config),
+            )
+            .await
+    }
+
     /// Reads PKI CRL configuration.
     pub async fn read_crl_config(&self) -> Result<PkiCrlConfig> {
         self.enveloped(
@@ -1244,6 +1473,27 @@ impl Pki<'_> {
         .await
     }
 
+    /// Reads PKI automatic tidy configuration.
+    pub async fn read_auto_tidy_config(&self) -> Result<PkiAutoTidyConfig> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["config", "auto-tidy"])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    /// Sets PKI automatic tidy configuration.
+    pub async fn write_auto_tidy_config(&self, config: &PkiAutoTidyConfig) -> Result<Empty> {
+        self.client
+            .request_json(
+                Method::POST,
+                &self.path(&["config", "auto-tidy"])?,
+                Some(config),
+            )
+            .await
+    }
+
     /// Issues a certificate and private key using a PKI role.
     pub async fn issue(
         &self,
@@ -1294,6 +1544,24 @@ impl Pki<'_> {
     pub async fn revoke(&self, request: &PkiRevokeRequest) -> Result<PkiRevokeResponse> {
         self.enveloped(Method::POST, &self.path(&["revoke"])?, Some(request))
             .await
+    }
+
+    /// Revokes a certificate by proving possession of its private key.
+    ///
+    /// The private key is accepted as [`SecretString`] and redacted from
+    /// `Debug`. OpenBao documents this endpoint as authenticated but not a
+    /// privileged operator action; access should still be scoped carefully to
+    /// avoid unwanted revocation.
+    pub async fn revoke_with_key(
+        &self,
+        request: &PkiRevokeWithKeyRequest,
+    ) -> Result<PkiRevokeResponse> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["revoke-with-key"])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Lists known certificate serial numbers.
@@ -1685,6 +1953,55 @@ where
     }
 }
 
+fn deserialize_optional_string_or_u64<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_any(OptionalStringOrU64Visitor)
+}
+
+struct OptionalStringOrU64Visitor;
+
+impl<'de> Visitor<'de> for OptionalStringOrU64Visitor {
+    type Value = Option<String>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("null, a string duration, or an integer duration")
+    }
+
+    fn visit_none<E>(self) -> core::result::Result<Self::Value, E> {
+        Ok(None)
+    }
+
+    fn visit_unit<E>(self) -> core::result::Result<Self::Value, E> {
+        Ok(None)
+    }
+
+    fn visit_some<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_optional_string_or_u64(deserializer)
+    }
+
+    fn visit_str<E>(self, value: &str) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(Some(value.to_owned()))
+    }
+
+    fn visit_string<E>(self, value: String) -> core::result::Result<Self::Value, E> {
+        Ok(Some(value))
+    }
+
+    fn visit_u64<E>(self, value: u64) -> core::result::Result<Self::Value, E> {
+        Ok(Some(value.to_string()))
+    }
+}
+
 struct StringOrListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for StringOrListVisitor<MAX> {
@@ -1802,9 +2119,9 @@ mod tests {
     use secrecy::{ExposeSecret, SecretString};
 
     use super::{
-        PkiAcmeConfig, PkiAcmeEabList, PkiAcmeEabToken, PkiAuthorityBundle, PkiCertificateBundle,
-        PkiImportResponse, PkiIssuerInfo, PkiIssuerList, PkiIssuersConfig, PkiKeyList, PkiRole,
-        PkiRoleList,
+        PkiAcmeConfig, PkiAcmeEabList, PkiAcmeEabToken, PkiAuthorityBundle, PkiAutoTidyConfig,
+        PkiCertificateBundle, PkiImportResponse, PkiIssuerInfo, PkiIssuerList, PkiIssuersConfig,
+        PkiKeyList, PkiRevokeWithKeyRequest, PkiRole, PkiRoleList,
     };
 
     #[test]
@@ -1888,6 +2205,28 @@ mod tests {
 
         assert_eq!(config.default.as_deref(), Some("issuer-1"));
         assert_eq!(config.default_follows_latest_issuer, Some(false));
+    }
+
+    #[test]
+    fn pki_auto_tidy_config_accepts_integer_duration_responses() {
+        let config: PkiAutoTidyConfig = serde_json::from_str(
+            r#"{"enabled":true,"interval_duration":43200,"safety_buffer":259200,"pause_duration":"0s"}"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(config.interval_duration.as_deref(), Some("43200"));
+        assert_eq!(config.safety_buffer.as_deref(), Some("259200"));
+        assert_eq!(config.pause_duration.as_deref(), Some("0s"));
+    }
+
+    #[test]
+    fn pki_revoke_with_key_request_redacts_private_key_debug() {
+        let request =
+            PkiRevokeWithKeyRequest::new("01:02", SecretString::from(["private-", "key"].concat()));
+
+        let debug = format!("{request:?}");
+        assert!(debug.contains("<redacted>"));
+        assert!(!debug.contains("private-key"));
     }
 
     #[test]

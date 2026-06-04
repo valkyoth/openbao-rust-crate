@@ -73,11 +73,11 @@ The `0.12.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `548/643` (`85.2%`);
-- typed plus partial coverage: `549/643` (`85.4%`);
-- addressed by typed, partial, raw, external, or rejected policy: `594/643`
-  (`92.4%`);
-- planned implementation rows before `1.0.0`: `49`;
+- strict typed coverage: `553/643` (`86.0%`);
+- typed plus partial coverage: `554/643` (`86.2%`);
+- addressed by typed, partial, raw, external, or rejected policy: `599/643`
+  (`93.2%`);
+- planned implementation rows before `1.0.0`: `44`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -205,8 +205,8 @@ Support plan:
   issuer/key config, named-issuer issue/sign, root rotate/replace, standalone
   key generation, multi-issuer root/intermediate generation, and
   operator-gated default root deletion with explicit `PkiRootDeletion`
-  confirmation are implemented. Sign-verbatim behind operator gates,
-  revoke-with-key, cluster config, auto-tidy config, and current-doc field
+  confirmation, cluster config, auto-tidy config, and revoke-with-key are
+  implemented. Sign-verbatim behind operator gates and current-doc field
   expansion for PKI role/generation/CRL/tidy structs are planned for `0.12.0`.
   Revocation/CRL management, CEL roles, named-issuer
   sign-intermediate/sign-self-issued, delta CRL rotation, and cross-sign rows
