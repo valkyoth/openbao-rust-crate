@@ -27,6 +27,8 @@ and resultant ACL helpers.
   internal-endpoint stability caveat and conservative capability maps.
 - Added in-flight request inspection as a typed operator-gated diagnostic
   helper with `SecretString` token accessors and bounded response maps.
+- Added the new system request/response types to the prelude where appropriate,
+  with operator ceremony types still gated by `operator-ops`.
 - Kept sys/config/ui, sys/monitor streaming, internal router inspection,
   internal counters, and internal request inspection rejected for stable scope.
 - Regenerated the OpenBao `2.5.x` endpoint matrix. It now records `643`

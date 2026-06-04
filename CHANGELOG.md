@@ -16,6 +16,8 @@ All notable changes to this project are documented here.
   passwords are returned as `SecretString`.
 - Added resultant ACL inspection with conservative capability maps and an
   internal-endpoint stability caveat.
+- Added the new `0.14.0` system request/response types to the prelude where
+  appropriate, with operator ceremony types still gated by `operator-ops`.
 - Updated the OpenBao `2.5.x` endpoint matrix to record zero `planned` and
   zero `decision` rows after the system backend pass.
 - Added the `0.14.0` release gate script and metadata checks.

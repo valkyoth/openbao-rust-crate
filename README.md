@@ -305,7 +305,7 @@ openbao = { version = "0.14", features = ["time"] }
 | `transit` | yes | Transit key lifecycle, batch cryptography, and single-operation cryptography helpers. |
 | `transit-bytes` | no | Raw-byte Transit convenience helpers using `base64-ng` for OpenBao's base64 request/response fields. |
 | `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, or post-quantum claim. |
-| `sys` | yes | System backend, readiness, leases, quotas, storage, diagnostics, and operator-gated helpers. |
+| `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tracing` | no | Optional request/response instrumentation with method, validated path, and status only. No bodies, tokens, or namespaces are logged; paths may still contain opaque IDs such as lease IDs or entity IDs, so treat debug traces as operationally sensitive. No OpenTelemetry SDK dependency. |

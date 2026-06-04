@@ -15,7 +15,9 @@
 //! Transit lifecycle, batch, single-operation cryptography, import/BYOK, and
 //! PKI issue/sign/revoke/tidy helpers, system health/readiness, dev-only
 //! bootstrap, mount management, audit devices, exact and prefix lease helpers,
-//! plugin catalog operations, SSH, TOTP, and raw JSON calls for advanced users.
+//! password policies, resultant ACL inspection, operator-gated root/recovery
+//! token ceremonies, in-flight request diagnostics, plugin catalog operations,
+//! SSH, TOTP, and raw JSON calls for advanced users.
 //! Selected system endpoints that return non-JSON data, such as Prometheus
 //! metrics and capped Raft snapshots, are exposed through typed helpers rather
 //! than a public raw-body escape hatch.
@@ -302,12 +304,20 @@ pub mod prelude {
     #[cfg(feature = "sys")]
     pub use crate::sys::{
         AuditedRequestHeaderConfig, AuditedRequestHeaders, Capability, CapabilityView, CorsConfig,
-        CorsConfigRequest, HaNode, HaStatus, Health, KeyStatus, LeaderStatus, LeaseCount,
-        LockedUsers, LockedUsersMountAccessor, LockedUsersNamespace, LoggerLevel, LoggerLevels,
-        NamespaceInfo, NamespaceList, NamespaceRequest, RaftAutopilotConfig, RaftConfiguration,
+        CorsConfigRequest, GeneratedPassword, HaNode, HaStatus, Health, KeyStatus, LeaderStatus,
+        LeaseCount, LockedUsers, LockedUsersMountAccessor, LockedUsersNamespace, LoggerLevel,
+        LoggerLevels, NamespaceInfo, NamespaceList, NamespaceRequest, PasswordPolicy,
+        PasswordPolicyList, PasswordPolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration,
         RaftJoinRequest, RaftJoinResponse, RaftPeerRequest, RaftServer, RateLimitQuotaConfig,
         RateLimitQuotaInfo, RateLimitQuotaList, RateLimitQuotaRequest, RemountMigrationInfo,
-        RemountRequest, RemountResponse, RemountStatus, Sys, UiMountDetails, UiMountSummary,
-        UiMounts, UiNamespaces, VersionHistory, VersionHistoryEntry,
+        RemountRequest, RemountResponse, RemountStatus, ResultantAcl, ResultantAclPath, Sys,
+        UiMountDetails, UiMountSummary, UiMounts, UiNamespaces, VersionHistory,
+        VersionHistoryEntry,
+    };
+    #[cfg(all(feature = "sys", feature = "operator-ops"))]
+    pub use crate::sys::{
+        DecodeTokenRequest, DecodeTokenResponse, InFlightRequest, InFlightRequests,
+        OperatorRecoveryKeyBackup, OperatorTokenGenerationStart,
+        OperatorTokenGenerationStartRequest, OperatorTokenGenerationStatus,
     };
 }
