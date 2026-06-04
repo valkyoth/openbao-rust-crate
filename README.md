@@ -37,8 +37,8 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the in-development `0.13.0` API. `0.13.0` builds on the
-`0.12.0` API with PKI specialized-flow coverage.
+This README documents the `0.13.0` API. `0.13.0` builds on the `0.12.0` API
+with PKI specialized-flow coverage.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 

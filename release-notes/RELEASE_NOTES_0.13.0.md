@@ -3,17 +3,21 @@
 ## Version
 
 - Version: 0.13.0
-- Status: in development
-- Git tag: pending
-- Git commit: pending
+- Release date: 2026-06-04
+- Git tag: `v0.13.0`
+- Git commit: see the signed `v0.13.0` tag object
 - License: MIT OR Apache-2.0
 
 ## Summary
 
-`0.13.0` is the PKI specialized-flow line. Planned scope includes
+`0.13.0` is the PKI specialized-flow line. The implemented scope is
 revocation/CRL management, CEL role and CEL issue/sign helpers,
 named-issuer hierarchy signing, delta-CRL rotation, and operator-gated
 cross-certification helpers.
+
+Remaining `0.13.0` planned work: none. The local release-gate components pass
+locally, and the external pentest plus GitHub CI are green for the `v0.13.0`
+tag.
 
 ## Added
 
@@ -48,7 +52,6 @@ cross-certification helpers.
 
 ## Security And Stability Gate
 
-- Release gate script: pending `scripts/release_0_13_gate.sh`
+- Release gate script: `scripts/release_0_13_gate.sh`
 - OpenBao integration command: `scripts/openbao_integration.sh`
-- Do not tag `v0.13.0` until local validation, external pentest feedback, and
-  GitHub CI are green.
+- External pentest feedback and GitHub CI are green for `v0.13.0`.

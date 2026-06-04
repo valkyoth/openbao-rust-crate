@@ -74,7 +74,7 @@ check_grep '0.12.0 - PKI Tier 1 Multi-Issuer And Authority Lifecycle' docs/RELEA
 check_grep '0.13.0 - PKI Specialized Flows' docs/RELEASE_PLAN.md
 check_grep '1.0.0 - First Stable Release' docs/RELEASE_PLAN.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.12.0.md
-check_grep 'Status: in development' release-notes/RELEASE_NOTES_0.13.0.md
+check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.13.0.md
 check_grep 'Audit status:' docs/API_STABILITY_AUDIT.md
 check_grep 'From `vaultrs`' docs/MIGRATION_GUIDE.md
 
