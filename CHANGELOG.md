@@ -64,6 +64,10 @@ All notable changes to this project are documented here.
 - Bounded AdminBootstrap KV v2 secret values and replaced variable-length
   slice comparison for secret convergence with a fixed-iteration comparison
   over the bounded value size.
+- Clarified final accepted residual risks for `transit-import` software
+  wrapping and AdminBootstrap concurrency: OpenSSL-managed key copies are
+  outside Rust zeroization control, and bootstrap contention detection is not a
+  substitute for external locking.
 
 ## 0.14.0 - 2026-06-04
 

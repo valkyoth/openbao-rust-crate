@@ -91,6 +91,11 @@ zero `planned` and zero `decision` rows.
   over TLS instead.
 - `transit-import` remains a software wrapping helper only; classified or
   high-assurance key wrapping must use an HSM or equivalent audited boundary.
+  OpenSSL-managed temporary key buffers, swap, crash dumps, and allocator free
+  lists remain outside this crate's zeroization control.
+- `Error::BootstrapContention` remains a best-effort post-write verification
+  signal. It is not a distributed lock; multi-runner bootstrap workflows must
+  still use external serialization.
 
 ## Security And Stability Gate
 

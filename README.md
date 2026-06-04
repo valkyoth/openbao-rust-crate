@@ -163,7 +163,9 @@ Delivered in `0.11.0`:
   symmetric key bytes remain
   outside the default wrapper APIs. The non-default `transit-import` plus
   `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP
-  wrapping helper.
+  wrapping helper. That helper passes raw key material and an ephemeral AES
+  wrapping key through software memory and OpenSSL-managed heap; it is not for
+  classified or high-assurance key wrapping.
 
 Delivered in `0.12.0`:
 
@@ -1038,6 +1040,11 @@ async fn main() -> Result<()> {
 
 Prepare a wrapped import blob with the optional `transit-import` and
 `transit-import-acknowledged` features:
+
+This helper is a software convenience path. OpenSSL may allocate intermediate
+key buffers outside Rust's `zeroize` control, so high-assurance deployments
+should wrap BYOK material inside an HSM or equivalent audited boundary and pass
+only the already-wrapped ciphertext to the default import request types.
 
 ```rust,ignore
 use openbao::secrets::transit::{

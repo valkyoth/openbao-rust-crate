@@ -66,7 +66,10 @@ Run at most one bootstrap plan per target cluster at a time. Use an external
 deployment lock, Kubernetes leader election, CI/CD environment lock, or another
 operator-controlled serialization mechanism. KV v2 secret convergence uses
 OpenBao CAS where available, but other bootstrap operations still require
-external serialization.
+external serialization. `Error::BootstrapContention` is a best-effort
+post-write detection signal when verification sees that a concurrent writer
+changed the converged value; it is not a lock and cannot prove that no race
+occurred.
 
 ## Residual Secret Memory
 
@@ -134,9 +137,12 @@ OpenSSL 1.1.1 or newer deployment baseline. It is not an HSM, FIPS,
 certification, post-quantum, or security-boundary claim. It also requires the
 `transit-import-acknowledged` feature so downstream builds explicitly review
 that raw key material and the ephemeral AES wrapping key pass through software
-memory and OpenSSL-managed heap. Classified or high-assurance key wrapping
-must not use this software helper; perform wrapping in an HSM or equivalent
-audited boundary instead.
+memory and OpenSSL-managed heap. OpenSSL may allocate intermediate key buffers
+outside Rust's allocator and outside this crate's `zeroize` control; those
+copies can remain in process heap, swap, crash dumps, or allocator free lists
+according to the host runtime. Classified or high-assurance key wrapping must
+not use this software helper; perform wrapping in an HSM or equivalent audited
+boundary instead.
 
 The `radius-auth` feature is not enabled by default. RADIUS relies on
 MD5-based authenticators and is retained only for audited legacy compatibility.

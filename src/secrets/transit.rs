@@ -679,11 +679,14 @@ impl TransitWrappedImportKey {
     ///
     /// The ephemeral AES key is passed to OpenSSL's RSA-OAEP encrypt path,
     /// which may copy it into OpenSSL-managed heap memory outside Rust's
-    /// allocator. That copy is outside this crate's `zeroize` control. For
-    /// deployments that require cryptographic key-boundary assurance, perform
-    /// key wrapping inside an HSM or dedicated key-wrapping service instead of
-    /// using this function. This helper is suitable only for development, CI,
-    /// and audited non-HSM automation environments. The
+    /// allocator. Raw key material and intermediate wrapping keys may
+    /// therefore remain in process heap, swap, crash dumps, or allocator free
+    /// lists according to the host runtime. Those copies are outside this
+    /// crate's `zeroize` control. For deployments that require cryptographic
+    /// key-boundary assurance, perform key wrapping inside an HSM or dedicated
+    /// key-wrapping service instead of using this function. This helper is
+    /// suitable only for development, CI, and audited non-HSM automation
+    /// environments. The
     /// `wrap_key_material_with_rng` variant lets callers inject reviewed
     /// randomness, but it is still a software OpenSSL wrapping path and not an
     /// HSM boundary.
@@ -707,11 +710,14 @@ impl TransitWrappedImportKey {
     ///
     /// The ephemeral AES key is passed to OpenSSL's RSA-OAEP encrypt path,
     /// which may copy it into OpenSSL-managed heap memory outside Rust's
-    /// allocator. That copy is outside this crate's `zeroize` control. For
-    /// deployments that require cryptographic key-boundary assurance, perform
-    /// key wrapping inside an HSM or dedicated key-wrapping service instead of
-    /// using this function. This helper is suitable only for development, CI,
-    /// and audited non-HSM automation environments.
+    /// allocator. Raw key material and intermediate wrapping keys may
+    /// therefore remain in process heap, swap, crash dumps, or allocator free
+    /// lists according to the host runtime. Those copies are outside this
+    /// crate's `zeroize` control. For deployments that require cryptographic
+    /// key-boundary assurance, perform key wrapping inside an HSM or dedicated
+    /// key-wrapping service instead of using this function. This helper is
+    /// suitable only for development, CI, and audited non-HSM automation
+    /// environments.
     #[must_use = "import the returned ciphertext promptly; software-wrapped key material remains sensitive until consumed and dropped"]
     pub fn wrap_key_material_with_rng<R>(
         rng: &mut R,
@@ -3050,6 +3056,12 @@ fn rsa_oaep_wrap_aes_key(
         .set_rsa_mgf1_md(digest)
         .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
 
+    // SECURITY: this OpenSSL handoff can allocate provider-managed temporary
+    // buffers outside Rust's allocator. The returned ciphertext buffer is
+    // zeroized by this crate, but OpenSSL internals, swap, crash dumps, and
+    // allocator free lists remain host-runtime residual risks. High-assurance
+    // key wrapping must use an HSM or equivalent audited boundary instead of
+    // this software helper.
     let mut encrypted = Zeroizing::new(Vec::new());
     context
         .encrypt_to_vec(ephemeral_aes_key, &mut encrypted)
