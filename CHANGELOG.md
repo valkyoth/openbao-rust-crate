@@ -47,6 +47,8 @@ All notable changes to this project are documented here.
 - Added checked Transit batch `try_push` builders with a named
   `MAX_TRANSIT_BATCH_ITEMS` limit and strengthened Transit import, retry
   jitter, TLS revocation, RADIUS, and bootstrap contention documentation.
+- Added rustls-backed static PEM CRL configuration for OpenBao server
+  certificate checks when using a root-only trust store.
 
 ## 0.14.0 - 2026-06-04
 

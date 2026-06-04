@@ -96,11 +96,17 @@ For high-assurance builds, keep the default `rustls-tls` backend, do not enable
 Downstream applications can enforce this with CI policy checks that reject
 those feature flags and API calls.
 
-The rustls-backed HTTP client does not perform client-side OCSP or CRL
-revocation checking for the OpenBao server certificate. Treat revocation as an
-operator PKI-lifecycle control: use `OpenBaoConfig::only_root_certificates`
-with only the internal OpenBao CA or self-signed listener certificate, issue
-short-lived OpenBao listener leaf certificates, rotate that internal CA on
+The rustls-backed HTTP client supports static PEM certificate revocation lists
+with `OpenBaoConfig::add_certificate_revocation_list_pem` or
+`OpenBaoConfig::add_certificate_revocation_list_pem_bundle`, but only when
+paired with `OpenBaoConfig::only_root_certificates`. This is the hardened
+client-side revocation path for deployments that publish CRLs for their
+internal OpenBao listener CA.
+
+The crate does not fetch CRL distribution points, refresh CRLs, perform OCSP,
+or decide fail-open/fail-closed policy for expired CRL material. Treat those as
+operator PKI-lifecycle controls: refresh CRLs and rebuild clients before expiry,
+issue short-lived OpenBao listener leaf certificates, rotate the internal CA on
 compromise, and configure server-side certificate-auth CRL/OCSP controls where
 applicable. Relying on platform or public roots is not recommended for
 classified or high-assurance deployments.

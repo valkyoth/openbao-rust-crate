@@ -516,9 +516,11 @@ over leaf certificate or public-key pinning because your CA can rotate server
 certificates without requiring every client to update a pin. For a self-signed
 OpenBao listener certificate, pass that certificate as the sole trusted root.
 The rustls-backed HTTP client does not perform OCSP or CRL checking for the
-server certificate, so deployments that rely on revocation should issue
-short-lived listener certificates and enforce certificate-auth revocation
-server-side.
+server certificate automatically. Static PEM CRLs can be configured with
+`add_certificate_revocation_list_pem` when using `only_root_certificates`;
+callers remain responsible for refreshing CRLs and rebuilding clients before
+they expire. Deployments that rely on revocation should still issue short-lived
+listener certificates and enforce certificate-auth revocation server-side.
 
 ```rust,no_run
 use openbao::{Client, OpenBaoConfig, Result};
@@ -532,11 +534,17 @@ async fn main() -> Result<()> {
             "failed to read the configured CA certificate file".into(),
         )
     })?;
+    let crl_pem = std::fs::read("openbao-ca.crl").map_err(|_| {
+        openbao::Error::InvalidTlsConfig(
+            "failed to read the configured CRL file".into(),
+        )
+    })?;
     let ca = Certificate::from_pem(&ca_pem)?;
 
     let config = OpenBaoConfig::new("https://bao.example.com:8200")?
         .namespace("admin/team-a")?
-        .only_root_certificates(vec![ca])?;
+        .only_root_certificates(vec![ca])?
+        .add_certificate_revocation_list_pem(&crl_pem)?;
 
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
     let client = Client::from_config(config)?.try_with_token(token)?;
@@ -547,8 +555,10 @@ async fn main() -> Result<()> {
 }
 ```
 
-The environment equivalent is `OPENBAO_CACERT=/path/to/ca.pem` together with
-`OPENBAO_TLS_ROOTS_ONLY=true`.
+The environment equivalent for root-only trust is
+`OPENBAO_CACERT=/path/to/ca.pem` together with
+`OPENBAO_TLS_ROOTS_ONLY=true`; CRLs are configured through the explicit Rust
+API so callers can own refresh and client rebuild policy.
 
 Authenticate with AppRole:
 

@@ -8,6 +8,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+#[cfg(feature = "rustls-tls")]
+use reqwest::tls::CertificateRevocationList;
 use reqwest::{
     Certificate, Identity, Method, StatusCode, Url,
     header::{ACCEPT, CONTENT_TYPE, HeaderName, HeaderValue},
@@ -283,6 +285,7 @@ pub struct OpenBaoConfig {
     min_tls_version: tls::Version,
     root_certificates: Vec<Certificate>,
     root_certificate_mode: RootCertificateMode,
+    crl_pem_bundles: Vec<Vec<u8>>,
     client_identity: Option<Identity>,
     #[cfg(feature = "sensitive-http-test-only")]
     allow_sensitive_local_http_for_tests: bool,
@@ -309,6 +312,7 @@ impl OpenBaoConfig {
             min_tls_version: tls::Version::TLS_1_3,
             root_certificates: Vec::new(),
             root_certificate_mode: RootCertificateMode::MergeWithSystem,
+            crl_pem_bundles: Vec::new(),
             client_identity: None,
             #[cfg(feature = "sensitive-http-test-only")]
             allow_sensitive_local_http_for_tests: false,
@@ -498,6 +502,46 @@ impl OpenBaoConfig {
         Ok(self)
     }
 
+    /// Adds one PEM-encoded certificate revocation list for server certificate checks.
+    ///
+    /// Static CRL enforcement is available only with the crate's `rustls-tls`
+    /// backend and requires [`Self::only_root_certificates`]. This matches
+    /// `reqwest`/rustls behavior: CRLs are enforced only when verification uses
+    /// a configured root-only trust store rather than the native verifier or a
+    /// merged platform/public root store.
+    ///
+    /// The caller is responsible for refreshing CRL material and rebuilding the
+    /// client before the CRL expires. The crate does not fetch CRL distribution
+    /// points and does not perform OCSP.
+    #[cfg(feature = "rustls-tls")]
+    pub fn add_certificate_revocation_list_pem(mut self, pem: impl AsRef<[u8]>) -> Result<Self> {
+        let pem = pem.as_ref();
+        CertificateRevocationList::from_pem(pem)?;
+        self.crl_pem_bundles.push(pem.to_vec());
+        self.validate()?;
+        Ok(self)
+    }
+
+    /// Adds a PEM bundle containing one or more certificate revocation lists.
+    ///
+    /// See [`Self::add_certificate_revocation_list_pem`] for the trust-store and
+    /// refresh requirements.
+    #[cfg(feature = "rustls-tls")]
+    pub fn add_certificate_revocation_list_pem_bundle(
+        mut self,
+        pem_bundle: impl AsRef<[u8]>,
+    ) -> Result<Self> {
+        let pem_bundle = pem_bundle.as_ref();
+        if CertificateRevocationList::from_pem_bundle(pem_bundle)?.is_empty() {
+            return Err(Error::InvalidTlsConfig(
+                "certificate revocation list bundle must contain at least one CRL".into(),
+            ));
+        }
+        self.crl_pem_bundles.push(pem_bundle.to_vec());
+        self.validate()?;
+        Ok(self)
+    }
+
     /// Sets the client certificate identity used for mutual TLS.
     ///
     /// TLS certificate auth requires OpenBao's listener to request/verify a
@@ -505,17 +549,23 @@ impl OpenBaoConfig {
     /// files and avoid logging certificate/key parsing errors that include
     /// secret paths.
     ///
-    /// The `reqwest`/rustls client stack does not perform client-side OCSP or
-    /// CRL revocation checking for the OpenBao server certificate. Treat
-    /// revocation as an OpenBao/listener and PKI-lifecycle control: use
-    /// short-lived certificates, root-only trust stores, and server-side
-    /// certificate-auth CRL/OCSP settings where applicable.
+    /// Static CRL enforcement for the OpenBao server certificate is available
+    /// through [`Self::add_certificate_revocation_list_pem`] when using
+    /// [`Self::only_root_certificates`]. The crate does not fetch CRL
+    /// distribution points and does not perform OCSP.
     pub fn client_identity(mut self, identity: Identity) -> Self {
         self.client_identity = Some(identity);
         self
     }
 
     fn validate(&self) -> Result<()> {
+        if !self.crl_pem_bundles.is_empty()
+            && self.root_certificate_mode != RootCertificateMode::OnlyConfigured
+        {
+            return Err(Error::InvalidTlsConfig(
+                "certificate revocation lists require only_root_certificates".into(),
+            ));
+        }
         match self.base_url.scheme() {
             "https" => Ok(()),
             "http"
@@ -549,6 +599,7 @@ impl fmt::Debug for OpenBaoConfig {
             .field("min_tls_version", &self.min_tls_version)
             .field("root_certificate_count", &self.root_certificates.len())
             .field("root_certificate_mode", &self.root_certificate_mode)
+            .field("crl_bundle_count", &self.crl_pem_bundles.len())
             .field("has_client_identity", &self.client_identity.is_some())
             .finish()
     }
@@ -602,6 +653,14 @@ fn build_http_client(config: &OpenBaoConfig, https_only: bool) -> Result<reqwest
             builder.tls_certs_only(config.root_certificates.clone())
         }
     };
+    #[cfg(feature = "rustls-tls")]
+    if !config.crl_pem_bundles.is_empty() {
+        let mut crls = Vec::new();
+        for pem_bundle in &config.crl_pem_bundles {
+            crls.extend(CertificateRevocationList::from_pem_bundle(pem_bundle)?);
+        }
+        builder = builder.tls_crls_only(crls);
+    }
     if let Some(identity) = config.client_identity.clone() {
         builder = builder.identity(identity);
     }
@@ -1587,6 +1646,29 @@ mod tests {
         let result = OpenBaoConfig::new("https://bao.example.com")
             .and_then(|config| config.only_root_certificates(Vec::new()));
         assert!(result.is_err());
+    }
+
+    #[cfg(feature = "rustls-tls")]
+    #[test]
+    fn certificate_revocation_lists_require_root_only_trust() {
+        let crl = b"-----BEGIN X509 CRL-----\n-----END X509 CRL-----\n";
+        let result = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.add_certificate_revocation_list_pem(crl));
+
+        assert!(
+            matches!(result, Err(Error::InvalidTlsConfig(message)) if message.contains("only_root_certificates"))
+        );
+    }
+
+    #[cfg(feature = "rustls-tls")]
+    #[test]
+    fn certificate_revocation_list_bundles_must_contain_crls() {
+        let result = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.add_certificate_revocation_list_pem_bundle(b""));
+
+        assert!(
+            matches!(result, Err(Error::InvalidTlsConfig(message)) if message.contains("at least one CRL"))
+        );
     }
 
     #[test]

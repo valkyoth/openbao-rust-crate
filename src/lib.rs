@@ -149,6 +149,8 @@ pub use policy::{AclCapability, AclPolicyBuilder};
 pub use posture::{
     FipsPosture, FipsPostureFinding, FipsPostureNote, FipsPostureReport, FipsPostureSeverity,
 };
+#[cfg(feature = "rustls-tls")]
+pub use reqwest::tls::CertificateRevocationList;
 pub use reqwest::{self, Certificate, Identity, Method, StatusCode, tls};
 pub use response::{
     BoundedStringList, Empty, ListEntries, ListPageOptions, MAX_RESPONSE_STRINGS, ResponseEnvelope,
@@ -166,6 +168,8 @@ pub use zeroize::{self, Zeroize, Zeroizing};
 
 /// Common imports for application code using the OpenBao SDK.
 pub mod prelude {
+    #[cfg(feature = "rustls-tls")]
+    pub use crate::CertificateRevocationList;
     pub use crate::{
         AclCapability, AclPolicyBuilder, Authenticated, BoundedStringList, Certificate, Client,
         ClientBuilder, Empty, Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries,

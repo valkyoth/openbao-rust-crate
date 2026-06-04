@@ -34,6 +34,8 @@ zero `planned` and zero `decision` rows.
   stable-candidate helpers.
 - Updated the pinned `taiki-e/install-action` CI action to the latest v2 tag
   enforced by the local check script.
+- Added rustls-backed static PEM CRL configuration for OpenBao server
+  certificate checks when using a root-only trust store.
 
 ## Remaining Finalization
 
@@ -66,9 +68,9 @@ zero `planned` and zero `decision` rows.
   batches before dispatch.
 - TLS 1.2 compatibility now has an explicit `tls12-acknowledged` feature and
   build warning. TLS 1.3 remains the default and recommended floor.
-- TLS server-certificate revocation remains a rustls/reqwest limitation.
-  High-assurance deployments should use root-only internal CA trust with
-  short-lived listener certificates and an operator CA-rotation process.
+- Static PEM CRLs can now be enforced for OpenBao server certificates when
+  using `only_root_certificates`; callers still own CRL refresh, client rebuild
+  timing, and OCSP/automatic revocation-discovery policy.
 
 ## Security And Stability Gate
 
