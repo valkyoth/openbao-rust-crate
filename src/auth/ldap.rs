@@ -775,6 +775,16 @@ fn validate_ldap_path_name(name: &str) -> Result<&str> {
             "LDAP auth path name must not contain control characters".into(),
         ));
     }
+    if name.contains(' ') {
+        return Err(Error::InvalidPath(
+            "LDAP auth path name must not contain spaces".into(),
+        ));
+    }
+    if name.contains(['*', '(', ')']) {
+        return Err(Error::InvalidPath(
+            "LDAP auth path name must not contain LDAP filter special characters".into(),
+        ));
+    }
     if name.contains(['\\', '/', '?', '#']) {
         return Err(Error::InvalidPath(
             "LDAP auth path name must not contain slash, backslash, query, or fragment characters"
@@ -889,13 +899,14 @@ mod tests {
     #[test]
     fn ldap_auth_path_name_validation_rejects_ambiguous_values() {
         assert!(validate_ldap_path_name("admins").is_ok());
-        assert!(validate_ldap_path_name("Team A").is_ok());
         assert!(validate_ldap_path_name("").is_err());
         assert!(validate_ldap_path_name(".").is_err());
         assert!(validate_ldap_path_name("..").is_err());
         assert!(validate_ldap_path_name("admins.").is_err());
+        assert!(validate_ldap_path_name("Team A").is_err());
         assert!(validate_ldap_path_name("team/admins").is_err());
         assert!(validate_ldap_path_name("admins?x=1").is_err());
+        assert!(validate_ldap_path_name("admin*)(uid=*)").is_err());
     }
 
     #[test]

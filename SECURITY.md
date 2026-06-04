@@ -44,9 +44,10 @@ Please include:
 - Namespace header values are treated as sensitive metadata.
 - Plain HTTP is allowed only by explicit numeric loopback IP opt-in, and
   credential-bearing or request-body requests still require HTTPS. This crate's
-  own HTTP mock tests use a separate explicit debug-only opt-in for numeric
+  own HTTP mock tests use a separate explicit test-only opt-in for numeric
   loopback servers. Hostnames such as `localhost` are rejected.
-- Response bodies must remain size-bounded, JSON content-type checked, and zeroized after decoding.
+- Response bodies must remain size-bounded; JSON responses and binary
+  responses with an expected `Accept` header must be content-type checked.
 - JSON request serialization buffers controlled by this crate must be zeroized
   after handoff to the HTTP stack.
 - Third-party GitHub Actions must be pinned to immutable commit SHAs.
@@ -80,6 +81,12 @@ encrypted swap or disabled swap, core-dump restrictions, short process
 lifetimes for highly sensitive workflows, and host-level memory protections
 appropriate to the environment.
 
+Base64 helpers used by Transit byte operations and system random byte helpers
+move base64 text into `SecretString`, but exposing text from dependency APIs is
+still a residual process-memory risk. High-assurance deployments should treat
+the calling process heap as capable of containing encoded secret material until
+the relevant `SecretString` values are dropped and zeroized.
+
 ## Hardened Deployment Profile
 
 For high-assurance builds, keep the default `rustls-tls` backend, do not enable
@@ -103,9 +110,14 @@ the host OpenSSL runtime through the `openssl` crate and requires an audited
 OpenSSL 1.1.1 or newer deployment baseline. It is not an HSM, FIPS,
 certification, or post-quantum claim.
 
+The `radius-auth` feature is not enabled by default. RADIUS relies on
+MD5-based authenticators and is retained only for audited legacy compatibility.
+Enabling it requires the additional `radius-auth-acknowledged` feature.
+
 The `sensitive-http-test-only` feature is for this crate's mock HTTP tests
 only. It must not be enabled in production application builds. Release metadata
-checks verify it is not part of the default feature set.
+checks verify it is not part of the default feature set, and `build.rs` emits a
+warning whenever it is compiled.
 
 ## Dev Bootstrap Warning
 
@@ -114,6 +126,11 @@ only. It refuses non-loopback and already initialized targets, but it still
 creates root-token and unseal-key material in the caller process. Do not use it
 for production, staging, shared environments, HSM/KMS-backed auto-unseal, or
 any environment that requires an operator key ceremony.
+
+Local Podman development TLS files under `deploy/podman/dev-state/` are
+generated per checkout and ignored. Private keys must never be committed. The
+release metadata check fails if a tracked file contains a PEM private-key
+header.
 
 ## Known Limitations
 

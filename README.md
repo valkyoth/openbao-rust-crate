@@ -248,7 +248,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "0.12", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "radius-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "0.12", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -280,7 +280,8 @@ openbao = { version = "0.12", features = ["time"] }
 | `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, and group mapping helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
-| `radius-auth` | yes | RADIUS login/config/user mapping helpers. |
+| `radius-auth` | no | RADIUS login/config/user mapping helpers. Legacy RADIUS uses MD5-based authenticators and requires `radius-auth-acknowledged`. |
+| `radius-auth-acknowledged` | no | Explicit acknowledgment for audited legacy RADIUS compatibility builds. |
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
 | `rabbitmq` | yes | RabbitMQ secrets engine connection, lease, role, and credential helpers. |
@@ -347,7 +348,7 @@ For the current `0.12.0` line it records `643` documented endpoint rows, with
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
 | JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL, callback, and direct/device poll helpers. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
-| RADIUS auth | Yes | Login, method config, user create/read/list/delete, paginated user list helpers, and a documented warning for RADIUS UDP/MD5 protocol risk. |
+| RADIUS auth | Gated | Login, method config, user create/read/list/delete, paginated user list helpers. Available only with `radius-auth` plus `radius-auth-acknowledged` because legacy RADIUS uses MD5-based authenticators. |
 | Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group create/read/list/delete mapping helpers. |
 | Userpass auth | Yes | Login and user create/read/list/delete, password update, and policy update helpers. |
 
@@ -480,7 +481,9 @@ async fn main() -> Result<()> {
 ```
 
 Retry is never global. `RetryableMethod` exposes only GET, HEAD, and OpenBao
-LIST so the helper cannot retry write verbs by accident.
+LIST so the helper cannot retry write verbs by accident. Exponential retry
+delays include bounded non-cryptographic jitter by default to avoid
+synchronized retry waves after temporary OpenBao outages.
 
 Configure a stricter client with a namespace and root-only trust store:
 

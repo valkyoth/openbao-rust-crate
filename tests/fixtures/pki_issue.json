@@ -5,7 +5,7 @@
     "ca_chain": [
       "-----BEGIN CERTIFICATE-----\nMIIBissuer\n-----END CERTIFICATE-----\n"
     ],
-    "private_key": "-----BEGIN PRIVATE KEY-----\nfixture\n-----END PRIVATE KEY-----\n",
+    "private_key": "-----BEGIN TEST PRIVATE KEY-----\nfixture\n-----END TEST PRIVATE KEY-----\n",
     "private_key_type": "rsa",
     "serial_number": "01:02:03",
     "expiration": 1800000000

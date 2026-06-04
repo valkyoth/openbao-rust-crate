@@ -43,6 +43,8 @@ and GitHub CI validation for the exact release candidate.
   rows, named-issuer issue/sign rows, authority lifecycle rows, config rows,
   revoke-with-key row, and gated sign-verbatim rows, bringing strict typed
   coverage to `555/643` (`86.3%`).
+- Binary raw-byte response content-type validation when callers supply an
+  expected `Accept` header.
 
 ## Planned Scope
 
@@ -59,6 +61,15 @@ and GitHub CI validation for the exact release candidate.
   when OpenBao documents it as public material.
 - The existing `Pki::delete_root(PkiRootDeletion::confirm())` decision remains
   the destructive default-root deletion boundary.
+- `radius-auth` is no longer part of default features and now requires
+  `radius-auth-acknowledged` because legacy RADIUS relies on MD5-based
+  authenticators.
+- Explicit retry backoff now includes bounded jitter by default to avoid
+  synchronized retry waves after temporary OpenBao outages.
+- LDAP auth path names reject spaces and LDAP filter metacharacters before
+  request dispatch.
+- Release metadata validation fails if tracked files contain PEM private-key
+  headers, and `build.rs` warns when `sensitive-http-test-only` is compiled.
 
 ## Security And Stability Gate
 

@@ -18,11 +18,22 @@ All notable changes to this project are documented here.
 - Added operator-gated PKI sign-verbatim helpers.
 - Expanded PKI role, URL, root/intermediate generation, CRL config, and tidy
   request/status structs with current OpenBao fields.
+- Added binary response content-type validation when raw byte helpers send an
+  expected `Accept` header.
 
 ### Maintenance
 
 - Updated GitHub Actions pins for `Swatinem/rust-cache` and
   `taiki-e/install-action`, and bumped the CI `cargo-deny` install version.
+- Added release metadata checks for pinned GitHub Actions and committed PEM
+  private-key headers.
+- Moved `radius-auth` out of default features and required
+  `radius-auth-acknowledged` for audited legacy RADIUS compatibility builds.
+- Added bounded jitter to explicit retry delays to avoid synchronized retry
+  waves during temporary OpenBao outages.
+- Tightened LDAP auth path-name validation to reject spaces and LDAP filter
+  metacharacters before request dispatch.
+- Added a build-time warning when `sensitive-http-test-only` is compiled.
 
 ## 0.11.0 - 2026-06-03
 

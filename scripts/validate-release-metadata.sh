@@ -84,4 +84,16 @@ if sed -n '/^default = \[/,/^\]/p' Cargo.toml | grep -q 'sensitive-http-test-onl
   exit 1
 fi
 
+if sed -n '/^default = \[/,/^\]/p' Cargo.toml | grep -q 'radius-auth'; then
+  echo "legacy RADIUS auth feature must not be in default features" >&2
+  exit 1
+fi
+
+private_key_pattern='-----BEGIN ((RSA|DSA|EC|OPENSSH|ENCRYPTED) )?PRIVATE KEY-----'
+if git grep -n -E -- "$private_key_pattern" -- ':!scripts/validate-release-metadata.sh' >/dev/null 2>&1; then
+  echo "private key material found in tracked files" >&2
+  git grep -n -E -- "$private_key_pattern" -- ':!scripts/validate-release-metadata.sh' >&2
+  exit 1
+fi
+
 echo "release metadata ok"

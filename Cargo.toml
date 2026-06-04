@@ -12,6 +12,7 @@ readme = "README.md"
 keywords = ["openbao", "vault", "secrets", "security"]
 categories = ["api-bindings", "authentication", "cryptography"]
 include = [
+    "build.rs",
     "src/**",
     "tests/**",
     "examples/**",
@@ -49,7 +50,6 @@ default = [
     "kerberos-auth",
     "kubernetes-auth",
     "ldap-auth",
-    "radius-auth",
     "userpass",
     "token",
     "kv1",
@@ -74,6 +74,9 @@ kerberos-auth = []
 kubernetes-auth = []
 ldap-auth = []
 radius-auth = []
+# RADIUS uses the legacy MD5-based RADIUS authenticator. Keep support available
+# for audited compatibility deployments, but require explicit acknowledgment.
+radius-auth-acknowledged = []
 userpass = []
 token = []
 kv1 = []

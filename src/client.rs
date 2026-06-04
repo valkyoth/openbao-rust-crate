@@ -1,7 +1,12 @@
 //! OpenBao client construction and raw request helpers.
 
 use core::{fmt, marker::PhantomData, time::Duration};
-use std::{env, fs, net::IpAddr};
+use std::{
+    env, fs,
+    net::IpAddr,
+    sync::atomic::{AtomicU64, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use reqwest::{
     Certificate, Identity, Method, StatusCode, Url,
@@ -24,6 +29,7 @@ const MAX_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_CONNECT_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_RETRY_ATTEMPTS: usize = 8;
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
+const DEFAULT_RETRY_JITTER_PERCENT: u8 = 20;
 const ADDRESS_ENV_KEYS: &[&str] = &["OPENBAO_ADDR", "BAO_ADDR", "VAULT_ADDR"];
 const TOKEN_ENV_KEYS: &[&str] = &["OPENBAO_TOKEN", "BAO_TOKEN", "VAULT_TOKEN"];
 const NAMESPACE_ENV_KEYS: &[&str] = &["OPENBAO_NAMESPACE", "BAO_NAMESPACE", "VAULT_NAMESPACE"];
@@ -96,6 +102,7 @@ pub struct RetryPolicy {
     max_attempts: usize,
     initial_delay: Duration,
     max_delay: Duration,
+    jitter_percent: u8,
 }
 
 /// HTTP methods that are safe to use with [`Client::request_json_with_retry`].
@@ -130,7 +137,9 @@ impl RetryPolicy {
     ///
     /// `max_attempts` includes the first request. A value of `1` is valid and
     /// means no retry. Delays are capped at `max_delay` and both durations must
-    /// be non-zero.
+    /// be non-zero. Retry delays include bounded non-cryptographic jitter so
+    /// many clients do not retry in synchronized waves after a temporary
+    /// OpenBao outage.
     pub fn exponential(
         max_attempts: usize,
         initial_delay: Duration,
@@ -165,7 +174,19 @@ impl RetryPolicy {
             max_attempts,
             initial_delay,
             max_delay,
+            jitter_percent: DEFAULT_RETRY_JITTER_PERCENT,
         })
+    }
+
+    /// Returns a copy of this policy with jitter disabled.
+    ///
+    /// This is intended for deterministic tests and tightly controlled
+    /// single-client maintenance tooling. Production multi-client deployments
+    /// should keep the default jitter.
+    #[must_use]
+    pub fn without_jitter(mut self) -> Self {
+        self.jitter_percent = 0;
+        self
     }
 
     /// Maximum number of attempts, including the first request.
@@ -186,13 +207,53 @@ impl RetryPolicy {
         self.max_delay
     }
 
+    /// Jitter percentage added to each retry delay.
+    #[must_use]
+    pub fn jitter_percent(&self) -> u8 {
+        self.jitter_percent
+    }
+
     fn delay_for_retry(&self, retry_index: usize) -> Duration {
         let shift = retry_index.min(u32::BITS as usize - 1) as u32;
         let multiplier = 1_u32.checked_shl(shift).unwrap_or(u32::MAX);
-        self.initial_delay
+        let base = self
+            .initial_delay
             .saturating_mul(multiplier)
+            .min(self.max_delay);
+        self.add_jitter(base, retry_index)
+    }
+
+    fn add_jitter(&self, base: Duration, retry_index: usize) -> Duration {
+        if self.jitter_percent == 0 || base.is_zero() {
+            return base;
+        }
+        let max_jitter = base.mul_f64(f64::from(self.jitter_percent) / 100.0);
+        if max_jitter.is_zero() {
+            return base;
+        }
+        let max_nanos = duration_to_saturating_nanos(max_jitter);
+        if max_nanos == 0 {
+            return base;
+        }
+        let jitter_nanos = retry_jitter_seed(retry_index) % (max_nanos + 1);
+        base.saturating_add(Duration::from_nanos(jitter_nanos))
             .min(self.max_delay)
     }
+}
+
+static RETRY_JITTER_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+fn retry_jitter_seed(retry_index: usize) -> u64 {
+    let counter = RETRY_JITTER_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos() as u64)
+        .unwrap_or(0);
+    nanos ^ counter.rotate_left(17) ^ (retry_index as u64).rotate_left(31)
+}
+
+fn duration_to_saturating_nanos(duration: Duration) -> u64 {
+    u64::try_from(duration.as_nanos()).unwrap_or(u64::MAX)
 }
 
 /// Validated OpenBao client configuration.
@@ -801,6 +862,11 @@ impl<State> Client<State> {
             });
         }
 
+        if let Some((_name, expected_content_type)) =
+            headers.iter().find(|(name, _value)| *name == ACCEPT)
+        {
+            validate_bytes_content_type(&response, expected_content_type)?;
+        }
         read_response_bytes(response, self.config.max_response_bytes).await
     }
 
@@ -885,7 +951,7 @@ impl<State> Client<State> {
     where
         B: Serialize + ?Sized,
     {
-        self.require_encrypted_transport_for_sensitive_request(&url, true)?;
+        self.require_encrypted_transport_for_sensitive_request(&url)?;
         let http = self.http_for_sensitive_request();
 
         let mut request = reqwest::Request::new(method, url);
@@ -938,7 +1004,7 @@ impl<State> Client<State> {
         headers: &[(HeaderName, HeaderValue)],
         body: Option<&[u8]>,
     ) -> Result<reqwest::Response> {
-        self.require_encrypted_transport_for_sensitive_request(&url, true)?;
+        self.require_encrypted_transport_for_sensitive_request(&url)?;
         let http = self.http_for_sensitive_request();
 
         let mut request = reqwest::Request::new(method, url);
@@ -1000,17 +1066,13 @@ impl<State> Client<State> {
         &self.sensitive_http
     }
 
-    fn require_encrypted_transport_for_sensitive_request(
-        &self,
-        url: &Url,
-        is_sensitive: bool,
-    ) -> Result<()> {
+    fn require_encrypted_transport_for_sensitive_request(&self, url: &Url) -> Result<()> {
         #[cfg(feature = "sensitive-http-test-only")]
         if self.config.allow_sensitive_local_http_for_tests && is_loopback_url(url) {
             return Ok(());
         }
 
-        if is_cleartext_sensitive_request(url, is_sensitive) {
+        if is_cleartext_url(url) {
             return Err(Error::InvalidBaseUrl(
                 "refusing to send credentials or request bodies over plain HTTP".into(),
             ));
@@ -1137,8 +1199,8 @@ fn token_header_for(
     }
 }
 
-fn is_cleartext_sensitive_request(url: &Url, is_sensitive: bool) -> bool {
-    is_sensitive && url.scheme() != "https"
+fn is_cleartext_url(url: &Url) -> bool {
+    url.scheme() != "https"
 }
 
 fn openbao_config_from_env_lookup<F>(mut lookup: F) -> Result<OpenBaoConfig>
@@ -1292,6 +1354,41 @@ fn validate_json_content_type(response: &reqwest::Response) -> Result<()> {
     Ok(())
 }
 
+fn validate_bytes_content_type(
+    response: &reqwest::Response,
+    expected_content_type: &HeaderValue,
+) -> Result<()> {
+    let expected = header_media_type(expected_content_type, "expected binary content-type")?;
+    if expected == "*/*" {
+        return Ok(());
+    }
+    let actual = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .ok_or_else(|| Error::Decode("missing content-type header".into()))?;
+    let actual = header_media_type(actual, "binary response content-type")?;
+    if !actual.eq_ignore_ascii_case(expected) {
+        return Err(Error::Decode(format!(
+            "unexpected content-type: expected {expected}"
+        )));
+    }
+    Ok(())
+}
+
+fn header_media_type<'a>(value: &'a HeaderValue, label: &'static str) -> Result<&'a str> {
+    let value = value
+        .to_str()
+        .map_err(|error| Error::Decode(format!("invalid {label} header: {error}")))?;
+    let media_type = value
+        .split(',')
+        .next()
+        .and_then(|value| value.split(';').next())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| Error::Decode(format!("missing {label} header")))?;
+    Ok(media_type)
+}
+
 fn sensitive_header_value(value: &str) -> Result<HeaderValue> {
     let mut header =
         HeaderValue::from_str(value).map_err(|error| Error::InvalidHeader(error.to_string()))?;
@@ -1311,9 +1408,8 @@ mod tests {
     use crate::Error;
 
     use super::{
-        Client, OpenBaoConfig, env_bool, is_cleartext_sensitive_request,
-        openbao_config_from_env_lookup, openbao_token_from_env_lookup, validate_token_for_header,
-        validate_user_agent,
+        Client, OpenBaoConfig, env_bool, is_cleartext_url, openbao_config_from_env_lookup,
+        openbao_token_from_env_lookup, validate_token_for_header, validate_user_agent,
     };
 
     #[test]
@@ -1338,15 +1434,14 @@ mod tests {
     }
 
     #[test]
-    fn cleartext_sensitive_request_detection_is_strict() {
+    fn cleartext_url_detection_is_strict() {
         let http = reqwest::Url::parse("http://127.0.0.1:8200/v1/sys/health")
             .unwrap_or_else(|error| panic!("{error}"));
         let https = reqwest::Url::parse("https://bao.example.com/v1/secret/data/app")
             .unwrap_or_else(|error| panic!("{error}"));
 
-        assert!(is_cleartext_sensitive_request(&http, true));
-        assert!(!is_cleartext_sensitive_request(&http, false));
-        assert!(!is_cleartext_sensitive_request(&https, true));
+        assert!(is_cleartext_url(&http));
+        assert!(!is_cleartext_url(&https));
     }
 
     #[test]

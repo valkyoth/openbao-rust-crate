@@ -57,6 +57,12 @@ compile_error!(
      Add feature \"operator-ops-acknowledged\" to confirm you have audited this choice."
 );
 
+#[cfg(all(feature = "radius-auth", not(feature = "radius-auth-acknowledged")))]
+compile_error!(
+    "The radius-auth feature enables the legacy RADIUS authentication protocol, which relies on MD5-based RADIUS authenticators. \
+     Add feature \"radius-auth-acknowledged\" to confirm this compatibility choice was audited."
+);
+
 #[cfg(all(
     feature = "sys",
     feature = "kv2",

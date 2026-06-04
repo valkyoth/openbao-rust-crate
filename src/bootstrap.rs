@@ -461,6 +461,11 @@ impl AdminBootstrap {
     }
 
     /// Ensures an ACL policy exists and matches the builder output.
+    ///
+    /// Policy convergence is read-compare-write and OpenBao does not expose a
+    /// CAS/version guard for policy writes. Callers must serialize bootstrap
+    /// execution with an external lock or single-runner deployment guarantee
+    /// when multiple processes can update the same cluster.
     pub fn ensure_policy(
         &mut self,
         name: impl AsRef<str>,
@@ -470,6 +475,11 @@ impl AdminBootstrap {
     }
 
     /// Ensures an ACL policy exists and matches an explicit policy document.
+    ///
+    /// Policy convergence is not atomic: a concurrent writer can modify the
+    /// policy after the read phase and before the write phase. This method is
+    /// safe only when bootstrap runs are serialized externally for the target
+    /// OpenBao cluster.
     pub fn ensure_policy_document(
         &mut self,
         name: impl AsRef<str>,

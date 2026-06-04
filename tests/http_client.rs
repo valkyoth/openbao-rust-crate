@@ -218,7 +218,8 @@ async fn explicit_retry_policy_retries_temporary_api_errors() {
         .unwrap_or_else(|error| panic!("{error}"));
     let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
     let policy = RetryPolicy::exponential(3, Duration::from_millis(5), Duration::from_millis(20))
-        .unwrap_or_else(|error| panic!("{error}"));
+        .unwrap_or_else(|error| panic!("{error}"))
+        .without_jitter();
     let mut delays = Vec::new();
 
     let health: openbao::sys::Health = client
@@ -313,6 +314,8 @@ fn retry_policy_validates_bounds() {
     assert_eq!(policy.max_attempts(), 2);
     assert_eq!(policy.initial_delay(), Duration::from_millis(1));
     assert_eq!(policy.max_delay(), Duration::from_millis(2));
+    assert_eq!(policy.jitter_percent(), 20);
+    assert_eq!(policy.without_jitter().jitter_percent(), 0);
 }
 
 #[tokio::test]
@@ -415,6 +418,58 @@ async fn raw_byte_request_sends_custom_protocol_headers() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(&response[..], b"ocsp-response-der");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn raw_byte_request_rejects_unexpected_content_type_when_accept_is_set() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/storage/raft/snapshot HTTP/1.1"));
+        assert!(request.contains("accept: application/octet-stream"));
+
+        let body = "<html>not a snapshot</html>";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: text/html\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+
+    let error = match client
+        .request_bytes_accepting(
+            openbao::Method::GET,
+            "sys/storage/raft/snapshot",
+            &[],
+            Some(openbao::reqwest::header::HeaderValue::from_static(
+                "application/octet-stream",
+            )),
+            None,
+            &[openbao::StatusCode::OK],
+        )
+        .await
+    {
+        Ok(_) => panic!("wrong binary content type unexpectedly succeeded"),
+        Err(error) => error,
+    };
+    assert!(error.to_string().contains("unexpected content-type"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
@@ -7898,7 +7953,9 @@ async fn pki_cluster_auto_tidy_and_revoke_with_key_paths_are_documented() {
                 4 => {
                     assert!(request.starts_with("POST /v1/pki/revoke-with-key HTTP/1.1"));
                     assert!(request.contains(r#""serial_number":"01:02""#));
-                    assert!(request.contains(r#""private_key":"-----BEGIN PRIVATE KEY-----""#));
+                    assert!(
+                        request.contains(r#""private_key":"-----BEGIN TEST PRIVATE KEY-----""#)
+                    );
                     r#"{"data":{"revocation_time":1893456001,"revocation_time_rfc3339":"2030-01-01T00:00:01Z"}}"#
                 }
                 _ => unreachable!(),
@@ -7958,7 +8015,7 @@ async fn pki_cluster_auto_tidy_and_revoke_with_key_paths_are_documented() {
     let revoked = pki
         .revoke_with_key(&openbao::secrets::pki::PkiRevokeWithKeyRequest::new(
             "01:02",
-            SecretString::from("-----BEGIN PRIVATE KEY-----"),
+            SecretString::from("-----BEGIN TEST PRIVATE KEY-----"),
         ))
         .await
         .unwrap_or_else(|error| panic!("{error}"));
@@ -8836,12 +8893,12 @@ async fn pki_issuer_patch_revoke_and_import_paths_are_documented() {
                 }
                 2 => {
                     assert!(request.starts_with("POST /v1/pki/config/ca HTTP/1.1"));
-                    assert!(request.contains(r#""pem_bundle":"-----BEGIN PRIVATE KEY-----"#));
+                    assert!(request.contains(r#""pem_bundle":"-----BEGIN TEST PRIVATE KEY-----"#));
                     r#"{"data":{"imported_issuers":["issuer-2"],"imported_keys":["key-2"],"existing_issuers":[],"existing_keys":[],"mapping":{"issuer-2":"key-2"}}}"#
                 }
                 3 => {
                     assert!(request.starts_with("POST /v1/pki/issuers/import/bundle HTTP/1.1"));
-                    assert!(request.contains(r#""pem_bundle":"-----BEGIN PRIVATE KEY-----"#));
+                    assert!(request.contains(r#""pem_bundle":"-----BEGIN TEST PRIVATE KEY-----"#));
                     r#"{"data":{"imported_issuers":["issuer-3"],"imported_keys":["key-3"],"existing_issuers":[],"existing_keys":[],"mapping":{"issuer-3":"key-3"}}}"#
                 }
                 4 => {
@@ -8852,7 +8909,7 @@ async fn pki_issuer_patch_revoke_and_import_paths_are_documented() {
                 5 => {
                     assert!(request.starts_with("POST /v1/pki/keys/import HTTP/1.1"));
                     assert!(request.contains(r#""key_name":"imported-key""#));
-                    assert!(request.contains(r#""pem_bundle":"-----BEGIN PRIVATE KEY-----"#));
+                    assert!(request.contains(r#""pem_bundle":"-----BEGIN TEST PRIVATE KEY-----"#));
                     r#"{"data":{"key_id":"key-5","key_name":"imported-key","key_type":"rsa","key_bits":4096}}"#
                 }
                 6 => {
@@ -8903,8 +8960,9 @@ async fn pki_issuer_patch_revoke_and_import_paths_are_documented() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(revoked.revocation_time, Some(1893456002));
 
-    let private_bundle =
-        SecretString::from("-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----");
+    let private_bundle = SecretString::from(
+        "-----BEGIN TEST PRIVATE KEY-----\nsecret\n-----END TEST PRIVATE KEY-----",
+    );
     let legacy_import = pki
         .import_ca_bundle(&private_bundle)
         .await
