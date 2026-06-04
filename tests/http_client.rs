@@ -7244,6 +7244,109 @@ async fn pki_role_urls_issue_sign_revoke_and_cert_paths_are_documented() {
 }
 
 #[tokio::test]
+async fn pki_named_issuer_issue_and_sign_paths_are_documented() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/pki/issuer/root-x1/issue/web HTTP/1.1"));
+                    assert!(request.contains(r#""common_name":"issuer-api.example.com""#));
+                    r#"{"data":{"certificate":"issuer-issued-cert","serial_number":"01:04"}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/pki/issuer/root-x1/sign/web HTTP/1.1"));
+                    assert!(request.contains(r#""csr":"-----BEGIN CERTIFICATE REQUEST-----""#));
+                    r#"{"data":{"certificate":"issuer-signed-cert","serial_number":"01:05"}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let issuer_issued = pki
+        .issue_with_issuer(
+            "root-x1",
+            "web",
+            &openbao::secrets::pki::PkiIssueRequest {
+                common_name: "issuer-api.example.com".to_owned(),
+                ttl: Some("24h".to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer_issued.serial_number.as_deref(), Some("01:04"));
+
+    let issuer_signed = pki
+        .sign_with_issuer(
+            "root-x1",
+            "web",
+            &openbao::secrets::pki::PkiSignRequest {
+                csr: "-----BEGIN CERTIFICATE REQUEST-----".to_owned(),
+                common_name: Some("issuer-api.example.com".to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer_signed.serial_number.as_deref(), Some("01:05"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn pki_named_issuer_issue_sign_validate_paths_before_request() {
+    let config = OpenBaoConfig::new("http://127.0.0.1:9")
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let issue_error = match pki
+        .issue_with_issuer("../issuer", "web", &Default::default())
+        .await
+    {
+        Ok(_) => panic!("invalid issuer path unexpectedly succeeded"),
+        Err(error) => error,
+    };
+    assert!(matches!(issue_error, Error::InvalidPath(_)));
+
+    let sign_error = match pki
+        .sign_with_issuer("root-x1", "../role", &Default::default())
+        .await
+    {
+        Ok(_) => panic!("invalid role path unexpectedly succeeded"),
+        Err(error) => error,
+    };
+    assert!(matches!(sign_error, Error::InvalidPath(_)));
+}
+
+#[tokio::test]
 async fn transit_export_helpers_reject_zero_versions_before_request() {
     let config =
         OpenBaoConfig::new("https://127.0.0.1:9940").unwrap_or_else(|error| panic!("{error}"));

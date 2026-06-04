@@ -24,21 +24,21 @@ Sources:
 ## Summary
 
 - Total documented endpoint rows: `643`
-- Strict typed coverage: `541/643` (84.1%)
-- Typed plus partial coverage: `542/643` (84.3%)
-- Addressed by typed, partial, raw, external, or rejected policy: `587/643` (91.3%)
-- Planned implementation rows before `1.0.0`: `56`
+- Strict typed coverage: `543/643` (84.4%)
+- Typed plus partial coverage: `544/643` (84.6%)
+- Addressed by typed, partial, raw, external, or rejected policy: `589/643` (91.6%)
+- Planned implementation rows before `1.0.0`: `54`
 - Open owner decisions before `1.0.0`: `0`
 
 | Status | Count |
 | --- | ---: |
-| `typed` | 496 |
+| `typed` | 498 |
 | `typed-gated` | 45 |
 | `partial` | 1 |
 | `raw` | 0 |
 | `external` | 33 |
 | `rejected` | 12 |
-| `planned` | 56 |
+| `planned` | 54 |
 | `decision` | 0 |
 
 ## Area Totals
@@ -46,7 +46,7 @@ Sources:
 | Area | Total | Typed | Typed gated | Partial | Raw | External | Rejected | Planned | Decision | Strict % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `auth` | 105 | 104 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 99.0% |
-| `secret` | 347 | 282 | 1 | 0 | 0 | 33 | 0 | 31 | 0 | 81.6% |
+| `secret` | 347 | 284 | 1 | 0 | 0 | 33 | 0 | 29 | 0 | 82.1% |
 | `system` | 191 | 110 | 44 | 0 | 0 | 0 | 12 | 25 | 0 | 80.6% |
 
 ## Pages With Non-Typed Rows
@@ -55,7 +55,7 @@ Sources:
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | [/api-docs/auth/token/](https://openbao.org/api-docs/auth/token/) | 18 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 | [/api-docs/secret/identity/oidc-provider/](https://openbao.org/api-docs/secret/identity/oidc-provider/) | 18 | 0 | 0 | 0 | 3 | 0 | 0 | 0 |
-| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 48 | 1 | 0 | 0 | 28 | 0 | 31 | 0 |
+| [/api-docs/secret/pki/](https://openbao.org/api-docs/secret/pki/) | 50 | 1 | 0 | 0 | 28 | 0 | 29 | 0 |
 | [/api-docs/secret/ssh/](https://openbao.org/api-docs/secret/ssh/) | 22 | 0 | 0 | 0 | 2 | 0 | 0 | 0 |
 | [/api-docs/system/config-ui/](https://openbao.org/api-docs/system/config-ui/) | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 |
 | [/api-docs/system/generate-recovery-token/](https://openbao.org/api-docs/system/generate-recovery-token/) | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 |

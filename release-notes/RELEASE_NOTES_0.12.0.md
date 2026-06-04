@@ -30,12 +30,15 @@ GitHub CI validation.
 
 - PKI default issuer and default key configuration read/write helpers for
   `/pki/config/issuers` and `/pki/config/keys`.
+- Named-issuer PKI issue/sign helpers for
+  `/pki/issuer/:issuer_ref/issue/:name` and
+  `/pki/issuer/:issuer_ref/sign/:name`.
 - Endpoint matrix regeneration for the implemented default issuer/key config
-  rows, bringing strict typed coverage to `541/643` (`84.1%`).
+  and named-issuer issue/sign rows, bringing strict typed coverage to
+  `543/643` (`84.4%`).
 
 ## Planned Scope
 
-- Named-issuer certificate issue and sign helpers.
 - Root rotate, multi-issuer root generation, root replace, standalone key
   generation, and intermediate issuer generation helpers.
 - Operator-gated sign-verbatim helpers.

@@ -305,12 +305,12 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
             "/pki/tidy",
             "/pki/tidy-status",
             "/pki/tidy-cancel",
+            "/pki/issuer/:issuer_ref/issue/:name",
+            "/pki/issuer/:issuer_ref/sign/:name",
         }
         if path in typed_pki_paths:
             return ("typed", "Typed PKI helper exists.")
         pki_0_12_paths = {
-            "/pki/issuer/:issuer_ref/issue/:name",
-            "/pki/issuer/:issuer_ref/sign/:name",
             "/pki/sign-verbatim(/:name)",
             "/pki/issuer/:issuer_ref/sign-verbatim(/:name)",
             "/pki/revoke-with-key",

@@ -1078,10 +1078,40 @@ impl Pki<'_> {
             .await
     }
 
+    /// Issues a certificate and private key using a PKI role and explicit issuer.
+    pub async fn issue_with_issuer(
+        &self,
+        issuer_ref: &str,
+        role: &str,
+        request: &PkiIssueRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "issue", role])?,
+            Some(request),
+        )
+        .await
+    }
+
     /// Signs a caller-provided CSR using a PKI role.
     pub async fn sign(&self, role: &str, request: &PkiSignRequest) -> Result<PkiCertificateBundle> {
         self.enveloped(Method::POST, &self.path(&["sign", role])?, Some(request))
             .await
+    }
+
+    /// Signs a caller-provided CSR using a PKI role and explicit issuer.
+    pub async fn sign_with_issuer(
+        &self,
+        issuer_ref: &str,
+        role: &str,
+        request: &PkiSignRequest,
+    ) -> Result<PkiCertificateBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["issuer", issuer_ref, "sign", role])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Revokes a certificate by serial number.
