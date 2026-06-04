@@ -1,17 +1,11 @@
 # OpenBao Rust SDK 0.12.0 Release Notes
 
-Status: in development.
-
-Readiness: implementation is in progress. Do not tag until local release gates,
-GitHub CI, and the external pentest report are green for the exact release
-candidate.
-
 ## Version
 
 - Version: 0.12.0
-- Release date: pending
-- Git tag: pending
-- Git commit: pending
+- Release date: 2026-06-04
+- Git tag: `v0.12.0`
+- Git commit: see the signed `v0.12.0` tag object
 - License: MIT OR Apache-2.0
 
 ## Summary
@@ -22,9 +16,9 @@ issue/sign, root rotation and replacement, standalone key generation,
 sign-verbatim operator helpers, revoke-with-key, cluster and auto-tidy config,
 and current-doc PKI struct-field expansion.
 
-The `0.12.0` PKI Tier 1 implementation and local documentation pass are
-complete. Remaining release work is the local release gate, external pentest,
-and GitHub CI validation for the exact release candidate.
+Remaining `0.12.0` planned work: none. The local release-gate components and
+the OpenBao `2.5.4` integration smoke test pass locally, and the external
+pentest plus GitHub CI are green for the `v0.12.0` tag.
 
 ## Added
 
@@ -75,5 +69,9 @@ and GitHub CI validation for the exact release candidate.
 
 - Release gate script: `scripts/release_0_12_gate.sh`
 - OpenBao integration command: `scripts/openbao_integration.sh`
-- Do not tag until external pentest feedback is reviewed and GitHub CI is
-  green.
+- Local validation completed for dependency freshness, formatting, release
+  metadata, clippy default/all-features, tests default/all-features, doctests,
+  docs, package verification, dependency policy, RustSec audit, SBOM
+  generation, and the pinned OpenBao `2.5.4` dev instance smoke test.
+- External pentest feedback was reviewed and GitHub CI was green before the
+  `v0.12.0` tag.
