@@ -7523,6 +7523,144 @@ async fn pki_authority_crl_and_tidy_paths_are_documented() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[tokio::test]
+async fn pki_authority_lifecycle_extensions_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..5 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("POST /v1/pki/keys/generate/internal HTTP/1.1"));
+                    assert!(request.contains(r#""key_name":"root-key-2026""#));
+                    assert!(request.contains(r#""key_type":"rsa""#));
+                    r#"{"data":{"key_id":"key-1","key_name":"root-key-2026","key_type":"rsa","key_bits":4096}}"#
+                }
+                1 => {
+                    assert!(
+                        request.starts_with("POST /v1/pki/issuers/generate/root/existing HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""key_ref":"key-1""#));
+                    assert!(request.contains(r#""issuer_name":"root-x1""#));
+                    r#"{"data":{"certificate":"issuer-root-cert","issuer_id":"issuer-1","issuer_name":"root-x1","key_id":"key-1"}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/pki/root/rotate/internal HTTP/1.1"));
+                    assert!(request.contains(r#""issuer_name":"next""#));
+                    r#"{"data":{"certificate":"rotated-root-cert","issuer_id":"issuer-2","issuer_name":"next","key_id":"key-2"}}"#
+                }
+                3 => {
+                    assert!(request.starts_with("POST /v1/pki/root/replace HTTP/1.1"));
+                    assert!(request.contains(r#""default":"issuer-2""#));
+                    r#"{"data":{"default":"issuer-2","default_follows_latest_issuer":false}}"#
+                }
+                4 => {
+                    assert!(request.starts_with(
+                        "POST /v1/pki/issuers/generate/intermediate/exported HTTP/1.1"
+                    ));
+                    assert!(request.contains(r#""common_name":"intermediate.example.com""#));
+                    r#"{"data":{"csr":"issuer-intermediate-csr","private_key":"issuer-intermediate-key","private_key_type":"rsa","key_id":"key-3"}}"#
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+
+    let key = pki
+        .generate_key(
+            openbao::secrets::pki::PkiKeyGenerationType::Internal,
+            &openbao::secrets::pki::PkiGenerateKeyRequest {
+                key_name: Some("root-key-2026".to_owned()),
+                key_type: Some("rsa".to_owned()),
+                key_bits: Some(4096),
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(key.key_id.as_deref(), Some("key-1"));
+    assert_eq!(key.key_bits, Some(4096));
+
+    let issuer_root = pki
+        .generate_issuer_root(
+            openbao::secrets::pki::PkiKeyGenerationType::Existing,
+            &openbao::secrets::pki::PkiGenerateRootRequest {
+                common_name: "root.example.com".to_owned(),
+                issuer_name: Some("root-x1".to_owned()),
+                key_ref: Some("key-1".to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(issuer_root.issuer_id.as_deref(), Some("issuer-1"));
+
+    let rotated = pki
+        .rotate_root(
+            openbao::secrets::pki::PkiKeyGenerationType::Internal,
+            &openbao::secrets::pki::PkiGenerateRootRequest {
+                common_name: "rotated.example.com".to_owned(),
+                issuer_name: Some("next".to_owned()),
+                key_name: Some("rotated-root-key".to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(rotated.issuer_name.as_deref(), Some("next"));
+
+    let replaced = pki
+        .replace_root(&openbao::secrets::pki::PkiIssuersConfig {
+            default: Some("issuer-2".to_owned()),
+            default_follows_latest_issuer: Some(false),
+        })
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(replaced.default.as_deref(), Some("issuer-2"));
+
+    let intermediate = pki
+        .generate_issuer_intermediate(
+            openbao::secrets::pki::PkiKeyGenerationType::Exported,
+            &openbao::secrets::pki::PkiGenerateIntermediateRequest {
+                common_name: "intermediate.example.com".to_owned(),
+                key_name: Some("intermediate-key".to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(intermediate.csr.as_deref(), Some("issuer-intermediate-csr"));
+    assert_eq!(
+        intermediate
+            .private_key
+            .as_ref()
+            .map(SecretString::expose_secret),
+        Some("issuer-intermediate-key")
+    );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[cfg(feature = "operator-ops")]
 #[tokio::test]
 async fn pki_delete_root_is_operator_gated_and_uses_documented_path() {

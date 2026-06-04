@@ -248,12 +248,12 @@ secret,GET,/pki/cert/:serial,typed,https://openbao.org/api-docs/secret/pki/,Type
 secret,GET,/pki/cert/:serial/raw,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
 secret,GET,/pki/cert/:serial/raw/pem,external,https://openbao.org/api-docs/secret/pki/,"Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling."
 secret,LIST,/pki/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/keys/generate/:type,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/keys/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/root/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuers/generate/root/:type,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
-secret,POST,/pki/root/rotate/:type,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/issuers/generate/root/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
+secret,POST,/pki/root/rotate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/intermediate/generate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/issuers/generate/intermediate/:type,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/issuers/generate/intermediate/:type,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/intermediate/cross-sign,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.13.0 as specialized PKI revocation, CEL, named-issuer hierarchy, delta-CRL, or cross-sign coverage."
 secret,POST,/pki/config/ca,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/issuers/import/bundle,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
@@ -279,7 +279,7 @@ secret,GET,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed
 secret,POST,/pki/config/urls,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/issuers,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
-secret,POST,/pki/root/replace,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."
+secret,POST,/pki/root/replace,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,POST,/pki/config/keys,typed,https://openbao.org/api-docs/secret/pki/,Typed PKI helper exists.
 secret,GET,/pki/config/cluster,planned,https://openbao.org/api-docs/secret/pki/,"Implement in 0.12.0 as PKI Tier 1 multi-issuer, authority lifecycle, config, sign-verbatim, or self-service revocation coverage."

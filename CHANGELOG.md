@@ -12,6 +12,8 @@ All notable changes to this project are documented here.
 - Added named-issuer PKI issue/sign helpers for
   `/pki/issuer/:issuer_ref/issue/:name` and
   `/pki/issuer/:issuer_ref/sign/:name`.
+- Added PKI root rotate, root replace, multi-issuer root/intermediate
+  generation, and standalone key generation helpers.
 
 ### Maintenance
 

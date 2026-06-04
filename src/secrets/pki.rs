@@ -214,9 +214,24 @@ pub struct PkiGenerateRootRequest {
     /// Issuer display name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub issuer_name: Option<String>,
+    /// Key display name when OpenBao creates new key material.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_name: Option<String>,
     /// Requested TTL such as `87600h`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ttl: Option<String>,
+    /// Requested alternative names.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub alt_names: Vec<String>,
+    /// Requested IP SANs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ip_sans: Vec<String>,
+    /// Requested URI SANs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub uri_sans: Vec<String>,
+    /// Requested other SANs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub other_sans: Vec<String>,
     /// Certificate return format, such as `pem`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
@@ -245,6 +260,21 @@ pub struct PkiGenerateIntermediateRequest {
     /// Issuer display name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub issuer_name: Option<String>,
+    /// Key display name when OpenBao creates new key material.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_name: Option<String>,
+    /// Requested alternative names.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub alt_names: Vec<String>,
+    /// Requested IP SANs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ip_sans: Vec<String>,
+    /// Requested URI SANs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub uri_sans: Vec<String>,
+    /// Requested other SANs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub other_sans: Vec<String>,
     /// Certificate return format, such as `pem`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
@@ -260,6 +290,20 @@ pub struct PkiGenerateIntermediateRequest {
     /// Existing key reference for `existing` generation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub key_ref: Option<String>,
+}
+
+/// Request for generating standalone PKI key material.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiGenerateKeyRequest {
+    /// Key display name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_name: Option<String>,
+    /// Key type, such as `rsa`, `ec`, or `ed25519`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_type: Option<String>,
+    /// Key size in bits.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_bits: Option<u64>,
 }
 
 /// Response from root or intermediate authority generation.
@@ -289,6 +333,18 @@ pub struct PkiAuthorityBundle {
     /// Certificate expiration as Unix seconds.
     #[serde(default)]
     pub expiration: Option<u64>,
+    /// Generated issuer identifier, when returned.
+    #[serde(default)]
+    pub issuer_id: Option<String>,
+    /// Generated issuer display name, when returned.
+    #[serde(default)]
+    pub issuer_name: Option<String>,
+    /// Generated or reused key identifier, when returned.
+    #[serde(default)]
+    pub key_id: Option<String>,
+    /// Generated or reused key display name, when returned.
+    #[serde(default)]
+    pub key_name: Option<String>,
 }
 
 impl fmt::Debug for PkiAuthorityBundle {
@@ -306,6 +362,50 @@ impl fmt::Debug for PkiAuthorityBundle {
             .field("private_key_type", &self.private_key_type)
             .field("serial_number", &self.serial_number)
             .field("expiration", &self.expiration)
+            .field("issuer_id", &self.issuer_id)
+            .field("issuer_name", &self.issuer_name)
+            .field("key_id", &self.key_id)
+            .field("key_name", &self.key_name)
+            .finish()
+    }
+}
+
+/// Response from standalone PKI key generation.
+#[derive(Clone, Deserialize)]
+pub struct PkiGeneratedKey {
+    /// Generated key identifier.
+    #[serde(default)]
+    pub key_id: Option<String>,
+    /// Generated key display name.
+    #[serde(default)]
+    pub key_name: Option<String>,
+    /// Generated key type.
+    #[serde(default)]
+    pub key_type: Option<String>,
+    /// Generated key size in bits, when returned.
+    #[serde(default)]
+    pub key_bits: Option<u64>,
+    /// Generated private key, when `exported` key generation returned one.
+    #[serde(default)]
+    pub private_key: Option<SecretString>,
+    /// Generated private key type, when returned.
+    #[serde(default)]
+    pub private_key_type: Option<String>,
+}
+
+impl fmt::Debug for PkiGeneratedKey {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PkiGeneratedKey")
+            .field("key_id", &self.key_id)
+            .field("key_name", &self.key_name)
+            .field("key_type", &self.key_type)
+            .field("key_bits", &self.key_bits)
+            .field(
+                "private_key",
+                &self.private_key.as_ref().map(|_| "<redacted>"),
+            )
+            .field("private_key_type", &self.private_key_type)
             .finish()
     }
 }
@@ -836,6 +936,63 @@ impl Pki<'_> {
         .await
     }
 
+    /// Generates a multi-issuer-aware root CA certificate.
+    pub async fn generate_issuer_root(
+        &self,
+        generation_type: PkiKeyGenerationType,
+        request: &PkiGenerateRootRequest,
+    ) -> Result<PkiAuthorityBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&[
+                "issuers",
+                "generate",
+                "root",
+                generation_type.as_path_segment(),
+            ])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Rotates the root CA certificate for this PKI mount.
+    pub async fn rotate_root(
+        &self,
+        generation_type: PkiKeyGenerationType,
+        request: &PkiGenerateRootRequest,
+    ) -> Result<PkiAuthorityBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["root", "rotate", generation_type.as_path_segment()])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Updates the default root issuer reference.
+    pub async fn replace_root(&self, config: &PkiIssuersConfig) -> Result<PkiIssuersConfig> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["root", "replace"])?,
+            Some(config),
+        )
+        .await
+    }
+
+    /// Generates standalone key material for this PKI mount.
+    pub async fn generate_key(
+        &self,
+        generation_type: PkiKeyGenerationType,
+        request: &PkiGenerateKeyRequest,
+    ) -> Result<PkiGeneratedKey> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&["keys", "generate", generation_type.as_path_segment()])?,
+            Some(request),
+        )
+        .await
+    }
+
     /// Permanently deletes the default root key material for this PKI mount.
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
@@ -874,6 +1031,25 @@ impl Pki<'_> {
             &self.path(&[
                 "intermediate",
                 "generate",
+                generation_type.as_path_segment(),
+            ])?,
+            Some(request),
+        )
+        .await
+    }
+
+    /// Generates a multi-issuer-aware intermediate CA CSR and key material.
+    pub async fn generate_issuer_intermediate(
+        &self,
+        generation_type: PkiKeyGenerationType,
+        request: &PkiGenerateIntermediateRequest,
+    ) -> Result<PkiAuthorityBundle> {
+        self.enveloped(
+            Method::POST,
+            &self.path(&[
+                "issuers",
+                "generate",
+                "intermediate",
                 generation_type.as_path_segment(),
             ])?,
             Some(request),

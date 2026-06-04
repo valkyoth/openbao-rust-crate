@@ -73,11 +73,11 @@ The `0.12.0` development line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `543/643` (`84.4%`);
-- typed plus partial coverage: `544/643` (`84.6%`);
-- addressed by typed, partial, raw, external, or rejected policy: `589/643`
-  (`91.6%`);
-- planned implementation rows before `1.0.0`: `54`;
+- strict typed coverage: `548/643` (`85.2%`);
+- typed plus partial coverage: `549/643` (`85.4%`);
+- addressed by typed, partial, raw, external, or rejected policy: `594/643`
+  (`92.4%`);
+- planned implementation rows before `1.0.0`: `49`;
 - open owner-decision rows before `1.0.0`: `0`.
 
 See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
@@ -201,13 +201,14 @@ Support plan:
   intermediate signing/install, role write/read/list/delete, issue, sign,
   revoke, certificate list/read, issuer/key list/read/delete/update, issuer
   revocation, CA/key import, ACME config/EAB/directory URL helpers, CRL
-  rotation, tidy, tidy status, tidy cancel, role merge-patch, and
+  rotation, tidy, tidy status, tidy cancel, role merge-patch, default
+  issuer/key config, named-issuer issue/sign, root rotate/replace, standalone
+  key generation, multi-issuer root/intermediate generation, and
   operator-gated default root deletion with explicit `PkiRootDeletion`
-  confirmation are implemented. Default issuer/key config, named-issuer
-  issue/sign, root rotate/replace, standalone key generation, sign-verbatim
-  behind operator gates, revoke-with-key, cluster config, auto-tidy config, and
-  current-doc field expansion for PKI role/generation/CRL/tidy structs are
-  planned for `0.12.0`. Revocation/CRL management, CEL roles, named-issuer
+  confirmation are implemented. Sign-verbatim behind operator gates,
+  revoke-with-key, cluster config, auto-tidy config, and current-doc field
+  expansion for PKI role/generation/CRL/tidy structs are planned for `0.12.0`.
+  Revocation/CRL management, CEL roles, named-issuer
   sign-intermediate/sign-self-issued, delta CRL rotation, and cross-sign rows
   are planned for `0.13.0`. Unauthenticated public CA/certificate/CRL reads and
   OCSP responder endpoints are external protocol/public-distribution

@@ -33,14 +33,14 @@ GitHub CI validation.
 - Named-issuer PKI issue/sign helpers for
   `/pki/issuer/:issuer_ref/issue/:name` and
   `/pki/issuer/:issuer_ref/sign/:name`.
+- PKI authority lifecycle helpers for root rotation, root replacement,
+  multi-issuer root/intermediate generation, and standalone key generation.
 - Endpoint matrix regeneration for the implemented default issuer/key config
-  and named-issuer issue/sign rows, bringing strict typed coverage to
-  `543/643` (`84.4%`).
+  rows, named-issuer issue/sign rows, and authority lifecycle rows, bringing
+  strict typed coverage to `548/643` (`85.2%`).
 
 ## Planned Scope
 
-- Root rotate, multi-issuer root generation, root replace, standalone key
-  generation, and intermediate issuer generation helpers.
 - Operator-gated sign-verbatim helpers.
 - Revoke-with-key proof-of-possession revocation helper.
 - PKI cluster config and auto-tidy config helpers.
