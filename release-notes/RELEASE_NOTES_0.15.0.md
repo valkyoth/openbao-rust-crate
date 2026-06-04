@@ -80,6 +80,9 @@ zero `planned` and zero `decision` rows.
 - Legacy Transit SHA-1 selection now requires `allow-sha1-acknowledged`.
 - Default builds skip retry jitter if OS randomness fails rather than using a
   weak timing-derived fallback.
+- AdminBootstrap KV v2 secret values are now bounded at plan construction, and
+  secret convergence comparisons use a fixed-iteration comparison over that
+  bound instead of variable-length slice comparison.
 - Static PEM CRLs can now be enforced for OpenBao server certificates when
   using `only_root_certificates`; callers still own CRL refresh, client rebuild
   timing, and OCSP/automatic revocation-discovery policy.

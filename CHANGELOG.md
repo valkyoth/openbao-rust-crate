@@ -61,6 +61,9 @@ All notable changes to this project are documented here.
   `insecure_tls=true` with credentials even when acknowledged, switched policy
   bootstrap comparisons to constant-time byte comparison, and added CI cache
   key rotation on toolchain or lockfile changes.
+- Bounded AdminBootstrap KV v2 secret values and replaced variable-length
+  slice comparison for secret convergence with a fixed-iteration comparison
+  over the bounded value size.
 
 ## 0.14.0 - 2026-06-04
 

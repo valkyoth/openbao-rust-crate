@@ -8,7 +8,7 @@ use core::fmt;
 use std::collections::BTreeMap;
 
 use secrecy::{ExposeSecret, SecretString};
-use subtle::ConstantTimeEq;
+use subtle::{Choice, ConstantTimeEq};
 
 #[cfg(feature = "approle")]
 use crate::auth::approle::{AppRoleRoleRequest, AppRoleSecretId, AppRoleSecretIdRequest};
@@ -34,6 +34,7 @@ use crate::{
 };
 
 const MAX_BOOTSTRAP_OPERATIONS: usize = 512;
+const MAX_BOOTSTRAP_SECRET_VALUE_BYTES: usize = crate::validation::MAX_JSON_OBJECT_BYTES;
 
 /// Builder for a small, idempotent OpenBao admin bootstrap plan.
 ///
@@ -642,6 +643,7 @@ impl AdminBootstrap {
     ) -> Result<&mut Self> {
         let mount = validate_mount_path(mount.as_ref())?.join("/");
         let path = validate_endpoint_path(path.as_ref())?.join("/");
+        validate_bootstrap_secret_values(&values)?;
         self.push_operation(BootstrapOperation::Kv2SecretValues {
             mount,
             path,
@@ -1761,11 +1763,36 @@ fn bootstrap_contention_error() -> Error {
 }
 
 fn secret_values_equal(current: &str, desired: &str) -> bool {
-    current.as_bytes().ct_eq(desired.as_bytes()).into()
+    let current = current.as_bytes();
+    let desired = desired.as_bytes();
+    if current.len() > MAX_BOOTSTRAP_SECRET_VALUE_BYTES
+        || desired.len() > MAX_BOOTSTRAP_SECRET_VALUE_BYTES
+    {
+        return false;
+    }
+
+    let mut equal = Choice::from((current.len() == desired.len()) as u8);
+    for index in 0..MAX_BOOTSTRAP_SECRET_VALUE_BYTES {
+        let current_byte = current.get(index).copied().unwrap_or(0);
+        let desired_byte = desired.get(index).copied().unwrap_or(0);
+        equal &= current_byte.ct_eq(&desired_byte);
+    }
+    bool::from(equal)
 }
 
 fn policy_rules_equal(current: &str, desired: &str) -> bool {
     current.as_bytes().ct_eq(desired.as_bytes()).into()
+}
+
+fn validate_bootstrap_secret_values(values: &BTreeMap<String, SecretString>) -> Result<()> {
+    for value in values.values() {
+        if value.expose_secret().len() > MAX_BOOTSTRAP_SECRET_VALUE_BYTES {
+            return Err(Error::InvalidParameter(
+                "bootstrap KV v2 secret value exceeds maximum allowed size".into(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<String, &str> {
@@ -2042,6 +2069,17 @@ mod tests {
                 )
                 .is_err()
         );
+
+        let mut oversized_values = BTreeMap::new();
+        oversized_values.insert(
+            "password".to_owned(),
+            SecretString::from("a".repeat(crate::validation::MAX_JSON_OBJECT_BYTES + 1)),
+        );
+        assert!(
+            bootstrap
+                .ensure_kv2_secret_values("secret", "app", oversized_values)
+                .is_err()
+        );
     }
 
     #[test]
@@ -2125,6 +2163,14 @@ mod tests {
     fn bootstrap_secret_comparison_and_race_errors_are_handled() {
         assert!(secret_values_equal("same-secret", "same-secret"));
         assert!(!secret_values_equal("same-secret", "other-secret"));
+        assert!(!secret_values_equal("same-secret", "same-secret-longer"));
+        assert!(!secret_values_equal("", "x"));
+        assert!(secret_values_equal("", ""));
+
+        let at_limit = "a".repeat(crate::validation::MAX_JSON_OBJECT_BYTES);
+        assert!(secret_values_equal(&at_limit, &at_limit));
+        let oversized = "a".repeat(crate::validation::MAX_JSON_OBJECT_BYTES + 1);
+        assert!(!secret_values_equal(&oversized, &oversized));
 
         let duplicate = Error::Api {
             status: StatusCode::BAD_REQUEST,
