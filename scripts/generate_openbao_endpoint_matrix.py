@@ -361,7 +361,7 @@ def classify_secret(page: str, method: str, path: str) -> tuple[str, str]:
             )
         return (
             "decision",
-            "PKI row needs explicit 0.12.0/0.13.0 implementation or boundary classification.",
+            "PKI row needs explicit implementation or boundary classification before 1.0.0.",
         )
 
     return ("decision", "Secret-engine endpoint is not classified yet.")

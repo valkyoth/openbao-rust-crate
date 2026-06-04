@@ -22,9 +22,9 @@ issue/sign, root rotation and replacement, standalone key generation,
 sign-verbatim operator helpers, revoke-with-key, cluster and auto-tidy config,
 and current-doc PKI struct-field expansion.
 
-Remaining `0.12.0` planned work: the rest of the PKI Tier 1 implementation and
-test coverage, documentation updates, local release gate, external pentest, and
-GitHub CI validation.
+The `0.12.0` PKI Tier 1 implementation and local documentation pass are
+complete. Remaining release work is the local release gate, external pentest,
+and GitHub CI validation for the exact release candidate.
 
 ## Added
 

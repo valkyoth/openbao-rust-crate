@@ -146,10 +146,11 @@ All notable changes to this project are documented here.
   deserializer.
 - Recorded the PKI advanced issuer/root decision: Tier 1 multi-issuer config,
   root lifecycle, sign-verbatim, revoke-with-key, and current-doc struct-field
-  completion are planned for `0.12.0`; Tier 2 revocation/CRL management, CEL,
-  named-issuer hierarchy, delta-CRL, and cross-sign rows are planned for
-  `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are
-  external boundaries.
+  completion were assigned to `0.12.0` and are now implemented in the
+  `0.12.0` line; Tier 2 revocation/CRL management, CEL, named-issuer
+  hierarchy, delta-CRL, and cross-sign rows are planned for `0.13.0`;
+  unauthenticated public CA/CRL/cert and OCSP protocol reads are external
+  boundaries.
 - Recorded the Transit import/BYOK boundary: wrapping-key, import and
   import-version, BYOK export, soft-delete/restore, cache/global config, CSR,
   and certificate-install rows are assigned to the `0.11.0` line; the current
