@@ -37,6 +37,11 @@ multiple-versions = "warn"
 wildcards = "deny"
 highlight = "all"
 
+# getrandom/rand duplicate versions are currently transitive through TLS and
+# cryptography dependencies. Keep them visible as warnings instead of skipping
+# them so every release gate re-checks whether dependency upgrades collapse the
+# graph or introduce additional randomness crate lines.
+
 [advisories]
 db-path = "/tmp/openbao-rust-crate-cargo-deny-advisory-dbs"
 yanked = "deny"

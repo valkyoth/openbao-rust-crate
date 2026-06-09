@@ -948,13 +948,14 @@ impl AdminBootstrap {
                         Err(error) if error.is_not_found() => None,
                         Err(error) => return Err(error),
                     };
-                    let needs_patch = current.as_ref().is_none_or(|config| {
-                        values.iter().any(|(key, value)| {
-                            config.get(key).is_none_or(|current| {
+                    let mut needs_patch = current.is_none();
+                    if let Some(config) = current.as_ref() {
+                        for (key, value) in values {
+                            needs_patch |= config.get(key).is_none_or(|current| {
                                 !secret_values_equal(current.expose_secret(), value.expose_secret())
-                            })
-                        })
-                    });
+                            });
+                        }
+                    }
                     let status = if needs_patch {
                         if current.is_some() {
                             BootstrapPreviewStatus::WouldUpdate
@@ -1265,13 +1266,14 @@ impl AdminBootstrap {
                         Err(error) if error.is_not_found() => None,
                         Err(error) => return Err(error),
                     };
-                    let needs_patch = current.as_ref().is_none_or(|secret| {
-                        values.iter().any(|(key, value)| {
-                            secret.data.get(key).is_none_or(|current| {
+                    let mut needs_patch = current.is_none();
+                    if let Some(secret) = current.as_ref() {
+                        for (key, value) in values {
+                            needs_patch |= secret.data.get(key).is_none_or(|current| {
                                 !secret_values_equal(current.expose_secret(), value.expose_secret())
-                            })
-                        })
-                    });
+                            });
+                        }
+                    }
                     let status = if needs_patch {
                         if let Some(current) = current {
                             kv.patch_with_options(

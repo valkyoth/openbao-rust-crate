@@ -480,6 +480,9 @@ impl OpenBaoConfig {
     /// The default is TLS 1.3. Passing TLS 1.2 is a legacy compatibility
     /// downgrade. High-assurance builds should reject TLS 1.2 in downstream CI
     /// unless the deployment has explicitly enabled `tls12-acknowledged`.
+    /// TLS versions below 1.2 are rejected when the client is built.
+    /// TLS 1.2 is also rejected at build time unless the crate was compiled
+    /// with the `tls12-acknowledged` feature.
     pub fn min_tls_version(mut self, version: tls::Version) -> Self {
         self.min_tls_version = version;
         self
@@ -502,10 +505,14 @@ impl OpenBaoConfig {
         self.min_tls_version(tls::Version::TLS_1_2)
     }
 
-    /// Adds a trusted root certificate while keeping platform/built-in roots.
+    /// Adds a trusted root certificate.
+    ///
+    /// In the default trust mode this certificate is merged with platform roots.
+    /// If [`Self::only_root_certificates`] has already been used, this appends
+    /// to that configured root-only trust store and does not re-enable platform
+    /// roots.
     pub fn add_root_certificate(mut self, certificate: Certificate) -> Self {
         self.root_certificates.push(certificate);
-        self.root_certificate_mode = RootCertificateMode::MergeWithSystem;
         self
     }
 
@@ -589,6 +596,7 @@ impl OpenBaoConfig {
     }
 
     fn validate(&self) -> Result<()> {
+        validate_min_tls_version(self.min_tls_version)?;
         if !self.crl_pem_bundles.is_empty()
             && self.root_certificate_mode != RootCertificateMode::OnlyConfigured
         {
@@ -612,6 +620,21 @@ impl OpenBaoConfig {
             ))),
         }
     }
+}
+
+fn validate_min_tls_version(version: tls::Version) -> Result<()> {
+    if version == tls::Version::TLS_1_0 || version == tls::Version::TLS_1_1 {
+        return Err(Error::InvalidTlsConfig(
+            "TLS versions below 1.2 are not supported by this crate".into(),
+        ));
+    }
+    #[cfg(not(feature = "tls12-acknowledged"))]
+    if version == tls::Version::TLS_1_2 {
+        return Err(Error::InvalidTlsConfig(
+            "TLS 1.2 requires the tls12-acknowledged feature".into(),
+        ));
+    }
+    Ok(())
 }
 
 impl fmt::Debug for OpenBaoConfig {
@@ -1641,6 +1664,35 @@ mod tests {
                 .and_then(|config| config.max_response_bytes(super::MAX_RESPONSE_BYTES + 1))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn tls_floor_rejects_versions_below_12() {
+        assert!(matches!(
+            super::validate_min_tls_version(reqwest::tls::Version::TLS_1_0),
+            Err(Error::InvalidTlsConfig(message)) if message.contains("below 1.2")
+        ));
+        assert!(matches!(
+            super::validate_min_tls_version(reqwest::tls::Version::TLS_1_1),
+            Err(Error::InvalidTlsConfig(message)) if message.contains("below 1.2")
+        ));
+    }
+
+    #[cfg(not(feature = "tls12-acknowledged"))]
+    #[test]
+    fn tls_12_requires_acknowledgement_feature() {
+        assert!(matches!(
+            super::validate_min_tls_version(reqwest::tls::Version::TLS_1_2),
+            Err(Error::InvalidTlsConfig(message)) if message.contains("tls12-acknowledged")
+        ));
+        assert!(super::validate_min_tls_version(reqwest::tls::Version::TLS_1_3).is_ok());
+    }
+
+    #[cfg(feature = "tls12-acknowledged")]
+    #[test]
+    fn tls_12_is_allowed_when_acknowledged() {
+        assert!(super::validate_min_tls_version(reqwest::tls::Version::TLS_1_2).is_ok());
+        assert!(super::validate_min_tls_version(reqwest::tls::Version::TLS_1_3).is_ok());
     }
 
     #[test]

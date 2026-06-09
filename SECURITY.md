@@ -78,6 +78,9 @@ backend, kernel, or network device may keep independent plaintext or ciphertext
 buffers until their own cleanup. This crate zeroizes the serialization buffer it
 controls, but it cannot guarantee zeroization of buffers owned by dependencies
 or the operating system.
+Token and namespace header values are also copied into HTTP-stack header
+structures that are marked sensitive for logging but are not zeroized on drop by
+the underlying `http`/`hyper`/`reqwest` types.
 
 High-assurance deployments should combine this crate with process isolation,
 encrypted swap or disabled swap, core-dump restrictions, short process

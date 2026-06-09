@@ -2,7 +2,20 @@
 
 All notable changes to this project are documented here.
 
-## 1.0.0 - Unreleased
+## Unreleased
+
+### Security
+
+- Reject configured TLS floors below TLS 1.2 at client build time and require
+  the `tls12-acknowledged` feature before TLS 1.2 configurations can build.
+- Preserve root-only trust mode when appending extra configured root
+  certificates with `OpenBaoConfig::add_root_certificate`.
+- Document HTTP-stack header-value memory as an accepted residual risk and keep
+  rand/getrandom duplicate-version warnings visible in dependency policy.
+- Avoid short-circuiting across KV v2 bootstrap secret keys when comparing
+  desired secret values.
+
+## 1.0.0 - 2026-06-04
 
 ### Added
 
