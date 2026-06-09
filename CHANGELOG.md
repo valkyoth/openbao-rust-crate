@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 1.0.1 - Unreleased
+
 ### Security
 
 - Reject configured TLS floors below TLS 1.2 at client build time and require

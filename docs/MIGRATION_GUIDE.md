@@ -1,9 +1,28 @@
 # Migration Guide
 
-This guide tracks migration work for the stable `1.0.0` release. The endpoint
+This guide tracks migration work for the stable `1.0.x` release. The endpoint
 matrix now has zero `planned` and zero
 `decision` rows; remaining non-typed rows are intentionally documented as raw,
 external, partial, gated, or rejected boundaries.
+
+## From `openbao` 1.0.0 To 1.0.1
+
+`1.0.1` is a source-compatible patch hardening release. Normal callers should
+not need code changes.
+
+Review these behavior changes if you intentionally customized TLS:
+
+- `OpenBaoConfig::min_tls_version(tls::Version::TLS_1_0)` and
+  `TLS_1_1` now fail when the client is built.
+- `OpenBaoConfig::min_tls_version(tls::Version::TLS_1_2)` now fails at build
+  time unless the crate is compiled with `tls12-acknowledged`; the dedicated
+  `min_tls_12()` helper was already gated this way.
+- `OpenBaoConfig::add_root_certificate()` now preserves root-only trust mode
+  after `only_root_certificates()` instead of widening trust back to platform
+  roots. Platform roots are used only while the configuration remains in merge
+  mode.
+
+No endpoint types, request structs, or response structs changed.
 
 ## From `openbao` 0.15 To 1.0
 

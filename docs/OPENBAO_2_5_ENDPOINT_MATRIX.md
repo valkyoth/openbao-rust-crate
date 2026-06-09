@@ -71,7 +71,7 @@ Sources:
 - Transit wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate install rows are implemented in `0.11.0`; the optional `transit-import` wrapping helper prepares OpenBao BYOK blobs with AES-KWP/RSA-OAEP behind feature-gated `openssl` and `aes-kw` dependencies.
 - PKI default issuer/key config, named-issuer issue/sign, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, revoke-with-key, cluster config, auto-tidy config, operator-gated sign-verbatim rows, and current-doc struct-field expansion are implemented in `0.12.0`; Tier 2 revocation/CEL/cross-sign/delta-CRL work is implemented in `0.13.0`; unauthenticated public CA/CRL/cert and OCSP protocol reads are classified as `external`.
 - System generate-root/recovery-token, decode-token, password policies, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are implemented in `0.14.0`; config-ui, monitor streaming, internal router inspection, request inspection, and internal counters are classified as `rejected`.
-- `0.15.0` was the closure release where planned endpoint rows were implemented or intentionally reclassified before `1.0.0`; `1.0.0` freezes the addressed endpoint boundary.
+- `0.15.0` was the closure release where planned endpoint rows were implemented or intentionally reclassified before `1.0.0`; the `1.0.x` stable line freezes the addressed endpoint boundary.
 
 Regenerate with:
 

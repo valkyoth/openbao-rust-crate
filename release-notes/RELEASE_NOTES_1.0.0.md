@@ -62,5 +62,5 @@ residual-risk register to the stable line.
 
 - Release gate script: `scripts/release_1_0_gate.sh`
 - OpenBao integration command: `scripts/openbao_integration.sh`
-- Do not tag `v1.0.0` until local validation, external pentest feedback, and
-  GitHub CI are green.
+- `v1.0.0` was tagged after local validation, external pentest feedback, and
+  GitHub CI were green.

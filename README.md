@@ -37,8 +37,8 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the stable `1.0.0` API. `1.0.0` freezes the public API
-surface trialed through the `0.15.0` stable-candidate release line.
+This README documents the stable `1.0.x` API. The current patch line is
+`1.0.1`, which preserves the `1.0.0` public API and adds post-stable hardening.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -186,7 +186,7 @@ Delivered in `0.14.0`:
   generate-recovery-token, decode-token, legacy recovery-key rekey, and
   in-flight request inspection, plus password policy and resultant ACL helpers.
 
-Stable `1.0.0` line:
+Stable `1.0.x` line:
 
 - `1.0.0`: stable API freeze with zero endpoint matrix rows left as
   `planned` or `decision`. Bounded unseal readiness polling is available through
@@ -197,7 +197,10 @@ Stable `1.0.0` line:
   mount/role workflows. Request-level back-pressure, full OpenTelemetry SDK
   integration, certificate pinning, KV v1 bootstrap convergence, and ACL
   parameter-constraint HCL generation are rejected for stable scope.
-- After `1.0.0`, the planned line is `1.0.x` maintenance, security fixes,
+- `1.0.1`: patch hardening for TLS-floor validation, root-only trust
+  preservation when adding configured roots, KV v2 bootstrap comparison
+  discipline, and residual-memory documentation.
+- After `1.0.x`, the planned line remains maintenance, security fixes,
   compatibility fixes, and documentation corrections.
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
@@ -232,7 +235,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `1.0.0` release line tracks compatibility evidence across this supported
+The `1.0.x` release line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -362,7 +365,7 @@ openbao = { version = "1", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the stable `1.0.0` line it records `643` documented endpoint rows, with
+For the stable `1.0.x` line it records `643` documented endpoint rows, with
 `597/643` (`92.8%`) strict typed or operator-gated coverage. All rows are now
 addressed by typed, operator-gated, partial, external, or rejected policy, with
 zero `planned` and zero `decision` rows.

@@ -14,6 +14,11 @@ compatibility fixes, and documentation corrections only. Every pre-`1.0`
 release must be functional enough to publish for external testing. No tag is
 cut until the owner provides a pentest report for the exact release commit.
 
+`1.0.1` is the first post-stable patch release. It contains only hardening and
+documentation updates: TLS-floor validation, root-only trust preservation when
+adding configured roots, KV v2 bootstrap comparison discipline, and clearer
+residual-memory documentation.
+
 ## Standing Release Gates
 
 Every release:
@@ -550,3 +555,16 @@ Publishable value:
 - production-ready stable OpenBao SDK for Rust. After `1.0.0`, planned work is
   limited to `1.0.x` security, correctness, compatibility, and documentation
   updates.
+
+### 1.0.1 - Patch Hardening
+
+Stop criteria:
+
+- TLS floors below TLS 1.2 fail before the HTTP client is built;
+- TLS 1.2 configurations require `tls12-acknowledged`;
+- adding a root certificate after `only_root_certificates` preserves root-only
+  trust instead of silently widening to platform roots;
+- KV v2 bootstrap secret comparison avoids short-circuiting across desired
+  keys;
+- residual HTTP header memory and rand/getrandom duplicate-version tracking
+  are documented.
