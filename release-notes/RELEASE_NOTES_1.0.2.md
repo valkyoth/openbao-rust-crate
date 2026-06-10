@@ -3,9 +3,9 @@
 ## Version
 
 - Version: 1.0.2
-- Status: in development
-- Git tag: pending
-- Git commit: pending
+- Release date: 2026-06-10
+- Git tag: `v1.0.2`
+- Git commit: see the signed `v1.0.2` tag object
 - License: MIT OR Apache-2.0
 
 ## Summary
@@ -47,5 +47,5 @@ API surface.
 - `cargo package --locked --allow-dirty --list`
 - `scripts/validate-release-metadata.sh`
 
-Do not tag `v1.0.2` until GitHub CI and CodeQL are green for the release
+`v1.0.2` was tagged after GitHub CI and CodeQL were green for the release
 commit.
