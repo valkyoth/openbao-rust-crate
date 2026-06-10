@@ -19,6 +19,10 @@ documentation updates: TLS-floor validation, root-only trust preservation when
 adding configured roots, KV v2 bootstrap comparison discipline, and clearer
 residual-memory documentation.
 
+`1.0.2` is a stable maintenance update for dependency refreshes, CI action pin
+updates, and crates.io README cleanup. It does not change OpenBao endpoint
+coverage or the public SDK API surface.
+
 ## Standing Release Gates
 
 Every release:
@@ -568,3 +572,15 @@ Stop criteria:
   keys;
 - residual HTTP header memory and rand/getrandom duplicate-version tracking
   are documented.
+
+### 1.0.2 - Dependency And Documentation Maintenance
+
+Stop criteria:
+
+- direct `base64-ng` dependency is updated to the latest reviewed release;
+- semver-compatible transitive dependencies are refreshed with `cargo update`;
+- pinned GitHub Actions match the latest versions checked by
+  `scripts/check_latest_crates.sh`;
+- README no longer carries historical pre-`1.0` release narration on the
+  crates.io landing page;
+- release notes and metadata validation cover the `1.0.2` candidate.

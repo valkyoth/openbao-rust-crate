@@ -9,9 +9,9 @@ gated, or rejected.
 
 - Release line: `1.0.x`
 - Started: 2026-06-03
-- Audit status: stable API frozen at `1.0.0`; `1.0.1` is a compatible
-  hardening patch. The OpenBao `2.5.x` endpoint matrix has zero `planned` and
-  zero `decision` rows.
+- Audit status: stable API frozen at `1.0.0`; `1.0.1` and `1.0.2` are
+  compatible maintenance patches. The OpenBao `2.5.x` endpoint matrix has zero
+  `planned` and zero `decision` rows.
 - Stable target: reached by `1.0.0`.
 - Planning assumption: after `1.0.0`, assume only `1.0.x` maintenance,
   security fixes, compatibility fixes, and documentation corrections.

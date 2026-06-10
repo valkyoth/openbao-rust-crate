@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 1.0.2 - Unreleased
+
 ### Changed
 
 - Updated `base64-ng` to `1.0.8` and refreshed semver-compatible transitive

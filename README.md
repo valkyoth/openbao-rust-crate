@@ -38,7 +38,8 @@ use openbao::Client;
 ```
 
 This README documents the stable `1.0.x` API. The current patch line is
-`1.0.1`, which preserves the `1.0.0` public API and adds post-stable hardening.
+`1.0.2`, which preserves the `1.0.0` public API and updates dependencies and
+release tooling.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -61,8 +62,9 @@ Implemented now:
   helpers.
 - Userpass login plus user create/read/list/delete, password update, and
   policy update helpers.
-- Token create, role create/read/list/delete, lookup, accessor lookup/list,
-  renew, revoke, revoke-orphan, revoke-self, and tidy helpers.
+- Token create, create-orphan, role create/read/list/delete, lookup, accessor
+  lookup/list/renew/revoke, renew, revoke, revoke-orphan, revoke-self, and tidy
+  helpers.
 - KV v2 read, write, CAS write, patch, list, latest delete, version read,
   version delete, undelete, destroy, metadata, backend config, typed data, and
   secret-aware service config read/write helpers.
@@ -87,28 +89,34 @@ Implemented now:
   generated certificate/key issue, and OTP verification helpers.
 - TOTP key create/read/list/delete, code generation, and code validation
   helpers.
-- PKI URL and CRL config, root/intermediate generation, intermediate signing
-  and install, role write/read/list/delete/patch, issue, sign, revoke,
-  certificate list/read, issuer/key list/read/delete/update, issuer revoke,
-  CA/key import, ACME config/EAB/directory URL, CRL rotate, tidy, tidy status,
-  and tidy cancel helpers.
-- Transit key create, read, list, delete, config update, rotate, export,
-  backup, restore, trim, encrypt/decrypt/rewrap batch helpers, data key,
-  random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options,
-  and optional raw-byte helpers.
+- PKI URL and CRL config, default issuer/key config, root/intermediate
+  generation, root rotate/replace, intermediate signing and install,
+  multi-issuer issue/sign flows, role write/read/list/delete/patch, CEL roles,
+  issue, sign, revoke, revoke-with-key, certificate list/read, issuer/key
+  list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB and
+  directory URL helpers, CRL and delta-CRL management, tidy, tidy status, and
+  tidy cancel helpers.
+- Transit key create, read, list, delete, config update, rotate, export, BYOK
+  wrapping-key/import/import-version/export helpers, soft-delete/restore,
+  cache/global config, CSR generation, certificate-chain install, backup,
+  restore, trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash,
+  HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional
+  raw-byte helpers, and gated software import-wrapping helpers.
 - System health, readiness polling, seal status, leader status, OpenAPI
   discovery, JSON metrics, runtime logger level, version history, namespace
   management, rate-limit quota management, password policies, resultant ACL
   inspection, and loopback-only dev bootstrap helpers.
 - Secret and auth mount enable, list, read, tune, and disable helpers.
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
+- Typed response wrapping through `Client::wrapping`, `WrappingContext`, and
+  `WrappedResponse<T>`.
 - ACL policy list, read, write, delete, and prefix list helpers.
 - Bounded ACL policy builder helpers for common KV v2 and Transit
-  least-privilege rules.
+  least-privilege rules, including response-wrapping TTL constraints.
 - Idempotent admin bootstrap plan builder for KV v2 mounts, Transit mounts,
   Transit keys, ACL policies, KV v2 string secret values, auth methods,
-  AppRole roles, explicit scoped service-token issuance, and explicit AppRole
-  SecretID issuance.
+  AppRole roles, PKI/database/SSH mount and role convergence, explicit scoped
+  service-token issuance, and explicit AppRole SecretID issuance.
 - Capability checks for the caller token, an explicit token, or a token
   accessor.
 - Audit device list, enable, disable, and hash helpers.
@@ -122,6 +130,7 @@ Implemented now:
 - Environment-based client construction from common OpenBao/Vault variables.
 - Shared authenticated client and Rust `Duration` to OpenBao duration string
   helpers for async application ergonomics.
+- Explicit retry/backoff helpers for caller-approved idempotent raw requests.
 - Bootstrap read-only preview, report lookup helpers for issued credentials,
   and changed steps.
 - Best-effort FIPS-oriented posture reporting for crate-visible Transit and
@@ -129,6 +138,8 @@ Implemented now:
 - Shared `ListEntries` ergonomics for common list responses without changing
   their documented fields.
 - Optional RFC3339 timestamp parsing helpers behind the `time` feature.
+- Optional `tracing` and HTTP/2 features without default dependency or runtime
+  transport hooks.
 - Raw JSON request escape hatch for endpoints that are not typed yet.
 - Operator-gated raw storage read, write, list, and delete helpers.
 - Operator-gated pprof diagnostic byte helpers.
@@ -137,71 +148,8 @@ Implemented now:
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
-Delivered in `0.9.0`:
-
-- Public API audit, migration guides, fuzz/fixture hardening,
-  quantum-readiness design notes, explicit retry/backoff, shared non-secret
-  pagination, PKI/Identity bootstrap convergence, and explicit pre-`1.0`
-  decisions for background renewal/tracking, seal readiness polling, typed
-  response wrapping, selective bootstrap convergence, and ACL policy-builder
-  wrapping TTLs. Tracing and HTTP/2 are resolved as non-default features
-  without runtime transport hooks.
-
-Delivered in `0.10.0`:
-
-- Identity OIDC token/provider administration, Identity MFA Duo/Okta/PingID/TOTP
-  management, MFA login enforcement, and `/sys/mfa/validate`, with bounded OIDC
-  response parsing and secret-aware MFA provider credentials, TOTP outputs,
-  passcodes, returned tokens, and accessors.
-
-Delivered in `0.11.0`:
-
-- Transit advanced key management: BYOK wrapping-key, import/import-version,
-  BYOK export, soft-delete/restore, cache/global config, CSR generation, and
-  certificate-chain install helpers. Endpoint wrappers accept externally
-  wrapped ciphertext or public-key-only import material; raw private or
-  symmetric key bytes remain
-  outside the default wrapper APIs. The non-default `transit-import` plus
-  `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP
-  wrapping helper. That helper passes raw key material and an ephemeral AES
-  wrapping key through software memory and OpenSSL-managed heap; it is not for
-  classified or high-assurance key wrapping.
-
-Delivered in `0.12.0`:
-
-- PKI Tier 1 multi-issuer and authority lifecycle work: default issuer/key
-  config, named-issuer issue/sign, root rotate/replace, standalone key
-  generation, sign-verbatim operator helpers, revoke-with-key, cluster and
-  auto-tidy config, and current-doc PKI struct-field expansion.
-
-Delivered in `0.13.0`:
-
-- PKI specialized flows, including revocation/CRL management, CEL roles and
-  issue/sign, named-issuer hierarchy signing, delta-CRL rotation, and
-  operator-gated cross-certification helpers.
-
-Delivered in `0.14.0`:
-
-- System backend completion: operator-gated generate-root,
-  generate-recovery-token, decode-token, legacy recovery-key rekey, and
-  in-flight request inspection, plus password policy and resultant ACL helpers.
-
-Stable `1.0.x` line:
-
-- `1.0.0`: stable API freeze with zero endpoint matrix rows left as
-  `planned` or `decision`. Bounded unseal readiness polling is available through
-  `wait_until_unsealed_with_delay`, with `wait_until_unsealed` behind the
-  `tokio-helpers` feature. Typed response wrapping is available through
-  `Client::wrapping`, ACL policy rules can enforce response-wrapping TTL
-  constraints, and AdminBootstrap can converge PKI, database, and SSH
-  mount/role workflows. Request-level back-pressure, full OpenTelemetry SDK
-  integration, certificate pinning, KV v1 bootstrap convergence, and ACL
-  parameter-constraint HCL generation are rejected for stable scope.
-- `1.0.1`: patch hardening for TLS-floor validation, root-only trust
-  preservation when adding configured roots, KV v2 bootstrap comparison
-  discipline, and residual-memory documentation.
-- After `1.0.x`, the planned line remains maintenance, security fixes,
-  compatibility fixes, and documentation corrections.
+`1.0.x` is a stable maintenance line. Feature history and patch details live in
+[CHANGELOG.md](CHANGELOG.md) and [release-notes](release-notes).
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the stable support policy.

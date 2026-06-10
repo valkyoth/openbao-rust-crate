@@ -5,6 +5,20 @@ matrix now has zero `planned` and zero
 `decision` rows; remaining non-typed rows are intentionally documented as raw,
 external, partial, gated, or rejected boundaries.
 
+## From `openbao` 1.0.1 To 1.0.2
+
+`1.0.2` is a source-compatible dependency and release-documentation update.
+Normal callers should not need code changes.
+
+Notable maintenance changes:
+
+- `base64-ng` is updated to `1.0.8`.
+- Semver-compatible transitive dependencies in `Cargo.lock` are refreshed.
+- The crates.io README is shorter and focuses on current SDK support instead
+  of historical pre-`1.0` release milestones.
+- The pinned `taiki-e/install-action` CI action is updated to the latest v2
+  tag checked by the release gate.
+
 ## From `openbao` 1.0.0 To 1.0.1
 
 `1.0.1` is a source-compatible patch hardening release. Normal callers should

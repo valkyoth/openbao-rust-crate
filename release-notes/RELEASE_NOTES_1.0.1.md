@@ -51,5 +51,5 @@ and documented residual HTTP-stack memory behavior.
 - `cargo deny check`
 - `scripts/validate-release-metadata.sh`
 
-Do not tag `v1.0.1` until GitHub CI and CodeQL are green for the release
+`v1.0.1` was tagged after GitHub CI and CodeQL were green for the release
 commit.
