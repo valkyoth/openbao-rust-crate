@@ -4,7 +4,13 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-## 1.0.1 - Unreleased
+### Changed
+
+- Updated `base64-ng` to `1.0.8` and refreshed semver-compatible transitive
+  dependencies in `Cargo.lock`.
+- Updated the pinned `taiki-e/install-action` CI action to `v2.81.9`.
+
+## 1.0.1 - 2026-06-09
 
 ### Security
 

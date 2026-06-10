@@ -127,7 +127,7 @@ sensitive-http-test-only-acknowledged = []
 
 [dependencies]
 aes-kw = { version = "0.3.1", default-features = false, features = ["zeroize"], optional = true }
-base64-ng = { version = "1.0.6", default-features = false, features = ["alloc"], optional = true }
+base64-ng = { version = "1.0.8", default-features = false, features = ["alloc"], optional = true }
 getrandom = "0.4.2"
 rand = { version = "0.10.1", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
