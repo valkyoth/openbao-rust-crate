@@ -11,4 +11,9 @@ fn main() {
             "cargo:warning=DANGER: sensitive-http-test-only disables HTTPS enforcement for sensitive loopback requests. Never include this feature in production builds."
         );
     }
+    if std::env::var_os("CARGO_FEATURE_MEMORY_LOCK").is_some() {
+        println!(
+            "cargo:warning=memory-lock is enabled. Verify host mlock/VirtualLock limits, swap policy, and failure handling for this deployment."
+        );
+    }
 }

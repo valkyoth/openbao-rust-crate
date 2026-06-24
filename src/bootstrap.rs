@@ -1814,6 +1814,9 @@ fn validate_bootstrap_secret_values(values: &BTreeMap<String, SecretString>) -> 
 }
 
 fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<String, &str> {
+    // SECURITY: the temporary map holds references into SecretString storage,
+    // not copied secret bytes. The serialized request body is built into a
+    // sanitizing buffer before the HTTP transport handoff.
     values
         .iter()
         .map(|(key, value)| (key.clone(), value.expose_secret()))

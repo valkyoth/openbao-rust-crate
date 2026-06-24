@@ -147,6 +147,13 @@ according to the host runtime. Classified or high-assurance key wrapping must
 not use this software helper; perform wrapping in an HSM or equivalent audited
 boundary instead.
 
+The `memory-lock` feature enables `sanitization` memory-lock support for secret
+buffers where the operating system permits it. It is disabled by default and
+requires `memory-lock-acknowledged` because mlock/VirtualLock limits, container
+permissions, swap policy, and failure behavior are deployment-specific. Memory
+locking is a host hardening control, not a guarantee that dependency-owned HTTP,
+TLS, kernel, allocator, or device buffers avoid swap or crash dumps.
+
 The `radius-auth` feature is not enabled by default. RADIUS relies on
 MD5-based authenticators and is retained only for audited legacy compatibility.
 Enabling it requires the additional `radius-auth-acknowledged` feature.

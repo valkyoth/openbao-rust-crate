@@ -76,6 +76,13 @@ compile_error!(
      Add feature \"transit-import-acknowledged\" to confirm this software wrapping choice was audited."
 );
 
+#[cfg(all(feature = "memory-lock", not(feature = "memory-lock-acknowledged")))]
+compile_error!(
+    "The memory-lock feature asks sanitization to lock secret buffers out of swap. \
+     Review OS mlock/VirtualLock limits, failure behavior, and deployment quotas before enabling it. \
+     Add feature \"memory-lock-acknowledged\" to confirm this host-level control was audited."
+);
+
 #[cfg(all(
     feature = "sensitive-http-test-only",
     not(feature = "sensitive-http-test-only-acknowledged")

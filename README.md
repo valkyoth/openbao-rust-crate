@@ -309,6 +309,8 @@ openbao = { version = "1", features = ["time"] }
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables Tokio convenience helpers such as `Sys::wait_until_unsealed`. Runtime-neutral variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
+| `memory-lock` | no | Enables `sanitization` memory-lock support for secret buffers where the host permits it. Requires `memory-lock-acknowledged`; verify OS mlock/VirtualLock limits and swap policy before enabling. |
+| `memory-lock-acknowledged` | no | Explicit acknowledgment for audited memory-lock builds. Memory locking is a host-level hardening control, not a guarantee that HTTP/TLS/kernel buffers avoid swap. |
 | `tls12-acknowledged` | no | Explicit acknowledgment for legacy TLS 1.2 compatibility. TLS 1.3 remains the default and is strongly preferred for high-security OpenBao deployments. |
 | `allow-sha1-acknowledged` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `allow-weak-jitter-fallback-acknowledged` | no | Explicit acknowledgment for using a timing-based retry jitter fallback if OS randomness fails. Default builds skip jitter rather than use the weak fallback. |

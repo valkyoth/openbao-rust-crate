@@ -29,6 +29,8 @@ bytes through `SecretVec::with_secret`.
 - Updated the local Podman development and integration-test image pin to
   `docker.io/openbao/openbao:2.5.5@sha256:e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9`.
 - Added a direct `sanitization` dependency with `alloc` support.
+- Added non-default `memory-lock` plus `memory-lock-acknowledged` features for
+  deployments that have audited host mlock/VirtualLock limits and swap policy.
 - Re-exported `sanitization`, `SecretVec`, `SecureSanitize`, and
   `sanitize_bytes` from the crate root and prelude.
 - Changed raw byte request helpers, Transit byte decode helpers, Transit import
@@ -38,6 +40,13 @@ bytes through `SecretVec::with_secret`.
   this crate's dependency configuration.
 - Updated README, migration guide, security notes, API stability audit, and
   quantum-readiness guidance for the sanitization API.
+- Hardened release checks so crate-version comparisons use literal manifest
+  version comparisons after resolving the latest crate version.
+- Added a 512-byte cap for custom user-agent strings before they are copied into
+  HTTP headers.
+- Documented the accepted bootstrap KV v2 secret-patch serialization residual:
+  the temporary patch map holds references into `SecretString` storage, while
+  the serialized request body uses a sanitizing buffer.
 
 ## Compatibility
 

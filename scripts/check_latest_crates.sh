@@ -42,6 +42,15 @@ latest_crate_version() {
   printf '%s\n' "$version"
 }
 
+manifest_crate_version() {
+  crate=$1
+  sed -n \
+    -e "s/^${crate} = \"\\([^\"]*\\)\".*/\\1/p" \
+    -e "s/^${crate} = { version = \"\\([^\"]*\\)\".*/\\1/p" \
+    Cargo.toml \
+    | head -1
+}
+
 check_manifest_crate_version() {
   crate=$1
   expected=$(latest_crate_version "$crate")
@@ -53,8 +62,9 @@ check_manifest_crate_version() {
 
   echo "${crate} latest ${expected}"
 
-  if ! grep -Eq "^${crate} = (\"${expected}\"|\{ version = \"${expected}\"[,}])" Cargo.toml; then
-    echo "Cargo.toml: ${crate} is not pinned to latest ${expected}" >&2
+  actual=$(manifest_crate_version "$crate")
+  if [ "$actual" != "$expected" ]; then
+    echo "Cargo.toml: ${crate} is pinned to ${actual:-missing}, expected latest ${expected}" >&2
     exit 1
   fi
 }

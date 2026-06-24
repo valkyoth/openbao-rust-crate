@@ -32,6 +32,7 @@ const MAX_CONNECT_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_RETRY_ATTEMPTS: usize = 8;
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
 const DEFAULT_RETRY_JITTER_PERCENT: u8 = 20;
+const MAX_USER_AGENT_BYTES: usize = 512;
 const ADDRESS_ENV_KEYS: &[&str] = &["OPENBAO_ADDR", "BAO_ADDR", "VAULT_ADDR"];
 const TOKEN_ENV_KEYS: &[&str] = &["OPENBAO_TOKEN", "BAO_TOKEN", "VAULT_TOKEN"];
 const NAMESPACE_ENV_KEYS: &[&str] = &["OPENBAO_NAMESPACE", "BAO_NAMESPACE", "VAULT_NAMESPACE"];
@@ -1303,6 +1304,11 @@ fn validate_user_agent(user_agent: &str) -> Result<()> {
             "user agent must not be empty".into(),
         ));
     }
+    if user_agent.len() > MAX_USER_AGENT_BYTES {
+        return Err(Error::InvalidParameter(
+            "user agent exceeds maximum allowed length".into(),
+        ));
+    }
     if !user_agent.is_ascii() {
         return Err(Error::InvalidParameter(
             "user agent must contain only ASCII characters".into(),
@@ -1702,6 +1708,8 @@ mod tests {
     fn user_agent_rejects_control_characters() {
         assert!(validate_user_agent("openbao-rust-client").is_ok());
         assert!(validate_user_agent("").is_err());
+        assert!(validate_user_agent(&"a".repeat(super::MAX_USER_AGENT_BYTES)).is_ok());
+        assert!(validate_user_agent(&"a".repeat(super::MAX_USER_AGENT_BYTES + 1)).is_err());
         assert!(validate_user_agent("good\r\nX-Injected: bad").is_err());
         assert!(
             OpenBaoConfig::new("https://bao.example.com")
