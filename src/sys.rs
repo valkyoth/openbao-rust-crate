@@ -7,12 +7,12 @@ use reqwest::{
     Method, StatusCode, Url,
     header::{CONTENT_TYPE, HeaderName, HeaderValue},
 };
+use sanitization::SecretVec;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{DeserializeOwned, Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
-use zeroize::Zeroizing;
 
 use crate::{
     Authenticated, Client, Error, JsonValue, Result, Unauthenticated,
@@ -310,7 +310,7 @@ pub struct RawList {
 ///
 /// Pprof helpers are available only with `operator-ops`. Profile payloads can
 /// contain stack traces, command-line arguments, or other diagnostic material,
-/// so they are returned as zeroizing byte buffers instead of strings.
+/// so they are returned as sanitizing byte buffers instead of strings.
 #[cfg(feature = "operator-ops")]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PprofProfile {
@@ -705,7 +705,7 @@ impl fmt::Debug for SysRandomResponse {
 impl SysRandomResponse {
     /// Decodes base64 random bytes returned with `SysToolsOutputFormat::Base64`.
     #[cfg(feature = "transit-bytes")]
-    pub fn random_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
+    pub fn random_bytes(&self) -> Result<SecretVec> {
         decode_sys_base64_secret(&self.random_bytes)
     }
 }
@@ -775,7 +775,7 @@ impl fmt::Debug for SysHashResponse {
 impl SysHashResponse {
     /// Decodes base64 output returned with `SysToolsOutputFormat::Base64`.
     #[cfg(feature = "transit-bytes")]
-    pub fn sum_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
+    pub fn sum_bytes(&self) -> Result<SecretVec> {
         decode_sys_base64_secret(&self.sum)
     }
 }
@@ -3964,8 +3964,10 @@ impl<State> Sys<'_, State> {
                 &[StatusCode::OK],
             )
             .await?;
-        String::from_utf8(body.as_slice().to_vec())
-            .map_err(|_| Error::Decode("OpenBao metrics response was not valid UTF-8".into()))
+        body.with_secret(|bytes| {
+            String::from_utf8(bytes.to_vec())
+                .map_err(|_| Error::Decode("OpenBao metrics response was not valid UTF-8".into()))
+        })
     }
 
     /// Reads host diagnostics from `/sys/host-info`.
@@ -4792,14 +4794,10 @@ impl Sys<'_, Authenticated> {
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
     /// Pprof data can include command-line arguments, stack traces, and other
-    /// local-node diagnostic material. The SDK returns a zeroizing byte buffer
+    /// local-node diagnostic material. The SDK returns a sanitizing byte buffer
     /// and applies the configured maximum response-size cap.
     #[cfg(feature = "operator-ops")]
-    pub async fn pprof(
-        &self,
-        profile: PprofProfile,
-        options: &PprofOptions,
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    pub async fn pprof(&self, profile: PprofProfile, options: &PprofOptions) -> Result<SecretVec> {
         validate_pprof_options(profile, options)?;
         let mut query = Vec::new();
         if let Some(seconds) = options.seconds {
@@ -5899,9 +5897,9 @@ impl Sys<'_, Authenticated> {
     ///
     /// The returned snapshot is encrypted by OpenBao's storage barrier, but it
     /// is still sensitive operational material. The SDK keeps the in-memory
-    /// buffer zeroizing and applies the configured response-size cap. Large
+    /// buffer sanitizing and applies the configured response-size cap. Large
     /// production snapshots may require a future streaming API.
-    pub async fn raft_snapshot(&self) -> Result<Zeroizing<Vec<u8>>> {
+    pub async fn raft_snapshot(&self) -> Result<SecretVec> {
         self.client
             .request_bytes_accepting(
                 Method::GET,
@@ -6289,12 +6287,12 @@ fn encode_sys_base64_secret(input: &[u8]) -> Result<SecretString> {
 }
 
 #[cfg(feature = "transit-bytes")]
-fn decode_sys_base64_secret(input: &SecretString) -> Result<Zeroizing<Vec<u8>>> {
+fn decode_sys_base64_secret(input: &SecretString) -> Result<SecretVec> {
     let decoded = base64_ng::STANDARD
         .decode_secret(input.expose_secret().as_bytes())
         .map_err(|_| Error::Decode("OpenBao response contained invalid base64".into()))?;
     let exposed = decoded.into_exposed_vec();
-    Ok(Zeroizing::new(
+    Ok(SecretVec::from_vec(
         exposed.into_exposed_unprotected_vec_caller_must_zeroize(),
     ))
 }

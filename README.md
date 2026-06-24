@@ -37,9 +37,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the stable `1.0.x` API. The current patch line is
-`1.0.2`, which preserves the `1.0.0` public API and updates dependencies and
-release tooling.
+This README documents the stable `1.1.x` API. The current minor line is
+`1.1.0`, which migrates owned secret byte buffers from `zeroize::Zeroizing` to
+`sanitization::SecretVec` while keeping the stable endpoint surface intact.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -148,7 +148,7 @@ Implemented now:
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
-`1.0.x` is a stable maintenance line. Feature history and patch details live in
+`1.x` is the stable release line. Feature history and patch details live in
 [CHANGELOG.md](CHANGELOG.md) and [release-notes](release-notes).
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
@@ -167,6 +167,7 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | TLS floor | TLS 1.3 by default; TLS 1.2 requires explicit opt-in |
 | Plain HTTP | Rejected by default; sensitive requests still require HTTPS |
 | Token storage | `openbao::SecretString` (`secrecy::SecretString`) |
+| Secret byte buffers | `openbao::SecretVec` (`sanitization::SecretVec`) |
 | Unsafe policy | `unsafe_code = "forbid"` |
 | Path validation | Rejects traversal, query/fragment injection, empty segments, controls, and trailing periods |
 | Error posture | API error strings are bounded and sanitized before formatting |
@@ -183,7 +184,7 @@ release sequencing live in [release-notes](release-notes) and
 The minimum supported Rust version is Rust `1.90.0`. New deployments should
 prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
 
-The `1.0.x` release line tracks compatibility evidence across this supported
+The `1.x` release line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
@@ -313,7 +314,7 @@ openbao = { version = "1", features = ["time"] }
 
 The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
 in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the stable `1.0.x` line it records `643` documented endpoint rows, with
+For the stable `1.x` line it records `643` documented endpoint rows, with
 `597/643` (`92.8%`) strict typed or operator-gated coverage. All rows are now
 addressed by typed, operator-gated, partial, external, or rejected policy, with
 zero `planned` and zero `decision` rows.
@@ -393,7 +394,7 @@ zero `planned` and zero `decision` rows.
 | Internal UI helpers | Yes | Internal UI namespace and mount discovery helpers with bounded maps; OpenBao does not guarantee endpoint stability. |
 | Metrics | Yes | Typed JSON helper for `/sys/metrics?format=json` and capped Prometheus text helper. |
 | Host diagnostics | Yes | JSON helper for `/sys/host-info` platform diagnostics. |
-| Pprof diagnostics | Gated | Capped zeroizing byte helpers for `/sys/pprof/:profile`, available only with `operator-ops` plus `operator-ops-acknowledged`. |
+| Pprof diagnostics | Gated | Capped sanitizing byte helpers for `/sys/pprof/:profile`, available only with `operator-ops` plus `operator-ops-acknowledged`. |
 | Sanitized config state | Yes | JSON helper for `/sys/config/state/sanitized`. |
 | Audited request headers | Yes | List, read, write, and delete `/sys/config/auditing/request-headers` helpers. |
 | CORS config | Yes | Read, write, and delete `/sys/config/cors` helpers with bounded lists, header validation, and wildcard-origin rejection. |
@@ -1021,7 +1022,7 @@ Prepare a wrapped import blob with the optional `transit-import` and
 `transit-import-acknowledged` features:
 
 This helper is a software convenience path. OpenSSL may allocate intermediate
-key buffers outside Rust's `zeroize` control, so high-assurance deployments
+key buffers outside this crate's sanitization control, so high-assurance deployments
 should wrap BYOK material inside an HSM or equivalent audited boundary and pass
 only the already-wrapped ciphertext to the default import request types.
 
@@ -1029,7 +1030,7 @@ only the already-wrapped ciphertext to the default import request types.
 use openbao::secrets::transit::{
     TransitImportHashFunction, TransitKeyType, TransitWrappedImportKey,
 };
-use openbao::{Client, Result, SecretString, Zeroizing};
+use openbao::{Client, Result, SecretString, SecretVec};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -1040,7 +1041,7 @@ async fn main() -> Result<()> {
     let wrapping_key = transit.wrapping_key().await?;
     let wrapped = TransitWrappedImportKey::wrap_key_material(
         &wrapping_key.public_key,
-        Zeroizing::new(b"32-byte-import-key-material-here".to_vec()),
+        SecretVec::from_vec(b"32-byte-import-key-material-here".to_vec()),
         TransitImportHashFunction::Sha256,
     )?;
 

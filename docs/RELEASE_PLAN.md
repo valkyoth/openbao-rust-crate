@@ -1,6 +1,6 @@
 # Release Plan
 
-This plan starts at `0.1.0` and ends at `1.0.0`, the first stable release.
+This plan starts at `0.1.0` and reached `1.0.0`, the first stable release.
 The endpoint-by-endpoint OpenBao `2.5.x` matrix currently tracks `643`
 documented endpoint rows, with `597/643` (`92.8%`) strict typed or
 operator-gated coverage and zero `planned` or `decision` rows. The remaining
@@ -9,8 +9,8 @@ rows are intentionally addressed as `partial`, `raw`, `external`, or
 The pre-`1.0` line extended through `0.15.0`; that final scope was trialed
 before the stable API freeze.
 
-After `1.0.0`, the expected line is `1.0.x` maintenance, security fixes,
-compatibility fixes, and documentation corrections only. Every pre-`1.0`
+After `1.0.0`, the expected line is stable maintenance, security fixes,
+OpenBao compatibility fixes, and reviewed security-focused minor updates. Every
 release must be functional enough to publish for external testing. No tag is
 cut until the owner provides a pentest report for the exact release commit.
 
@@ -22,6 +22,12 @@ residual-memory documentation.
 `1.0.2` is a stable maintenance update for dependency refreshes, CI action pin
 updates, and crates.io README cleanup. It does not change OpenBao endpoint
 coverage or the public SDK API surface.
+
+`1.1.0` is a security-type migration release. It replaces the public
+`zeroize::Zeroizing<Vec<u8>>` byte-buffer API with
+`sanitization::SecretVec`, removes the direct `zeroize` dependency and the
+`openbao::Zeroizing` / `openbao::Zeroize` re-exports, and keeps the stable
+OpenBao endpoint boundary intact.
 
 ## Standing Release Gates
 
@@ -50,8 +56,10 @@ Every release:
   The `1.0.0` candidate has no remaining `planned` implementation rows.
 - No endpoint row may remain classified as `planned` or `decision` when
   `1.0.0` is tagged.
-- After `1.0.0`, new feature work is not planned. Only `1.0.x` security,
-  correctness, compatibility, and documentation updates are assumed.
+- After `1.0.0`, endpoint expansion is not planned unless OpenBao adds stable
+  API surface that must be tracked. Security, correctness, compatibility,
+  documentation, dependency, and reviewed security-type migrations may land in
+  the stable `1.x` line.
 
 ## Downstream Ergonomics Backlog
 
@@ -257,7 +265,7 @@ Stop condition:
   `operator-ops` plus `operator-ops-acknowledged`; values are secret-aware and
   key lists are bounded.
 - Pprof diagnostic helpers are implemented behind `operator-ops` plus
-  `operator-ops-acknowledged`; payloads are returned in zeroizing byte buffers
+  `operator-ops-acknowledged`; payloads are returned in sanitizing byte buffers
   under the configured response-size cap. Streaming monitor and unstable
   internal inspect endpoints remain deferred.
 - HA status and remount/mount-migration start/status helpers are implemented.
@@ -394,7 +402,7 @@ Stop condition:
   line, with optional `openssl` and `aes-kw` dependencies only when the
   feature is enabled;
 - the `transit-import` helper accepts raw private or symmetric key bytes
-  through zeroizing inputs, returns the OpenBao wrapped-key blob as
+  through sanitizing inputs, returns the OpenBao wrapped-key blob as
   `SecretString`, has redacted `Debug`, and is documented as an ergonomic
   client-side helper rather than an OpenBao, FIPS, HSM, or post-quantum
   security guarantee;
@@ -557,8 +565,8 @@ Stop condition:
 Publishable value:
 
 - production-ready stable OpenBao SDK for Rust. After `1.0.0`, planned work is
-  limited to `1.0.x` security, correctness, compatibility, and documentation
-  updates.
+  limited to `1.x` security, correctness, OpenBao compatibility,
+  documentation, dependency, and reviewed security-type migration updates.
 
 ### 1.0.1 - Patch Hardening
 
@@ -584,3 +592,17 @@ Stop criteria:
 - README no longer carries historical pre-`1.0` release narration on the
   crates.io landing page;
 - release notes and metadata validation cover the `1.0.2` candidate.
+
+### 1.1.0 - Sanitization Secret Buffer Migration
+
+Stop criteria:
+
+- direct `zeroize` dependency is removed from `Cargo.toml`;
+- `sanitization` is a direct dependency with the `alloc` feature enabled;
+- public byte-buffer helpers return `sanitization::SecretVec`;
+- crate root and prelude re-export `sanitization`, `SecretVec`,
+  `SecureSanitize`, and `sanitize_bytes`;
+- README, migration guide, security notes, API audit, and release notes explain
+  the source migration from `Zeroizing<Vec<u8>>` to `SecretVec`;
+- full all-feature compile, tests, release gates, dependency/tool version
+  checks, and GitHub CI pass before tagging.

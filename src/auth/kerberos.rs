@@ -7,9 +7,9 @@ use reqwest::{
     Method, StatusCode,
     header::{AUTHORIZATION, HeaderValue},
 };
+use sanitization::SecureSanitize;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Deserializer, Serialize, de::Visitor};
-use zeroize::Zeroizing;
 
 use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
@@ -720,13 +720,13 @@ fn negotiate_header(spnego_token: &SecretString) -> Result<HeaderValue> {
             "Kerberos SPNEGO token must not be empty".into(),
         ));
     }
-    let mut value = Zeroizing::new(String::with_capacity(
-        "Negotiate ".len() + spnego_token.expose_secret().len(),
-    ));
+    let mut value = String::with_capacity("Negotiate ".len() + spnego_token.expose_secret().len());
     value.push_str("Negotiate ");
     value.push_str(spnego_token.expose_secret());
-    let mut header =
-        HeaderValue::from_str(&value).map_err(|error| Error::InvalidHeader(error.to_string()))?;
+    let header =
+        HeaderValue::from_str(&value).map_err(|error| Error::InvalidHeader(error.to_string()));
+    value.secure_sanitize();
+    let mut header = header?;
     header.set_sensitive(true);
     Ok(header)
 }

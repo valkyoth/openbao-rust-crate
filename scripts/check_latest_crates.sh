@@ -65,7 +65,7 @@ check_manifest_crate_version subtle
 check_manifest_crate_version time
 check_manifest_crate_version tokio
 check_manifest_crate_version tracing
-check_manifest_crate_version zeroize
+check_manifest_crate_version sanitization
 
 echo "checking CI cargo tool versions"
 check_workflow_tool_version cargo-deny

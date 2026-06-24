@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 1.1.0 - 2026-06-24
+
+### Changed
+
+- Migrated public owned secret-byte buffers from `zeroize::Zeroizing<Vec<u8>>`
+  to `sanitization::SecretVec`.
+- Re-exported `sanitization`, `SecretVec`, `SecureSanitize`, and
+  `sanitize_bytes` from the crate root and prelude.
+- Removed the direct `zeroize` dependency and the `openbao::Zeroize` /
+  `openbao::Zeroizing` re-exports.
+- Updated Transit import software wrapping examples and byte helper docs for
+  the new sanitization API.
+
+### Compatibility
+
+- Callers using byte helper APIs must replace `Zeroizing<Vec<u8>>` with
+  `SecretVec` and use `with_secret` to inspect returned bytes.
+- OpenBao endpoint coverage and request/response semantics are unchanged.
+
 ## 1.0.2 - 2026-06-10
 
 ### Changed

@@ -15,9 +15,9 @@ use reqwest::{
     header::{ACCEPT, CONTENT_TYPE, HeaderName, HeaderValue},
     redirect, tls,
 };
+use sanitization::{SecretVec, SecureSanitize};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Serialize, de::DeserializeOwned};
-use zeroize::Zeroizing;
 
 use crate::{
     Error, Result,
@@ -926,7 +926,7 @@ impl<State> Client<State> {
             .await
     }
 
-    /// Sends a raw byte request and returns a capped zeroizing byte buffer.
+    /// Sends a raw byte request and returns a capped sanitizing byte buffer.
     ///
     /// `path` is relative to `/v1` and is validated like [`Self::request_json`].
     /// This escape hatch is intended for OpenBao endpoints whose payloads are
@@ -944,7 +944,7 @@ impl<State> Client<State> {
         accept: Option<HeaderValue>,
         body: Option<&[u8]>,
         accepted_statuses: &[StatusCode],
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    ) -> Result<SecretVec> {
         let mut headers = Vec::new();
         if let Some(accept) = accept {
             headers.push((ACCEPT, accept));
@@ -966,7 +966,7 @@ impl<State> Client<State> {
         headers: &[(HeaderName, HeaderValue)],
         body: Option<&[u8]>,
         accepted_statuses: &[StatusCode],
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    ) -> Result<SecretVec> {
         let mut url = self.url_for_path(path)?;
         if !query.is_empty() {
             let mut pairs = url.query_pairs_mut();
@@ -1109,7 +1109,7 @@ impl<State> Client<State> {
             request.headers_mut().insert(name, value);
         }
         if let Some(payload) = body {
-            let encoded = Zeroizing::new(
+            let encoded = SecretVec::from_vec(
                 serde_json::to_vec(payload)
                     .map_err(|_| Error::Decode("OpenBao request could not be encoded".into()))?,
             );
@@ -1119,11 +1119,11 @@ impl<State> Client<State> {
                     .headers_mut()
                     .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
             }
-            // SECURITY: this copy is intentionally non-zeroing because
-            // reqwest::Body does not accept a Zeroize-on-drop body buffer.
-            // The Zeroizing serialization buffer above is cleared; reqwest,
+            // SECURITY: this copy is intentionally non-sanitizing because
+            // reqwest::Body does not accept a sanitize-on-drop body buffer.
+            // The SecretVec serialization buffer above is cleared; reqwest,
             // TLS, kernel, and device buffers are documented residual risks.
-            *request.body_mut() = Some(Vec::from(&encoded[..]).into());
+            *request.body_mut() = Some(encoded.with_secret(|bytes| Vec::from(bytes)).into());
         }
 
         execute_openbao_http_request(http, request).await
@@ -1342,13 +1342,14 @@ fn token_header_for(
             sensitive_header_value(token_value)?,
         )),
         HeaderMode::Bearer => {
-            let mut bearer =
-                Zeroizing::new(String::with_capacity("Bearer ".len() + token_value.len()));
+            let mut bearer = String::with_capacity("Bearer ".len() + token_value.len());
             bearer.push_str("Bearer ");
             bearer.push_str(token_value);
             let value = sensitive_header_value(&bearer).map_err(|_| {
                 Error::InvalidHeader("token must be valid for Authorization header use".into())
-            })?;
+            });
+            bearer.secure_sanitize();
+            let value = value?;
             Ok((reqwest::header::AUTHORIZATION, value))
         }
     }
@@ -1446,14 +1447,16 @@ where
     validate_json_content_type(&response)?;
     let body = read_response_bytes(response, max_response_bytes).await?;
 
-    serde_json::from_slice(&body)
-        .map_err(|_| Error::Decode("OpenBao response did not match expected schema".into()))
+    body.with_secret(|bytes| {
+        serde_json::from_slice(bytes)
+            .map_err(|_| Error::Decode("OpenBao response did not match expected schema".into()))
+    })
 }
 
 async fn read_response_bytes(
     mut response: reqwest::Response,
     max_response_bytes: usize,
-) -> Result<Zeroizing<Vec<u8>>> {
+) -> Result<SecretVec> {
     if response
         .content_length()
         .is_some_and(|length| length > max_response_bytes as u64)
@@ -1463,7 +1466,7 @@ async fn read_response_bytes(
         ));
     }
 
-    let mut body = Zeroizing::new(Vec::new());
+    let mut body = SecretVec::empty();
     while let Some(chunk) = response.chunk().await? {
         if body.len().saturating_add(chunk.len()) > max_response_bytes {
             return Err(Error::Decode(

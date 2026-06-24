@@ -1,28 +1,31 @@
 # API Stability Audit
 
-This document records the API stability audit for the stable `1.0.x`
+This document records the API stability audit for the stable `1.x`
 release. The goal is to make the public API commitments explicit while keeping
 documented safety boundaries for endpoints that remain raw, external, partial,
 gated, or rejected.
 
 ## Status
 
-- Release line: `1.0.x`
+- Release line: `1.x`
 - Started: 2026-06-03
-- Audit status: stable API frozen at `1.0.0`; `1.0.1` and `1.0.2` are
-  compatible maintenance patches. The OpenBao `2.5.x` endpoint matrix has zero
+- Audit status: stable endpoint API frozen at `1.0.0`; `1.0.1` and `1.0.2`
+  are compatible maintenance patches, and `1.1.0` is a reviewed
+  security-buffer type migration from `zeroize::Zeroizing<Vec<u8>>` to
+  `sanitization::SecretVec`. The OpenBao `2.5.x` endpoint matrix has zero
   `planned` and zero `decision` rows.
 - Stable target: reached by `1.0.0`.
-- Planning assumption: after `1.0.0`, assume only `1.0.x` maintenance,
-  security fixes, compatibility fixes, and documentation corrections.
+- Planning assumption: after `1.0.0`, assume stable maintenance, security
+  fixes, OpenBao compatibility fixes, documentation corrections, and reviewed
+  security-focused minor migrations.
 - Coverage target: no OpenBao `2.5.x` endpoint row remains classified as
   `planned` or `decision`; not every row must become first-class typed if a
   raw, external, partial, gated, or rejected boundary is safer.
 
 ## Stabilization Rules
 
-- Public types that expose secret material must continue using `SecretString`
-  or an equivalent secret-aware type.
+- Public types that expose secret material must continue using `SecretString`,
+  `SecretVec`, or an equivalent secret-aware type.
 - Public request builders must validate local path, duration, CIDR, header,
   TLS, and size constraints before request dispatch when validation can be done
   without weakening OpenBao server-side policy.

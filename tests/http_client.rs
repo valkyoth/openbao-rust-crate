@@ -547,7 +547,7 @@ async fn raw_byte_request_sends_custom_protocol_headers() {
         )
         .await
         .unwrap_or_else(|error| panic!("{error}"));
-    assert_eq!(&response[..], b"ocsp-response-der");
+    response.with_secret(|bytes| assert_eq!(bytes, b"ocsp-response-der"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
@@ -2357,7 +2357,7 @@ async fn sys_raft_storage_helpers_use_documented_paths() {
         .raft_snapshot()
         .await
         .unwrap_or_else(|error| panic!("{error}"));
-    assert_eq!(snapshot.as_slice(), b"raft-snapshot-bytes");
+    snapshot.with_secret(|bytes| assert_eq!(bytes, b"raft-snapshot-bytes"));
     client
         .sys()
         .raft_restore_snapshot(b"restore-snapshot")
@@ -3538,7 +3538,7 @@ async fn transit_byte_helpers_base64_encode_and_decode_payloads() {
     let plaintext = decrypted
         .plaintext_bytes()
         .unwrap_or_else(|error| panic!("{error}"));
-    assert_eq!(&plaintext[..], b"secret");
+    plaintext.with_secret(|bytes| assert_eq!(bytes, b"secret"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
@@ -10537,7 +10537,7 @@ async fn pprof_helpers_use_documented_paths_and_capped_bytes() {
         .pprof(openbao::sys::PprofProfile::Heap, &Default::default())
         .await
         .unwrap_or_else(|error| panic!("{error}"));
-    assert_eq!(heap.as_slice(), b"heap-profile");
+    heap.with_secret(|bytes| assert_eq!(bytes, b"heap-profile"));
 
     let cpu = client
         .sys()
@@ -10547,7 +10547,7 @@ async fn pprof_helpers_use_documented_paths_and_capped_bytes() {
         )
         .await
         .unwrap_or_else(|error| panic!("{error}"));
-    assert_eq!(cpu.as_slice(), b"cpu-profile");
+    cpu.with_secret(|bytes| assert_eq!(bytes, b"cpu-profile"));
 
     let goroutine = client
         .sys()
@@ -10557,7 +10557,7 @@ async fn pprof_helpers_use_documented_paths_and_capped_bytes() {
         )
         .await
         .unwrap_or_else(|error| panic!("{error}"));
-    assert_eq!(goroutine.as_slice(), b"goroutine stack trace");
+    goroutine.with_secret(|bytes| assert_eq!(bytes, b"goroutine stack trace"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

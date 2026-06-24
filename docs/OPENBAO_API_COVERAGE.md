@@ -69,7 +69,7 @@ Sources:
 
 ## Endpoint Matrix
 
-The stable `1.0.x` release line uses a mechanical endpoint matrix instead
+The stable `1.x` release line uses a mechanical endpoint matrix instead
 of only area-level estimates:
 
 - documented endpoint rows extracted from OpenBao `2.5.x`: `643`;

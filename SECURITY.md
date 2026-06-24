@@ -48,7 +48,7 @@ Please include:
   loopback servers. Hostnames such as `localhost` are rejected.
 - Response bodies must remain size-bounded; JSON responses and binary
   responses with an expected `Accept` header must be content-type checked.
-- JSON request serialization buffers controlled by this crate must be zeroized
+- JSON request serialization buffers controlled by this crate must be sanitized
   after handoff to the HTTP stack.
 - Third-party GitHub Actions must be pinned to immutable commit SHAs.
 - New dependencies require a release-plan justification and `cargo deny` review.
@@ -75,11 +75,11 @@ occurred.
 
 After a JSON request body is handed to `reqwest`, the transport stack, TLS
 backend, kernel, or network device may keep independent plaintext or ciphertext
-buffers until their own cleanup. This crate zeroizes the serialization buffer it
-controls, but it cannot guarantee zeroization of buffers owned by dependencies
+buffers until their own cleanup. This crate sanitizes the serialization buffer it
+controls, but it cannot guarantee sanitization of buffers owned by dependencies
 or the operating system.
 Token and namespace header values are also copied into HTTP-stack header
-structures that are marked sensitive for logging but are not zeroized on drop by
+structures that are marked sensitive for logging but are not sanitized on drop by
 the underlying `http`/`hyper`/`reqwest` types.
 
 High-assurance deployments should combine this crate with process isolation,
@@ -91,7 +91,7 @@ Base64 helpers used by Transit byte operations and system random byte helpers
 move base64 text into `SecretString`, but exposing text from dependency APIs is
 still a residual process-memory risk. High-assurance deployments should treat
 the calling process heap as capable of containing encoded secret material until
-the relevant `SecretString` values are dropped and zeroized.
+the relevant `SecretString` values are dropped and cleared.
 
 ## Hardened Deployment Profile
 
@@ -141,7 +141,7 @@ certification, post-quantum, or security-boundary claim. It also requires the
 `transit-import-acknowledged` feature so downstream builds explicitly review
 that raw key material and the ephemeral AES wrapping key pass through software
 memory and OpenSSL-managed heap. OpenSSL may allocate intermediate key buffers
-outside Rust's allocator and outside this crate's `zeroize` control; those
+outside Rust's allocator and outside this crate's sanitization control; those
 copies can remain in process heap, swap, crash dumps, or allocator free lists
 according to the host runtime. Classified or high-assurance key wrapping must
 not use this software helper; perform wrapping in an HSM or equivalent audited

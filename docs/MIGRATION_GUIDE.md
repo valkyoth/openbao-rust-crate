@@ -1,9 +1,53 @@
 # Migration Guide
 
-This guide tracks migration work for the stable `1.0.x` release. The endpoint
+This guide tracks migration work for the stable `1.x` release. The endpoint
 matrix now has zero `planned` and zero
 `decision` rows; remaining non-typed rows are intentionally documented as raw,
 external, partial, gated, or rejected boundaries.
+
+## From `openbao` 1.0.2 To 1.1.0
+
+`1.1.0` intentionally changes the public owned secret-byte buffer type. The
+OpenBao endpoint surface is unchanged, but byte helpers now use
+`sanitization::SecretVec` instead of `zeroize::Zeroizing<Vec<u8>>`.
+
+Replace imports:
+
+```rust
+// Before
+use openbao::{SecretString, Zeroizing};
+
+// After
+use openbao::{SecretString, SecretVec};
+```
+
+Replace owned byte construction:
+
+```rust
+// Before
+let material = Zeroizing::new(raw_bytes);
+
+// After
+let material = SecretVec::from_vec(raw_bytes);
+```
+
+Read returned secret bytes through `with_secret`:
+
+```rust
+let plaintext = transit.decrypt("key", &request).await?.plaintext_bytes()?;
+plaintext.with_secret(|bytes| {
+    // use bytes inside this closure
+});
+```
+
+Affected public helpers include raw byte request helpers, Transit byte decode
+helpers, Transit import software wrapping helpers, system random/hash byte
+helpers, pprof byte reads, and Raft snapshot byte downloads.
+
+The crate root and prelude now re-export `sanitization`, `SecretVec`,
+`SecureSanitize`, and `sanitize_bytes`. The `zeroize`, `Zeroize`, and
+`Zeroizing` re-exports were removed. If your application used those re-exports
+for unrelated data, depend on your preferred clearing crate directly.
 
 ## From `openbao` 1.0.1 To 1.0.2
 

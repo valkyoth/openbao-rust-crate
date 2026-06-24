@@ -28,7 +28,7 @@
 //! but ACL policies, AppRole settings, and other bootstrap operations still
 //! require caller-owned serialization to avoid overwriting concurrent changes.
 //!
-//! Secret request payloads are serialized through a zeroizing intermediate
+//! Secret request payloads are serialized through a sanitizing intermediate
 //! buffer before handoff to `reqwest`. The HTTP stack still owns a normal body
 //! buffer after that handoff, and TLS, kernel, allocator, and device buffers
 //! can retain transient copies outside this crate's control. Treat Transit
@@ -156,6 +156,7 @@ pub use response::{
     BoundedStringList, Empty, ListEntries, ListPageOptions, MAX_RESPONSE_STRINGS, ResponseEnvelope,
     deserialize_bounded_string_vec,
 };
+pub use sanitization::{self, SecretVec, SecureSanitize, sanitize_bytes};
 pub use secrecy::{self, ExposeSecret, SecretString};
 pub use serde_json::{self, Value as JsonValue};
 #[cfg(feature = "time")]
@@ -164,7 +165,6 @@ pub use time::{self, OffsetDateTime};
 pub use timestamp::{
     OptionalTimestampExt, TimestampExt, parse_optional_rfc3339_timestamp, parse_rfc3339_timestamp,
 };
-pub use zeroize::{self, Zeroize, Zeroizing};
 
 /// Common imports for application code using the OpenBao SDK.
 pub mod prelude {
@@ -174,8 +174,8 @@ pub mod prelude {
         AclCapability, AclPolicyBuilder, Authenticated, BoundedStringList, Certificate, Client,
         ClientBuilder, Empty, Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries,
         ListPageOptions, MAX_RESPONSE_STRINGS, Method, OpenBao, OpenBaoConfig, PluginMount,
-        RenewalHint, ResponseEnvelope, Result, SecretString, SharedClient, StatusCode,
-        Unauthenticated, Zeroize, Zeroizing, deserialize_bounded_string_vec,
+        RenewalHint, ResponseEnvelope, Result, SecretString, SecretVec, SecureSanitize,
+        SharedClient, StatusCode, Unauthenticated, deserialize_bounded_string_vec,
         duration_to_bao_string, validate_endpoint_path, validate_mount_path,
     };
     #[cfg(feature = "transit")]

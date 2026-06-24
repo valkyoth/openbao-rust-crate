@@ -3,23 +3,22 @@
 use core::fmt;
 use std::collections::BTreeMap;
 
-use reqwest::{Method, StatusCode};
-use secrecy::{ExposeSecret, SecretString};
-use serde::{
-    Deserialize, Deserializer, Serialize,
-    de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
-};
-#[cfg(feature = "transit-import")]
-use zeroize::Zeroize;
-#[cfg(any(feature = "transit-bytes", feature = "transit-import"))]
-use zeroize::Zeroizing;
-
 use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_vec,
     },
+};
+use reqwest::{Method, StatusCode};
+#[cfg(feature = "transit-import")]
+use sanitization::Secret;
+#[cfg(any(feature = "transit-bytes", feature = "transit-import"))]
+use sanitization::SecretVec;
+use secrecy::{ExposeSecret, SecretString};
+use serde::{
+    Deserialize, Deserializer, Serialize,
+    de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
 };
 
 #[cfg(feature = "transit-import")]
@@ -646,7 +645,7 @@ impl TransitImportVersionRequest {
 /// high-assurance production deployments.
 #[cfg(feature = "transit-import")]
 #[derive(Clone)]
-#[must_use = "Transit wrapped import ciphertext is secret-bearing material; pass it to an import request or zeroize/drop it promptly"]
+#[must_use = "Transit wrapped import ciphertext is secret-bearing material; pass it to an import request or sanitize/drop it promptly"]
 pub struct TransitWrappedImportKey {
     /// Base64 BYOK ciphertext accepted by OpenBao import endpoints.
     pub ciphertext: SecretString,
@@ -682,7 +681,7 @@ impl TransitWrappedImportKey {
     /// allocator. Raw key material and intermediate wrapping keys may
     /// therefore remain in process heap, swap, crash dumps, or allocator free
     /// lists according to the host runtime. Those copies are outside this
-    /// crate's `zeroize` control. For deployments that require cryptographic
+    /// crate's sanitization control. For deployments that require cryptographic
     /// key-boundary assurance, perform key wrapping inside an HSM or dedicated
     /// key-wrapping service instead of using this function. This helper is
     /// suitable only for development, CI, and audited non-HSM automation
@@ -693,7 +692,7 @@ impl TransitWrappedImportKey {
     #[must_use = "import the returned ciphertext promptly; software-wrapped key material remains sensitive until consumed and dropped"]
     pub fn wrap_key_material(
         wrapping_key_pem: &str,
-        key_material: Zeroizing<Vec<u8>>,
+        key_material: SecretVec,
         hash_function: TransitImportHashFunction,
     ) -> Result<Self> {
         let mut rng = rand::rng();
@@ -713,7 +712,7 @@ impl TransitWrappedImportKey {
     /// allocator. Raw key material and intermediate wrapping keys may
     /// therefore remain in process heap, swap, crash dumps, or allocator free
     /// lists according to the host runtime. Those copies are outside this
-    /// crate's `zeroize` control. For deployments that require cryptographic
+    /// crate's sanitization control. For deployments that require cryptographic
     /// key-boundary assurance, perform key wrapping inside an HSM or dedicated
     /// key-wrapping service instead of using this function. This helper is
     /// suitable only for development, CI, and audited non-HSM automation
@@ -722,7 +721,7 @@ impl TransitWrappedImportKey {
     pub fn wrap_key_material_with_rng<R>(
         rng: &mut R,
         wrapping_key_pem: &str,
-        key_material: Zeroizing<Vec<u8>>,
+        key_material: SecretVec,
         hash_function: TransitImportHashFunction,
     ) -> Result<Self>
     where
@@ -1011,13 +1010,13 @@ impl ListEntries for TransitKeyList {
 ///
 /// # Security residual
 ///
-/// The SDK serializes secret-bearing request bodies through a zeroizing
-/// intermediate buffer, but `reqwest::Body` owns a normal non-zeroizing copy
+/// The SDK serializes secret-bearing request bodies through a sanitizing
+/// intermediate buffer, but `reqwest::Body` owns a normal non-sanitizing copy
 /// after handoff to the HTTP stack. Treat the calling process heap as
 /// containing the base64 plaintext for the duration of the request lifecycle,
 /// and possibly longer depending on allocator behavior. Disable core dumps,
 /// restrict `ptrace`/process memory inspection, avoid swap or use encrypted
-/// swap, and zeroize caller-owned plaintext buffers as soon as they are no
+/// swap, and sanitize caller-owned plaintext buffers as soon as they are no
 /// longer needed.
 #[derive(Clone, Debug)]
 pub struct TransitEncryptRequest {
@@ -1100,14 +1099,14 @@ impl fmt::Debug for TransitEncryptResponse {
 ///
 /// # Security residual
 ///
-/// The SDK serializes secret-bearing request bodies through a zeroizing
-/// intermediate buffer, but `reqwest::Body` owns a normal non-zeroizing copy
+/// The SDK serializes secret-bearing request bodies through a sanitizing
+/// intermediate buffer, but `reqwest::Body` owns a normal non-sanitizing copy
 /// after handoff to the HTTP stack. Treat the calling process heap as
 /// containing the ciphertext and any base64 associated data, derivation
 /// context, or nonce for the duration of the request lifecycle, and possibly
 /// longer depending on allocator behavior. Disable core dumps, restrict
 /// `ptrace`/process memory inspection, avoid swap or use encrypted swap, and
-/// zeroize caller-owned buffers promptly.
+/// sanitize caller-owned buffers promptly.
 #[derive(Clone, Debug)]
 pub struct TransitDecryptRequest {
     /// OpenBao ciphertext.
@@ -1170,9 +1169,9 @@ impl fmt::Debug for TransitDecryptResponse {
 }
 
 impl TransitDecryptResponse {
-    /// Decodes OpenBao's base64 plaintext into zeroizing raw bytes.
+    /// Decodes OpenBao's base64 plaintext into sanitizing raw bytes.
     #[cfg(feature = "transit-bytes")]
-    pub fn plaintext_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
+    pub fn plaintext_bytes(&self) -> Result<SecretVec> {
         decode_base64_secret(&self.plaintext)
     }
 }
@@ -1275,9 +1274,9 @@ impl fmt::Debug for TransitDataKeyResponse {
 }
 
 impl TransitDataKeyResponse {
-    /// Decodes the returned plaintext data key into zeroizing raw bytes.
+    /// Decodes the returned plaintext data key into sanitizing raw bytes.
     #[cfg(feature = "transit-bytes")]
-    pub fn plaintext_bytes(&self) -> Result<Option<Zeroizing<Vec<u8>>>> {
+    pub fn plaintext_bytes(&self) -> Result<Option<SecretVec>> {
         self.plaintext
             .as_ref()
             .map(decode_base64_secret)
@@ -1312,7 +1311,7 @@ impl fmt::Debug for TransitRandomResponse {
 impl TransitRandomResponse {
     /// Decodes base64 random bytes returned with `TransitOutputFormat::Base64`.
     #[cfg(feature = "transit-bytes")]
-    pub fn random_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
+    pub fn random_bytes(&self) -> Result<SecretVec> {
         decode_base64_secret(&self.random_bytes)
     }
 }
@@ -2467,11 +2466,11 @@ impl Transit<'_> {
 
     /// Encrypts base64-encoded plaintext with a Transit key.
     ///
-    /// The plaintext is wrapped in `SecretString` and the crate zeroizes its
+    /// The plaintext is wrapped in `SecretString` and the crate sanitizes its
     /// serialization buffer, but serde, reqwest, TLS, kernel, and device
     /// buffers can retain transient body copies outside this crate's control
     /// during request transmission. Callers that use raw plaintext buffers
-    /// should zeroize their own buffers immediately after constructing the
+    /// should sanitize their own buffers immediately after constructing the
     /// request.
     pub async fn encrypt(
         &self,
@@ -2955,7 +2954,7 @@ fn verify_payload(request: &TransitVerifyRequest) -> TransitVerifyPayload<'_> {
 fn wrap_import_key_material<R>(
     rng: &mut R,
     wrapping_key_pem: &str,
-    mut key_material: Zeroizing<Vec<u8>>,
+    mut key_material: SecretVec,
     hash_function: TransitImportHashFunction,
 ) -> Result<TransitWrappedImportKey>
 where
@@ -2974,30 +2973,36 @@ where
 
     use aes_kw::{KeyInit, KwpAes256};
 
-    let mut ephemeral_aes_key = Zeroizing::new([0_u8; TRANSIT_IMPORT_EPHEMERAL_AES_KEY_BYTES]);
-    rng.fill_bytes(&mut ephemeral_aes_key[..]);
+    let mut ephemeral_aes_key = Secret::new([0_u8; TRANSIT_IMPORT_EPHEMERAL_AES_KEY_BYTES]);
+    ephemeral_aes_key.with_secret_mut(|key| rng.fill_bytes(key));
 
-    let kwp = KwpAes256::new((&*ephemeral_aes_key).into());
     let wrapped_target_len = (key_material.len().div_ceil(8) + 1) * 8;
-    let mut wrapped_target = Zeroizing::new(vec![0_u8; wrapped_target_len]);
-    let wrapped_target_len = kwp
-        .wrap_key(&key_material, &mut wrapped_target)
-        .map_err(|_| {
-            Error::InvalidParameter("Transit import key material could not be wrapped".into())
-        })?
-        .len();
-    wrapped_target.truncate(wrapped_target_len);
-    key_material.zeroize();
+    let mut wrapped_target = SecretVec::from_vec(vec![0_u8; wrapped_target_len]);
+    let wrapped_target_len = ephemeral_aes_key.with_secret(|aes_key| {
+        let kwp = KwpAes256::new(aes_key.into());
+        key_material.with_secret(|material| {
+            wrapped_target.with_secret_mut(|output| {
+                kwp.wrap_key(material, output)
+                    .map(|wrapped| wrapped.len())
+                    .map_err(|_| {
+                        Error::InvalidParameter(
+                            "Transit import key material could not be wrapped".into(),
+                        )
+                    })
+            })
+        })
+    })?;
+    key_material.clear_secret();
 
-    let wrapped_aes_key =
-        rsa_oaep_wrap_aes_key(wrapping_key_pem, &ephemeral_aes_key[..], hash_function)?;
+    let wrapped_aes_key = ephemeral_aes_key
+        .with_secret(|aes_key| rsa_oaep_wrap_aes_key(wrapping_key_pem, aes_key, hash_function))?;
 
-    let mut combined = Zeroizing::new(Vec::with_capacity(
-        wrapped_aes_key.len() + wrapped_target.len(),
-    ));
-    combined.extend_from_slice(&wrapped_aes_key);
-    combined.extend_from_slice(&wrapped_target);
-    let ciphertext = base64_encode_secret(&combined)?;
+    let mut combined = SecretVec::with_capacity(wrapped_aes_key.len() + wrapped_target_len);
+    wrapped_aes_key.with_secret(|wrapped| combined.extend_from_slice(wrapped));
+    wrapped_target.with_secret(|wrapped| {
+        combined.extend_from_slice(&wrapped[..wrapped_target_len]);
+    });
+    let ciphertext = combined.with_secret(base64_encode_secret)?;
 
     Ok(TransitWrappedImportKey {
         ciphertext,
@@ -3010,7 +3015,7 @@ fn rsa_oaep_wrap_aes_key(
     wrapping_key_pem: &str,
     ephemeral_aes_key: &[u8],
     hash_function: TransitImportHashFunction,
-) -> Result<Zeroizing<Vec<u8>>> {
+) -> Result<SecretVec> {
     use openssl::{
         md::Md,
         pkey::{Id, PKey, Public},
@@ -3058,15 +3063,15 @@ fn rsa_oaep_wrap_aes_key(
 
     // SECURITY: this OpenSSL handoff can allocate provider-managed temporary
     // buffers outside Rust's allocator. The returned ciphertext buffer is
-    // zeroized by this crate, but OpenSSL internals, swap, crash dumps, and
+    // sanitized by this crate, but OpenSSL internals, swap, crash dumps, and
     // allocator free lists remain host-runtime residual risks. High-assurance
     // key wrapping must use an HSM or equivalent audited boundary instead of
     // this software helper.
-    let mut encrypted = Zeroizing::new(Vec::new());
+    let mut encrypted = Vec::new();
     context
         .encrypt_to_vec(ephemeral_aes_key, &mut encrypted)
         .map_err(|_| Error::InvalidParameter("Transit wrapping key encryption failed".into()))?;
-    Ok(encrypted)
+    Ok(SecretVec::from_vec(encrypted))
 }
 
 #[cfg(any(feature = "transit-bytes", feature = "transit-import"))]
@@ -3083,12 +3088,12 @@ fn base64_encode_secret(input: &[u8]) -> Result<SecretString> {
 }
 
 #[cfg(feature = "transit-bytes")]
-fn decode_base64_secret(input: &SecretString) -> Result<Zeroizing<Vec<u8>>> {
+fn decode_base64_secret(input: &SecretString) -> Result<SecretVec> {
     let decoded = base64_ng::STANDARD
         .decode_secret(input.expose_secret().as_bytes())
         .map_err(|_| Error::Decode("OpenBao response contained invalid base64".into()))?;
     let exposed = decoded.into_exposed_vec();
-    Ok(Zeroizing::new(
+    Ok(SecretVec::from_vec(
         exposed.into_exposed_unprotected_vec_caller_must_zeroize(),
     ))
 }
@@ -3430,8 +3435,8 @@ mod tests {
     #[test]
     fn transit_import_helper_wraps_key_material_without_leaking_debug() {
         use openssl::rsa::Rsa;
+        use sanitization::SecretVec;
         use secrecy::ExposeSecret;
-        use zeroize::Zeroizing;
 
         let mut rng = rand::rng();
         let public_key_pem = Rsa::generate(4096)
@@ -3444,7 +3449,7 @@ mod tests {
         let wrapped = super::TransitWrappedImportKey::wrap_key_material_with_rng(
             &mut rng,
             &public_key_pem,
-            Zeroizing::new(b"key-material-for-import".to_vec()),
+            SecretVec::from_vec(b"key-material-for-import".to_vec()),
             super::TransitImportHashFunction::Sha256,
         )
         .unwrap_or_else(|error| panic!("{error}"));
@@ -3478,7 +3483,7 @@ mod tests {
     #[test]
     fn transit_import_helper_rejects_non_rsa_wrapping_key() {
         use openssl::{ec::EcKey, nid::Nid};
-        use zeroize::Zeroizing;
+        use sanitization::SecretVec;
 
         let ec_group = openssl::ec::EcGroup::from_curve_name(Nid::X9_62_PRIME256V1)
             .unwrap_or_else(|error| panic!("{error}"));
@@ -3491,7 +3496,7 @@ mod tests {
 
         let error = match super::TransitWrappedImportKey::wrap_key_material(
             &public_key_pem,
-            Zeroizing::new(b"key-material-for-import".to_vec()),
+            SecretVec::from_vec(b"key-material-for-import".to_vec()),
             super::TransitImportHashFunction::Sha256,
         ) {
             Ok(_) => panic!("non-RSA wrapping key was unexpectedly accepted"),
@@ -3521,7 +3526,7 @@ mod tests {
 
     #[cfg(feature = "transit-bytes")]
     #[test]
-    fn transit_byte_helpers_use_base64_ng_and_zeroizing_decode() {
+    fn transit_byte_helpers_use_base64_ng_and_sanitizing_decode() {
         let request = TransitEncryptRequest::from_plaintext_bytes(b"secret")
             .unwrap_or_else(|error| panic!("{error}"))
             .with_context_bytes(b"app")
@@ -3542,6 +3547,6 @@ mod tests {
         let bytes = response
             .plaintext_bytes()
             .unwrap_or_else(|error| panic!("{error}"));
-        assert_eq!(&bytes[..], b"secret");
+        bytes.with_secret(|decoded| assert_eq!(decoded, b"secret"));
     }
 }

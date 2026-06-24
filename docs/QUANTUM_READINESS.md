@@ -34,7 +34,7 @@ options. Any such API must:
 
 - name the OpenBao primitive exactly;
 - stay behind a feature gate if it pulls additional dependencies;
-- treat key material as `SecretString` or `Zeroizing` data where applicable;
+- treat key material as `SecretString` or `SecretVec` data where applicable;
 - document whether the primitive is experimental, hybrid, or stable in
   OpenBao's own documentation;
 - avoid broad names such as `quantum_safe` unless OpenBao itself uses that term
