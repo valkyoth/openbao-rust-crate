@@ -4,15 +4,73 @@ set -eu
 echo "latest rustc in use:"
 rustc --version
 
+latest_crate_version() {
+  crate=$1
+  cargo search "$crate" --limit 1 \
+    | sed -n "s/^${crate} = \"\\([^\"]*\\)\".*/\\1/p" \
+    | head -1
+}
+
+check_manifest_crate_version() {
+  crate=$1
+  expected=$(latest_crate_version "$crate")
+
+  if [ -z "$expected" ]; then
+    echo "failed to resolve latest ${crate} crate version" >&2
+    exit 1
+  fi
+
+  echo "${crate} latest ${expected}"
+
+  if ! grep -Eq "^${crate} = (\"${expected}\"|\{ version = \"${expected}\"[,}])" Cargo.toml; then
+    echo "Cargo.toml: ${crate} is not pinned to latest ${expected}" >&2
+    exit 1
+  fi
+}
+
+check_workflow_tool_version() {
+  tool=$1
+  expected=$(latest_crate_version "$tool")
+  workflow=.github/workflows/ci.yml
+
+  if [ -z "$expected" ]; then
+    echo "failed to resolve latest ${tool} crate version" >&2
+    exit 1
+  fi
+
+  actual=$(
+    sed -n "s/.*${tool}@\\([^,[:space:]]*\\).*/\\1/p" "$workflow" \
+      | head -1
+  )
+
+  echo "${tool} latest ${expected}"
+
+  if [ "$actual" != "$expected" ]; then
+    echo "${workflow}: ${tool} pin is ${actual:-missing}, expected ${expected}" >&2
+    exit 1
+  fi
+}
+
 echo "checking current crates.io versions used by this crate"
-cargo search reqwest --limit 1
-cargo search base64-ng --limit 1
-cargo search secrecy --limit 1
-cargo search serde --limit 1
-cargo search serde_json --limit 1
-cargo search time --limit 1
-cargo search tokio --limit 1
-cargo search zeroize --limit 1
+check_manifest_crate_version aes-kw
+check_manifest_crate_version base64-ng
+check_manifest_crate_version getrandom
+check_manifest_crate_version openssl
+check_manifest_crate_version rand
+check_manifest_crate_version reqwest
+check_manifest_crate_version secrecy
+check_manifest_crate_version serde
+check_manifest_crate_version serde_json
+check_manifest_crate_version subtle
+check_manifest_crate_version time
+check_manifest_crate_version tokio
+check_manifest_crate_version tracing
+check_manifest_crate_version zeroize
+
+echo "checking CI cargo tool versions"
+check_workflow_tool_version cargo-deny
+check_workflow_tool_version cargo-audit
+check_workflow_tool_version cargo-sbom
 
 echo "checking OpenBao latest GitHub release"
 curl -s https://api.github.com/repos/openbao/openbao/releases/latest \

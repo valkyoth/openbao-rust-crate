@@ -127,19 +127,19 @@ sensitive-http-test-only-acknowledged = []
 
 [dependencies]
 aes-kw = { version = "0.3.1", default-features = false, features = ["zeroize"], optional = true }
-base64-ng = { version = "1.0.8", default-features = false, features = ["alloc"], optional = true }
-getrandom = "0.4.2"
+base64-ng = { version = "1.2.2", default-features = false, features = ["alloc"], optional = true }
+getrandom = "0.4.3"
 rand = { version = "0.10.1", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
-openssl = { version = "0.10.80", optional = true }
+openssl = { version = "0.10.81", optional = true }
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 subtle = "2.6.1"
-time = { version = "0.3.47", default-features = false, features = ["parsing"], optional = true }
+time = { version = "0.3.51", default-features = false, features = ["parsing"], optional = true }
 tokio = { version = "1.52.3", default-features = false, features = ["time"], optional = true }
 tracing = { version = "0.1.44", default-features = false, features = ["std"], optional = true }
-zeroize = "1.8.2"
+zeroize = "1.9.0"
 
 [dev-dependencies]
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
