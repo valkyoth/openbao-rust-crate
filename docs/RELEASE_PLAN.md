@@ -609,3 +609,17 @@ Stop criteria:
   user-visible patch-release API behavior is reflected in typed helpers;
 - full all-feature compile, tests, release gates, dependency/tool version
   checks, and GitHub CI pass before tagging.
+
+### 1.1.1 - Security Dependency Refresh
+
+Stop criteria:
+
+- `base64-ng` is updated to `1.2.3`;
+- `sanitization` is updated to `1.2.2`;
+- `cargo update --dry-run` reports no remaining Rust-1.90-compatible lockfile
+  updates;
+- cargo security tooling and pinned GitHub Actions match the latest versions
+  checked by `scripts/check_latest_crates.sh`;
+- release notes, changelog, README, and metadata validation cover the `1.1.1`
+  candidate;
+- all-feature tests and GitHub CI pass before tagging.

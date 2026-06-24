@@ -49,6 +49,7 @@ check_file release-notes/RELEASE_NOTES_1.0.0.md
 check_file release-notes/RELEASE_NOTES_1.0.1.md
 check_file release-notes/RELEASE_NOTES_1.0.2.md
 check_file release-notes/RELEASE_NOTES_1.1.0.md
+check_file release-notes/RELEASE_NOTES_1.1.1.md
 check_file scripts/release_0_6_gate.sh
 check_file scripts/release_0_7_gate.sh
 check_file scripts/release_0_8_gate.sh
@@ -63,7 +64,7 @@ check_file scripts/release_1_0_gate.sh
 check_file .github/workflows/ci.yml
 
 check_grep 'name = "openbao"' Cargo.toml
-check_grep 'version = "1.1.0"' Cargo.toml
+check_grep 'version = "1.1.1"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
@@ -87,12 +88,14 @@ check_grep '1.0.0 - First Stable Release' docs/RELEASE_PLAN.md
 check_grep '1.0.1 - Patch Hardening' docs/RELEASE_PLAN.md
 check_grep '1.0.2 - Dependency And Documentation Maintenance' docs/RELEASE_PLAN.md
 check_grep '1.1.0 - Sanitization Secret Buffer Migration' docs/RELEASE_PLAN.md
+check_grep '1.1.1 - Security Dependency Refresh' docs/RELEASE_PLAN.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.12.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.13.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_1.0.0.md
 check_grep 'Release date: 2026-06-09' release-notes/RELEASE_NOTES_1.0.1.md
 check_grep 'Release date: 2026-06-10' release-notes/RELEASE_NOTES_1.0.2.md
 check_grep 'Release date: 2026-06-24' release-notes/RELEASE_NOTES_1.1.0.md
+check_grep 'Release date: 2026-06-24' release-notes/RELEASE_NOTES_1.1.1.md
 check_grep 'Audit status:' docs/API_STABILITY_AUDIT.md
 check_grep 'From `vaultrs`' docs/MIGRATION_GUIDE.md
 

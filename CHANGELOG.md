@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 1.1.1 - 2026-06-24
+
 ### Changed
 
 - Updated first-party security dependencies: `base64-ng` to `1.2.3` and

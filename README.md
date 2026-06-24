@@ -37,9 +37,9 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the stable `1.1.x` API. The current minor line is
-`1.1.0`, which migrates owned secret byte buffers from `zeroize::Zeroizing` to
-`sanitization::SecretVec` while keeping the stable endpoint surface intact.
+This README documents the stable `1.1.x` API. The current patch release is
+`1.1.1`, which keeps the `1.1.0` owned-secret-buffer migration intact and
+refreshes the first-party security crate pins.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -205,7 +205,7 @@ the newest OpenBao patch release available for that SDK line:
 | SDK release line | OpenBao version tested |
 | --- | --- |
 | `0.1.0` through `1.0.2` | OpenBao `2.5.4` |
-| `1.1.0` | OpenBao `2.5.5` |
+| `1.1.0` through `1.1.1` | OpenBao `2.5.5` |
 
 ## Install
 
