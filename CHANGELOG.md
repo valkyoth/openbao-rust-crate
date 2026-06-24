@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Updated first-party security dependencies: `base64-ng` to `1.2.3` and
+  `sanitization` to `1.2.2`.
+- Verified cargo security tooling and pinned GitHub Actions remain on their
+  latest checked versions.
+
 ## 1.1.0 - 2026-06-24
 
 ### Changed
