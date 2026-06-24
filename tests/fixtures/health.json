@@ -2,7 +2,7 @@
   "initialized": true,
   "sealed": false,
   "standby": false,
-  "version": "2.5.4",
+  "version": "2.5.5",
   "cluster_name": "openbao-fixture",
   "cluster_id": "cluster-fixture"
 }

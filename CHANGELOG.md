@@ -12,6 +12,10 @@ All notable changes to this project are documented here.
   to `sanitization::SecretVec`.
 - Re-exported `sanitization`, `SecretVec`, `SecureSanitize`, and
   `sanitize_bytes` from the crate root and prelude.
+- Added `Sys::clear_namespace_metadata` for the OpenBao 2.5.5 namespace
+  merge-patch behavior that clears `custom_metadata` with top-level `null`.
+- Updated the local OpenBao development/integration image pin and mocked
+  version fixtures to OpenBao 2.5.5.
 - Removed the direct `zeroize` dependency and the `openbao::Zeroize` /
   `openbao::Zeroizing` re-exports.
 - Updated Transit import software wrapping examples and byte helper docs for

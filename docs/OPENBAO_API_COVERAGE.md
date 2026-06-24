@@ -19,6 +19,11 @@ Endpoint-by-endpoint coverage was generated from the official rendered
 OpenBao `2.5.x` API documentation on 2026-06-03 and is tracked in
 `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` with the full CSV source in
 `docs/openbao-2.5-endpoint-matrix.csv`.
+The matrix was regenerated on 2026-06-24 after OpenBao `2.5.5`; it still
+contains `643` documented endpoint rows with zero `planned` and zero
+`decision` rows. The `2.5.5` API compatibility pass added the namespace custom
+metadata clear helper for the newly fixed merge-patch behavior and moved local
+integration testing to the pinned `2.5.5` image.
 
 Sources:
 

@@ -9,7 +9,7 @@ volumes:
 
 services:
   openbao:
-    image: docker.io/openbao/openbao:2.5.4@sha256:436eaf9778cad75507ff70ea26ace30dcbe15606e619ac3823495663d7f7c115
+    image: docker.io/openbao/openbao:2.5.5@sha256:e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9
     container_name: openbao_rust_crate_dev
     command: ["server", "-config=/openbao/config/openbao.hcl"]
     user: "100:0"

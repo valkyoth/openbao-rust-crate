@@ -21,6 +21,13 @@ bytes through `SecretVec::with_secret`.
 
 ## Changed
 
+- Checked OpenBao `2.5.5` release notes and regenerated the official-docs
+  endpoint matrix. The matrix remains at `643` documented rows with zero
+  `planned` and zero `decision` rows.
+- Added `Sys::clear_namespace_metadata`, which uses the OpenBao `2.5.5`
+  namespace merge-patch behavior for top-level `custom_metadata: null`.
+- Updated the local Podman development and integration-test image pin to
+  `docker.io/openbao/openbao:2.5.5@sha256:e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9`.
 - Added a direct `sanitization` dependency with `alloc` support.
 - Re-exported `sanitization`, `SecretVec`, `SecureSanitize`, and
   `sanitize_bytes` from the crate root and prelude.

@@ -850,6 +850,11 @@ pub struct NamespaceRequest {
     pub custom_metadata: BTreeMap<String, String>,
 }
 
+#[derive(Serialize)]
+struct NamespaceClearMetadataRequest {
+    custom_metadata: Option<BTreeMap<String, String>>,
+}
+
 impl NamespaceRequest {
     /// Creates an empty namespace request.
     #[must_use]
@@ -5686,6 +5691,28 @@ impl Sys<'_, Authenticated> {
                     HeaderValue::from_static("application/merge-patch+json"),
                 )],
                 Some(request),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Clears all namespace custom metadata through `/sys/namespaces/:path`.
+    ///
+    /// OpenBao 2.5.5 added support for clearing namespace custom metadata by
+    /// sending a JSON Merge Patch with top-level `custom_metadata: null`.
+    pub async fn clear_namespace_metadata(&self, path: &str) -> Result<Empty> {
+        let request = NamespaceClearMetadataRequest {
+            custom_metadata: None,
+        };
+        self.client
+            .request_json_headers_accepting(
+                Method::PATCH,
+                &namespace_path(path)?,
+                &[(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/merge-patch+json"),
+                )],
+                Some(&request),
                 &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
             .await

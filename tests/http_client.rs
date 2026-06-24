@@ -207,7 +207,7 @@ async fn wait_until_unsealed_uses_seal_status_until_ready() {
             let request = read_http_request(&mut stream);
             assert!(request.starts_with("GET /v1/sys/seal-status HTTP/1.1"));
             let body = format!(
-                r#"{{"type":"shamir","initialized":true,"sealed":{sealed},"n":1,"t":1,"progress":0,"version":"2.5.4"}}"#
+                r#"{{"type":"shamir","initialized":true,"sealed":{sealed},"n":1,"t":1,"progress":0,"version":"2.5.5"}}"#
             );
             let response = format!(
                 "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
@@ -328,7 +328,7 @@ async fn explicit_retry_policy_retries_temporary_api_errors() {
             let request = read_http_request(&mut stream);
             assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
             let body = if index == 2 {
-                r#"{"initialized":true,"sealed":false,"standby":false,"version":"2.5.4"}"#
+                r#"{"initialized":true,"sealed":false,"standby":false,"version":"2.5.5"}"#
             } else {
                 r#"{"errors":["temporary"]}"#
             };
@@ -1094,7 +1094,7 @@ async fn sys_ha_status_sends_documented_path() {
         let request = read_http_request(&mut stream);
         assert!(request.starts_with("GET /v1/sys/ha-status HTTP/1.1"));
         assert!(request.contains("x-vault-token: test-token"));
-        let body = r#"{"Nodes":[{"hostname":"node1","api_address":"https://10.0.0.2:8200","cluster_address":"https://10.0.0.2:8201","active_node":true,"last_echo":null,"version":"2.5.4"},{"hostname":"node2","api_address":"https://10.0.0.3:8200","cluster_address":"https://10.0.0.3:8201","active_node":false,"last_echo":"2026-06-02T00:00:00Z","version":"2.5.4"}]}"#;
+        let body = r#"{"Nodes":[{"hostname":"node1","api_address":"https://10.0.0.2:8200","cluster_address":"https://10.0.0.2:8201","active_node":true,"last_echo":null,"version":"2.5.5"},{"hostname":"node2","api_address":"https://10.0.0.3:8200","cluster_address":"https://10.0.0.3:8201","active_node":false,"last_echo":"2026-06-02T00:00:00Z","version":"2.5.5"}]}"#;
         let response = format!(
             "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
@@ -1749,7 +1749,7 @@ async fn sys_version_history_uses_documented_list_path() {
         let request = read_http_request(&mut stream);
         assert!(request.starts_with("LIST /v1/sys/version-history HTTP/1.1"));
         assert!(request.contains("x-vault-token: test-token"));
-        let body = r#"{"keys":["2.5.3","2.5.4"],"key_info":{"2.5.3":{"build_date":null,"previous_version":null,"timestamp_installed":"2026-05-01T00:00:00Z"},"2.5.4":{"build_date":"2026-05-26T00:00:00Z","previous_version":"2.5.3","timestamp_installed":"2026-05-27T00:00:00Z"}}}"#;
+        let body = r#"{"keys":["2.5.3","2.5.5"],"key_info":{"2.5.3":{"build_date":null,"previous_version":null,"timestamp_installed":"2026-05-01T00:00:00Z"},"2.5.5":{"build_date":"2026-05-26T00:00:00Z","previous_version":"2.5.3","timestamp_installed":"2026-05-27T00:00:00Z"}}}"#;
         let response = format!(
             "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
@@ -1772,11 +1772,11 @@ async fn sys_version_history_uses_documented_list_path() {
         .version_history()
         .await
         .unwrap_or_else(|error| panic!("{error}"));
-    assert!(history.keys.iter().any(|version| version == "2.5.4"));
+    assert!(history.keys.iter().any(|version| version == "2.5.5"));
     assert_eq!(
         history
             .key_info
-            .get("2.5.4")
+            .get("2.5.5")
             .and_then(|entry| entry.previous_version.as_deref()),
         Some("2.5.3")
     );
@@ -1863,7 +1863,7 @@ async fn sys_namespace_lifecycle_uses_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for step in 0..5 {
+        for step in 0..6 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match step {
@@ -1888,6 +1888,12 @@ async fn sys_namespace_lifecycle_uses_documented_paths() {
                     String::new()
                 }
                 4 => {
+                    assert!(request.starts_with("PATCH /v1/sys/namespaces/team/app HTTP/1.1"));
+                    assert!(request.contains("content-type: application/merge-patch+json"));
+                    assert!(request.contains(r#""custom_metadata":null"#));
+                    String::new()
+                }
+                5 => {
                     assert!(request.starts_with("DELETE /v1/sys/namespaces/team/app HTTP/1.1"));
                     String::new()
                 }
@@ -1954,6 +1960,12 @@ async fn sys_namespace_lifecycle_uses_documented_paths() {
             "team/app",
             &openbao::sys::NamespaceRequest::new().with_metadata("env", "dev"),
         )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    client
+        .sys()
+        .clear_namespace_metadata("team/app")
         .await
         .unwrap_or_else(|error| panic!("{error}"));
 
@@ -3160,7 +3172,7 @@ async fn sys_plugin_catalog_lists_all_plugins() {
             .unwrap_or_else(|error| panic!("{error}"));
         let request = String::from_utf8_lossy(&buffer[..bytes]);
         assert!(request.starts_with("GET /v1/sys/plugins/catalog HTTP/1.1"));
-        let body = r#"{"data":{"auth":["ldap"],"database":["postgresql-database-plugin"],"secret":["transit"],"detailed":[{"builtin":true,"deprecation_status":"supported","name":"transit","type":"secret","version":"v2.5.4+builtin.openbao"}]}}"#;
+        let body = r#"{"data":{"auth":["ldap"],"database":["postgresql-database-plugin"],"secret":["transit"],"detailed":[{"builtin":true,"deprecation_status":"supported","name":"transit","type":"secret","version":"v2.5.5+builtin.openbao"}]}}"#;
         let response = format!(
             "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
             body.len(),
@@ -6062,12 +6074,12 @@ async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
                 2 => {
                     assert!(request.starts_with("POST /v1/sys/unseal HTTP/1.1"));
                     assert!(request.contains(r#""key":"unseal-key""#));
-                    r#"{"sealed":false,"n":1,"t":1,"progress":0,"version":"2.5.4"}"#
+                    r#"{"sealed":false,"n":1,"t":1,"progress":0,"version":"2.5.5"}"#
                 }
                 3 => {
                     assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
                     assert!(request.contains("x-vault-token: root-token"));
-                    r#"{"initialized":true,"sealed":false,"standby":false,"version":"2.5.4"}"#
+                    r#"{"initialized":true,"sealed":false,"standby":false,"version":"2.5.5"}"#
                 }
                 _ => unreachable!(),
             };
@@ -10594,7 +10606,7 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
                 1 => {
                     assert!(request.starts_with("POST /v1/sys/unseal HTTP/1.1"));
                     assert!(request.contains(&format!(r#""key":"{}{}""#, "unseal-", "share")));
-                    r#"{"sealed":false,"n":1,"t":1,"progress":0,"version":"2.5.4"}"#.to_owned()
+                    r#"{"sealed":false,"n":1,"t":1,"progress":0,"version":"2.5.5"}"#.to_owned()
                 }
                 2 => {
                     assert!(request.starts_with("PUT /v1/sys/seal HTTP/1.1"));

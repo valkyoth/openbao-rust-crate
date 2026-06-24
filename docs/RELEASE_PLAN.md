@@ -604,5 +604,8 @@ Stop criteria:
   `SecureSanitize`, and `sanitize_bytes`;
 - README, migration guide, security notes, API audit, and release notes explain
   the source migration from `Zeroizing<Vec<u8>>` to `SecretVec`;
+- OpenBao `2.5.5` release notes are reviewed, the endpoint matrix is
+  regenerated, local integration testing is pinned to `2.5.5`, and any
+  user-visible patch-release API behavior is reflected in typed helpers;
 - full all-feature compile, tests, release gates, dependency/tool version
   checks, and GitHub CI pass before tagging.

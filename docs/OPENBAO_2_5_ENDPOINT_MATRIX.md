@@ -1,6 +1,6 @@
 # OpenBao 2.5.x Endpoint Coverage Matrix
 
-Generated on 2026-06-04 from the official OpenBao 2.5.x API documentation.
+Generated on 2026-06-24 from the official OpenBao 2.5.x API documentation.
 The full endpoint row matrix is stored in
 `docs/openbao-2.5-endpoint-matrix.csv`.
 

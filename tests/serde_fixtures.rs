@@ -35,7 +35,7 @@ fn public_response_fixtures_deserialize() -> Result<(), Box<dyn Error>> {
     let health: Health = serde_json::from_str(include_str!("fixtures/health.json"))?;
     assert!(health.initialized);
     assert!(!health.sealed);
-    assert_eq!(health.version, "2.5.4");
+    assert_eq!(health.version, "2.5.5");
 
     let kv2: ResponseEnvelope<Kv2Secret<FixtureSecret>> =
         serde_json::from_str(include_str!("fixtures/kv2_read.json"))?;

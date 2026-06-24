@@ -6,7 +6,7 @@ PODMAN_DIR="$ROOT_DIR/deploy/podman"
 STATE_DIR="$PODMAN_DIR/dev-state"
 TLS_DIR="$STATE_DIR/tls"
 COMPOSE_FILE="$PODMAN_DIR/compose.dev.yml"
-OPENBAO_IMAGE="docker.io/openbao/openbao:2.5.4@sha256:436eaf9778cad75507ff70ea26ace30dcbe15606e619ac3823495663d7f7c115"
+OPENBAO_IMAGE="docker.io/openbao/openbao:2.5.5@sha256:e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9"
 DATA_VOLUME="openbao-rust-crate_openbao_data"
 
 require() {
