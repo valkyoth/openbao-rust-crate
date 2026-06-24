@@ -4,11 +4,42 @@ set -eu
 echo "latest rustc in use:"
 rustc --version
 
-latest_crate_version() {
+cargo_search_crate_version() {
   crate=$1
   cargo search "$crate" --limit 1 \
     | sed -n "s/^${crate} = \"\\([^\"]*\\)\".*/\\1/p" \
     | head -1
+}
+
+crates_io_api_crate_version() {
+  crate=$1
+  json=$(
+    curl -fsSL \
+      --retry 3 \
+      --retry-delay 2 \
+      -A openbao-rust-crate-checks \
+      "https://crates.io/api/v1/crates/${crate}" \
+      2>/dev/null || true
+  )
+
+  if [ -z "$json" ]; then
+    return 0
+  fi
+
+  version=$(printf '%s\n' "$json" | sed -n 's/.*"max_stable_version":"\([^"]*\)".*/\1/p' | head -1)
+  if [ -z "$version" ]; then
+    version=$(printf '%s\n' "$json" | sed -n 's/.*"newest_version":"\([^"]*\)".*/\1/p' | head -1)
+  fi
+  printf '%s\n' "$version"
+}
+
+latest_crate_version() {
+  crate=$1
+  version=$(cargo_search_crate_version "$crate" 2>/dev/null || true)
+  if [ -z "$version" ]; then
+    version=$(crates_io_api_crate_version "$crate")
+  fi
+  printf '%s\n' "$version"
 }
 
 check_manifest_crate_version() {
