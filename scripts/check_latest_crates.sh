@@ -145,6 +145,6 @@ check_github_action_pin() {
 }
 
 echo "checking pinned GitHub Actions"
-check_github_action_pin actions/checkout https://github.com/actions/checkout.git 6
+check_github_action_pin actions/checkout https://github.com/actions/checkout.git 7
 check_github_action_pin Swatinem/rust-cache https://github.com/Swatinem/rust-cache.git 2
 check_github_action_pin taiki-e/install-action https://github.com/taiki-e/install-action.git 2
