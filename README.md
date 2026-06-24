@@ -197,6 +197,16 @@ range:
 | `1.95.0` | `cargo check --all-features`. |
 | `1.96.0` | `cargo check --all-features`. |
 
+## OpenBao Test Version Support
+
+The SDK targets the OpenBao `2.5.x` API surface. Release testing is pinned to
+the newest OpenBao patch release available for that SDK line:
+
+| SDK release line | OpenBao version tested |
+| --- | --- |
+| `0.1.0` through `1.0.2` | OpenBao `2.5.4` |
+| `1.1.0` | OpenBao `2.5.5` |
+
 ## Install
 
 ```toml
