@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Changed
+
+- Updated `time` to `0.3.53`.
+- Updated pinned `taiki-e/install-action` CI action to `v2.82.7`.
+- Refreshed semver-compatible transitive dependencies in `Cargo.lock`.
+
 ## 1.1.1 - 2026-06-24
 
 ### Changed
