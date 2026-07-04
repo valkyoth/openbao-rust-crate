@@ -29,6 +29,10 @@ coverage or the public SDK API surface.
 `openbao::Zeroizing` / `openbao::Zeroize` re-exports, and keeps the stable
 OpenBao endpoint boundary intact.
 
+`1.1.2` refreshes the stable `1.1.x` dependency and CI tooling pins and makes
+Rust `1.96.1` the primary checked toolchain while preserving the documented
+Rust `1.90.0` compatibility floor.
+
 ## Standing Release Gates
 
 Every release:
@@ -621,5 +625,23 @@ Stop criteria:
 - cargo security tooling and pinned GitHub Actions match the latest versions
   checked by `scripts/check_latest_crates.sh`;
 - release notes, changelog, README, and metadata validation cover the `1.1.1`
+  candidate;
+- all-feature tests and GitHub CI pass before tagging.
+
+### 1.1.2 - Rust 1.96.1 Toolchain And Dependency Refresh
+
+Stop criteria:
+
+- package metadata is updated to `1.1.2`;
+- `rust-toolchain.toml` and the CI Rust installer use Rust `1.96.1` as the
+  primary checked toolchain;
+- `rust-version = "1.90"` remains the MSRV and all-feature compatibility is
+  checked back to Rust `1.90.0`;
+- direct dependency pins are refreshed to the latest reviewed versions checked
+  by `scripts/check_latest_crates.sh`;
+- semver-compatible transitive dependencies are refreshed with `cargo update`;
+- pinned GitHub Actions match the latest versions checked by
+  `scripts/check_latest_crates.sh`;
+- release notes, changelog, README, and metadata validation cover the `1.1.2`
   candidate;
 - all-feature tests and GitHub CI pass before tagging.

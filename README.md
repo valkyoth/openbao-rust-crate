@@ -38,8 +38,9 @@ use openbao::Client;
 ```
 
 This README documents the stable `1.1.x` API. The current patch release is
-`1.1.1`, which keeps the `1.1.0` owned-secret-buffer migration intact and
-refreshes the first-party security crate pins.
+`1.1.2`, which keeps the `1.1.0` owned-secret-buffer migration intact,
+refreshes dependency/tooling pins, and makes Rust `1.96.1` the primary checked
+toolchain while preserving the Rust `1.90.0` compatibility floor.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -160,6 +161,7 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | --- | --- |
 | License | `MIT OR Apache-2.0` |
 | Rust edition | 2024 |
+| Primary Rust toolchain | Rust `1.96.1` |
 | MSRV | Rust `1.90.0` |
 | Async runtime | Runtime-agnostic client; examples use Tokio |
 | HTTP transport | `reqwest` with redirects disabled |
@@ -181,21 +183,22 @@ release sequencing live in [release-notes](release-notes) and
 
 ## Rust Version Support
 
-The minimum supported Rust version is Rust `1.90.0`. New deployments should
-prefer the latest stable Rust; as of June 1, 2026, that is Rust `1.96.0`.
+The primary checked Rust toolchain is Rust `1.96.1`. The minimum supported
+Rust version remains Rust `1.90.0`, and the `1.x` line checks compatibility
+back to that floor.
 
 The `1.x` release line tracks compatibility evidence across this supported
 range:
 
 | Rust | Required Evidence |
 | --- | --- |
-| `1.90.0` | Full test suite and clippy. |
-| `1.91.0` | `cargo check --all-features`. |
-| `1.92.0` | `cargo check --all-features`. |
-| `1.93.0` | `cargo check --all-features`. |
-| `1.94.0` | `cargo check --all-features`. |
+| `1.96.1` | Primary release gate: fmt, clippy, tests, docs, deny, audit, SBOM, and real OpenBao integration. |
 | `1.95.0` | `cargo check --all-features`. |
-| `1.96.0` | `cargo check --all-features`. |
+| `1.94.0` | `cargo check --all-features`. |
+| `1.93.0` | `cargo check --all-features`. |
+| `1.92.0` | `cargo check --all-features`. |
+| `1.91.0` | `cargo check --all-features`. |
+| `1.90.0` | MSRV compatibility check with all features. |
 
 ## OpenBao Test Version Support
 
@@ -205,7 +208,7 @@ the newest OpenBao patch release available for that SDK line:
 | SDK release line | OpenBao version tested |
 | --- | --- |
 | `0.1.0` through `1.0.2` | OpenBao `2.5.4` |
-| `1.1.0` through `1.1.1` | OpenBao `2.5.5` |
+| `1.1.0` through `1.1.2` | OpenBao `2.5.5` |
 
 ## Install
 

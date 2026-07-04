@@ -1,6 +1,6 @@
 [package]
 name = "openbao"
-version = "1.1.1"
+version = "1.1.2"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -129,9 +129,9 @@ sensitive-http-test-only-acknowledged = []
 
 [dependencies]
 aes-kw = { version = "0.3.1", default-features = false, optional = true }
-base64-ng = { version = "1.2.3", default-features = false, features = ["alloc"], optional = true }
+base64-ng = { version = "1.3.5", default-features = false, features = ["alloc"], optional = true }
 getrandom = "0.4.3"
-rand = { version = "0.10.1", default-features = false, features = ["std", "thread_rng"], optional = true }
+rand = { version = "0.10.2", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 openssl = { version = "0.10.81", optional = true }
 secrecy = { version = "0.10.3", features = ["serde"] }

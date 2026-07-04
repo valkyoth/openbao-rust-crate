@@ -2,12 +2,16 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 1.1.2 - 2026-07-04
 
 ### Changed
 
+- Made Rust `1.96.1` the primary pinned development and CI installer
+  toolchain while keeping Rust `1.90.0` as the crate MSRV.
+- Updated `base64-ng` to `1.3.5`.
+- Updated `rand` to `0.10.2`.
 - Updated `time` to `0.3.53`.
-- Updated pinned `taiki-e/install-action` CI action to `v2.82.7`.
+- Updated pinned `taiki-e/install-action` CI action to `v2.82.8`.
 - Refreshed semver-compatible transitive dependencies in `Cargo.lock`.
 
 ## 1.1.1 - 2026-06-24
