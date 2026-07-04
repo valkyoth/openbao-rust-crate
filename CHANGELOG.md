@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 1.1.2 - 2026-07-04
 
 ### Added
 
@@ -13,15 +13,10 @@ All notable changes to this project are documented here.
 
 ### Changed
 
-- Replaced duration component parsing with a manual checked parser so duration
-  validation stays allocation-light and suitable for bounded Kani proofs.
-
-## 1.1.2 - 2026-07-04
-
-### Changed
-
 - Made Rust `1.96.1` the primary pinned development and CI installer
   toolchain while keeping Rust `1.90.0` as the crate MSRV.
+- Replaced duration component parsing with a manual checked parser so duration
+  validation stays allocation-light and suitable for bounded Kani proofs.
 - Updated `base64-ng` to `1.3.5`.
 - Updated `rand` to `0.10.2`.
 - Updated `time` to `0.3.53`.
