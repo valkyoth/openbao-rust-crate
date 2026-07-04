@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- Added optional Kani proof harness support, gated through `scripts/check_kani.sh`
+  and the inert `kani` feature. The initial proof set covers byte-level path
+  rejection policy and allocation-light duration component parsing on the Rust
+  `1.90.0` Kani toolchain.
+
+### Changed
+
+- Replaced duration component parsing with a manual checked parser so duration
+  validation stays allocation-light and suitable for bounded Kani proofs.
+
 ## 1.1.2 - 2026-07-04
 
 ### Changed

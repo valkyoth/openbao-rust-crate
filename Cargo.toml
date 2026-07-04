@@ -17,6 +17,7 @@ include = [
     "tests/**",
     "examples/**",
     "docs/**",
+    "kani/**",
     "release-notes/**",
     "scripts/**",
     "deploy/podman/compose.dev.yml",
@@ -98,6 +99,7 @@ tokio-helpers = ["dep:tokio"]
 tracing = ["dep:tracing"]
 memory-lock = ["sanitization/memory-lock"]
 memory-lock-acknowledged = []
+kani = []
 tls12-acknowledged = []
 allow-weak-jitter-fallback-acknowledged = []
 # Production operator APIs for init/unseal/rekey/rotate and PKI root deletion.
@@ -149,6 +151,7 @@ tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "net", "i
 [lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
 
 [lints.clippy]
 panic = "deny"

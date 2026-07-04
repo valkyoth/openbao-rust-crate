@@ -33,8 +33,7 @@ pub(crate) fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
         if digit_start == index {
             return false;
         }
-        let digits = &value[digit_start..index];
-        let Ok(component) = digits.parse::<u64>() else {
+        let Some(component) = parse_duration_component(&bytes[digit_start..index]) else {
             return false;
         };
         if component > MAX_DURATION_COMPONENT {
@@ -59,6 +58,25 @@ pub(crate) fn validate_duration_string(value: &str, allow_zero: bool) -> bool {
         index += 1;
     }
     true
+}
+
+pub(crate) fn parse_duration_component(digits: &[u8]) -> Option<u64> {
+    if digits.is_empty() {
+        return None;
+    }
+
+    let mut component = 0u64;
+    for digit in digits {
+        if !digit.is_ascii_digit() {
+            return None;
+        }
+        let value = u64::from(*digit - b'0');
+        component = component.checked_mul(10)?.checked_add(value)?;
+        if component > MAX_DURATION_COMPONENT {
+            return None;
+        }
+    }
+    Some(component)
 }
 
 pub(crate) fn validate_optional_ldap_tls_version(

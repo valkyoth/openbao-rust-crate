@@ -47,6 +47,8 @@ Every release:
 - runs `cargo audit`;
 - runs `cargo deny check`;
 - generates an SBOM;
+- runs bounded Kani proof harnesses when a compatible `cargo-kani` toolchain is
+  installed;
 - validates release metadata;
 - records pentest report status before tag.
 

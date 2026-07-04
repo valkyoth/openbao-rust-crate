@@ -3,6 +3,10 @@ use crate::{Error, Result};
 const MAX_PATH_BYTES: usize = 4096;
 const MAX_PATH_SEGMENTS: usize = 64;
 
+pub(crate) fn path_byte_is_forbidden(byte: u8) -> bool {
+    byte.is_ascii_control() || matches!(byte, b' ' | b'%' | b'\\' | b'?' | b'#')
+}
+
 /// Validates an OpenBao mount-style path and returns normalized path segments.
 ///
 /// Mount paths must be non-empty, below the crate path length and segment
@@ -33,25 +37,27 @@ fn validate_path(value: &str, allow_empty: bool) -> Result<Vec<String>> {
             "non-ASCII characters are not allowed in OpenBao paths".into(),
         ));
     }
-    if value.as_bytes().iter().any(u8::is_ascii_control) {
-        return Err(Error::InvalidPath(
-            "control characters are not allowed".into(),
-        ));
-    }
-    if value.contains('%') {
-        return Err(Error::InvalidPath(
-            "percent characters are not allowed in OpenBao paths".into(),
-        ));
-    }
-    if value.bytes().any(|byte| byte == b' ') {
-        return Err(Error::InvalidPath(
-            "space characters are not allowed".into(),
-        ));
-    }
-    if value.contains('\\') || value.contains('?') || value.contains('#') {
-        return Err(Error::InvalidPath(
-            "backslash, query, and fragment characters are not allowed".into(),
-        ));
+    if value.bytes().any(path_byte_is_forbidden) {
+        if value.as_bytes().iter().any(u8::is_ascii_control) {
+            return Err(Error::InvalidPath(
+                "control characters are not allowed".into(),
+            ));
+        }
+        if value.contains('%') {
+            return Err(Error::InvalidPath(
+                "percent characters are not allowed in OpenBao paths".into(),
+            ));
+        }
+        if value.bytes().any(|byte| byte == b' ') {
+            return Err(Error::InvalidPath(
+                "space characters are not allowed".into(),
+            ));
+        }
+        if value.contains('\\') || value.contains('?') || value.contains('#') {
+            return Err(Error::InvalidPath(
+                "backslash, query, and fragment characters are not allowed".into(),
+            ));
+        }
     }
     let trimmed = value.trim_matches('/');
     if trimmed.is_empty() {

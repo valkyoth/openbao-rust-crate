@@ -37,4 +37,7 @@ cargo deny check
 echo "checks: RustSec advisories"
 cargo audit
 
+echo "checks: Kani"
+scripts/check_kani.sh
+
 echo "checks: ok"

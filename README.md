@@ -174,7 +174,7 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | Path validation | Rejects traversal, query/fragment injection, empty segments, controls, and trailing periods |
 | Error posture | API error strings are bounded and sanitized before formatting |
 | Dependency policy | `cargo deny` plus RustSec audit in the release gate |
-| Release evidence | fmt, clippy, tests, docs, deny, audit, SBOM, and real OpenBao integration |
+| Release evidence | fmt, clippy, tests, docs, deny, audit, SBOM, optional Kani proof harnesses, and real OpenBao integration |
 | Pentest gate | Required before tagging a release |
 
 Security details live in [SECURITY.md](SECURITY.md). Release evidence and
@@ -192,7 +192,7 @@ range:
 
 | Rust | Required Evidence |
 | --- | --- |
-| `1.96.1` | Primary release gate: fmt, clippy, tests, docs, deny, audit, SBOM, and real OpenBao integration. |
+| `1.96.1` | Primary release gate: fmt, clippy, tests, docs, deny, audit, SBOM, optional Kani proof harnesses, and real OpenBao integration. |
 | `1.95.0` | `cargo check --all-features`. |
 | `1.94.0` | `cargo check --all-features`. |
 | `1.93.0` | `cargo check --all-features`. |
@@ -312,6 +312,7 @@ openbao = { version = "1", features = ["time"] }
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables Tokio convenience helpers such as `Sys::wait_until_unsealed`. Runtime-neutral variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
+| `kani` | no | Inert feature reserved for Kani proof harness builds. Normal users do not need it; `scripts/check_kani.sh` enables it with the Rust `1.90.0` Kani toolchain. |
 | `memory-lock` | no | Enables `sanitization` memory-lock support for secret buffers where the host permits it. Requires `memory-lock-acknowledged`; verify OS mlock/VirtualLock limits and swap policy before enabling. |
 | `memory-lock-acknowledged` | no | Explicit acknowledgment for audited memory-lock builds. Memory locking is a host-level hardening control, not a guarantee that HTTP/TLS/kernel buffers avoid swap. |
 | `tls12-acknowledged` | no | Explicit acknowledgment for legacy TLS 1.2 compatibility. TLS 1.3 remains the default and is strongly preferred for high-security OpenBao deployments. |

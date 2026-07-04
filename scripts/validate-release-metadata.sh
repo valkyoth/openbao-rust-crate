@@ -30,6 +30,7 @@ check_file docs/RELEASE_PLAN.md
 check_file docs/OPENBAO_API_COVERAGE.md
 check_file docs/API_STABILITY_AUDIT.md
 check_file docs/MIGRATION_GUIDE.md
+check_file kani/README.md
 check_file release-notes/RELEASE_NOTES_0.1.0.md
 check_file release-notes/RELEASE_NOTES_0.2.0.md
 check_file release-notes/RELEASE_NOTES_0.3.0.md
@@ -62,6 +63,7 @@ check_file scripts/release_0_13_gate.sh
 check_file scripts/release_0_14_gate.sh
 check_file scripts/release_0_15_gate.sh
 check_file scripts/release_1_0_gate.sh
+check_file scripts/check_kani.sh
 check_file .github/workflows/ci.yml
 
 check_grep 'name = "openbao"' Cargo.toml

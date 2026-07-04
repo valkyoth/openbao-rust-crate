@@ -113,6 +113,9 @@ mod response;
 pub mod timestamp;
 mod validation;
 
+#[cfg(kani)]
+mod kani_proofs;
+
 #[cfg(any(
     feature = "approle",
     feature = "cert-auth",
