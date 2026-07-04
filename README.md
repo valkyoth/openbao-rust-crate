@@ -1719,6 +1719,37 @@ The integration script creates a fresh TLS dev instance, initializes and
 unseals it, stores the root token in a temporary `0600` file for the test
 process, and removes that file when the run exits.
 
+## Kani Proof Harnesses
+
+The crate includes optional Kani proof harnesses for a small set of
+allocation-light validation helpers. The current harnesses cover byte-level
+OpenBao path rejection policy and duration component parsing. They are bounded
+proofs that complement the normal unit, integration, fuzz, Miri, audit, and
+deny checks; they are not a whole-crate formal verification claim.
+
+Kani currently runs here with the Rust `1.90.0` toolchain pairing also used by
+the sibling `base64-ng` crate. After installing Kani, run the proofs locally
+with:
+
+```bash
+rustup toolchain install 1.90.0-x86_64-unknown-linux-gnu
+cargo kani --version
+scripts/check_kani.sh
+```
+
+If your installed Kani release supports a newer Rust toolchain, replace the
+value below and override the toolchain used by the script:
+
+```bash
+OPENBAO_KANI_TOOLCHAIN=<supported-rust-toolchain> scripts/check_kani.sh
+```
+
+The normal `scripts/checks.sh` gate also invokes `scripts/check_kani.sh`. When
+the compatible Rust toolchain or `cargo-kani` is not installed, the Kani script
+prints a skip message instead of failing local development checks. See
+[kani/README.md](kani/README.md) for the exact proof scope and current
+limitations.
+
 ## Release Discipline
 
 Run the normal local checks:
