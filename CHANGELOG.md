@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Changed
+
+- Updated pinned `taiki-e/install-action` CI action to `v2.82.10`.
+
 ## 1.1.2 - 2026-07-04
 
 ### Added
