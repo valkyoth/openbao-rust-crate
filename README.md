@@ -188,11 +188,10 @@ release sequencing live in [release-notes](release-notes) and
 ## Rust Version Support
 
 The primary checked Rust toolchain is Rust `1.96.1`. The minimum supported
-Rust version remains Rust `1.90.0`, and the `1.x` line checks compatibility
-back to that floor.
+Rust version remains Rust `1.90.0`, and the current development line checks
+compatibility back to that floor.
 
-The `1.x` release line tracks compatibility evidence across this supported
-range:
+The SDK tracks compatibility evidence across this supported range:
 
 | Rust | Required Evidence |
 | --- | --- |
@@ -214,6 +213,10 @@ the newest OpenBao patch release available for that SDK line:
 | `0.1.0` through `1.0.2` | OpenBao `2.5.4` |
 | `1.1.0` through `1.1.2` | OpenBao `2.5.5` |
 | `2.0.0` development branch | OpenBao `2.5.5` baseline; historical `2.0.0` through `2.5.5` certification is in progress |
+
+The immutable source and OCI artifact inventory for those historical releases
+is committed under [`compat/`](compat/README.md). Artifact locking is not yet a
+claim of API compatibility; snapshot and live behavior checkpoints remain.
 
 ## Install
 

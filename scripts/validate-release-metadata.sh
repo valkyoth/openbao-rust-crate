@@ -25,6 +25,11 @@ check_file CONTRIBUTING.md
 check_file LICENSE-APACHE
 check_file LICENSE-MIT
 check_file deny.toml
+check_file compat/README.md
+check_file compat/releases.lock.json
+check_file compat/releases.lock.sha256
+check_file compat/image-signatures.lock.json
+check_file compat/image-signatures.lock.sha256
 check_file rust-toolchain.toml
 check_file docs/RELEASE_PLAN.md
 check_file docs/OPENBAO_API_COVERAGE.md
@@ -64,6 +69,7 @@ check_file scripts/release_0_14_gate.sh
 check_file scripts/release_0_15_gate.sh
 check_file scripts/release_1_0_gate.sh
 check_file scripts/check_kani.sh
+check_file scripts/validate_openbao_release_lock.py
 check_file .github/workflows/ci.yml
 
 check_grep 'name = "openbao"' Cargo.toml

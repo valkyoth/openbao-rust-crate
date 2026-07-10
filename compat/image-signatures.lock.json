@@ -1,0 +1,29 @@
+{
+  "schema": "openbao-image-signature-evidence/v1",
+  "observed_on": "2026-07-10",
+  "repository": "docker.io/openbao/openbao",
+  "bundle_format": "application/vnd.dev.sigstore.bundle.v0.3+json newline stream",
+  "records": [
+    {"version":"2.0.0","index_bundle_sha256":"sha256:537fae7f4240eb7356ae8df2f665097d9efde0622ec590c22d6c1aa273b91d2a","linux_amd64_bundle_sha256":"sha256:1a493f0c316d2359ce09926dc8ab5c21d9c58d52cf0373475c068aff8a63c98a"},
+    {"version":"2.0.1","index_bundle_sha256":"sha256:9d991a23f53c7b38c82883e14b5e90ceb7f6943c048793961a14373fd0d3fe14","linux_amd64_bundle_sha256":"sha256:a6edcbb124f2c9fe993ee150117a7d27fb528b6639fb1bce5d522181b8374c34"},
+    {"version":"2.0.2","index_bundle_sha256":"sha256:9cfc820e7a5732890b6d86b4eaaac40b85e392fa27ccbab2e9005fe1694b096d","linux_amd64_bundle_sha256":"sha256:f3bb6b08dbf1b0d840faad4d9916f64ea9e723f155dde677cb3e178cd42dc2c8"},
+    {"version":"2.0.3","index_bundle_sha256":"sha256:9abda126918e0041ec2d6f616f566617eb783be2ad0081d90c3d6c432361bc29","linux_amd64_bundle_sha256":"sha256:09c9b9b9feeb9f067759865f42a7399c203288d482424afab1f7215a64b64f0a"},
+    {"version":"2.1.0","index_bundle_sha256":"sha256:fc97c2bc8a7941f3e9eccdbba3b92bebe10d6f121d2d2c7ef08cd7694eab375f","linux_amd64_bundle_sha256":"sha256:4d0bcc5ab83ec7073372ca80a798b3dc6cbfc40066009af92d228a44d4a4ae98"},
+    {"version":"2.1.1","index_bundle_sha256":"sha256:9597a6598cd8b132214e99304964bd67152e7e4d8d58f35568be04e9bddefc32","linux_amd64_bundle_sha256":"sha256:0df35752aee859cb925db10755a3eac46316eeda52c05e383a537e6a84c0af2f"},
+    {"version":"2.2.0","index_bundle_sha256":"sha256:42403b6f769581e0fba184a0cfadb61b0f2b0207a3fd0f92780a1545d77f8c0d","linux_amd64_bundle_sha256":"sha256:f397b1780ccedb2d73250005c80fd6263c61a105dced38d509ef89fd0ec1dc92"},
+    {"version":"2.2.1","index_bundle_sha256":"sha256:710d332c495a8ba0324a50a22b9b38d4c20fc8c8c0b64e9b1e9533b9169f1d44","linux_amd64_bundle_sha256":"sha256:6a23079f7b4f3060df02adb00f06ee58d2f3c427970447e6ce47ac4907ad1108"},
+    {"version":"2.2.2","index_bundle_sha256":"sha256:34137cf47413f2ec07d84779f5d83a19861bd92ed1a11a5e276f344c8fb5e21b","linux_amd64_bundle_sha256":"sha256:04432c165f21807374a0273551dd8ce30cc99a810944cfc5c2387af6f0253e7b"},
+    {"version":"2.3.1","index_bundle_sha256":"sha256:a3642a542502ac5b608f7139a965ce3a01a28253848087b4f2094aa92ec00f38","linux_amd64_bundle_sha256":"sha256:0b9b9d78b843a669b504ce1750b952f80f25853be43bb564a4a9cdf6cb54ec5e"},
+    {"version":"2.3.2","index_bundle_sha256":"sha256:58436e79b65d231e120006cf72b0be15df2e7be8fd2b826f196977a49f76f514","linux_amd64_bundle_sha256":"sha256:5ed15ac803980180dcf6efe4d3556c5adcb2b4035bb5c15a69a6164a1b37b796"},
+    {"version":"2.4.0","index_bundle_sha256":"sha256:ddc8e5149f75c4607ebe12f0c6939d50a4e6cb525108523882d01facaea15b03","linux_amd64_bundle_sha256":"sha256:f5b9908d9154c0f9c34a95898286d3251837cdb58ea3ff54112dc63498cb8510"},
+    {"version":"2.4.1","index_bundle_sha256":"sha256:4adce8094301f1f2287b81e02b92719af502ba5237b54d438db59e1aa8bb52d8","linux_amd64_bundle_sha256":"sha256:d1dbd403b3702ad3e405e9e20f53947f61d8b4d65d1e189c9c8868d716244113"},
+    {"version":"2.4.3","index_bundle_sha256":"sha256:530512c9e7b049f2c8ad308351cb16486bb1e1b2121fa163477fb2dc8cca9d99","linux_amd64_bundle_sha256":"sha256:52b5c6409e97ecefcd591599acfb8e02ccee5f48e39389c38cf5f3ff905ab456"},
+    {"version":"2.4.4","index_bundle_sha256":"sha256:aa00e8406a5820bf8280712a806c372701662ae0183aad5a9dd811ea94095b12","linux_amd64_bundle_sha256":"sha256:657a05646b536d230ea7923cb92ab02f9c60dfee20a19884e6843ee4e4ab6e1c"},
+    {"version":"2.5.0","index_bundle_sha256":"sha256:ef32a8055654fb8dce226ab8073a5a09690daf4b7c4751614559637f4b970fac","linux_amd64_bundle_sha256":"sha256:f39e73c198e1851b453d1b7b06d5599b67b019f76e2ec2437f9098d408eb5f6d"},
+    {"version":"2.5.1","index_bundle_sha256":"sha256:5b57923759abed5a618982f35d1f1aadfabaddd539ef2dc780f00630dea8b3a3","linux_amd64_bundle_sha256":"sha256:9e27ec901e99a874b6c07fe77ca6175181464ac1cd5b9e724f8c9de647aba1be"},
+    {"version":"2.5.2","index_bundle_sha256":"sha256:d54927182fbe2debfaedf0a848b15e6887f3b585fb4803c6ed6dca8a40e65c75","linux_amd64_bundle_sha256":"sha256:82a9bc6eebeec3171eaf9f06b0fe46eff3b29f7d12d6459d450891075a099576"},
+    {"version":"2.5.3","index_bundle_sha256":"sha256:f4cfc76ce84a51995513d1a0339dd06f1d669c741a42919cc26b0a0c8fb6412d","linux_amd64_bundle_sha256":"sha256:2dfda695256f77e921a30b5557e48ae6b88e772a70cc982447564db7bf9d0a96"},
+    {"version":"2.5.4","index_bundle_sha256":"sha256:aef3d9b4cc785bc986cf2808e8a3018756cf1e5525c87c79bfc8c6155f2cf6a8","linux_amd64_bundle_sha256":"sha256:788c229acb53ad76f53bb0bb6794b95fe4fa7bc7ebf227250548dfbd30206577"},
+    {"version":"2.5.5","index_bundle_sha256":"sha256:626ce6ce4eb7297b68b0ddd0e5756cf26bea8e28561cec2e281775529c66a9a0","linux_amd64_bundle_sha256":"sha256:4e026e2b99045ef30b730f433eac8bd0bc4c860adf1ff82c45e57f47b8a288c3"}
+  ]
+}

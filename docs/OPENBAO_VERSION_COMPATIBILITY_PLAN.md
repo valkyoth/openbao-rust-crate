@@ -257,7 +257,8 @@ green CI and exact-HEAD pentest confirmation before advancement.
 
 During implementation:
 
-- keep the package version at the current released value;
+- keep `main` identified as unreleased `2.0.0` after the first breaking
+  checkpoint;
 - maintain changes under the `Unreleased` changelog section;
 - do not create intermediate tags;
 - do not claim historical compatibility in the README until its release
@@ -330,6 +331,9 @@ Stop conditions:
   reordered or modified historical records fail validation;
 - signed upstream tags and available artifact attestations are verified and
   recorded without claiming verification that upstream does not provide.
+- source and OCI artifact hashes are complete in this checkpoint; normalized
+  OpenAPI hashes land in Commit 03's separate append-only snapshot lock so the
+  release-artifact lock is not rewritten.
 
 Pentest focus:
 

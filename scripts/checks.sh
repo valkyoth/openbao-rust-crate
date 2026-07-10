@@ -10,6 +10,10 @@ cargo fmt --all --check
 echo "checks: release metadata"
 scripts/validate-release-metadata.sh
 
+echo "checks: OpenBao release lock"
+python3 scripts/validate_openbao_release_lock.py
+python3 scripts/validate_openbao_release_lock.py --self-test
+
 echo "checks: clippy default"
 cargo clippy --all-targets -- -D warnings
 
@@ -40,8 +44,10 @@ cargo deny --manifest-path tests/fixtures/reqwest-native-unification/Cargo.toml 
   --config deny.toml check
 
 echo "checks: RustSec advisories"
-cargo audit
-cargo audit --file tests/fixtures/reqwest-native-unification/Cargo.lock
+rustsec_db="${OPENBAO_RUSTSEC_DB:-/tmp/openbao-rust-crate-advisory-db}"
+cargo audit --db "$rustsec_db"
+cargo audit --db "$rustsec_db" \
+  --file tests/fixtures/reqwest-native-unification/Cargo.lock
 
 echo "checks: Kani"
 scripts/check_kani.sh

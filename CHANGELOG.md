@@ -8,6 +8,10 @@ All notable changes to this project are documented here.
 
 - Started the `2.0.0` multi-version OpenBao compatibility implementation.
 - Added auditable TLS backend reporting through `Client::tls_backend`.
+- Added an immutable, checksum-anchored inventory for 21 OpenBao source and
+  OCI release artifacts, including exact Cosign verification identities and
+  signature-bundle fingerprints.
+- Added a bounded offline release-lock validator with tamper self-tests.
 
 ### Changed
 

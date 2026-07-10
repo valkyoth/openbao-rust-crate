@@ -52,6 +52,10 @@ Please include:
   after handoff to the HTTP stack.
 - Third-party GitHub Actions must be pinned to immutable commit SHAs.
 - New dependencies require a release-plan justification and `cargo deny` review.
+- Historical OpenBao source and image evidence is accepted only through the
+  checksum-anchored, duplicate-key-safe offline validator documented in
+  `compat/README.md`. Artifact identity alone is not an API compatibility or
+  server security endorsement.
 - Public raw JSON, byte, retry, and response-wrapping transports are disabled
   unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
   bypass typed request validation and operation-specific feature gates; keep
