@@ -15,15 +15,14 @@ LDAP auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
 Kerberos auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
-Endpoint-by-endpoint coverage was generated from the official rendered
-OpenBao `2.5.x` API documentation on 2026-06-03 and is tracked in
-`docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` with the full CSV source in
-`docs/openbao-2.5-endpoint-matrix.csv`.
-The matrix was regenerated on 2026-06-24 after OpenBao `2.5.5`; it still
-contains `643` documented endpoint rows with zero `planned` and zero
-`decision` rows. The `2.5.5` API compatibility pass added the namespace custom
-metadata clear helper for the newly fixed merge-patch behavior and moved local
-integration testing to the pinned `2.5.5` image.
+The exact endpoint contract baseline is captured from the official OpenBao
+`v2.5.5` tagged source commit and reconciled with the locked-image OpenAPI
+snapshot. It is summarized in `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md`; the
+machine-readable source of truth is
+`docs/openbao-2.5-contract-matrix.json`, and the CSV is a review index.
+The corrected inventory contains `644` documented rows and `663` expanded
+method/path operations. It fixes the old rendered-documentation parser's
+omission of `HEAD /sys/health`.
 
 Sources:
 
@@ -74,19 +73,23 @@ Sources:
 
 ## Endpoint Matrix
 
-The stable `1.x` release line uses a mechanical endpoint matrix instead
-of only area-level estimates:
+The `2.0.0` line replaces the former page-level classifications with an exact
+operation contract backlog:
 
-- documented endpoint rows extracted from OpenBao `2.5.x`: `643`;
-- strict typed coverage: `597/643` (`92.8%`);
-- typed plus partial coverage: `598/643` (`93.0%`);
-- addressed by typed, partial, raw, external, or rejected policy: `643/643`
-  (`100.0%`);
-- planned implementation rows before `1.0.0`: `0`;
-- open owner-decision rows before `1.0.0`: `0`.
+- unique tagged-documentation rows: `644`;
+- expanded method/path operations: `663`;
+- exact OpenAPI-pattern matches: `611`;
+- ambiguous OpenAPI matches retained for review: `11`;
+- documented operations absent from the OpenAPI snapshot: `41`;
+- `confirmed-gap` rows: `79`;
+- `unverified` rows: `565`;
+- typed claims in the baseline: `0`.
 
-See `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for area totals and
-`docs/openbao-2.5-endpoint-matrix.csv` for each method/path row.
+The earlier `597/643` percentage is withdrawn. A row becomes `typed` or
+`typed-gated` only after every documented field has coverage and secret review,
+and a public helper plus test evidence is linked. See
+`docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for totals and
+`docs/openbao-2.5-contract-matrix.json` for the full contract.
 
 ## Foundation
 

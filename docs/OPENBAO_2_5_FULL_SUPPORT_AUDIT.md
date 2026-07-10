@@ -6,11 +6,12 @@
   `028992583c693c4de6350b8aa52ff85e30375a99`.
 - Tagged API documentation files reviewed: `115` MDX files under
   `website/content/api-docs`.
-- Tagged documentation endpoint rows: `650` raw rows and `643` unique
-  method/path rows.
-- Existing crate matrix rows: `643`.
-- Audit status: endpoint inventory matches, but implementation classification
-  and field-level completeness do not.
+- Tagged documentation endpoint rows: `651` raw rows, `644` unique documented
+  rows, and `663` expanded method/path operations.
+- The old rendered-documentation matrix omitted `HEAD /sys/health`; the exact
+  tagged-source capture corrects that inventory defect.
+- Audit status: exact inventory and field evidence are captured. Public helper,
+  transport, security, and test evidence remain intentionally unverified.
 - Release target for closure: `2.0.0`.
 
 This is a static audit checkpoint, not a compatibility certification. Live
@@ -43,23 +44,24 @@ database servers, browser rendering, DNS challenge provisioning, or third-party
 identity-provider behavior. It does require a safe first-class crate boundary
 for every OpenBao endpoint participating in those workflows.
 
-## Existing Matrix Result
+## Exact Matrix Baseline
 
-The current generated matrix reports:
+The replacement matrix reports:
 
 | Classification | Rows |
 | --- | ---: |
-| `typed` | 528 |
-| `typed-gated` | 69 |
-| `partial` | 1 |
-| `external` | 33 |
-| `rejected` | 12 |
-| Total | 643 |
+| `unverified` | 565 |
+| `confirmed-gap` | 79 |
+| `typed` | 0 |
+| `typed-gated` | 0 |
+| Total | 644 |
 
-The tagged `v2.5.5` documentation confirms that the matrix discovered the
-correct 643 unique rows. The problem is that the generator classifies whole
-pages as typed without mechanically checking method paths, request parameters,
-response fields, or public methods in the crate.
+The machine-readable source of truth is
+`docs/openbao-2.5-contract-matrix.json`. It records exact tagged source,
+documented parameters, sampled response fields, normalized OpenAPI evidence,
+transport/security review state, crate helper/type links, and test evidence.
+The CSV is only a review index. No page or module prefix can confer typed
+status.
 
 ## Previously Non-Strict Rows
 
@@ -99,12 +101,10 @@ without an exact matching public helper or documented method:
 | Key rotation | 11 | Legacy keyring alias, root rotation, automatic rotation config read/write aliases, verification, and backup operations are absent. |
 | PKI CRL rotation | 2 | The docs specify GET for CRL and delta-CRL rotation; current helpers send POST. |
 
-Until the full mechanical audit is complete, `33` is a lower bound. Correcting
-only these confirmed classifications reduces strict endpoint coverage from the
-reported `597/643` to at most `564/643` (`87.7%`). Field-level gaps mean even
-that percentage is an endpoint-row upper bound rather than complete API
-coverage. Together with the 46 rows already classified as non-strict, the
-confirmed operation-level closure backlog is therefore at least 79 rows.
+The exact baseline revokes every prior typed claim until evidence is linked.
+These `33` false classifications plus `46` previously non-strict rows form the
+`79` confirmed-gap rows. The remaining `565` rows are `unverified`, not typed.
+No support percentage is published from this backlog.
 
 ### Exact Confirmed False-Typed Operations
 
@@ -281,7 +281,8 @@ Every typed status must be derived from explicit operation evidence.
 
 The `2.5.5` closure is complete only when:
 
-- all 643 rows are mechanically classified as `typed` or `typed-gated`;
+- all 644 rows and all 663 expanded operations are mechanically classified as
+  `typed` or `typed-gated`;
 - all documented parameters and response fields have explicit coverage;
 - generated coverage cannot claim a helper that is absent from the public API;
 - mock, fixture, and live evidence exists at the level promised by each row;

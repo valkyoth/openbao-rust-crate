@@ -382,7 +382,8 @@ Goal:
 
 Stop conditions:
 
-- all 643 `v2.5.5` endpoint rows are represented exactly once;
+- all 644 `v2.5.5` documented rows and 663 expanded method/path operations are
+  represented exactly once;
 - no status is inferred merely from a documentation page or module prefix;
 - every documented request parameter and response field has an explicit
   coverage state;
@@ -910,7 +911,8 @@ included OpenBao release, receive the correct reviewed endpoint behavior for
 that exact profile, and get a local typed error for unavailable behavior. A
 future profile must be append-only and must not change the endpoint contract,
 test evidence, or generated hash of an older profile. For OpenBao `2.5.5`, all
-643 documented endpoint rows and their documented request/response
-surfaces must be implemented as typed or appropriately gated crate APIs; an
+644 documented rows, 663 expanded method/path operations, and their documented
+request/response surfaces must be implemented as typed or appropriately gated
+crate APIs; an
 external protocol handoff or generic raw request alone does not satisfy the
 full-support target.

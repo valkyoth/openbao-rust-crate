@@ -16,6 +16,12 @@ All notable changes to this project are documented here.
   21 locked OpenBao releases, secondary rendered-site observations, and
   adjacent-release path/method/field/schema diffs behind a separate anchored
   snapshot lock and bounded offline validator.
+- Added an exact OpenBao `v2.5.5` contract matrix generated from the immutable
+  tagged source and reconciled against the locked-image OpenAPI snapshot. It
+  records 644 documented rows, 663 expanded method/path operations, field and
+  secret-review state, crate helper/type links, and test evidence.
+- Added deterministic contract-matrix verification and adversarial self-tests
+  to the full check suite.
 
 ### Changed
 
@@ -27,6 +33,9 @@ All notable changes to this project are documented here.
 - Updated pinned `taiki-e/install-action` CI action to `v2.83.0`.
 - Added strict-overall-deadline Tokio readiness and unseal helpers and capped
   runtime-neutral readiness sleeps to their remaining retry budget.
+- Withdrew the former `597/643` coverage percentage. The exact baseline treats
+  all rows as unverified or confirmed gaps until operation-level helper,
+  field, transport, security, and test evidence is linked.
 
 ### Security
 
@@ -152,9 +161,9 @@ All notable changes to this project are documented here.
   policies that require response wrapping.
 - Added AdminBootstrap convergence for PKI, database, and SSH mounts plus
   database dynamic/static roles and SSH roles.
-- Reconciled the release plan and API stability audit with the current
-  endpoint matrix: `597/643` strict typed or operator-gated rows, with zero
-  remaining `planned` or `decision` rows.
+- Reconciled the release plan and API stability audit with the then-current
+  endpoint matrix's `597/643` claim and zero remaining `planned` or `decision`
+  rows. The `2.0.0` exact-contract audit later withdrew this page-level claim.
 - Updated the migration guide and bootstrap example for the `0.15.0`
   stable-candidate ergonomics.
 - Updated the pinned `taiki-e/install-action` CI action to the latest v2 tag
@@ -403,10 +412,11 @@ All notable changes to this project are documented here.
   documentation review, intentional deferral, or permanent external boundary.
 - Added migration guidance for users upgrading from earlier `openbao` releases,
   `vaultrs`, or bespoke `reqwest` OpenBao/Vault wrappers.
-- Added a generated OpenBao `2.5.x` endpoint-by-endpoint coverage matrix with
-  `643` documented endpoint rows, `72.9%` strict typed or operator-gated
-  coverage, explicit pre-`1.0.0` planned rows, and zero remaining owner-decision
-  rows.
+- Added the original generated OpenBao `2.5.x` endpoint matrix, which then
+  reported `643` rows and `72.9%` strict typed or operator-gated coverage, plus
+  explicit pre-`1.0.0` planned rows and zero owner-decision rows. The `2.0.0`
+  exact-contract audit later corrected the inventory and withdrew that
+  percentage.
 - Added a `0.9.0` release-note skeleton and release gate script.
 - Expanded the pre-`1.0` release strategy through `0.15.0` so Identity/auth,
   Transit advanced key management, PKI advanced and specialized flows, system

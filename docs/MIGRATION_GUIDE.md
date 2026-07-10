@@ -142,9 +142,9 @@ Recommended checks before deploying the stable release:
   Transit import software wrapping, and test-only HTTP escape hatches;
 - review `SECURITY.md` for accepted residuals around transport buffers,
   bootstrap locking, and software BYOK wrapping;
-- use `docs/API_STABILITY_AUDIT.md` and
-  `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` as the stable endpoint-boundary
-  reference.
+- use `docs/API_STABILITY_AUDIT.md` for the historical stable boundary and
+  `docs/openbao-2.5-contract-matrix.json` for the exact `2.0.0` contract
+  backlog. Unverified rows are not support claims.
 
 ## From `openbao` 0.14 To 1.0
 
@@ -217,9 +217,9 @@ Adopt these `0.9` additions where they fit:
   `AdminBootstrap::ensure_identity_group` for idempotent service setup. These
   compare only fields set in the desired request and do not perform PKI CA
   setup or database connection configuration;
-- use `docs/API_STABILITY_AUDIT.md` and
-  `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` as the pre-`1.0.0` source of truth for
-  planned, rejected, external, raw, and gated endpoint boundaries;
+- use `docs/API_STABILITY_AUDIT.md` for the historical pre-`1.0.0` decisions.
+  The replacement `docs/openbao-2.5-contract-matrix.json` is the current exact
+  contract backlog; it does not inherit typed status from those old decisions;
 - read `docs/QUANTUM_READINESS.md` for the crate's advisory-only posture. It
   does not claim post-quantum safety for current OpenBao deployments.
 

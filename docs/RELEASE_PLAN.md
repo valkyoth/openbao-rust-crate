@@ -1,12 +1,13 @@
 # Release Plan
 
 This plan starts at `0.1.0` and reached `1.0.0`, the first stable release.
-The endpoint-by-endpoint OpenBao `2.5.5` inventory contains `643` unique
-documented method/path rows. The pre-`1.0` matrix reported `597/643` (`92.8%`)
-as strict typed or operator-gated coverage, but the post-`1.1` exact-source
-audit found at least 33 false typed classifications. The corrected current
-upper bound is therefore `564/643` (`87.7%`), before field-level completeness
-is counted. [`OPENBAO_2_5_FULL_SUPPORT_AUDIT.md`](OPENBAO_2_5_FULL_SUPPORT_AUDIT.md)
+The exact OpenBao `2.5.5` inventory contains `644` unique documented rows and
+`663` expanded method/path operations. The pre-`1.0` matrix's `597/643`
+coverage claim has been withdrawn: the exact-source audit found an omitted
+HEAD operation and page-level classifications without helper, field, security,
+transport, or test evidence. The replacement baseline has `79`
+`confirmed-gap` and `565` `unverified` rows and publishes no support percentage.
+[`OPENBAO_2_5_FULL_SUPPORT_AUDIT.md`](OPENBAO_2_5_FULL_SUPPORT_AUDIT.md)
 records the evidence and confirmed gaps. The pre-`1.0` line extended through
 `0.15.0`; that final scope was trialed before the stable API freeze.
 
@@ -68,10 +69,11 @@ Every release:
 
 - `1.0.0` used a narrower definition of complete support: every endpoint row
   was addressed, but protocol handoffs and explicit rejections were accepted.
-- The `2.0.0` goal supersedes that boundary for OpenBao `2.5.5`. Every one of
-  the 643 documented operations and its request/response contract must be
-  first-class typed or typed-gated coverage. Generic raw requests, URL-only
-  handoffs, `partial`, `external`, and `rejected` classifications do not count.
+- The `2.0.0` goal supersedes that boundary for OpenBao `2.5.5`. All 644
+  documented rows, 663 expanded operations, and their request/response
+  contracts must be first-class typed or typed-gated coverage. Generic raw
+  requests, URL-only handoffs, `partial`, `external`, and `rejected`
+  classifications do not count.
 - Compatibility with OpenBao `2.0.0` through `2.5.5` is version-specific and
   append-only. New server profiles must not overwrite the behavior retained
   for an older supported server.
@@ -670,8 +672,8 @@ Stop criteria:
 
 - immutable compatibility profiles cover every listed stable OpenBao release
   from `2.0.0` through `2.5.5`;
-- the corrected OpenBao `2.5.5` matrix covers all 643 rows as typed or
-  typed-gated, with zero partial, raw, external, rejected, planned, or decision
+- the corrected OpenBao `2.5.5` matrix covers all 644 rows and 663 expanded
+  operations as typed or typed-gated, with zero unverified or confirmed-gap
   rows and explicit request/response field evidence;
 - exact and range requirements, strict detection, explicit assumed mode, and
   acknowledged unknown-newer behavior are implemented and documented;

@@ -32,9 +32,13 @@ check_file compat/image-signatures.lock.json
 check_file compat/image-signatures.lock.sha256
 check_file compat/api-snapshots.lock.json
 check_file compat/api-snapshots.lock.sha256
+check_file compat/api-contracts/2.5.5-tagged-contract.json
 check_file rust-toolchain.toml
 check_file docs/RELEASE_PLAN.md
 check_file docs/OPENBAO_API_COVERAGE.md
+check_file docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
+check_file docs/openbao-2.5-contract-matrix.json
+check_file docs/openbao-2.5-endpoint-matrix.csv
 check_file docs/API_STABILITY_AUDIT.md
 check_file docs/MIGRATION_GUIDE.md
 check_file kani/README.md
@@ -73,6 +77,7 @@ check_file scripts/release_1_0_gate.sh
 check_file scripts/check_kani.sh
 check_file scripts/validate_openbao_release_lock.py
 check_file scripts/openbao_api_snapshots.py
+check_file scripts/generate_openbao_contract_matrix.py
 check_file .github/workflows/ci.yml
 
 check_grep 'name = "openbao"' Cargo.toml
@@ -82,6 +87,9 @@ check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep 'channel = "1.97.0"' rust-toolchain.toml
 check_grep 'rustup toolchain install 1.90.0' scripts/ci_install_rust.sh
 check_grep 'cargo +1.90.0 check --locked --all-targets --all-features' scripts/checks.sh
+check_grep 'generate_openbao_contract_matrix.py --verify' scripts/checks.sh
+check_grep 'generate_openbao_contract_matrix.py --self-test' scripts/checks.sh
+check_grep 'Unique documented rows: `644`' docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
 check_grep 'oidc-get-callback-acknowledged = \["jwt-auth"\]' Cargo.toml
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
 check_grep 'unsafe_code = "forbid"' Cargo.toml

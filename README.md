@@ -345,12 +345,15 @@ openbao = { version = "1", features = ["time"] }
 
 ## Support Matrix
 
-The detailed OpenBao `2.5.x` endpoint-by-endpoint coverage matrix is tracked
-in [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md).
-For the stable `1.x` line it records `643` documented endpoint rows, with
-`597/643` (`92.8%`) strict typed or operator-gated coverage. All rows are now
-addressed by typed, operator-gated, partial, external, or rejected policy, with
-zero `planned` and zero `decision` rows.
+The exact OpenBao `2.5.5` contract backlog is summarized in
+[docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md),
+with its machine-readable source of truth in
+[`docs/openbao-2.5-contract-matrix.json`](docs/openbao-2.5-contract-matrix.json).
+It contains `644` unique tagged-documentation rows and `663` expanded
+method/path operations. The earlier `597/643` coverage claim has been withdrawn:
+the exact baseline intentionally marks all rows `unverified` or
+`confirmed-gap` until public helper, field, transport, security, and test
+evidence is linked. It is an implementation backlog, not a support percentage.
 
 ### Client, Transport, And TLS
 
