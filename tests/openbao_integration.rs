@@ -10,7 +10,7 @@
 
 use std::{
     collections::BTreeMap,
-    env, fs, process,
+    env, fs, io, process,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -35,6 +35,7 @@ struct IntegrationEnv {
     token: SecretString,
     ca_cert: Certificate,
     expected_version: String,
+    result_file: String,
 }
 
 impl IntegrationEnv {
@@ -48,12 +49,14 @@ impl IntegrationEnv {
         let ca_path = env::var("BAO_CACERT")?;
         let ca_pem = fs::read(ca_path)?;
         let expected_version = env::var("OPENBAO_EXPECTED_VERSION")?;
+        let result_file = env::var("OPENBAO_RESULT_FILE")?;
 
         Ok(Some(Self {
             addr,
             token: SecretString::from(token.trim().to_owned()),
             ca_cert: Certificate::from_pem(&ca_pem)?,
             expected_version,
+            result_file,
         }))
     }
 
@@ -69,6 +72,7 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
         return Ok(());
     };
     let expected_version = env.expected_version.clone();
+    let result_file = env.result_file.clone();
     let client = env.client()?;
     assert_eq!(client.sys().health().await?.version, expected_version);
     let suffix = unique_suffix()?;
@@ -77,19 +81,68 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     let auth_mount = format!("obrs-auth-{suffix}");
     let policy_name = format!("obrs-policy-{suffix}");
 
-    let _ = client.sys().disable_mount(&kv1_mount).await;
-    let _ = client.sys().disable_mount(&kv2_mount).await;
-    let _ = client.sys().disable_auth_method(&auth_mount).await;
-    let _ = client.sys().delete_policy(&policy_name).await;
-
     let result = run_flow(&client, &kv1_mount, &kv2_mount, &auth_mount, &policy_name).await;
-
-    let _ = client.sys().disable_mount(&kv1_mount).await;
-    let _ = client.sys().disable_mount(&kv2_mount).await;
-    let _ = client.sys().disable_auth_method(&auth_mount).await;
-    let _ = client.sys().delete_policy(&policy_name).await;
-
+    cleanup_flow(&client, &kv1_mount, &kv2_mount, &auth_mount, &policy_name).await?;
     result?;
+    write_core_flow_attestation(&result_file, &expected_version)?;
+    Ok(())
+}
+
+async fn cleanup_flow(
+    client: &Client<openbao::Authenticated>,
+    kv1_mount: &str,
+    kv2_mount: &str,
+    auth_mount: &str,
+    policy_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let _ = client.sys().disable_mount(kv1_mount).await;
+    let _ = client.sys().disable_mount(kv2_mount).await;
+    let _ = client.sys().disable_auth_method(auth_mount).await;
+    let _ = client.sys().delete_policy(policy_name).await;
+
+    let mounts = client.sys().list_mounts().await?;
+    let auth_methods = client.sys().list_auth_methods().await?;
+    let policies = client.sys().list_policies().await?;
+    if mounts.contains_key(&format!("{kv1_mount}/"))
+        || mounts.contains_key(&format!("{kv2_mount}/"))
+        || auth_methods.contains_key(&format!("{auth_mount}/"))
+        || policies.policies.iter().any(|policy| policy == policy_name)
+    {
+        return Err(io::Error::other("OpenBao integration resource cleanup failed").into());
+    }
+    Ok(())
+}
+
+const CORE_OPERATION_IDS: [&str; 8] = [
+    "health",
+    "mount-management",
+    "kv1",
+    "kv2",
+    "policy",
+    "token",
+    "capabilities",
+    "response-wrapping",
+];
+
+#[derive(Serialize)]
+struct CoreFlowAttestation<'a> {
+    schema: &'static str,
+    version: &'a str,
+    executed: [&'static str; 8],
+    skipped: [&'static str; 0],
+}
+
+fn write_core_flow_attestation(
+    result_file: &str,
+    expected_version: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let encoded = serde_json::to_vec(&CoreFlowAttestation {
+        schema: "openbao-core-flow-attestation/v1",
+        version: expected_version,
+        executed: CORE_OPERATION_IDS,
+        skipped: [],
+    })?;
+    fs::write(result_file, encoded)?;
     Ok(())
 }
 

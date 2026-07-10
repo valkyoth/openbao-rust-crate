@@ -28,6 +28,13 @@ All notable changes to this project are documented here.
 - Added isolated per-run Podman resources, dynamic loopback ports, in-memory
   server storage, ephemeral TLS, an anonymous memory-backed token descriptor,
   ownership-checked cleanup, and harness adversarial self-tests.
+- Added checksum-anchored machine-readable core-flow results for all 21 exact
+  OpenBao releases from `2.0.0` through `2.5.5`. Every release passed health,
+  mount, KV v1, KV v2, policy, token, capability, and response-wrapping checks
+  with zero skipped operations.
+- Added fail-closed completion attestations, bounded result validation, stable
+  failure/skip classifications, false-green self-tests, and offline core-flow
+  result verification to the full check suite.
 
 ### Changed
 
@@ -42,6 +49,11 @@ All notable changes to this project are documented here.
 - Withdrew the former `597/643` coverage percentage. The exact baseline treats
   all rows as unverified or confirmed gaps until operation-level helper,
   field, transport, security, and test evidence is linked.
+- Made the integration harness invoke the locked image's `bao` binary directly
+  so version-dependent 2.0.x/2.1.x entrypoint defaults cannot duplicate server
+  configuration.
+- Narrowed the crate package allowlist to reviewed Python and shell sources so
+  generated Python bytecode cannot enter the published archive.
 
 ### Security
 
@@ -59,6 +71,10 @@ All notable changes to this project are documented here.
 - OIDC GET callback redemption now requires the non-default
   `oidc-get-callback-acknowledged` feature and avoids the previous additional
   plaintext query-value copies before constructing the unavoidable URL.
+- Historical compatibility runs verify SDK resource cleanup before accepting a
+  passing attestation and keep old server releases in disposable rootless
+  containers with read-only filesystems, dropped capabilities, internal
+  networks, and loopback-only host exposure.
 
 ## 1.1.2 - 2026-07-04
 

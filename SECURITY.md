@@ -241,7 +241,18 @@ Release integration tests do not use that persistent development state. The
 version-locked harness creates per-run TLS under a private temporary directory,
 passes the root token through an anonymous memory-backed descriptor, uses
 in-memory OpenBao storage and ownership-labeled Podman resources, and sanitizes
-private material during cleanup.
+private material during cleanup. It invokes the locked image's `bao` binary
+directly so historical image entrypoint wrappers cannot inject additional
+configuration or commands. Test cleanup is verified before a successful
+completion attestation is accepted.
+
+Historical compatibility runs include OpenBao releases that may contain fixed
+upstream vulnerabilities. They run only as disposable, rootless, read-only
+containers with dropped capabilities, no-new-privileges, an internal per-run
+network, and a dynamically published loopback API port. Never expose these old
+servers to another host or reuse them for application, staging, or production
+traffic. Passing historical core tests is a compatibility observation, not a
+security endorsement of the server release.
 
 The root token and unseal key necessarily exist in process and HTTP/TLS memory
 during initialization; filesystem, allocator, Podman, TLS, kernel, and device
@@ -267,5 +278,7 @@ creation. The release notes must record:
 
 This crate tracks the official OpenBao API documentation. The API is currently
 documented as `/v1`, and OpenBao warns that compatibility is not yet guaranteed
-for every auth method and secrets engine. Any behavior derived from live testing
-rather than documentation must be marked as such in docs and tests.
+for every auth method and secrets engine. Live core-flow evidence for exact
+OpenBao `2.0.0` through `2.5.5` releases is labeled `tested-subset`; it does not
+extend to every typed helper. Any behavior derived from live testing rather
+than documentation must be marked as such in docs and tests.

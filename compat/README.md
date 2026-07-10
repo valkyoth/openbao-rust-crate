@@ -60,6 +60,8 @@ python3 scripts/validate_openbao_release_lock.py --self-test
 python3 scripts/openbao_api_snapshots.py --verify
 python3 scripts/openbao_api_snapshots.py --self-test
 python3 scripts/openbao_test_harness.py --self-test
+python3 scripts/openbao_core_matrix.py --verify
+python3 scripts/openbao_core_matrix.py --self-test
 ```
 
 The validator uses only the Python standard library and performs no network
@@ -169,7 +171,34 @@ Run one exact inventory release with:
 scripts/openbao_integration.sh 2.5.5
 ```
 
-Commit 04 establishes secure version selection and isolation. It does not by
-itself claim that the current integration flow passes every historical
-release; that classification and machine-readable evidence belong to Commit
-05.
+The harness invokes the image's `bao` binary directly instead of trusting its
+version-dependent entrypoint wrapper. This is required for the 2.0.x and 2.1.x
+images, whose wrapper otherwise injects a second config path and loads the
+listener twice.
+
+## Historical Core-Flow Results
+
+`core-flow-results.json` records a successful live run against every one of the
+21 exact releases in `releases.lock.json`, from `2.0.0` through `2.5.5`. Each
+run verifies the reported server version and executes the same core subset:
+
+- health and seal status;
+- secrets and auth mount management;
+- KV v1 and KV v2 read/write/list behavior;
+- ACL policy management;
+- token lookup, creation, capability checks, and revocation;
+- caller, token, and accessor capability checks;
+- response wrapping, lookup, and unwrap.
+
+The result is intentionally labeled `tested-subset`. It does not claim that
+every typed helper or every documented OpenBao endpoint was exercised on every
+historical server. The report records zero skipped operations and binds the
+exact release inventory, harness source, Rust test definition, image digest,
+and reported server version. Its canonical bytes are protected by
+`core-flow-results.sha256` and a hard-coded validator anchor.
+
+The Rust test writes a completion attestation only after the complete flow and
+post-test resource verification succeed. Missing, reordered, duplicated,
+zero-test, or all-skipped operation evidence fails validation. Reports permit
+only fixed classifications and reason codes and reject control characters so
+tokens or raw server errors cannot enter committed evidence.

@@ -1,0 +1,1289 @@
+{
+  "generator_version": 1,
+  "harness_sha256": "0524cca71a1806593e7cb84ea88bca978d554d8a70bd0a04e014f3c3441aaf9a",
+  "records": [
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:bdd0f74946f0fe2b5d69761886fb7a6bae6b5e90d1562937aa046cb3ece90e4d",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.0.0",
+      "test_count": 1,
+      "version": "2.0.0"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:47a0d9217f3b52252a6825eb80a9ddd465b65adf1270257349e55ed5f2e52148",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.0.1",
+      "test_count": 1,
+      "version": "2.0.1"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:1f5bd1ed455b954658155d5686de000aa76a7d3d401c009cac583a7ea3d462cb",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.0.2",
+      "test_count": 1,
+      "version": "2.0.2"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:3a074934b3b750247b8cf5be970c8071c64059fdf274b5b6af0aeb4e47a61c09",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.0.3",
+      "test_count": 1,
+      "version": "2.0.3"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:c214512044d9da35a42ad330baead674905df60a5569c85e1eb474f22a089efb",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.1.0",
+      "test_count": 1,
+      "version": "2.1.0"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:6bc66d973401a7ee4d9dfe0b51d1db4ee3dfb453ebb6a85e87f6436f7ce7514f",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.1.1",
+      "test_count": 1,
+      "version": "2.1.1"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:936afc14a970bac6b0a3357131ec7176eb31265edd3d48bd0ae62fee59a703d5",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.2.0",
+      "test_count": 1,
+      "version": "2.2.0"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:372647ba9f34d29d2464425dacaa005d6709b6e79af7eb18a2ff18bbb9d02e10",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.2.1",
+      "test_count": 1,
+      "version": "2.2.1"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:3ee05b27b88115f2a24f4d99bea4fab9f55a2cb2041315ddbf11fa7bf694a443",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.2.2",
+      "test_count": 1,
+      "version": "2.2.2"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:2f0c914d160a138b26bfbfff0bde495f9b6cb87bfe1991c911a6bf497bf70d42",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.3.1",
+      "test_count": 1,
+      "version": "2.3.1"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:c664f682703b751165e3ead271a6e15e642f862bddf7f77a96b5fc8d5190260b",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.3.2",
+      "test_count": 1,
+      "version": "2.3.2"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:ef48a10304e0d3fc45652b4712e137f7cc9e9e282ec8a43a10909e8d3466b3be",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.4.0",
+      "test_count": 1,
+      "version": "2.4.0"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:06a26f632cd0bdd0fd6e25034f55d68bc28b62590adc8efea3b8dacade11579a",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.4.1",
+      "test_count": 1,
+      "version": "2.4.1"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:ba4519574cc4b8763143dddd76faa95fddf044812e466645ae00622d8d8a9e8e",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.4.3",
+      "test_count": 1,
+      "version": "2.4.3"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:01bdba095690b1fe7cc1ec956ca422cfe01fd9a994ea28d9a6a2f84886dc9569",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.4.4",
+      "test_count": 1,
+      "version": "2.4.4"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:74a9997f0fc630f429fd71bdf2e7fffba39fe3024ca1ded9f094b15f7ea3f79e",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.5.0",
+      "test_count": 1,
+      "version": "2.5.0"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:8843249c9bc051b0c547e53888565ee5a23a40a49079a8cd63578ef1517ba56b",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.5.1",
+      "test_count": 1,
+      "version": "2.5.1"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:a6452398f866efd173b3173cdffe7d0fc231649ca8a7283789094fd2496e725d",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.5.2",
+      "test_count": 1,
+      "version": "2.5.2"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:adc30a9eb5c80093730ded08d5487b5ce03b55ab84ede907bb64cb408f841096",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.5.3",
+      "test_count": 1,
+      "version": "2.5.3"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:d0424c95859f7b4c1e308abf57c4cd72b9cba835bb946eb397172b799fba9477",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.5.4",
+      "test_count": 1,
+      "version": "2.5.4"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.5.5",
+      "test_count": 1,
+      "version": "2.5.5"
+    }
+  ],
+  "release_inventory_sha256": "028dfa5cf562816b3a51d894aaf723ba06354dd422b606e60546ac2eb236f136",
+  "schema": "openbao-core-flow-results/v1",
+  "scope": {
+    "claim": "only the listed core SDK operations were executed",
+    "compatibility_status": "tested-subset",
+    "operation_ids": [
+      "health",
+      "mount-management",
+      "kv1",
+      "kv2",
+      "policy",
+      "token",
+      "capabilities",
+      "response-wrapping"
+    ]
+  },
+  "summary": {
+    "failed": 0,
+    "passed": 21,
+    "release_count": 21,
+    "skipped_operations": 0
+  },
+  "test_definition_sha256": "9a0b296aed18d9ef5cf7c29786709c8c7152da70990f7e5248193bc4424d11ec"
+}

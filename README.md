@@ -150,7 +150,8 @@ Implemented now:
 - Typed custom plugin wrapper pattern documentation and safe building blocks
   for application-specific OpenBao plugin APIs.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
-- Real OpenBao integration test gate using the pinned OpenBao image.
+- Version-locked real OpenBao integration harness plus a committed core-flow
+  baseline covering all 21 exact releases from `2.0.0` through `2.5.5`.
 
 `1.1.2` remains the latest published stable release while `main` develops
 `2.0.0`. Feature history and release details live in [CHANGELOG.md](CHANGELOG.md)
@@ -215,14 +216,16 @@ the newest OpenBao patch release available for that SDK line:
 | --- | --- |
 | `0.1.0` through `1.0.2` | OpenBao `2.5.4` |
 | `1.1.0` through `1.1.2` | OpenBao `2.5.5` |
-| `2.0.0` development branch | Immutable tagged-documentation and normalized OpenAPI evidence for `2.0.0` through `2.5.5`; live certification is in progress |
+| `2.0.0` development branch | Live core-flow subset passed on all 21 exact releases from OpenBao `2.0.0` through `2.5.5`; immutable tagged-documentation and normalized OpenAPI evidence is also retained for each release. |
 
 The immutable source and OCI artifact inventory for those historical releases
 is committed under [`compat/`](compat/README.md), together with deterministic
 tagged-documentation snapshots, normalized server-generated OpenAPI snapshots,
-and adjacent-release contract diffs. Artifact and API-evidence locking are not
-yet claims of live behavioral compatibility; version-locked integration and
-capability-profile checkpoints remain.
+adjacent-release contract diffs, and machine-readable live core-flow results.
+The live result is explicitly a tested subset of health, mount, KV, policy,
+token, capability, and response-wrapping behavior. It is not yet a claim that
+every typed helper works on every historical release; operation-level
+capability profiles remain later checkpoints.
 
 ## Install
 

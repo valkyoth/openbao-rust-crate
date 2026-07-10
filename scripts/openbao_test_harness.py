@@ -38,6 +38,16 @@ MAX_JSON_DEPTH = 16
 MAX_JSON_NODES = 16_384
 MAX_JSON_STRING_BYTES = 64 * 1024
 OWNER_LABEL = "io.openbao.rust-crate.integration-run"
+CORE_OPERATION_IDS = (
+    "health",
+    "mount-management",
+    "kv1",
+    "kv2",
+    "policy",
+    "token",
+    "capabilities",
+    "response-wrapping",
+)
 
 
 class HarnessError(RuntimeError):
@@ -50,6 +60,10 @@ class HarnessInterrupted(HarnessError):
 
 class VersionMismatch(HarnessError):
     """The running server is not the exact selected release."""
+
+
+class IntegrationTestFailure(HarnessError):
+    """The Rust core integration flow failed."""
 
 
 def reject_non_finite(value: str) -> None:
@@ -468,6 +482,8 @@ def container_command(
         f"{config}:/openbao/config/openbao.hcl:ro,Z",
         "--volume",
         f"{tls}:/openbao/tls:ro,Z",
+        "--entrypoint",
+        "bao",
         image,
         "server",
         "-config=/openbao/config/openbao.hcl",
@@ -642,7 +658,44 @@ def sanitize_secret_fd(descriptor: int) -> bool:
     return sanitized
 
 
-def cargo_environment(root: Path, address: str, ca_cert: Path, token_path: str, version: str) -> dict[str, str]:
+def read_descriptor(descriptor: int, maximum: int) -> bytes:
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    chunks: list[bytes] = []
+    remaining = maximum + 1
+    while remaining:
+        chunk = os.read(descriptor, min(64 * 1024, remaining))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    data = b"".join(chunks)
+    if len(data) > maximum:
+        raise HarnessError("integration attestation exceeds the byte limit")
+    return data
+
+
+def validate_attestation(value: dict[str, Any], version: str) -> None:
+    if set(value) != {"schema", "version", "executed", "skipped"}:
+        raise HarnessError("integration attestation fields are invalid")
+    if (
+        value.get("schema") != "openbao-core-flow-attestation/v1"
+        or value.get("version") != version
+        or value.get("executed") != list(CORE_OPERATION_IDS)
+        or value.get("skipped") != []
+    ):
+        raise HarnessError("integration attestation is incomplete or contradictory")
+    if not value["executed"]:
+        raise HarnessError("integration attestation contains zero executed operations")
+
+
+def cargo_environment(
+    root: Path,
+    address: str,
+    ca_cert: Path,
+    token_path: str,
+    result_path: str,
+    version: str,
+) -> dict[str, str]:
     environment = os.environ.copy()
     for name in (
         "ALL_PROXY",
@@ -663,6 +716,7 @@ def cargo_environment(root: Path, address: str, ca_cert: Path, token_path: str, 
         {
             "OPENBAO_INTEGRATION": "1",
             "OPENBAO_EXPECTED_VERSION": version,
+            "OPENBAO_RESULT_FILE": result_path,
             "BAO_ADDR": address,
             "BAO_CACERT": str(ca_cert),
             "BAO_TOKEN_FILE": token_path,
@@ -769,7 +823,7 @@ def remove_owned_resource(
         raise HarnessError("isolated resource survived cleanup")
 
 
-def run_integration(version: str) -> None:
+def run_integration(version: str) -> dict[str, Any]:
     try:
         release = select_release(validate_lock_files(), version)
     except LockValidationError as error:
@@ -790,6 +844,7 @@ def run_integration(version: str) -> None:
     cleanup_failed = False
     primary_error: BaseException | None = None
     token_descriptor: int | None = None
+    result_descriptor: int | None = None
     try:
         tls, ca_cert = generate_tls(root, openssl, command_environment(root))
         config = write_server_config(root)
@@ -838,6 +893,8 @@ def run_integration(version: str) -> None:
         token = initialize_and_unseal(address, ca_cert)
         token_descriptor = create_secret_fd(token)
         token_path = f"/proc/self/fd/{token_descriptor}"
+        result_descriptor = create_secret_fd("")
+        result_path = f"/proc/self/fd/{result_descriptor}"
         token = ""
         print(f"OpenBao integration: locked {version} preflight passed")
         result = subprocess.run(
@@ -852,14 +909,42 @@ def run_integration(version: str) -> None:
             ],
             cwd=ROOT,
             stdin=subprocess.DEVNULL,
-            env=cargo_environment(root, address, ca_cert, token_path, version),
-            pass_fds=(token_descriptor,),
+            env=cargo_environment(
+                root,
+                address,
+                ca_cert,
+                token_path,
+                result_path,
+                version,
+            ),
+            pass_fds=(token_descriptor, result_descriptor),
             timeout=1800,
             check=False,
             close_fds=True,
         )
         if result.returncode != 0:
-            raise HarnessError("OpenBao integration test failed")
+            raise IntegrationTestFailure("OpenBao core integration test failed")
+        attestation = parse_json(read_descriptor(result_descriptor, 64 * 1024))
+        validate_attestation(attestation, version)
+        return {
+            "version": version,
+            "image_linux_amd64_digest": release["image"]["linux_amd64_digest"],
+            "reported_version": version,
+            "compatibility_status": "tested-subset",
+            "outcome": "passed",
+            "test_count": 1,
+            "operations": [
+                {
+                    "id": operation,
+                    "status": "passed",
+                    "reason_code": None,
+                    "classification": None,
+                }
+                for operation in CORE_OPERATION_IDS
+            ],
+            "failure_class": None,
+            "failure_reason_code": None,
+        }
     except subprocess.TimeoutExpired as error:
         primary_error = error
         raise HarnessError("OpenBao integration test timed out") from error
@@ -881,6 +966,9 @@ def run_integration(version: str) -> None:
                 cleanup_failed = True
         if token_descriptor is not None:
             if not sanitize_secret_fd(token_descriptor):
+                cleanup_failed = True
+        if result_descriptor is not None:
+            if not sanitize_secret_fd(result_descriptor):
                 cleanup_failed = True
         if not cleanup_private_files(root):
             cleanup_failed = True
@@ -930,6 +1018,9 @@ def self_test() -> None:
         or "no-new-privileges" not in command
         or "--publish" not in command
         or "127.0.0.1::8200" not in command
+        or command.count("--entrypoint") != 1
+        or command[command.index("--entrypoint") + 1] != "bao"
+        or command[-2:] != ["server", "-config=/openbao/config/openbao.hcl"]
     ):
         raise HarnessError("self-test container command is not locked and sandboxed")
     for value in ("", "2.5", "v2.5.5", "2.5.5;id", "docker.io/openbao/openbao:2.5.5", "9.9.9"):
@@ -948,6 +1039,23 @@ def self_test() -> None:
         "deep response JSON",
         lambda: parse_json((b'{"a":' * 18) + b"null" + (b"}" * 18)),
     )
+    valid_attestation = {
+        "schema": "openbao-core-flow-attestation/v1",
+        "version": "2.5.5",
+        "executed": list(CORE_OPERATION_IDS),
+        "skipped": [],
+    }
+    validate_attestation(valid_attestation, "2.5.5")
+    for mutation in (
+        {**valid_attestation, "executed": []},
+        {**valid_attestation, "executed": list(CORE_OPERATION_IDS[:-1])},
+        {**valid_attestation, "skipped": ["health"]},
+        {**valid_attestation, "version": "2.5.4"},
+    ):
+        expect_rejected(
+            "a false-green integration attestation",
+            lambda mutation=mutation: validate_attestation(mutation, "2.5.5"),
+        )
     with tempfile.TemporaryDirectory(prefix="openbao-harness-self-test-") as directory:
         root = Path(directory)
         secret = root / "secret"

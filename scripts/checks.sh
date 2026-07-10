@@ -28,6 +28,10 @@ python3 scripts/generate_openbao_contract_matrix.py --self-test
 echo "checks: version-locked OpenBao integration harness"
 python3 scripts/openbao_test_harness.py --self-test
 
+echo "checks: historical OpenBao core-flow evidence"
+python3 scripts/openbao_core_matrix.py --verify
+python3 scripts/openbao_core_matrix.py --self-test
+
 echo "checks: clippy default"
 cargo clippy --all-targets -- -D warnings
 
