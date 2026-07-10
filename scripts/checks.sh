@@ -10,6 +10,9 @@ cargo fmt --all --check
 echo "checks: release metadata"
 scripts/validate-release-metadata.sh
 
+echo "checks: Rust 1.90.0 MSRV"
+cargo +1.90.0 check --locked --all-targets --all-features
+
 echo "checks: OpenBao release lock"
 python3 scripts/validate_openbao_release_lock.py
 python3 scripts/validate_openbao_release_lock.py --self-test

@@ -40,7 +40,7 @@ use openbao::Client;
 The latest published stable release is `1.1.2`. The `main` branch now identifies
 itself as the unreleased `2.0.0` development line because its raw-transport,
 JWT/OIDC metadata, base-URL, and multi-version compatibility work includes
-intentional breaking changes. Rust `1.96.1` is the primary checked toolchain;
+intentional breaking changes. Rust `1.97.0` is the primary checked toolchain;
 Rust `1.90.0` remains the compatibility floor.
 
 The crate is dual-licensed under MIT or Apache-2.0.
@@ -164,7 +164,7 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | --- | --- |
 | License | `MIT OR Apache-2.0` |
 | Rust edition | 2024 |
-| Primary Rust toolchain | Rust `1.96.1` |
+| Primary Rust toolchain | Rust `1.97.0` |
 | MSRV | Rust `1.90.0` |
 | Async runtime | Runtime-agnostic client; examples use Tokio |
 | HTTP transport | `reqwest` with redirects disabled |
@@ -187,21 +187,23 @@ release sequencing live in [release-notes](release-notes) and
 
 ## Rust Version Support
 
-The primary checked Rust toolchain is Rust `1.96.1`. The minimum supported
-Rust version remains Rust `1.90.0`, and the current development line checks
-compatibility back to that floor.
+The primary checked Rust toolchain is Rust `1.97.0`. The minimum supported
+Rust version remains Rust `1.90.0`. CI runs the full release gate on the
+primary toolchain and a locked all-target, all-feature compilation check on
+the MSRV.
 
 The SDK tracks compatibility evidence across this supported range:
 
 | Rust | Required Evidence |
 | --- | --- |
-| `1.96.1` | Primary release gate: fmt, clippy, tests, docs, deny, audit, SBOM, optional Kani proof harnesses, and real OpenBao integration. |
+| `1.97.0` | Primary release gate: fmt, clippy, tests, docs, deny, audit, SBOM, optional Kani proof harnesses, and real OpenBao integration. |
+| `1.96.1` | `cargo check --all-features`. |
 | `1.95.0` | `cargo check --all-features`. |
 | `1.94.0` | `cargo check --all-features`. |
 | `1.93.0` | `cargo check --all-features`. |
 | `1.92.0` | `cargo check --all-features`. |
 | `1.91.0` | `cargo check --all-features`. |
-| `1.90.0` | MSRV compatibility check with all features. |
+| `1.90.0` | Locked MSRV compatibility check with all targets and all features on every CI run. |
 
 ## OpenBao Test Version Support
 

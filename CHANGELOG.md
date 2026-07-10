@@ -21,6 +21,9 @@ All notable changes to this project are documented here.
 
 - Marked `main` as the unreleased `2.0.0` development line because current
   security-boundary changes are intentionally not source-compatible with 1.x.
+- Made Rust `1.97.0` the primary development and CI toolchain while retaining
+  Rust `1.90.0` as the MSRV, now enforced by a locked all-target, all-feature
+  CI compilation check.
 - Updated pinned `taiki-e/install-action` CI action to `v2.83.0`.
 
 ### Security

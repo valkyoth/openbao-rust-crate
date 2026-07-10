@@ -79,7 +79,9 @@ check_grep 'name = "openbao"' Cargo.toml
 check_grep 'version = "2.0.0"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
-check_grep 'channel = "1.96.1"' rust-toolchain.toml
+check_grep 'channel = "1.97.0"' rust-toolchain.toml
+check_grep 'rustup toolchain install 1.90.0' scripts/ci_install_rust.sh
+check_grep 'cargo +1.90.0 check --locked --all-targets --all-features' scripts/checks.sh
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
 check_grep 'unsafe_code = "forbid"' Cargo.toml
 check_grep '0.1.0 - Secure Core And KV v2' docs/RELEASE_PLAN.md
