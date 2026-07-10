@@ -391,10 +391,11 @@ def validate_signature_document(document: dict[str, Any]) -> None:
 
 def read_regular_file(path: Path, maximum: int) -> bytes:
     no_follow = getattr(os, "O_NOFOLLOW", None)
-    if no_follow is None:
-        raise LockValidationError("secure no-follow file reads are unavailable")
+    non_block = getattr(os, "O_NONBLOCK", None)
+    if no_follow is None or non_block is None:
+        raise LockValidationError("secure non-blocking no-follow file reads are unavailable")
 
-    flags = os.O_RDONLY | no_follow | getattr(os, "O_CLOEXEC", 0)
+    flags = os.O_RDONLY | no_follow | non_block | getattr(os, "O_CLOEXEC", 0)
     try:
         descriptor = os.open(path, flags)
     except OSError as error:
@@ -497,6 +498,13 @@ def run_self_tests() -> None:
         expect_rejected(
             "symbolic-link input",
             lambda: read_regular_file(symlink_file, MAX_LOCK_BYTES),
+        )
+
+        fifo_file = temporary_root / "input.fifo"
+        os.mkfifo(fifo_file)
+        expect_rejected(
+            "FIFO input",
+            lambda: read_regular_file(fifo_file, MAX_LOCK_BYTES),
         )
 
     reordered = copy.deepcopy(document)
