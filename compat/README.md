@@ -1,9 +1,10 @@
 # OpenBao Compatibility Evidence
 
 This directory contains immutable inputs for the OpenBao multi-version
-compatibility model. Artifact verification does not by itself certify API or
-security compatibility. API snapshots, live behavior evidence, capability
-profiles, and security support decisions land in later checkpoints.
+compatibility model. Artifact and API-evidence verification do not by
+themselves certify live behavior or server security. Version-locked behavior
+tests, capability profiles, and security support decisions land in later
+checkpoints.
 
 ## Release Lock
 
@@ -14,8 +15,9 @@ initial compatibility range. Each record contains:
 - the published, non-draft, non-prerelease GitHub Release timestamp;
 - the exact multi-platform OCI index and `linux/amd64` manifest digests;
 - the exact official release-workflow identity used for Cosign verification;
-- the source commit and path reserved for documentation evidence;
-- explicit pending status for API snapshots and compatibility review.
+- the source commit and path used for documentation evidence;
+- the separate snapshot-lock path and explicit pending state retained as the
+  immutable Commit 02 checkpoint record.
 
 All selected stable tags are lightweight Git tags. Their tag ref object is
 therefore the commit object itself, and the tag object and peeled commit IDs
@@ -55,6 +57,8 @@ Run:
 ```sh
 python3 scripts/validate_openbao_release_lock.py
 python3 scripts/validate_openbao_release_lock.py --self-test
+python3 scripts/openbao_api_snapshots.py --verify
+python3 scripts/openbao_api_snapshots.py --self-test
 ```
 
 The validator uses only the Python standard library and performs no network
@@ -66,6 +70,57 @@ reordered records, changed historical identifiers, and verification-status
 downgrades. The release and signature locks each have a sidecar SHA-256 plus a
 hard-coded validator anchor, so changing historical evidence requires an
 explicit multi-file review.
+
+## API Snapshot Lock
+
+`api-snapshots.lock.json` binds two deterministic artifacts for each locked
+release:
+
+- `api-snapshots/<version>/documentation.json` is derived only from MDX blobs
+  under `website/content/api-docs` at the exact locked source commit. It keeps
+  every source blob identity and hash, plus normalized method, path, heading,
+  and documented-field evidence.
+- `api-snapshots/<version>/openapi.json` is captured from the exact locked OCI
+  index after independently verifying its `linux/amd64` child manifest. The
+  server runs without a network, host port, writable root filesystem, Linux
+  capabilities, or root privileges. One instance of every documented built-in
+  auth method and secrets engine is mounted before requesting generic mount
+  paths.
+
+Descriptions, examples, summaries, external links, and tags are excluded from
+the normalized OpenAPI contract. Paths, methods, operation identifiers,
+parameters, request bodies, responses, defaults, extensions, and component
+schemas remain. Canonical key ordering makes repeated captures byte-identical;
+the committed `2.5.5` capture was reproduced independently before the lock was
+finalized.
+
+`api-diffs/` records path, method, documented field, OpenAPI operation, and
+component-schema changes between adjacent published releases. A zero-change
+diff is still retained and hashed. Existing artifacts are immutable: the
+generator accepts an existing file only when its bytes are identical.
+
+Rendered `2.3.x`, `2.4.x`, and current `2.5.x` pages are separately recorded
+under `rendered-api-cross-checks/`. They are explicitly secondary observations
+because a minor-line or current website can change and cannot prove an exact
+patch release. They never replace or modify tagged-source evidence. No
+equivalent rendered routes are published for `2.0.x` through `2.2.x`.
+
+The snapshot validator uses a hard-coded lock digest, bounded pre-parse JSON
+scanning, duplicate-key rejection, exact artifact paths, bounded descriptor
+reads, and no-follow/non-blocking file opens. It verifies every source commit,
+OCI digest, artifact size/hash, internal version, count, predecessor diff, and
+rendered-observation identity against the release inventory.
+
+To reproduce all online evidence from an exact OpenBao source clone:
+
+```sh
+python3 scripts/openbao_api_snapshots.py \
+  --generate \
+  --source-repository /path/to/openbao
+```
+
+Generation requires `git`, `skopeo`, and rootless `podman`. Existing committed
+artifacts are never overwritten with different bytes.
 
 ## Reproducing Online Evidence
 
@@ -88,6 +143,5 @@ cosign verify \
   'docker.io/openbao/openbao@sha256:<locked-digest>'
 ```
 
-The release lock is append-only after this checkpoint. Commit 03 adds a
-separate API-snapshot lock rather than rewriting these source and image
-identities.
+The release and API snapshot locks are append-only after their respective
+checkpoints. Commit 03 did not rewrite the Commit 02 source or image identities.

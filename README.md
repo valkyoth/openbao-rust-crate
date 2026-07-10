@@ -212,11 +212,14 @@ the newest OpenBao patch release available for that SDK line:
 | --- | --- |
 | `0.1.0` through `1.0.2` | OpenBao `2.5.4` |
 | `1.1.0` through `1.1.2` | OpenBao `2.5.5` |
-| `2.0.0` development branch | OpenBao `2.5.5` baseline; historical `2.0.0` through `2.5.5` certification is in progress |
+| `2.0.0` development branch | Immutable tagged-documentation and normalized OpenAPI evidence for `2.0.0` through `2.5.5`; live certification is in progress |
 
 The immutable source and OCI artifact inventory for those historical releases
-is committed under [`compat/`](compat/README.md). Artifact locking is not yet a
-claim of API compatibility; snapshot and live behavior checkpoints remain.
+is committed under [`compat/`](compat/README.md), together with deterministic
+tagged-documentation snapshots, normalized server-generated OpenAPI snapshots,
+and adjacent-release contract diffs. Artifact and API-evidence locking are not
+yet claims of live behavioral compatibility; version-locked integration and
+capability-profile checkpoints remain.
 
 ## Install
 

@@ -30,6 +30,8 @@ check_file compat/releases.lock.json
 check_file compat/releases.lock.sha256
 check_file compat/image-signatures.lock.json
 check_file compat/image-signatures.lock.sha256
+check_file compat/api-snapshots.lock.json
+check_file compat/api-snapshots.lock.sha256
 check_file rust-toolchain.toml
 check_file docs/RELEASE_PLAN.md
 check_file docs/OPENBAO_API_COVERAGE.md
@@ -70,6 +72,7 @@ check_file scripts/release_0_15_gate.sh
 check_file scripts/release_1_0_gate.sh
 check_file scripts/check_kani.sh
 check_file scripts/validate_openbao_release_lock.py
+check_file scripts/openbao_api_snapshots.py
 check_file .github/workflows/ci.yml
 
 check_grep 'name = "openbao"' Cargo.toml

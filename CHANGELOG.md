@@ -12,6 +12,10 @@ All notable changes to this project are documented here.
   OCI release artifacts, including exact Cosign verification identities and
   signature-bundle fingerprints.
 - Added a bounded offline release-lock validator with tamper self-tests.
+- Added immutable tagged-documentation and normalized OpenAPI snapshots for all
+  21 locked OpenBao releases, secondary rendered-site observations, and
+  adjacent-release path/method/field/schema diffs behind a separate anchored
+  snapshot lock and bounded offline validator.
 
 ### Changed
 

@@ -56,6 +56,10 @@ Please include:
   checksum-anchored, duplicate-key-safe offline validator documented in
   `compat/README.md`. Artifact identity alone is not an API compatibility or
   server security endorsement.
+- Historical API evidence is accepted only through the separately anchored
+  snapshot validator. Tagged documentation remains primary, rendered pages are
+  secondary observations, and normalized OpenAPI remains supporting evidence;
+  none of these replace version-locked live behavior tests.
 - Public raw JSON, byte, retry, and response-wrapping transports are disabled
   unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
   bypass typed request validation and operation-specific feature gates; keep

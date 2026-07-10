@@ -14,6 +14,10 @@ echo "checks: OpenBao release lock"
 python3 scripts/validate_openbao_release_lock.py
 python3 scripts/validate_openbao_release_lock.py --self-test
 
+echo "checks: OpenBao API snapshots"
+python3 scripts/openbao_api_snapshots.py --verify
+python3 scripts/openbao_api_snapshots.py --self-test
+
 echo "checks: clippy default"
 cargo clippy --all-targets -- -D warnings
 
