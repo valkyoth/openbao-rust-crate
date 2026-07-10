@@ -3,6 +3,12 @@
 //! These types model stable OpenBao releases. They deliberately reject
 //! prerelease and build metadata so a compatibility profile always selects an
 //! exact reviewed server release.
+//!
+//! This module currently provides value types only. Constructing a requirement
+//! does not query `/sys/health`, cache a connected server version, or gate an
+//! HTTP request. Runtime enforcement lands with the planned client
+//! compatibility-policy and version-aware-dispatch checkpoints; until then,
+//! callers must not treat these values as proof that a connection was checked.
 
 use core::{fmt, str::FromStr};
 

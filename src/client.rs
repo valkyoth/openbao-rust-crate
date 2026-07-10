@@ -660,11 +660,11 @@ fn validate_base_url_components(url: &Url) -> Result<()> {
 }
 
 pub(crate) const fn ensure_public_raw_api_enabled() -> Result<()> {
-    #[cfg(feature = "raw-api")]
+    #[cfg(all(feature = "raw-api", feature = "raw-api-acknowledged"))]
     {
         Ok(())
     }
-    #[cfg(not(feature = "raw-api"))]
+    #[cfg(not(all(feature = "raw-api", feature = "raw-api-acknowledged")))]
     {
         Err(Error::RawApiDisabled)
     }
@@ -1774,7 +1774,7 @@ mod tests {
         ));
     }
 
-    #[cfg(feature = "raw-api")]
+    #[cfg(all(feature = "raw-api", feature = "raw-api-acknowledged"))]
     #[test]
     fn public_raw_api_is_enabled_only_by_acknowledged_feature_pair() {
         assert!(super::ensure_public_raw_api_enabled().is_ok());

@@ -25,9 +25,9 @@ All notable changes to this project are documented here.
 
 ### Security
 
-- Public raw transports now require explicit feature acknowledgement, JWT/OIDC
-  metadata values use secret-aware types, and unsafe base-URL components are
-  rejected.
+- Public raw transports now require both raw-API features at compile time and
+  in the runtime guard, JWT/OIDC metadata values use secret-aware types, and
+  unsafe base-URL components are rejected.
 - CRL-bearing TLS configurations fail closed unless Rustls is the selected
   backend.
 - Release-lock inputs are opened without following symbolic links and are read
