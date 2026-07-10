@@ -35,6 +35,12 @@ All notable changes to this project are documented here.
 - Added fail-closed completion attestations, bounded result validation, stable
   failure/skip classifications, false-green self-tests, and offline core-flow
   result verification to the full check suite.
+- Added an inventory-derived OpenBao compatibility CI matrix. Pull requests run
+  the oldest release plus the latest patch in every minor line; nightly,
+  manual release-gate, and tag workflows run all 21 locked releases.
+- Added sanitized per-release CI artifacts and a bounded aggregate report that
+  distinguishes compatibility failures from infrastructure failures and
+  rejects missing, extra, malformed, or contradictory matrix evidence.
 
 ### Changed
 
@@ -54,6 +60,8 @@ All notable changes to this project are documented here.
   configuration.
 - Narrowed the crate package allowlist to reviewed Python and shell sources so
   generated Python bytecode cannot enter the published archive.
+- Extended latest-action checks to every action used by the compatibility
+  workflow, including pinned upload and download artifact actions.
 
 ### Security
 
@@ -75,6 +83,9 @@ All notable changes to this project are documented here.
   passing attestation and keep old server releases in disposable rootless
   containers with read-only filesystems, dropped capabilities, internal
   networks, and loopback-only host exposure.
+- Compatibility jobs use read-only repository permissions, disabled checkout
+  credentials, no shared build cache, no repository secrets, and fixed
+  sanitized artifact paths with fail-closed aggregation.
 
 ## 1.1.2 - 2026-07-04
 

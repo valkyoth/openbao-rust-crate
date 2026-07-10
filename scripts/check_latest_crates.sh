@@ -122,7 +122,7 @@ check_github_action_pin() {
   action=$1
   repo=$2
   major=$3
-  workflow=.github/workflows/ci.yml
+  workflow=$4
 
   latest_tag=$(
     git ls-remote --tags --sort=version:refname "$repo" "refs/tags/v${major}.*" \
@@ -149,43 +149,48 @@ check_github_action_pin() {
     )
   fi
 
-  actual_sha=$(
-    awk -v action="$action" '
-      $0 ~ "uses: " action "@" {
-        sub(".*@", "", $0);
-        sub(/[[:space:]].*/, "", $0);
-        print;
-        exit;
-      }
-    ' "$workflow"
-  )
-  comment_tag=$(
-    awk -v action="$action" '
-      $0 ~ "# " action " v" {
-        for (field = 1; field <= NF; field += 1) {
-          if ($field ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/) {
-            print $field;
-            exit;
-          }
-        }
-      }
-    ' "$workflow"
-  )
+  echo "${action} latest ${latest_tag} (${latest_sha}) in ${workflow}"
 
-  echo "${action} latest ${latest_tag} (${latest_sha})"
-
-  if [ "$comment_tag" != "$latest_tag" ]; then
-    echo "${workflow}: ${action} comment is ${comment_tag:-missing}, expected ${latest_tag}" >&2
+  if ! awk -v action="$action" -v expected="$latest_sha" '
+    $0 ~ "uses: " action "@" {
+      found += 1
+      value = $0
+      sub(".*@", "", value)
+      sub(/[[:space:]].*/, "", value)
+      if (value != expected) {
+        invalid = 1
+      }
+    }
+    END { exit(found == 0 || invalid != 0) }
+  ' "$workflow"; then
+    echo "${workflow}: one or more ${action} uses are missing or not pinned to ${latest_sha}" >&2
     exit 1
   fi
 
-  if [ "$actual_sha" != "$latest_sha" ]; then
-    echo "${workflow}: ${action} pin is ${actual_sha:-missing}, expected ${latest_sha} for ${latest_tag}" >&2
+  if ! awk -v action="$action" -v expected="$latest_tag" '
+    $0 ~ "# " action " v" {
+      found += 1
+      value = ""
+      for (field = 1; field <= NF; field += 1) {
+        if ($field ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/) {
+          value = $field
+        }
+      }
+      if (value != expected) {
+        invalid = 1
+      }
+    }
+    END { exit(found == 0 || invalid != 0) }
+  ' "$workflow"; then
+    echo "${workflow}: one or more ${action} comments do not name ${latest_tag}" >&2
     exit 1
   fi
 }
 
 echo "checking pinned GitHub Actions"
-check_github_action_pin actions/checkout https://github.com/actions/checkout.git 7
-check_github_action_pin Swatinem/rust-cache https://github.com/Swatinem/rust-cache.git 2
-check_github_action_pin taiki-e/install-action https://github.com/taiki-e/install-action.git 2
+check_github_action_pin actions/checkout https://github.com/actions/checkout.git 7 .github/workflows/ci.yml
+check_github_action_pin Swatinem/rust-cache https://github.com/Swatinem/rust-cache.git 2 .github/workflows/ci.yml
+check_github_action_pin taiki-e/install-action https://github.com/taiki-e/install-action.git 2 .github/workflows/ci.yml
+check_github_action_pin actions/checkout https://github.com/actions/checkout.git 7 .github/workflows/openbao-compatibility.yml
+check_github_action_pin actions/upload-artifact https://github.com/actions/upload-artifact.git 7 .github/workflows/openbao-compatibility.yml
+check_github_action_pin actions/download-artifact https://github.com/actions/download-artifact.git 8 .github/workflows/openbao-compatibility.yml

@@ -32,6 +32,9 @@ echo "checks: historical OpenBao core-flow evidence"
 python3 scripts/openbao_core_matrix.py --verify
 python3 scripts/openbao_core_matrix.py --self-test
 
+echo "checks: OpenBao compatibility CI controller"
+python3 -B scripts/openbao_ci_matrix.py self-test
+
 echo "checks: clippy default"
 cargo clippy --all-targets -- -D warnings
 

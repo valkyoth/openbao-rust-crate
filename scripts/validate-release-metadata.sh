@@ -82,7 +82,9 @@ check_file scripts/openbao_api_snapshots.py
 check_file scripts/generate_openbao_contract_matrix.py
 check_file scripts/openbao_test_harness.py
 check_file scripts/openbao_core_matrix.py
+check_file scripts/openbao_ci_matrix.py
 check_file .github/workflows/ci.yml
+check_file .github/workflows/openbao-compatibility.yml
 
 check_grep 'name = "openbao"' Cargo.toml
 check_grep 'version = "2.0.0"' Cargo.toml
@@ -98,6 +100,12 @@ check_grep 'generate_openbao_contract_matrix.py --self-test' scripts/checks.sh
 check_grep 'openbao_test_harness.py --self-test' scripts/checks.sh
 check_grep 'openbao_core_matrix.py --verify' scripts/checks.sh
 check_grep 'openbao_core_matrix.py --self-test' scripts/checks.sh
+check_grep 'openbao_ci_matrix.py self-test' scripts/checks.sh
+check_grep 'pull_request:' .github/workflows/openbao-compatibility.yml
+check_grep 'schedule:' .github/workflows/openbao-compatibility.yml
+check_grep 'workflow_dispatch:' .github/workflows/openbao-compatibility.yml
+check_grep 'persist-credentials: false' .github/workflows/openbao-compatibility.yml
+check_grep 'openbao_ci_matrix.py aggregate' .github/workflows/openbao-compatibility.yml
 check_grep 'Unique documented rows: `644`' docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
 check_grep 'oidc-get-callback-acknowledged = \["jwt-auth"\]' Cargo.toml
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml

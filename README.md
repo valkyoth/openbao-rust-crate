@@ -227,6 +227,12 @@ token, capability, and response-wrapping behavior. It is not yet a claim that
 every typed helper works on every historical release; operation-level
 capability profiles remain later checkpoints.
 
+Pull requests run that core subset against `2.0.0` and the latest patch in each
+minor line. Nightly, manual release-gate, and version-tag workflows run every
+exact locked release. The matrix publishes sanitized per-release results and a
+single aggregate report; missing or contradictory evidence is an
+infrastructure failure, not a passing compatibility result.
+
 ## Install
 
 ```toml
@@ -1770,6 +1776,7 @@ offline input and cleanup-policy tests without starting a container:
 
 ```bash
 python3 scripts/openbao_test_harness.py --self-test
+python3 -B scripts/openbao_ci_matrix.py self-test
 ```
 
 ## Kani Proof Harnesses

@@ -62,6 +62,7 @@ python3 scripts/openbao_api_snapshots.py --self-test
 python3 scripts/openbao_test_harness.py --self-test
 python3 scripts/openbao_core_matrix.py --verify
 python3 scripts/openbao_core_matrix.py --self-test
+python3 -B scripts/openbao_ci_matrix.py self-test
 ```
 
 The validator uses only the Python standard library and performs no network
@@ -202,3 +203,28 @@ post-test resource verification succeed. Missing, reordered, duplicated,
 zero-test, or all-skipped operation evidence fails validation. Reports permit
 only fixed classifications and reason codes and reject control characters so
 tokens or raw server errors cannot enter committed evidence.
+
+## Compatibility CI Matrix
+
+`.github/workflows/openbao-compatibility.yml` obtains every matrix value from
+the validated release inventory through `scripts/openbao_ci_matrix.py`. Pull
+requests run `2.0.0` plus the latest patch in each OpenBao minor line. Scheduled
+nightly runs, manual pre-release gates, and version-tag runs cover all 21 exact
+releases.
+
+Compatibility jobs do not use a shared Cargo cache or repository secrets. They
+checkout without persisted credentials, run on a fixed hosted-runner image,
+and upload only `ci-artifacts/openbao-result.json`. That bounded report contains
+fixed identifiers, classifications, and operation statuses; it cannot contain
+raw errors, server bodies, tokens, TLS keys, or server data.
+
+The aggregate job downloads exactly one result artifact for every expected
+version and rejects missing, extra, malformed, symlinked, reordered, or
+identity-mismatched evidence. A failed core flow is reported separately from a
+runner, download, cleanup, or artifact infrastructure failure. The aggregate
+job runs even after matrix failures and is the stable required status for
+branch protection. Manual `workflow_dispatch` runs provide the pre-tag
+all-release gate; tag-triggered runs are independent post-tag confirmation.
+Because pull-request workflows execute pull-request code, branch protection
+must require `OpenBao Compatibility / Aggregate results` and CODEOWNER review
+for changes to the workflow, controller, release locks, or their validators.

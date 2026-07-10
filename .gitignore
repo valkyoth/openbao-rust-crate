@@ -4,6 +4,7 @@
 /fuzz/target/
 /fuzz/Cargo.lock
 /tests/fixtures/*/target/
+/ci-artifacts/
 /.env
 /.env.*
 !/deploy/podman/openbao.dev.env.example

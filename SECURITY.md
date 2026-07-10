@@ -254,6 +254,19 @@ servers to another host or reuse them for application, staging, or production
 traffic. Passing historical core tests is a compatibility observation, not a
 security endorsement of the server release.
 
+The compatibility workflow has read-only repository permissions, persists no
+checkout credential, references no repository secret, and deliberately avoids
+shared build caches. Each matrix job uploads one fixed sanitized JSON result;
+TLS files, tokens, raw responses, server logs, and temporary server data are
+outside the artifact path. Aggregation validates the exact expected artifact
+set and treats missing, malformed, or job/report-contradictory evidence as an
+infrastructure failure rather than a compatibility pass.
+
+Pull-request code remains untrusted even though this workflow exposes no
+secrets or write permission. Repository branch protection must require the
+fixed aggregate compatibility status and CODEOWNER approval for modifications
+to compatibility workflows, controllers, release locks, and validators.
+
 The root token and unseal key necessarily exist in process and HTTP/TLS memory
 during initialization; filesystem, allocator, Podman, TLS, kernel, and device
 copies remain subject to the residual-memory limitations documented above.
