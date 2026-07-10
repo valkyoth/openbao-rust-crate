@@ -37,10 +37,11 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-This README documents the stable `1.1.x` API. The current patch release is
-`1.1.2`, which keeps the `1.1.0` owned-secret-buffer migration intact,
-refreshes dependency/tooling pins, and makes Rust `1.96.1` the primary checked
-toolchain while preserving the Rust `1.90.0` compatibility floor.
+The latest published stable release is `1.1.2`. The `main` branch now identifies
+itself as the unreleased `2.0.0` development line because its raw-transport,
+JWT/OIDC metadata, base-URL, and multi-version compatibility work includes
+intentional breaking changes. Rust `1.96.1` is the primary checked toolchain;
+Rust `1.90.0` remains the compatibility floor.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -150,8 +151,9 @@ Implemented now:
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Real OpenBao integration test gate using the pinned OpenBao image.
 
-`1.x` is the stable release line. Feature history and patch details live in
-[CHANGELOG.md](CHANGELOG.md) and [release-notes](release-notes).
+`1.1.2` remains the latest published stable release while `main` develops
+`2.0.0`. Feature history and release details live in [CHANGELOG.md](CHANGELOG.md)
+and [release-notes](release-notes).
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the stable support policy.
@@ -211,6 +213,7 @@ the newest OpenBao patch release available for that SDK line:
 | --- | --- |
 | `0.1.0` through `1.0.2` | OpenBao `2.5.4` |
 | `1.1.0` through `1.1.2` | OpenBao `2.5.5` |
+| `2.0.0` development branch | OpenBao `2.5.5` baseline; historical `2.0.0` through `2.5.5` certification is in progress |
 
 ## Install
 
@@ -352,7 +355,7 @@ zero `planned` and zero `decision` rows.
 | TLS floor | Yes | TLS 1.3 minimum by default; audited legacy deployments can opt down to TLS 1.2. |
 | HTTP protocol | HTTP/1.1 by default | Enable non-default `http2` for TLS ALPN HTTP/2 negotiation. No runtime HTTP/2 knob is exposed. |
 | Custom CA roots | Yes | Extra root certificates can be merged with the platform trust store. |
-| Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. This is the supported alternative to leaf certificate or SPKI pinning. |
+| Root-only trust stores | Yes | System roots can be bypassed by using only configured root certificates. This is the supported alternative to leaf certificate or SPKI pinning. CRLs additionally require Rustls to be the selected backend. |
 | Client TLS identity | Yes | Optional mutual TLS client identity for TLS certificate auth. |
 | Connection timeout | Yes | 5-second connection timeout by default; caller overrides are bounded. |
 | User agent fingerprinting | Yes | Default user agent omits the exact crate version. |

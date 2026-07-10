@@ -40,9 +40,10 @@ ordered, pentest-gated commits on `main`, without intermediate crate versions
 or tags. The complete architecture, exact historical release inventory,
 security invariants, commit sequence, and stop criteria are defined in
 [`OPENBAO_VERSION_COMPATIBILITY_PLAN.md`](OPENBAO_VERSION_COMPATIBILITY_PLAN.md).
-The package version changes to `2.0.0` only after every checkpoint is complete
-and the exact release candidate passes the full historical matrix and final
-pentest.
+The package metadata identifies `main` as unreleased `2.0.0` throughout the
+breaking checkpoint series. No package or tag is published until every
+checkpoint is complete and the exact release candidate passes the full
+historical matrix and final pentest.
 
 ## Standing Release Gates
 

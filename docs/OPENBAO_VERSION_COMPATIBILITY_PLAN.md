@@ -6,9 +6,9 @@
 - Delivery model: ordered commits on `main`, not intermediate crate releases.
 - Current implementation target: OpenBao stable releases from `v2.0.0`
   through `v2.5.5` listed below.
-- Release rule: the crate version remains unchanged during implementation.
-  Only the final release-preparation commit changes package and documentation
-  metadata to `2.0.0`.
+- Release rule: `main` identifies itself as unreleased `2.0.0` from the first
+  breaking checkpoint onward. No `2.0.0` package is published or tagged until
+  the final release-preparation commit and all release gates are complete.
 - Advancement rule: each checkpoint must have green required CI and an
   owner-provided pentest for the exact resulting commit before work starts on
   the next checkpoint.
@@ -840,8 +840,8 @@ Suggested commit title: `Prepare OpenBao SDK 2.0.0`
 
 Goal:
 
-- update package metadata to `2.0.0`;
-- update exact self-version constraints in standalone test fixtures;
+- verify package metadata and standalone test-fixture constraints remain
+  exactly `2.0.0`;
 - finalize changelog and release notes;
 - freeze generated compatibility artifacts;
 - run the complete all-release gate.

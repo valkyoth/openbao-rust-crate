@@ -62,6 +62,9 @@ Please include:
 - The selected reqwest TLS backend is set explicitly from this crate's feature
   policy so dependency feature unification cannot silently replace Rustls with
   native TLS.
+- Configured certificate revocation lists fail closed unless Rustls is the
+  selected backend. Enabling acknowledged native TLS alongside Rustls selects
+  native TLS and therefore rejects CRL-bearing client configurations.
 
 ## Admin Bootstrap Concurrency
 

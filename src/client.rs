@@ -762,6 +762,12 @@ fn build_http_client(
     let (selected_builder, tls_backend) = (builder.tls_backend_rustls(), TlsBackend::Rustls);
     builder = selected_builder;
 
+    if !config.crl_pem_bundles.is_empty() && tls_backend != TlsBackend::Rustls {
+        return Err(Error::InvalidTlsConfig(
+            "certificate revocation lists require the selected Rustls TLS backend".into(),
+        ));
+    }
+
     builder = match config.root_certificate_mode {
         RootCertificateMode::MergeWithSystem => {
             builder.tls_certs_merge(config.root_certificates.clone())
@@ -1979,6 +1985,24 @@ mod tests {
 
         assert!(
             matches!(result, Err(Error::InvalidTlsConfig(message)) if message.contains("at least one CRL"))
+        );
+    }
+
+    #[cfg(all(feature = "rustls-tls", feature = "native-tls"))]
+    #[test]
+    fn certificate_revocation_lists_fail_when_native_tls_is_selected() {
+        let root =
+            crate::Certificate::from_pem(include_bytes!("../tests/fixtures/tls_test_ca.pem"))
+                .unwrap_or_else(|error| panic!("failed to parse test certificate: {error}"));
+        let crl = include_bytes!("../tests/fixtures/tls_test_ca.crl.pem");
+        let config = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.only_root_certificates(vec![root]))
+            .and_then(|config| config.add_certificate_revocation_list_pem(crl))
+            .unwrap_or_else(|error| panic!("failed to prepare CRL configuration: {error}"));
+        let result = super::ClientBuilder::new(config).build();
+
+        assert!(
+            matches!(result, Err(Error::InvalidTlsConfig(message)) if message.contains("selected Rustls TLS backend"))
         );
     }
 

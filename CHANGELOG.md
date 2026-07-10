@@ -4,9 +4,24 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- Started the `2.0.0` multi-version OpenBao compatibility implementation.
+- Added auditable TLS backend reporting through `Client::tls_backend`.
+
 ### Changed
 
-- Updated pinned `taiki-e/install-action` CI action to `v2.82.10`.
+- Marked `main` as the unreleased `2.0.0` development line because current
+  security-boundary changes are intentionally not source-compatible with 1.x.
+- Updated pinned `taiki-e/install-action` CI action to `v2.83.0`.
+
+### Security
+
+- Public raw transports now require explicit feature acknowledgement, JWT/OIDC
+  metadata values use secret-aware types, and unsafe base-URL components are
+  rejected.
+- CRL-bearing TLS configurations fail closed unless Rustls is the selected
+  backend.
 
 ## 1.1.2 - 2026-07-04
 
