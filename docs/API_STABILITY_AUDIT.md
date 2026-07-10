@@ -18,6 +18,9 @@ gated, or rejected.
 - Planning assumption: after `1.0.0`, assume stable maintenance, security
   fixes, OpenBao compatibility fixes, documentation corrections, and reviewed
   security-focused minor migrations.
+- Next major boundary: `2.0.0` combines the multi-version OpenBao compatibility
+  work with intentionally breaking raw-transport, JWT/OIDC secret-metadata,
+  and base-URL hardening. See the migration guide before updating from 1.x.
 - Coverage target: no OpenBao `2.5.x` endpoint row remains classified as
   `planned` or `decision`; not every row must become first-class typed if a
   raw, external, partial, gated, or rejected boundary is safer.

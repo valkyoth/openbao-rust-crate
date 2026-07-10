@@ -141,7 +141,8 @@ Implemented now:
 - Optional RFC3339 timestamp parsing helpers behind the `time` feature.
 - Optional `tracing` and HTTP/2 features without default dependency or runtime
   transport hooks.
-- Raw JSON request escape hatch for endpoints that are not typed yet.
+- Feature-gated raw JSON request escape hatch for audited deployment-specific
+  wrappers.
 - Operator-gated raw storage read, write, list, and delete helpers.
 - Operator-gated pprof diagnostic byte helpers.
 - Typed custom plugin wrapper pattern documentation and safe building blocks
@@ -166,6 +167,7 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | Async runtime | Runtime-agnostic client; examples use Tokio |
 | HTTP transport | `reqwest` with redirects disabled |
 | Default TLS backend | Rustls |
+| TLS backend audit | `Client::tls_backend` reports the backend selected by this crate's feature policy |
 | TLS floor | TLS 1.3 by default; TLS 1.2 requires explicit opt-in |
 | Plain HTTP | Rejected by default; sensitive requests still require HTTPS |
 | Token storage | `openbao::SecretString` (`secrecy::SecretString`) |
@@ -356,7 +358,7 @@ zero `planned` and zero `decision` rows.
 | User agent fingerprinting | Yes | Default user agent omits the exact crate version. |
 | Namespace header | Yes | `X-Vault-Namespace` support for namespace-aware deployments. |
 | Environment construction | Yes | Reads `OPENBAO_*`, `BAO_*`, and `VAULT_*` aliases with secure defaults. |
-| Raw JSON requests | Yes | Escape hatch for endpoints that are not typed yet. |
+| Raw JSON requests | Gated | Requires `raw-api` plus `raw-api-acknowledged`; prefer typed helpers and audited local wrappers. |
 
 ### Authentication
 

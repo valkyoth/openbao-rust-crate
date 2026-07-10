@@ -34,12 +34,13 @@ OpenBao endpoint boundary intact.
 Rust `1.96.1` the primary checked toolchain while preserving the documented
 Rust `1.90.0` compatibility floor.
 
-`1.2.0` adds explicit multi-version OpenBao compatibility. It is delivered as
+`2.0.0` adds explicit multi-version OpenBao compatibility and establishes a
+major-version boundary for the reviewed security hardening. It is delivered as
 ordered, pentest-gated commits on `main`, without intermediate crate versions
 or tags. The complete architecture, exact historical release inventory,
 security invariants, commit sequence, and stop criteria are defined in
 [`OPENBAO_VERSION_COMPATIBILITY_PLAN.md`](OPENBAO_VERSION_COMPATIBILITY_PLAN.md).
-The package version changes to `1.2.0` only after every checkpoint is complete
+The package version changes to `2.0.0` only after every checkpoint is complete
 and the exact release candidate passes the full historical matrix and final
 pentest.
 
@@ -66,7 +67,7 @@ Every release:
 
 - `1.0.0` used a narrower definition of complete support: every endpoint row
   was addressed, but protocol handoffs and explicit rejections were accepted.
-- The `1.2.0` goal supersedes that boundary for OpenBao `2.5.5`. Every one of
+- The `2.0.0` goal supersedes that boundary for OpenBao `2.5.5`. Every one of
   the 643 documented operations and its request/response contract must be
   first-class typed or typed-gated coverage. Generic raw requests, URL-only
   handoffs, `partial`, `external`, and `rejected` classifications do not count.
@@ -657,7 +658,7 @@ Stop criteria:
   candidate;
 - all-feature tests and GitHub CI pass before tagging.
 
-### 1.2.0 - Multi-Version OpenBao Compatibility
+### 2.0.0 - Multi-Version OpenBao Compatibility
 
 Implementation is governed by
 [`OPENBAO_VERSION_COMPATIBILITY_PLAN.md`](OPENBAO_VERSION_COMPATIBILITY_PLAN.md).
@@ -685,4 +686,4 @@ Stop criteria:
 - the README and security documentation distinguish tested wire compatibility
   from security endorsement of an old server;
 - all standard release gates, the all-release integration gate, GitHub checks,
-  and the final exact-commit pentest pass before tagging `v1.2.0`.
+  and the final exact-commit pentest pass before tagging `v2.0.0`.

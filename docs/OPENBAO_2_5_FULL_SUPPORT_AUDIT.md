@@ -11,7 +11,7 @@
 - Existing crate matrix rows: `643`.
 - Audit status: endpoint inventory matches, but implementation classification
   and field-level completeness do not.
-- Release target for closure: `1.2.0`.
+- Release target for closure: `2.0.0`.
 
 This is a static audit checkpoint, not a compatibility certification. Live
 OpenAPI capture and behavior tests against the locked `v2.5.5` image remain
@@ -19,7 +19,7 @@ required by `OPENBAO_VERSION_COMPATIBILITY_PLAN.md`.
 
 ## Meaning Of 100 Percent
 
-For `1.2.0`, full OpenBao `2.5.5` HTTP API support means:
+For `2.0.0`, full OpenBao `2.5.5` HTTP API support means:
 
 - every documented method/path row is represented by a first-class
   typed or typed-and-gated crate API;
@@ -82,7 +82,7 @@ new full-support goal:
 
 The earlier decisions to classify these rows as external or rejected were
 reasonable for a narrower stable SDK. They are superseded by the explicit
-`1.2.0` goal of full documented OpenBao support.
+`2.0.0` goal of full documented OpenBao support.
 
 ## Confirmed Incorrect Typed Classifications
 

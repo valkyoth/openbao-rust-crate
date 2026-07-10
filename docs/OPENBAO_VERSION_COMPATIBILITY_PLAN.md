@@ -2,13 +2,13 @@
 
 ## Status
 
-- Target crate release: `1.2.0`.
+- Target crate release: `2.0.0`.
 - Delivery model: ordered commits on `main`, not intermediate crate releases.
 - Current implementation target: OpenBao stable releases from `v2.0.0`
   through `v2.5.5` listed below.
 - Release rule: the crate version remains unchanged during implementation.
   Only the final release-preparation commit changes package and documentation
-  metadata to `1.2.0`.
+  metadata to `2.0.0`.
 - Advancement rule: each checkpoint must have green required CI and an
   owner-provided pentest for the exact resulting commit before work starts on
   the next checkpoint.
@@ -21,7 +21,7 @@ The companion
 [`OPENBAO_2_5_FULL_SUPPORT_AUDIT.md`](OPENBAO_2_5_FULL_SUPPORT_AUDIT.md)
 records the baseline audit that found the existing endpoint inventory complete
 but its implementation classifications and field-level coverage incomplete.
-`1.2.0` must close those gaps as part of the multi-version work.
+`2.0.0` must close those gaps as part of the multi-version work.
 
 OpenBao currently documents its HTTP API under `/v1`, but explicitly warns
 that this prefix does not yet guarantee backwards compatibility. Therefore,
@@ -248,7 +248,7 @@ The expected sequence is:
 6. fix every actionable finding in a focused follow-up commit;
 7. repeat CI and pentest against the new exact HEAD until clean;
 8. delete `PENTEST.md` after its findings are resolved or explicitly recorded;
-9. record accepted residual risk in `SECURITY.md` or the `1.2.0` release notes;
+9. record accepted residual risk in `SECURITY.md` or the `2.0.0` release notes;
 10. begin the next numbered checkpoint only after the current HEAD is clean.
 
 Do not squash, amend, force-push, or rewrite reviewed commits on `main`. A
@@ -275,7 +275,7 @@ Goal:
 
 - add this document;
 - link it from `docs/RELEASE_PLAN.md`;
-- establish `1.2.0` as the single release milestone.
+- establish `2.0.0` as the single release milestone.
 
 Stop conditions:
 
@@ -501,11 +501,11 @@ Goal:
 - verify and cache the public server version;
 - provide a sanitized compatibility report.
 
-For `1.2.0`, existing constructors remain source-compatible and retain their
-current unverified behavior unless a compatibility policy is selected. Strict
-verification becomes the recommended documented path. Making strict mode the
-unconditional default is reserved for a future crate major release because an
-automatic preflight request is an observable behavior change.
+For `2.0.0`, existing constructors remain available and retain their current
+unverified behavior unless a compatibility policy is selected. Strict
+verification becomes the recommended documented path. Strict mode is not the
+unconditional default because an automatic preflight request would add network
+I/O to client construction and prevent offline configuration.
 
 Stop conditions:
 
@@ -834,13 +834,14 @@ Pentest focus:
 - the complete compatibility attack surface, especially downgrade, generated
   data trust, parser bounds, route selection, concurrency, and reporting.
 
-### Commit 20: Prepare The 1.2.0 Release Candidate
+### Commit 20: Prepare The 2.0.0 Release Candidate
 
-Suggested commit title: `Prepare OpenBao SDK 1.2.0`
+Suggested commit title: `Prepare OpenBao SDK 2.0.0`
 
 Goal:
 
-- update package metadata to `1.2.0`;
+- update package metadata to `2.0.0`;
+- update exact self-version constraints in standalone test fixtures;
 - finalize changelog and release notes;
 - freeze generated compatibility artifacts;
 - run the complete all-release gate.
@@ -865,7 +866,7 @@ Pentest focus:
 
 ## Future OpenBao Release Procedure
 
-After `1.2.0`, a new stable OpenBao release is added through this sequence:
+After `2.0.0`, a new stable OpenBao release is added through this sequence:
 
 1. verify the official stable tag and immutable image digest;
 2. append one release inventory record;
@@ -883,7 +884,7 @@ before transmission. Rust methods are not removed merely because a newer
 OpenBao server removed an endpoint; crate API removal remains governed by Rust
 semantic versioning and the crate's security policy.
 
-## Explicit Non-Goals For 1.2.0
+## Explicit Non-Goals For 2.0.0
 
 - Cargo features named after OpenBao versions.
 - One crate release per OpenBao server release.
@@ -894,14 +895,13 @@ semantic versioning and the crate's security policy.
 - Re-enabling endpoints blocked for known security reasons.
 - Implementing arbitrary undocumented external plugin schemas or the behavior
   of third-party databases, identity providers, DNS providers, and browsers.
-- Making strict automatic preflight mandatory for existing constructors in a
-  semver-minor release.
+- Making strict automatic preflight mandatory for every constructor.
 - Supporting beta, release-candidate, or development OpenBao builds as stable
   profiles.
 
-## Final 1.2.0 Definition Of Done
+## Final 2.0.0 Definition Of Done
 
-`1.2.0` is complete only when an application can select or strictly detect an
+`2.0.0` is complete only when an application can select or strictly detect an
 included OpenBao release, receive the correct reviewed endpoint behavior for
 that exact profile, and get a local typed error for unavailable behavior. A
 future profile must be append-only and must not change the endpoint contract,

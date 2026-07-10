@@ -4130,6 +4130,7 @@ impl Sys<'_, Unauthenticated> {
             config: self.client.config.clone(),
             http: self.client.http.clone(),
             sensitive_http: self.client.sensitive_http.clone(),
+            tls_backend: self.client.tls_backend,
             token: None,
             _state: PhantomData,
         }

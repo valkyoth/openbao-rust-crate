@@ -158,7 +158,7 @@ pub mod sys;
 
 pub use client::{
     Authenticated, Client, ClientBuilder, HeaderMode, HttpPolicy, OpenBao, OpenBaoConfig,
-    RetryPolicy, RetryableMethod, RootCertificateMode, SharedClient, Unauthenticated,
+    RetryPolicy, RetryableMethod, RootCertificateMode, SharedClient, TlsBackend, Unauthenticated,
 };
 pub use compatibility::{OpenBaoVersion, OpenBaoVersionRequirement};
 pub use duration::{RenewalHint, duration_to_bao_string};
@@ -196,9 +196,9 @@ pub mod prelude {
         ClientBuilder, Empty, Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries,
         ListPageOptions, MAX_RESPONSE_STRINGS, Method, OpenBao, OpenBaoConfig, OpenBaoVersion,
         OpenBaoVersionRequirement, PluginMount, RenewalHint, ResponseEnvelope, Result,
-        SecretString, SecretVec, SecureSanitize, SharedClient, StatusCode, Unauthenticated,
-        deserialize_bounded_string_vec, duration_to_bao_string, validate_endpoint_path,
-        validate_mount_path,
+        SecretString, SecretVec, SecureSanitize, SharedClient, StatusCode, TlsBackend,
+        Unauthenticated, deserialize_bounded_string_vec, duration_to_bao_string,
+        validate_endpoint_path, validate_mount_path,
     };
     #[cfg(feature = "transit")]
     pub use crate::{

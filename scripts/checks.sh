@@ -36,9 +36,12 @@ cargo package --locked --allow-dirty
 
 echo "checks: dependency policy"
 cargo deny check
+cargo deny --manifest-path tests/fixtures/reqwest-native-unification/Cargo.toml \
+  --config deny.toml check
 
 echo "checks: RustSec advisories"
 cargo audit
+cargo audit --file tests/fixtures/reqwest-native-unification/Cargo.lock
 
 echo "checks: Kani"
 scripts/check_kani.sh

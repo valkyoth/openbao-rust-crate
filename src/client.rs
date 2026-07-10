@@ -697,6 +697,20 @@ pub struct ClientBuilder {
     config: OpenBaoConfig,
 }
 
+/// TLS implementation selected for an OpenBao client.
+///
+/// Selection follows this crate's feature policy rather than reqwest's unified
+/// dependency features. This lets applications audit which backend OpenBao
+/// requests actually use when another dependency enables additional reqwest
+/// TLS features.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TlsBackend {
+    /// The Rustls TLS implementation.
+    Rustls,
+    /// The platform native TLS implementation.
+    Native,
+}
+
 impl ClientBuilder {
     /// Creates a builder from validated configuration.
     pub fn new(config: OpenBaoConfig) -> Self {
@@ -706,23 +720,32 @@ impl ClientBuilder {
     /// Builds an unauthenticated OpenBao client.
     pub fn build(self) -> Result<Client<Unauthenticated>> {
         self.config.validate()?;
-        let http = build_http_client(
+        let (http, tls_backend) = build_http_client(
             &self.config,
             self.config.http_policy == HttpPolicy::HttpsOnly,
         )?;
-        let sensitive_http = build_http_client(&self.config, true)?;
+        let (sensitive_http, sensitive_tls_backend) = build_http_client(&self.config, true)?;
+        if tls_backend != sensitive_tls_backend {
+            return Err(Error::Internal(
+                "OpenBao HTTP clients selected different TLS backends",
+            ));
+        }
 
         Ok(Client {
             config: self.config,
             http,
             sensitive_http,
+            tls_backend,
             token: None,
             _state: PhantomData,
         })
     }
 }
 
-fn build_http_client(config: &OpenBaoConfig, https_only: bool) -> Result<reqwest::Client> {
+fn build_http_client(
+    config: &OpenBaoConfig,
+    https_only: bool,
+) -> Result<(reqwest::Client, TlsBackend)> {
     let mut builder = reqwest::Client::builder()
         .timeout(config.timeout)
         .connect_timeout(config.connect_timeout)
@@ -731,14 +754,13 @@ fn build_http_client(config: &OpenBaoConfig, https_only: bool) -> Result<reqwest
         .redirect(redirect::Policy::none())
         .tls_version_min(config.min_tls_version);
 
-    #[cfg(feature = "rustls-tls")]
-    {
-        builder = builder.tls_backend_rustls();
-    }
+    // Apply and record the backend in one operation so dependency feature
+    // unification cannot make the reported backend diverge from the builder.
     #[cfg(feature = "native-tls")]
-    {
-        builder = builder.tls_backend_native();
-    }
+    let (selected_builder, tls_backend) = (builder.tls_backend_native(), TlsBackend::Native);
+    #[cfg(all(not(feature = "native-tls"), feature = "rustls-tls"))]
+    let (selected_builder, tls_backend) = (builder.tls_backend_rustls(), TlsBackend::Rustls);
+    builder = selected_builder;
 
     builder = match config.root_certificate_mode {
         RootCertificateMode::MergeWithSystem => {
@@ -760,7 +782,7 @@ fn build_http_client(config: &OpenBaoConfig, https_only: bool) -> Result<reqwest
         builder = builder.identity(identity);
     }
 
-    Ok(builder.build()?)
+    Ok((builder.build()?, tls_backend))
 }
 
 /// Typed OpenBao HTTP client.
@@ -768,6 +790,7 @@ pub struct Client<State = Unauthenticated> {
     pub(crate) config: OpenBaoConfig,
     pub(crate) http: reqwest::Client,
     pub(crate) sensitive_http: reqwest::Client,
+    pub(crate) tls_backend: TlsBackend,
     pub(crate) token: Option<SecretString>,
     pub(crate) _state: PhantomData<State>,
 }
@@ -805,6 +828,7 @@ impl Client<Unauthenticated> {
             config: self.config,
             http: self.http,
             sensitive_http: self.sensitive_http,
+            tls_backend: self.tls_backend,
             token: Some(token),
             _state: PhantomData,
         }
@@ -838,6 +862,7 @@ impl Client<Unauthenticated> {
             config: self.config.clone(),
             http: self.http.clone(),
             sensitive_http: self.sensitive_http.clone(),
+            tls_backend: self.tls_backend,
             token: None,
             _state: PhantomData,
         }
@@ -848,6 +873,12 @@ impl<State> Client<State> {
     /// Returns the validated base URL.
     pub fn base_url(&self) -> &Url {
         &self.config.base_url
+    }
+
+    /// Returns the TLS backend selected when this client was built.
+    #[must_use]
+    pub const fn tls_backend(&self) -> TlsBackend {
+        self.tls_backend
     }
 
     /// Sends a raw authenticated or unauthenticated JSON request.
@@ -1695,6 +1726,17 @@ mod tests {
     #[test]
     fn rejects_http_by_default() {
         assert!(Client::new("http://127.0.0.1:8200").is_err());
+    }
+
+    #[test]
+    fn reports_the_tls_backend_selected_by_crate_features() {
+        let client = Client::new("https://bao.example.com")
+            .unwrap_or_else(|error| panic!("failed to build client: {error}"));
+
+        #[cfg(feature = "native-tls")]
+        assert_eq!(client.tls_backend(), super::TlsBackend::Native);
+        #[cfg(all(not(feature = "native-tls"), feature = "rustls-tls"))]
+        assert_eq!(client.tls_backend(), super::TlsBackend::Rustls);
     }
 
     #[test]

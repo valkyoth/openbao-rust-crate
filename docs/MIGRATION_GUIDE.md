@@ -1,9 +1,50 @@
 # Migration Guide
 
-This guide tracks migration work for the stable `1.x` release. The endpoint
+This guide tracks migrations between stable OpenBao SDK releases. The endpoint
 matrix now has zero `planned` and zero
 `decision` rows; remaining non-typed rows are intentionally documented as raw,
 external, partial, gated, or rejected boundaries.
+
+## From `openbao` 1.1.2 To 2.0.0
+
+`2.0.0` is the next major release. It combines explicit multi-version OpenBao
+compatibility with security-boundary changes that are intentionally not
+source-compatible with `1.1.2`.
+
+JWT/OIDC login metadata values now use `SecretString` because OpenBao can
+return OAuth access, ID, and refresh tokens in this map:
+
+```rust
+use openbao::ExposeSecret;
+
+let role = login
+    .metadata
+    .get("role")
+    .map(ExposeSecret::expose_secret);
+```
+
+Public raw JSON, byte, retry, and response-wrapping transports now require
+both `raw-api` and `raw-api-acknowledged`. Typed endpoint helpers remain
+available without those features. Audit each local raw wrapper before enabling
+the acknowledgement:
+
+```toml
+[dependencies]
+openbao = {
+    version = "2",
+    features = ["raw-api", "raw-api-acknowledged"]
+}
+```
+
+OpenBao base URLs must now be origins. Remove embedded credentials,
+application paths, query strings, and fragments. Configure authentication with
+the typed token or login APIs, and configure namespaces with
+`OpenBaoConfig::namespace`.
+
+`Client::tls_backend` reports whether the crate selected Rustls or native TLS.
+Selection follows this crate's acknowledged TLS feature policy even when Cargo
+feature unification enables another backend on reqwest through a different
+dependency.
 
 ## From `openbao` 1.0.2 To 1.1.0
 
