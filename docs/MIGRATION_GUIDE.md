@@ -23,6 +23,25 @@ let role = login
     .map(ExposeSecret::expose_secret);
 ```
 
+Database plugin response extension values now use `SecretString` because an
+unknown plugin can return credentials or private key material in
+`DatabaseConnectionInfo::connection_details`. Expose a reviewed field only at
+its point of use:
+
+```rust
+use openbao::ExposeSecret;
+
+let connection_url = connection
+    .connection_details
+    .get("connection_url")
+    .map(ExposeSecret::expose_secret);
+```
+
+`DatabaseConnectionConfig::extra` also rejects keys that collide with typed
+request fields. Move standard fields such as `username`, `password`, and
+`connection_url` to their dedicated struct fields instead of inserting them
+into `extra`.
+
 Public raw JSON, byte, retry, and response-wrapping transports now require
 both `raw-api` and `raw-api-acknowledged`. Typed endpoint helpers remain
 available without those features. Audit each local raw wrapper before enabling

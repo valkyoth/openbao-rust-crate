@@ -76,6 +76,9 @@ All notable changes to this project are documented here.
 - Database plugin extension values now fail closed as `SecretString`, and
   database extension details plus Identity OIDC introspection claims are
   excluded from `Debug` output.
+- Database plugin response extension values now also fail closed as bounded
+  `SecretString` values, and request extension keys cannot shadow typed
+  database connection fields during serialization.
 - OIDC GET callback redemption now requires the non-default
   `oidc-get-callback-acknowledged` feature and avoids the previous additional
   plaintext query-value copies before constructing the unavoidable URL.

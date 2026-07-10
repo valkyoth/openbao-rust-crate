@@ -5,7 +5,11 @@ use std::collections::BTreeMap;
 
 use reqwest::{Method, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Visitor, ser::SerializeMap};
+use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::{IgnoredAny, MapAccess, Visitor},
+    ser::SerializeMap,
+};
 
 use crate::{
     Authenticated, Client, Error, Result,
@@ -15,6 +19,22 @@ use crate::{
         deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
     },
 };
+
+const DATABASE_CONNECTION_CONFIG_FIELDS: [&str; 10] = [
+    "plugin_name",
+    "plugin_version",
+    "verify_connection",
+    "allowed_roles",
+    "root_rotation_statements",
+    "password_policy",
+    "connection_url",
+    "username",
+    "password",
+    "disable_escaping",
+];
+
+const DATABASE_CONNECTION_EXTRA_COLLISION_ERROR: &str =
+    "database connection extra field collides with a typed field";
 
 /// Handle for a mounted Database secrets engine.
 #[derive(Debug)]
@@ -95,13 +115,16 @@ pub struct DatabaseConnectionInfo {
     /// Roles allowed to use this connection.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub allowed_roles: Vec<String>,
-    /// Connection details returned by OpenBao. Sensitive password fields are
-    /// intentionally not returned by OpenBao.
+    /// Plugin-specific connection details returned by OpenBao.
+    ///
+    /// Unknown database plugins may return credential or key material in this
+    /// object, so values fail closed as [`SecretString`] even when a known
+    /// plugin currently returns only non-secret metadata.
     #[serde(
         default,
-        deserialize_with = "deserialize_bounded_string_map_or_default"
+        deserialize_with = "deserialize_bounded_secret_string_map_or_default"
     )]
-    pub connection_details: BTreeMap<String, String>,
+    pub connection_details: BTreeMap<String, SecretString>,
     /// Password policy used by generated credentials.
     #[serde(default)]
     pub password_policy: Option<String>,
@@ -594,6 +617,16 @@ impl Serialize for DatabaseConnectionConfig {
     where
         S: Serializer,
     {
+        if self.extra.keys().any(|key| {
+            DATABASE_CONNECTION_CONFIG_FIELDS
+                .iter()
+                .any(|field| key == field)
+        }) {
+            return Err(<S::Error as serde::ser::Error>::custom(
+                DATABASE_CONNECTION_EXTRA_COLLISION_ERROR,
+            ));
+        }
+
         let mut count = 1 + self.extra.len();
         count += usize::from(self.plugin_version.is_some());
         count += usize::from(self.verify_connection.is_some());
@@ -638,6 +671,64 @@ impl Serialize for DatabaseConnectionConfig {
             map.serialize_entry(key, value.expose_secret())?;
         }
         map.end()
+    }
+}
+
+fn deserialize_bounded_secret_string_map_or_default<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(
+        Option::<BoundedDatabaseConnectionDetails>::deserialize(deserializer)?
+            .map(|details| details.0)
+            .unwrap_or_default(),
+    )
+}
+
+#[derive(Deserialize)]
+struct BoundedDatabaseConnectionDetails(
+    #[serde(deserialize_with = "deserialize_bounded_secret_string_map")]
+    BTreeMap<String, SecretString>,
+);
+
+fn deserialize_bounded_secret_string_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer
+        .deserialize_map(BoundedSecretStringMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>)
+}
+
+struct BoundedSecretStringMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretStringMapVisitor<MAX> {
+    type Value = BTreeMap<String, SecretString>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "a map of at most {MAX} secret string pairs")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, String>()? else {
+                return Ok(values);
+            };
+            values.insert(key, SecretString::from(value));
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "OpenBao database connection details exceed item limit",
+            ));
+        }
+        Ok(values)
     }
 }
 
@@ -764,6 +855,7 @@ mod tests {
     use secrecy::{ExposeSecret, SecretString};
 
     use super::{
+        DATABASE_CONNECTION_CONFIG_FIELDS, DATABASE_CONNECTION_EXTRA_COLLISION_ERROR,
         DatabaseConnectionConfig, DatabaseConnectionInfo, DatabaseCredentials, DatabaseList,
         DatabaseRole, DatabaseStaticCredentials,
     };
@@ -795,6 +887,46 @@ mod tests {
         assert!(debug.contains("connection_detail_count"));
         assert!(!debug.contains("private_key"));
         assert!(!debug.contains("returned-plugin-private-key"));
+        assert_eq!(
+            info.connection_details["private_key"].expose_secret(),
+            "returned-plugin-private-key"
+        );
+    }
+
+    #[test]
+    fn database_connection_extension_rejects_typed_field_collisions() {
+        for field in DATABASE_CONNECTION_CONFIG_FIELDS {
+            let mut config = DatabaseConnectionConfig::new("custom-database-plugin");
+            config
+                .extra
+                .insert(field.to_owned(), SecretString::from("shadowed-value"));
+
+            let error = match serde_json::to_value(&config) {
+                Ok(_) => panic!("typed database field collision unexpectedly serialized"),
+                Err(error) => error,
+            };
+            assert_eq!(error.to_string(), DATABASE_CONNECTION_EXTRA_COLLISION_ERROR);
+            assert!(!error.to_string().contains(field));
+            assert!(!error.to_string().contains("shadowed-value"));
+        }
+    }
+
+    #[test]
+    fn database_connection_details_are_bounded_before_extra_value_parsing() {
+        let mut details = serde_json::Map::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            details.insert(format!("field-{index}"), serde_json::json!("value"));
+        }
+        let value = serde_json::json!({
+            "plugin_name": "custom-database-plugin",
+            "connection_details": details,
+        });
+
+        let error = match serde_json::from_value::<DatabaseConnectionInfo>(value) {
+            Ok(_) => panic!("oversized database connection details unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("exceed item limit"));
     }
 
     #[test]
