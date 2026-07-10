@@ -58,12 +58,13 @@ python3 scripts/validate_openbao_release_lock.py --self-test
 ```
 
 The validator uses only the Python standard library and performs no network
-access. It rejects oversized or deeply nested JSON, duplicate keys, unknown or
-missing fields, path traversal, mutable tags, malformed or duplicate hashes,
-reordered records, changed historical identifiers, and verification-status
-downgrades. The release and signature locks each have a sidecar SHA-256 plus a
-hard-coded validator anchor, so changing historical evidence requires an
-explicit multi-file review.
+access. It opens inputs without following symbolic links and reads at most the
+configured byte limit plus one byte. It rejects oversized or deeply nested
+JSON, duplicate keys, unknown or missing fields, path traversal, mutable tags,
+malformed or duplicate hashes, reordered records, changed historical
+identifiers, and verification-status downgrades. The release and signature
+locks each have a sidecar SHA-256 plus a hard-coded validator anchor, so
+changing historical evidence requires an explicit multi-file review.
 
 ## Reproducing Online Evidence
 

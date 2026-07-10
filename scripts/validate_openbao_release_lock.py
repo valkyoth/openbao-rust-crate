@@ -6,8 +6,11 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import re
+import stat
 import sys
+import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -387,12 +390,39 @@ def validate_signature_document(document: dict[str, Any]) -> None:
 
 
 def read_regular_file(path: Path, maximum: int) -> bytes:
-    if path.is_symlink() or not path.is_file():
-        raise LockValidationError("release lock inputs must be regular non-symlink files")
-    data = path.read_bytes()
-    if len(data) > maximum:
-        raise LockValidationError("release lock input exceeds its byte limit")
-    return data
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise LockValidationError("secure no-follow file reads are unavailable")
+
+    flags = os.O_RDONLY | no_follow | getattr(os, "O_CLOEXEC", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise LockValidationError("release lock input could not be opened securely") from error
+
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise LockValidationError("release lock inputs must be regular files")
+        if metadata.st_size > maximum:
+            raise LockValidationError("release lock input exceeds its byte limit")
+
+        chunks: list[bytes] = []
+        remaining = maximum + 1
+        while remaining > 0:
+            chunk = os.read(descriptor, min(64 * 1024, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        data = b"".join(chunks)
+        if len(data) > maximum:
+            raise LockValidationError("release lock input exceeds its byte limit")
+        return data
+    except OSError as error:
+        raise LockValidationError("release lock input could not be read securely") from error
+    finally:
+        os.close(descriptor)
 
 
 def require_content_digest(data: bytes, expected: str, label: str) -> None:
@@ -450,6 +480,24 @@ def run_self_tests() -> None:
     validate_signature_document(signature_document)
 
     expect_rejected("duplicate JSON keys", lambda: parse_json(b'{"schema":1,"schema":2}'))
+
+    with tempfile.TemporaryDirectory(prefix="openbao-release-lock-") as directory:
+        temporary_root = Path(directory)
+        bounded_file = temporary_root / "bounded.json"
+        bounded_file.write_bytes(b"x" * 17)
+        expect_rejected(
+            "oversized input before allocation",
+            lambda: read_regular_file(bounded_file, 16),
+        )
+
+        target_file = temporary_root / "target.json"
+        target_file.write_bytes(b"{}")
+        symlink_file = temporary_root / "symlink.json"
+        symlink_file.symlink_to(target_file)
+        expect_rejected(
+            "symbolic-link input",
+            lambda: read_regular_file(symlink_file, MAX_LOCK_BYTES),
+        )
 
     reordered = copy.deepcopy(document)
     reordered["records"][0], reordered["records"][1] = reordered["records"][1], reordered["records"][0]

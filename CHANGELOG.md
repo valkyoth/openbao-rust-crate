@@ -26,6 +26,9 @@ All notable changes to this project are documented here.
   rejected.
 - CRL-bearing TLS configurations fail closed unless Rustls is the selected
   backend.
+- Release-lock inputs are opened without following symbolic links and are read
+  through bounded file descriptors; RustSec checks use a private per-run
+  advisory database unless an explicit database path is supplied.
 
 ## 1.1.2 - 2026-07-04
 

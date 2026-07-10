@@ -44,7 +44,22 @@ cargo deny --manifest-path tests/fixtures/reqwest-native-unification/Cargo.toml 
   --config deny.toml check
 
 echo "checks: RustSec advisories"
-rustsec_db="${OPENBAO_RUSTSEC_DB:-/tmp/openbao-rust-crate-advisory-db}"
+rustsec_db="${OPENBAO_RUSTSEC_DB:-}"
+rustsec_db_cleanup=
+if [ -z "$rustsec_db" ]; then
+  rustsec_db="$(umask 077 && mktemp -d "${TMPDIR:-/tmp}/openbao-rustsec.XXXXXX")"
+  rustsec_db_cleanup="$rustsec_db"
+  cleanup_rustsec_db() {
+    if [ -n "$rustsec_db_cleanup" ]; then
+      rm -rf -- "$rustsec_db_cleanup"
+      rustsec_db_cleanup=
+    fi
+  }
+  trap cleanup_rustsec_db EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+fi
 cargo audit --db "$rustsec_db"
 cargo audit --db "$rustsec_db" \
   --file tests/fixtures/reqwest-native-unification/Cargo.lock
