@@ -59,6 +59,7 @@ python3 scripts/validate_openbao_release_lock.py
 python3 scripts/validate_openbao_release_lock.py --self-test
 python3 scripts/openbao_api_snapshots.py --verify
 python3 scripts/openbao_api_snapshots.py --self-test
+python3 scripts/openbao_test_harness.py --self-test
 ```
 
 The validator uses only the Python standard library and performs no network
@@ -145,3 +146,30 @@ cosign verify \
 
 The release and API snapshot locks are append-only after their respective
 checkpoints. Commit 03 did not rewrite the Commit 02 source or image identities.
+
+## Version-Locked Integration Harness
+
+`scripts/openbao_test_harness.py` consumes the validated release inventory and
+accepts only one exact listed version. It starts
+`docker.io/openbao/openbao@sha256:<locked-linux-amd64-digest>` with Podman and
+verifies the pulled digest, architecture, operating system, and exact
+`/sys/health` version before initialization or test execution.
+
+Runs use an internal per-run network, dynamic loopback API port, in-memory
+storage, random ownership-labeled resources, ephemeral TLS, and an inherited
+anonymous memory-backed credential descriptor. No caller-supplied image, port,
+resource name, command, or environment-selected version enters the container
+command. Proxy inheritance is disabled for loopback requests. Cleanup checks
+the ownership label before removal and fails the run if a runtime resource or
+private temporary directory survives.
+
+Run one exact inventory release with:
+
+```sh
+scripts/openbao_integration.sh 2.5.5
+```
+
+Commit 04 establishes secure version selection and isolation. It does not by
+itself claim that the current integration flow passes every historical
+release; that classification and machine-readable evidence belong to Commit
+05.

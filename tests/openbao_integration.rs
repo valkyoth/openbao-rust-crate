@@ -1,8 +1,9 @@
 //! Real OpenBao integration flow.
 //!
 //! These tests are skipped unless `OPENBAO_INTEGRATION=1` is set. Use
-//! `scripts/openbao_integration.sh` to start a local TLS OpenBao instance,
-//! initialize it, unseal it, and run this file.
+//! `scripts/openbao_integration.sh` to select an exact locked release, start an
+//! isolated local TLS instance, verify its version, initialize and unseal it,
+//! and run this file.
 
 #![cfg(all(feature = "kv1", feature = "kv2", feature = "sys", feature = "token"))]
 #![allow(clippy::panic)]
@@ -33,6 +34,7 @@ struct IntegrationEnv {
     addr: String,
     token: SecretString,
     ca_cert: Certificate,
+    expected_version: String,
 }
 
 impl IntegrationEnv {
@@ -42,17 +44,16 @@ impl IntegrationEnv {
         }
 
         let addr = env::var("BAO_ADDR")?;
-        let token = match env::var("BAO_TOKEN_FILE") {
-            Ok(path) => fs::read_to_string(path)?,
-            Err(_) => env::var("BAO_TOKEN")?,
-        };
+        let token = fs::read_to_string(env::var("BAO_TOKEN_FILE")?)?;
         let ca_path = env::var("BAO_CACERT")?;
         let ca_pem = fs::read(ca_path)?;
+        let expected_version = env::var("OPENBAO_EXPECTED_VERSION")?;
 
         Ok(Some(Self {
             addr,
             token: SecretString::from(token.trim().to_owned()),
             ca_cert: Certificate::from_pem(&ca_pem)?,
+            expected_version,
         }))
     }
 
@@ -67,7 +68,9 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     let Some(env) = IntegrationEnv::load()? else {
         return Ok(());
     };
+    let expected_version = env.expected_version.clone();
     let client = env.client()?;
+    assert_eq!(client.sys().health().await?.version, expected_version);
     let suffix = unique_suffix()?;
     let kv1_mount = format!("obrs-kv1-{suffix}");
     let kv2_mount = format!("obrs-kv2-{suffix}");

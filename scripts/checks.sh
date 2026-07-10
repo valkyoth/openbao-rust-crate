@@ -25,6 +25,9 @@ echo "checks: OpenBao 2.5.5 contract matrix"
 python3 scripts/generate_openbao_contract_matrix.py --verify
 python3 scripts/generate_openbao_contract_matrix.py --self-test
 
+echo "checks: version-locked OpenBao integration harness"
+python3 scripts/openbao_test_harness.py --self-test
+
 echo "checks: clippy default"
 cargo clippy --all-targets -- -D warnings
 

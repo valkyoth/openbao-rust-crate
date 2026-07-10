@@ -237,6 +237,16 @@ generated per checkout and ignored. Private keys must never be committed. The
 release metadata check fails if a tracked file contains a PEM private-key
 header.
 
+Release integration tests do not use that persistent development state. The
+version-locked harness creates per-run TLS under a private temporary directory,
+passes the root token through an anonymous memory-backed descriptor, uses
+in-memory OpenBao storage and ownership-labeled Podman resources, and sanitizes
+private material during cleanup.
+
+The root token and unseal key necessarily exist in process and HTTP/TLS memory
+during initialization; filesystem, allocator, Podman, TLS, kernel, and device
+copies remain subject to the residual-memory limitations documented above.
+
 ## Known Limitations
 
 Exact certificate or SPKI pinning is not implemented in 0.4.0; use root-only

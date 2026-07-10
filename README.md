@@ -1743,9 +1743,31 @@ Run the real OpenBao integration flow:
 scripts/openbao_integration.sh
 ```
 
-The integration script creates a fresh TLS dev instance, initializes and
-unseals it, stores the root token in a temporary `0600` file for the test
-process, and removes that file when the run exits.
+The default is the exact locked OpenBao `2.5.5` release. Select any other exact
+entry from `compat/releases.lock.json` explicitly:
+
+```bash
+scripts/openbao_integration.sh 2.2.0
+```
+
+The integration harness accepts only a canonical version in the validated
+inventory and starts the locked Linux amd64 image digest, never a caller image
+or mutable tag. Before initialization or Cargo execution, `/sys/health` must
+report that exact version. Each run uses random ownership-labeled container and
+internal-network names, an in-memory store, a dynamic numeric-loopback port,
+ephemeral TLS keys, and an inherited anonymous memory-backed root-token
+descriptor. The harness disables HTTP proxy inheritance for loopback traffic,
+zeroes the token descriptor and private files during cleanup, and verifies
+ownership before deleting runtime resources. Parallel runs therefore do not
+share ports, networks, server state, TLS keys, or credentials.
+
+The fixed-port `openbao_dev.sh` Compose stack remains a manual development
+convenience and is not used by the version-locked integration harness. Run the
+offline input and cleanup-policy tests without starting a container:
+
+```bash
+python3 scripts/openbao_test_harness.py --self-test
+```
 
 ## Kani Proof Harnesses
 

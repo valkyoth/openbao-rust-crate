@@ -22,6 +22,12 @@ All notable changes to this project are documented here.
   secret-review state, crate helper/type links, and test evidence.
 - Added deterministic contract-matrix verification and adversarial self-tests
   to the full check suite.
+- Added a version-locked OpenBao integration harness that selects one exact
+  release inventory entry, starts only its locked Linux amd64 digest, and
+  verifies the exact `/sys/health` version before initialization and tests.
+- Added isolated per-run Podman resources, dynamic loopback ports, in-memory
+  server storage, ephemeral TLS, an anonymous memory-backed token descriptor,
+  ownership-checked cleanup, and harness adversarial self-tests.
 
 ### Changed
 
