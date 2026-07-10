@@ -33,3 +33,10 @@ path = "fuzz_targets/response_envelope.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "version_parsing"
+path = "fuzz_targets/version_parsing.rs"
+test = false
+doc = false
+bench = false

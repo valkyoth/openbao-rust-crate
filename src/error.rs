@@ -23,6 +23,14 @@ pub enum Error {
     InvalidTimeout(&'static str),
     /// A request parameter is invalid.
     InvalidParameter(String),
+    /// A stable OpenBao server version is malformed or non-canonical.
+    ///
+    /// The static reason never contains the rejected input.
+    InvalidOpenBaoVersion(&'static str),
+    /// An exact or inclusive OpenBao version requirement is invalid.
+    ///
+    /// The static reason never contains the rejected input.
+    InvalidOpenBaoVersionRequirement(&'static str),
     /// A crate invariant was violated.
     Internal(&'static str),
     /// Bootstrap convergence detected that a concurrent writer changed the
@@ -68,6 +76,12 @@ impl fmt::Display for Error {
             }
             Self::InvalidParameter(message) => {
                 write!(formatter, "invalid OpenBao request parameter: {message}")
+            }
+            Self::InvalidOpenBaoVersion(message) => {
+                write!(formatter, "invalid OpenBao version: {message}")
+            }
+            Self::InvalidOpenBaoVersionRequirement(message) => {
+                write!(formatter, "invalid OpenBao version requirement: {message}")
             }
             Self::Internal(message) => write!(formatter, "internal OpenBao SDK error: {message}"),
             Self::BootstrapContention(message) => {

@@ -1,4 +1,8 @@
 /target/
+/fuzz/artifacts/
+/fuzz/corpus/
+/fuzz/target/
+/fuzz/Cargo.lock
 /.env
 /.env.*
 !/deploy/podman/openbao.dev.env.example
