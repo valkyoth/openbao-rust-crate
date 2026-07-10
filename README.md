@@ -1761,14 +1761,16 @@ scripts/openbao_integration.sh 2.2.0
 
 The integration harness accepts only a canonical version in the validated
 inventory and starts the locked Linux amd64 image digest, never a caller image
-or mutable tag. Before initialization or Cargo execution, `/sys/health` must
-report that exact version. Each run uses random ownership-labeled container and
-internal-network names, an in-memory store, a dynamic numeric-loopback port,
-ephemeral TLS keys, and an inherited anonymous memory-backed root-token
-descriptor. The harness disables HTTP proxy inheritance for loopback traffic,
-zeroes the token descriptor and private files during cleanup, and verifies
-ownership before deleting runtime resources. Parallel runs therefore do not
-share ports, networks, server state, TLS keys, or credentials.
+or mutable tag. Cargo compiles the integration test without OpenBao credentials;
+the harness then ownership-validates the resulting executable. Before
+initialization, `/sys/health` must report the exact selected version. Each run
+uses random ownership-labeled container and internal-network names, an in-memory
+store, a dynamic numeric-loopback port, ephemeral TLS keys, and an inherited
+anonymous memory-backed root-token descriptor passed only to that precompiled
+test executable. The harness disables HTTP proxy inheritance for loopback
+traffic, zeroes the token descriptor and private files during cleanup, and
+verifies ownership before deleting runtime resources. Parallel runs therefore
+do not share ports, networks, server state, TLS keys, or credentials.
 
 The fixed-port `openbao_dev.sh` Compose stack remains a manual development
 convenience and is not used by the version-locked integration harness. Run the

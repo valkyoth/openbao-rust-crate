@@ -414,6 +414,8 @@ Stop conditions:
 
 - arbitrary image references and shell fragments are rejected;
 - no test credentials survive cleanup or enter logs/artifacts;
+- Cargo, compilers, proc macros, and build scripts never inherit OpenBao test
+  credentials; only an ownership-validated precompiled test executable does;
 - version mismatch fails before integration tests;
 - parallel jobs cannot share volumes, ports, tokens, or TLS keys.
 

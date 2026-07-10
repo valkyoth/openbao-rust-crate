@@ -717,11 +717,17 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretStringMapVisitor<MAX> 
         A: MapAccess<'de>,
     {
         let mut values = BTreeMap::new();
-        while values.len() < MAX {
+        let mut entry_count = 0_usize;
+        while entry_count < MAX {
             let Some((key, value)) = map.next_entry::<String, String>()? else {
                 return Ok(values);
             };
-            values.insert(key, SecretString::from(value));
+            entry_count += 1;
+            if values.insert(key, SecretString::from(value)).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao database connection details contain duplicate keys",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(serde::de::Error::custom(
@@ -927,6 +933,20 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceed item limit"));
+    }
+
+    #[test]
+    fn database_connection_details_reject_duplicate_keys() {
+        let error = match serde_json::from_str::<DatabaseConnectionInfo>(
+            r#"{"plugin_name":"custom-database-plugin","connection_details":{"private_key":"first","private_key":"second"}}"#,
+        ) {
+            Ok(_) => panic!("duplicate database connection detail unexpectedly decoded"),
+            Err(error) => error,
+        };
+        assert!(error.to_string().contains("contain duplicate keys"));
+        assert!(!error.to_string().contains("private_key"));
+        assert!(!error.to_string().contains("first"));
+        assert!(!error.to_string().contains("second"));
     }
 
     #[test]

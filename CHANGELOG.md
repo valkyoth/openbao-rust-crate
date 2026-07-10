@@ -49,7 +49,7 @@ All notable changes to this project are documented here.
 - Made Rust `1.97.0` the primary development and CI toolchain while retaining
   Rust `1.90.0` as the MSRV, now enforced by a locked all-target, all-feature
   CI compilation check.
-- Updated pinned `taiki-e/install-action` CI action to `v2.83.0`.
+- Updated pinned `taiki-e/install-action` CI action to `v2.83.1`.
 - Added strict-overall-deadline Tokio readiness and unseal helpers and capped
   runtime-neutral readiness sleeps to their remaining retry budget.
 - Withdrew the former `597/643` coverage percentage. The exact baseline treats
@@ -79,9 +79,15 @@ All notable changes to this project are documented here.
 - Database plugin response extension values now also fail closed as bounded
   `SecretString` values, and request extension keys cannot shadow typed
   database connection fields during serialization.
+- Database plugin response-extension maps reject duplicate keys and count
+  parsed entries, rather than only unique map keys, against their response
+  limit.
 - OIDC GET callback redemption now requires the non-default
   `oidc-get-callback-acknowledged` feature and avoids the previous additional
   plaintext query-value copies before constructing the unavoidable URL.
+- OIDC state, client nonce, callback credential, and redirect URI inputs are
+  length-bounded before request construction. State and nonce values now use
+  `SecretString` and remain redacted from request `Debug` output.
 - Historical compatibility runs verify SDK resource cleanup before accepting a
   passing attestation and keep old server releases in disposable rootless
   containers with read-only filesystems, dropped capabilities, internal
@@ -89,6 +95,10 @@ All notable changes to this project are documented here.
 - Compatibility jobs use read-only repository permissions, disabled checkout
   credentials, no shared build cache, no repository secrets, and fixed
   sanitized artifact paths with fail-closed aggregation.
+- The compatibility harness compiles and ownership-validates its integration
+  test executable before OpenBao initialization, then exposes the ephemeral
+  root-token and result descriptors only to that executable, not Cargo,
+  compiler, or build-script processes.
 
 ## 1.1.2 - 2026-07-04
 

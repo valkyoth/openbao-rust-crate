@@ -33,6 +33,7 @@ VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+", re.ASCII)
 RESOURCE = re.compile(r"openbao-it-[a-z0-9-]{1,64}", re.ASCII)
 LOOPBACK_PORT = re.compile(r"127\.0\.0\.1:([0-9]{1,5})\n?", re.ASCII)
 MAX_COMMAND_OUTPUT = 1024 * 1024
+MAX_CARGO_OUTPUT = 32 * 1024 * 1024
 MAX_HTTP_BODY = 1024 * 1024
 MAX_JSON_DEPTH = 16
 MAX_JSON_NODES = 16_384
@@ -688,7 +689,33 @@ def validate_attestation(value: dict[str, Any], version: str) -> None:
         raise HarnessError("integration attestation contains zero executed operations")
 
 
-def cargo_environment(
+def cargo_build_environment(root: Path) -> dict[str, str]:
+    environment = os.environ.copy()
+    for name in (
+        "OPENBAO_ADDR",
+        "OPENBAO_EXPECTED_VERSION",
+        "OPENBAO_INTEGRATION",
+        "OPENBAO_RESULT_FILE",
+        "OPENBAO_TOKEN",
+        "BAO_ADDR",
+        "BAO_CACERT",
+        "BAO_TOKEN",
+        "BAO_TOKEN_FILE",
+        "VAULT_ADDR",
+        "VAULT_CACERT",
+        "VAULT_TOKEN",
+    ):
+        environment.pop(name, None)
+    environment.update(
+        {
+            "CARGO_TARGET_DIR": str(ROOT / "target"),
+            "HOME": os.environ.get("HOME", str(root)),
+        }
+    )
+    return environment
+
+
+def cargo_runtime_environment(
     root: Path,
     address: str,
     ca_cert: Path,
@@ -696,17 +723,11 @@ def cargo_environment(
     result_path: str,
     version: str,
 ) -> dict[str, str]:
-    environment = os.environ.copy()
+    environment = cargo_build_environment(root)
     for name in (
         "ALL_PROXY",
         "HTTPS_PROXY",
         "HTTP_PROXY",
-        "OPENBAO_ADDR",
-        "OPENBAO_TOKEN",
-        "BAO_TOKEN",
-        "VAULT_TOKEN",
-        "VAULT_ADDR",
-        "VAULT_CACERT",
         "all_proxy",
         "https_proxy",
         "http_proxy",
@@ -722,11 +743,76 @@ def cargo_environment(
             "BAO_TOKEN_FILE": token_path,
             "NO_PROXY": "127.0.0.1,localhost",
             "no_proxy": "127.0.0.1,localhost",
-            "CARGO_TARGET_DIR": str(ROOT / "target"),
-            "HOME": os.environ.get("HOME", str(root)),
         }
     )
     return environment
+
+
+def validate_test_binary(path: Path, target_root: Path | None = None) -> Path:
+    expected_root = target_root if target_root is not None else ROOT / "target"
+    if not path.is_absolute() or len(os.fsencode(path)) > 4096:
+        raise HarnessError("Cargo integration test executable path is invalid")
+    try:
+        root_metadata = os.lstat(expected_root)
+        candidate_metadata = os.lstat(path)
+        resolved_root = expected_root.resolve(strict=True)
+        resolved_path = path.resolve(strict=True)
+    except OSError as error:
+        raise HarnessError("Cargo integration test executable is missing or unsafe") from error
+    if stat.S_ISLNK(root_metadata.st_mode) or not stat.S_ISDIR(root_metadata.st_mode):
+        raise HarnessError("Cargo target directory is not a real directory")
+    try:
+        resolved_path.relative_to(resolved_root)
+    except ValueError as error:
+        raise HarnessError("Cargo integration test executable escaped the target directory") from error
+    if (
+        resolved_path != path
+        or not stat.S_ISREG(candidate_metadata.st_mode)
+        or candidate_metadata.st_nlink != 1
+        or candidate_metadata.st_uid != os.getuid()
+        or candidate_metadata.st_mode & 0o022 != 0
+        or candidate_metadata.st_mode & 0o100 == 0
+    ):
+        raise HarnessError("Cargo integration test executable ownership or mode is unsafe")
+    return resolved_path
+
+
+def compile_integration_test(root: Path) -> Path:
+    output = run_bounded(
+        [
+            "cargo",
+            "test",
+            "--no-run",
+            "--test",
+            "openbao_integration",
+            "--all-features",
+            "--message-format=json-render-diagnostics",
+        ],
+        maximum=MAX_CARGO_OUTPUT,
+        timeout=1200,
+        environment=cargo_build_environment(root),
+    )
+    candidates: list[Path] = []
+    for line in output.splitlines():
+        if not line or len(line) > MAX_HTTP_BODY:
+            if len(line) > MAX_HTTP_BODY:
+                raise HarnessError("Cargo JSON message exceeds the byte limit")
+            continue
+        message = parse_json(line)
+        if message.get("reason") != "compiler-artifact":
+            continue
+        target = message.get("target")
+        executable = message.get("executable")
+        if (
+            isinstance(target, dict)
+            and target.get("name") == "openbao_integration"
+            and target.get("kind") == ["test"]
+            and isinstance(executable, str)
+        ):
+            candidates.append(Path(executable))
+    if len(candidates) != 1:
+        raise HarnessError("Cargo did not produce exactly one integration test executable")
+    return validate_test_binary(candidates[0])
 
 
 def sanitize_file(path: Path) -> bool:
@@ -846,6 +932,7 @@ def run_integration(version: str) -> dict[str, Any]:
     token_descriptor: int | None = None
     result_descriptor: int | None = None
     try:
+        test_binary = compile_integration_test(root)
         tls, ca_cert = generate_tls(root, openssl, command_environment(root))
         config = write_server_config(root)
         image = inspect_image(podman, release, podman_env)
@@ -898,18 +985,10 @@ def run_integration(version: str) -> dict[str, Any]:
         token = ""
         print(f"OpenBao integration: locked {version} preflight passed")
         result = subprocess.run(
-            [
-                "cargo",
-                "test",
-                "--test",
-                "openbao_integration",
-                "--all-features",
-                "--",
-                "--test-threads=1",
-            ],
+            [str(test_binary), "--test-threads=1"],
             cwd=ROOT,
             stdin=subprocess.DEVNULL,
-            env=cargo_environment(
+            env=cargo_runtime_environment(
                 root,
                 address,
                 ca_cert,
@@ -1072,6 +1151,33 @@ def self_test() -> None:
         fifo = root / "fifo"
         os.mkfifo(fifo)
         expect_rejected("FIFO credential creation", lambda: write_private(fifo, b"secret"))
+        cargo_target = root / "cargo-target"
+        cargo_target.mkdir(mode=0o700)
+        test_binary = cargo_target / "openbao_integration-test"
+        test_binary.write_bytes(b"test executable")
+        test_binary.chmod(0o700)
+        if validate_test_binary(test_binary, cargo_target) != test_binary:
+            raise HarnessError("self-test rejected a private integration executable")
+        binary_symlink = cargo_target / "test-symlink"
+        binary_symlink.symlink_to(test_binary)
+        expect_rejected(
+            "symbolic-link integration executable",
+            lambda: validate_test_binary(binary_symlink, cargo_target),
+        )
+        writable_binary = cargo_target / "writable-test"
+        writable_binary.write_bytes(b"test executable")
+        writable_binary.chmod(0o722)
+        expect_rejected(
+            "group-writable integration executable",
+            lambda: validate_test_binary(writable_binary, cargo_target),
+        )
+        outside_binary = root / "outside-test"
+        outside_binary.write_bytes(b"test executable")
+        outside_binary.chmod(0o700)
+        expect_rejected(
+            "integration executable outside target",
+            lambda: validate_test_binary(outside_binary, cargo_target),
+        )
         descriptor = create_secret_fd("credential")
         if Path(f"/proc/self/fd/{descriptor}").read_text() != "credential":
             raise HarnessError("self-test anonymous credential is unreadable")

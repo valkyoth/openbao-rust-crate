@@ -8,6 +8,7 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{IgnoredAny, MapAccess, Visitor},
+    ser::SerializeMap,
 };
 
 use crate::{
@@ -313,18 +314,54 @@ impl ListEntries for JwtRoleList {
     }
 }
 
+const MAX_OIDC_STATE_BYTES: usize = 4 * 1024;
+#[cfg(any(feature = "oidc-get-callback-acknowledged", test))]
+const MAX_OIDC_CREDENTIAL_BYTES: usize = 64 * 1024;
+const MAX_OIDC_NONCE_BYTES: usize = 4 * 1024;
+const MAX_OIDC_REDIRECT_URI_BYTES: usize = 8 * 1024;
+
 /// Request for starting an OIDC browser login flow.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Default)]
 pub struct OidcAuthUrlRequest {
     /// Role used for the OIDC login. Defaults to the mount default role when omitted.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
     /// Callback URL registered with OpenBao and the OIDC provider.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect_uri: Option<String>,
     /// Optional nonce that must match the later callback or poll request.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_nonce: Option<String>,
+    pub client_nonce: Option<SecretString>,
+}
+
+impl fmt::Debug for OidcAuthUrlRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OidcAuthUrlRequest")
+            .field("role", &self.role)
+            .field("redirect_uri", &self.redirect_uri)
+            .field("has_client_nonce", &self.client_nonce.is_some())
+            .finish()
+    }
+}
+
+impl Serialize for OidcAuthUrlRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let count = usize::from(self.role.is_some())
+            + usize::from(self.redirect_uri.is_some())
+            + usize::from(self.client_nonce.is_some());
+        let mut map = serializer.serialize_map(Some(count))?;
+        if let Some(role) = &self.role {
+            map.serialize_entry("role", role)?;
+        }
+        if let Some(redirect_uri) = &self.redirect_uri {
+            map.serialize_entry("redirect_uri", redirect_uri)?;
+        }
+        if let Some(client_nonce) = &self.client_nonce {
+            map.serialize_entry("client_nonce", client_nonce.expose_secret())?;
+        }
+        map.end()
+    }
 }
 
 impl OidcAuthUrlRequest {
@@ -350,7 +387,7 @@ impl OidcAuthUrlRequest {
 
     /// Sets the client nonce used to bind later callback or poll requests.
     #[must_use]
-    pub fn with_client_nonce(mut self, client_nonce: impl Into<String>) -> Self {
+    pub fn with_client_nonce(mut self, client_nonce: impl Into<SecretString>) -> Self {
         self.client_nonce = Some(client_nonce.into());
         self
     }
@@ -359,19 +396,21 @@ impl OidcAuthUrlRequest {
         if let Some(role) = &self.role {
             validate_mount_path(role)?;
         }
-        if let Some(redirect_uri) = &self.redirect_uri
-            && redirect_uri.trim().is_empty()
-        {
-            return Err(Error::InvalidParameter(
-                "OIDC redirect_uri must not be empty".into(),
-            ));
+        if let Some(redirect_uri) = &self.redirect_uri {
+            validate_oidc_plain_value(
+                redirect_uri,
+                MAX_OIDC_REDIRECT_URI_BYTES,
+                "OIDC redirect_uri must not be empty",
+                "OIDC redirect_uri exceeds the maximum length",
+            )?;
         }
-        if let Some(client_nonce) = &self.client_nonce
-            && client_nonce.trim().is_empty()
-        {
-            return Err(Error::InvalidParameter(
-                "OIDC client_nonce must not be empty".into(),
-            ));
+        if let Some(client_nonce) = &self.client_nonce {
+            validate_oidc_secret_value(
+                client_nonce,
+                MAX_OIDC_NONCE_BYTES,
+                "OIDC client_nonce must not be empty",
+                "OIDC client_nonce exceeds the maximum length",
+            )?;
         }
         Ok(())
     }
@@ -391,21 +430,33 @@ pub struct OidcAuthUrlResponse {
 }
 
 /// Request for completing a browser OIDC callback.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct OidcCallbackRequest {
     /// Opaque state returned by the OIDC provider.
-    pub state: String,
+    pub state: SecretString,
     /// Provider authorization code. Required when `id_token` is omitted.
     pub code: Option<SecretString>,
     /// Provider ID token. Required when `code` is omitted.
     pub id_token: Option<SecretString>,
     /// Client nonce supplied to `oidc_auth_url`, when used.
-    pub client_nonce: Option<String>,
+    pub client_nonce: Option<SecretString>,
+}
+
+impl fmt::Debug for OidcCallbackRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OidcCallbackRequest")
+            .field("state", &"<redacted>")
+            .field("has_code", &self.code.is_some())
+            .field("has_id_token", &self.id_token.is_some())
+            .field("has_client_nonce", &self.client_nonce.is_some())
+            .finish()
+    }
 }
 
 impl OidcCallbackRequest {
     /// Creates a callback request using an authorization code.
-    pub fn with_code(state: impl Into<String>, code: SecretString) -> Self {
+    pub fn with_code(state: impl Into<SecretString>, code: SecretString) -> Self {
         Self {
             state: state.into(),
             code: Some(code),
@@ -415,7 +466,7 @@ impl OidcCallbackRequest {
     }
 
     /// Creates a callback request using an ID token.
-    pub fn with_id_token(state: impl Into<String>, id_token: SecretString) -> Self {
+    pub fn with_id_token(state: impl Into<SecretString>, id_token: SecretString) -> Self {
         Self {
             state: state.into(),
             code: None,
@@ -426,21 +477,22 @@ impl OidcCallbackRequest {
 
     /// Sets the client nonce that must match the authorization URL request.
     #[must_use]
-    pub fn with_client_nonce(mut self, client_nonce: impl Into<String>) -> Self {
+    pub fn with_client_nonce(mut self, client_nonce: impl Into<SecretString>) -> Self {
         self.client_nonce = Some(client_nonce.into());
         self
     }
 
     #[cfg(any(feature = "oidc-get-callback-acknowledged", test))]
     fn validate(&self) -> Result<()> {
-        if self.state.trim().is_empty() {
-            return Err(Error::InvalidParameter(
-                "OIDC state must not be empty".into(),
-            ));
-        }
+        validate_oidc_secret_value(
+            &self.state,
+            MAX_OIDC_STATE_BYTES,
+            "OIDC state must not be empty",
+            "OIDC state exceeds the maximum length",
+        )?;
         match (&self.code, &self.id_token) {
-            (Some(code), None) if !code.expose_secret().is_empty() => {}
-            (None, Some(id_token)) if !id_token.expose_secret().is_empty() => {}
+            (Some(code), None) => validate_oidc_credential(code)?,
+            (None, Some(id_token)) => validate_oidc_credential(id_token)?,
             (Some(_), Some(_)) => {
                 return Err(Error::InvalidParameter(
                     "OIDC callback accepts code or id_token, not both".into(),
@@ -452,30 +504,55 @@ impl OidcCallbackRequest {
                 ));
             }
         }
-        if let Some(client_nonce) = &self.client_nonce
-            && client_nonce.trim().is_empty()
-        {
-            return Err(Error::InvalidParameter(
-                "OIDC client_nonce must not be empty".into(),
-            ));
+        if let Some(client_nonce) = &self.client_nonce {
+            validate_oidc_secret_value(
+                client_nonce,
+                MAX_OIDC_NONCE_BYTES,
+                "OIDC client_nonce must not be empty",
+                "OIDC client_nonce exceeds the maximum length",
+            )?;
         }
         Ok(())
     }
 }
 
 /// Request for polling an OIDC direct or device callback flow.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone)]
 pub struct OidcPollRequest {
     /// Opaque state returned by the authorization URL request.
-    pub state: String,
+    pub state: SecretString,
     /// Client nonce supplied to `oidc_auth_url`, when used.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_nonce: Option<String>,
+    pub client_nonce: Option<SecretString>,
+}
+
+impl fmt::Debug for OidcPollRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OidcPollRequest")
+            .field("state", &"<redacted>")
+            .field("has_client_nonce", &self.client_nonce.is_some())
+            .finish()
+    }
+}
+
+impl Serialize for OidcPollRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map =
+            serializer.serialize_map(Some(1 + usize::from(self.client_nonce.is_some())))?;
+        map.serialize_entry("state", self.state.expose_secret())?;
+        if let Some(client_nonce) = &self.client_nonce {
+            map.serialize_entry("client_nonce", client_nonce.expose_secret())?;
+        }
+        map.end()
+    }
 }
 
 impl OidcPollRequest {
     /// Creates an OIDC poll request.
-    pub fn new(state: impl Into<String>) -> Self {
+    pub fn new(state: impl Into<SecretString>) -> Self {
         Self {
             state: state.into(),
             client_nonce: None,
@@ -484,26 +561,68 @@ impl OidcPollRequest {
 
     /// Sets the client nonce that must match the authorization URL request.
     #[must_use]
-    pub fn with_client_nonce(mut self, client_nonce: impl Into<String>) -> Self {
+    pub fn with_client_nonce(mut self, client_nonce: impl Into<SecretString>) -> Self {
         self.client_nonce = Some(client_nonce.into());
         self
     }
 
     fn validate(&self) -> Result<()> {
-        if self.state.trim().is_empty() {
-            return Err(Error::InvalidParameter(
-                "OIDC state must not be empty".into(),
-            ));
-        }
-        if let Some(client_nonce) = &self.client_nonce
-            && client_nonce.trim().is_empty()
-        {
-            return Err(Error::InvalidParameter(
-                "OIDC client_nonce must not be empty".into(),
-            ));
+        validate_oidc_secret_value(
+            &self.state,
+            MAX_OIDC_STATE_BYTES,
+            "OIDC state must not be empty",
+            "OIDC state exceeds the maximum length",
+        )?;
+        if let Some(client_nonce) = &self.client_nonce {
+            validate_oidc_secret_value(
+                client_nonce,
+                MAX_OIDC_NONCE_BYTES,
+                "OIDC client_nonce must not be empty",
+                "OIDC client_nonce exceeds the maximum length",
+            )?;
         }
         Ok(())
     }
+}
+
+fn validate_oidc_plain_value(
+    value: &str,
+    maximum: usize,
+    empty_error: &'static str,
+    length_error: &'static str,
+) -> Result<()> {
+    if value.trim().is_empty() {
+        return Err(Error::InvalidParameter(empty_error.into()));
+    }
+    if value.len() > maximum {
+        return Err(Error::InvalidParameter(length_error.into()));
+    }
+    Ok(())
+}
+
+fn validate_oidc_secret_value(
+    value: &SecretString,
+    maximum: usize,
+    empty_error: &'static str,
+    length_error: &'static str,
+) -> Result<()> {
+    validate_oidc_plain_value(value.expose_secret(), maximum, empty_error, length_error)
+}
+
+#[cfg(any(feature = "oidc-get-callback-acknowledged", test))]
+fn validate_oidc_credential(value: &SecretString) -> Result<()> {
+    let value = value.expose_secret();
+    if value.is_empty() {
+        return Err(Error::InvalidParameter(
+            "OIDC callback requires one non-empty credential".into(),
+        ));
+    }
+    if value.len() > MAX_OIDC_CREDENTIAL_BYTES {
+        return Err(Error::InvalidParameter(
+            "OIDC callback credential exceeds the maximum length".into(),
+        ));
+    }
+    Ok(())
 }
 
 /// Metadata returned after a successful JWT login.
@@ -772,7 +891,7 @@ impl JwtAuth<'_> {
         // builds still require HTTPS and sanitized transport errors. Borrowed
         // values avoid an additional ordinary String copy before reqwest owns
         // the unavoidable URL buffer.
-        let mut query = vec![("state", request.state.as_str())];
+        let mut query = vec![("state", request.state.expose_secret())];
         if let Some(code) = &request.code {
             query.push(("code", code.expose_secret()));
         }
@@ -780,7 +899,7 @@ impl JwtAuth<'_> {
             query.push(("id_token", id_token.expose_secret()));
         }
         if let Some(client_nonce) = &request.client_nonce {
-            query.push(("client_nonce", client_nonce.as_str()));
+            query.push(("client_nonce", client_nonce.expose_secret()));
         }
         let response: JwtLoginResponse = self
             .client
@@ -1016,6 +1135,58 @@ mod tests {
             super::OidcCallbackRequest::with_id_token("state", SecretString::from("id-token"))
                 .validate()
                 .is_ok()
+        );
+    }
+
+    #[test]
+    fn oidc_correlation_values_are_secret_redacted_and_bounded() {
+        let auth = super::OidcAuthUrlRequest::new("https://app.example.com/callback")
+            .with_client_nonce("auth-secret-nonce");
+        let auth_debug = format!("{auth:?}");
+        assert!(!auth_debug.contains("auth-secret-nonce"));
+        let auth_json = serde_json::to_value(&auth).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(auth_json["client_nonce"], "auth-secret-nonce");
+
+        let callback = super::OidcCallbackRequest::with_code(
+            "callback-secret-state",
+            SecretString::from("authorization-code"),
+        )
+        .with_client_nonce("callback-secret-nonce");
+        let callback_debug = format!("{callback:?}");
+        assert!(!callback_debug.contains("callback-secret-state"));
+        assert!(!callback_debug.contains("callback-secret-nonce"));
+        assert!(!callback_debug.contains("authorization-code"));
+
+        let poll =
+            super::OidcPollRequest::new("poll-secret-state").with_client_nonce("poll-secret-nonce");
+        let poll_debug = format!("{poll:?}");
+        assert!(!poll_debug.contains("poll-secret-state"));
+        assert!(!poll_debug.contains("poll-secret-nonce"));
+        let poll_json = serde_json::to_value(&poll).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(poll_json["state"], "poll-secret-state");
+        assert_eq!(poll_json["client_nonce"], "poll-secret-nonce");
+
+        assert!(
+            super::OidcCallbackRequest::with_code(
+                "s".repeat(super::MAX_OIDC_STATE_BYTES + 1),
+                SecretString::from("code"),
+            )
+            .validate()
+            .is_err()
+        );
+        assert!(
+            super::OidcCallbackRequest::with_code(
+                "state",
+                SecretString::from("c".repeat(super::MAX_OIDC_CREDENTIAL_BYTES + 1)),
+            )
+            .validate()
+            .is_err()
+        );
+        assert!(
+            super::OidcPollRequest::new("state")
+                .with_client_nonce("n".repeat(super::MAX_OIDC_NONCE_BYTES + 1))
+                .validate()
+                .is_err()
         );
     }
 

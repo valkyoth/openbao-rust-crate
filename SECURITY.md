@@ -239,12 +239,15 @@ header.
 
 Release integration tests do not use that persistent development state. The
 version-locked harness creates per-run TLS under a private temporary directory,
-passes the root token through an anonymous memory-backed descriptor, uses
-in-memory OpenBao storage and ownership-labeled Podman resources, and sanitizes
-private material during cleanup. It invokes the locked image's `bao` binary
-directly so historical image entrypoint wrappers cannot inject additional
-configuration or commands. Test cleanup is verified before a successful
-completion attestation is accepted.
+compiles and ownership-validates the integration test before initialization,
+then passes the root token through an anonymous memory-backed descriptor only
+to that precompiled executable. Cargo, rustc, proc macros, and build scripts do
+not inherit the token or result descriptor. The harness uses in-memory OpenBao
+storage and ownership-labeled Podman resources and sanitizes private material
+during cleanup. It invokes the locked image's `bao` binary directly so
+historical image entrypoint wrappers cannot inject additional configuration or
+commands. Test cleanup is verified before a successful completion attestation
+is accepted.
 
 Historical compatibility runs include OpenBao releases that may contain fixed
 upstream vulnerabilities. They run only as disposable, rootless, read-only

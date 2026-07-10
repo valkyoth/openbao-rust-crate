@@ -42,6 +42,25 @@ request fields. Move standard fields such as `username`, `password`, and
 `connection_url` to their dedicated struct fields instead of inserting them
 into `extra`.
 
+OIDC request correlation values now use secret-aware types. The public
+`client_nonce` fields on `OidcAuthUrlRequest`, `OidcCallbackRequest`, and
+`OidcPollRequest`, plus the `state` fields on callback and poll requests, are
+now `SecretString` values. Constructors and builder methods still accept string
+literals directly; code that initializes public fields must wrap values:
+
+```rust
+use openbao::SecretString;
+use openbao::auth::jwt::OidcPollRequest;
+
+let request = OidcPollRequest {
+    state: SecretString::from("opaque-state"),
+    client_nonce: Some(SecretString::from("session-nonce")),
+};
+```
+
+OIDC state, nonce, callback credentials, and redirect URIs are also rejected
+when they exceed the SDK's documented request bounds.
+
 Public raw JSON, byte, retry, and response-wrapping transports now require
 both `raw-api` and `raw-api-acknowledged`. Typed endpoint helpers remain
 available without those features. Audit each local raw wrapper before enabling
