@@ -52,6 +52,16 @@ Please include:
   after handoff to the HTTP stack.
 - Third-party GitHub Actions must be pinned to immutable commit SHAs.
 - New dependencies require a release-plan justification and `cargo deny` review.
+- Public raw JSON, byte, retry, and response-wrapping transports are disabled
+  unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
+  bypass typed request validation and operation-specific feature gates; keep
+  every enabled use behind a reviewed local typed wrapper with fixed methods
+  and paths.
+- Base URLs are origins only. User credentials, application paths, query
+  strings, and fragments are rejected before a client is built.
+- The selected reqwest TLS backend is set explicitly from this crate's feature
+  policy so dependency feature unification cannot silently replace Rustls with
+  native TLS.
 
 ## Admin Bootstrap Concurrency
 
@@ -81,6 +91,11 @@ or the operating system.
 Token and namespace header values are also copied into HTTP-stack header
 structures that are marked sensitive for logging but are not sanitized on drop by
 the underlying `http`/`hyper`/`reqwest` types.
+Tokens loaded from environment variables are moved directly into
+`SecretString` without an intermediate trimmed copy, but the operating system's
+process environment remains outside the crate's sanitization control. Prefer a
+protected credential broker, inherited file descriptor, or dedicated secret
+agent where environment-variable residency is unacceptable.
 
 High-assurance deployments should combine this crate with process isolation,
 encrypted swap or disabled swap, core-dump restrictions, short process

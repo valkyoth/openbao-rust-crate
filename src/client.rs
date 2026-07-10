@@ -324,6 +324,7 @@ impl OpenBaoConfig {
     pub fn new(base_url: impl AsRef<str>) -> Result<Self> {
         let url = Url::parse(base_url.as_ref())
             .map_err(|error| Error::InvalidBaseUrl(error.to_string()))?;
+        validate_base_url_components(&url)?;
         Ok(Self {
             base_url: url,
             timeout: Duration::from_secs(30),
@@ -597,6 +598,7 @@ impl OpenBaoConfig {
     }
 
     fn validate(&self) -> Result<()> {
+        validate_base_url_components(&self.base_url)?;
         validate_min_tls_version(self.min_tls_version)?;
         if !self.crl_pem_bundles.is_empty()
             && self.root_certificate_mode != RootCertificateMode::OnlyConfigured
@@ -636,6 +638,36 @@ fn validate_min_tls_version(version: tls::Version) -> Result<()> {
         ));
     }
     Ok(())
+}
+
+fn validate_base_url_components(url: &Url) -> Result<()> {
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(Error::InvalidBaseUrl(
+            "base URL must not contain user credentials".into(),
+        ));
+    }
+    if url.query().is_some() || url.fragment().is_some() {
+        return Err(Error::InvalidBaseUrl(
+            "base URL must not contain a query or fragment".into(),
+        ));
+    }
+    if !matches!(url.path(), "" | "/") {
+        return Err(Error::InvalidBaseUrl(
+            "base URL must not contain an application path".into(),
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) const fn ensure_public_raw_api_enabled() -> Result<()> {
+    #[cfg(feature = "raw-api")]
+    {
+        Ok(())
+    }
+    #[cfg(not(feature = "raw-api"))]
+    {
+        Err(Error::RawApiDisabled)
+    }
 }
 
 impl fmt::Debug for OpenBaoConfig {
@@ -698,6 +730,15 @@ fn build_http_client(config: &OpenBaoConfig, https_only: bool) -> Result<reqwest
         .https_only(https_only)
         .redirect(redirect::Policy::none())
         .tls_version_min(config.min_tls_version);
+
+    #[cfg(feature = "rustls-tls")]
+    {
+        builder = builder.tls_backend_rustls();
+    }
+    #[cfg(feature = "native-tls")]
+    {
+        builder = builder.tls_backend_native();
+    }
 
     builder = match config.root_certificate_mode {
         RootCertificateMode::MergeWithSystem => {
@@ -814,7 +855,25 @@ impl<State> Client<State> {
     /// `path` is relative to `/v1`. It is validated and joined as URL path
     /// segments, so callers should pass values such as `sys/health` or
     /// `secret/data/app`.
+    ///
+    /// This escape hatch requires both `raw-api` and `raw-api-acknowledged`
+    /// because raw calls bypass typed endpoint validation and operation-specific
+    /// feature gates. Prefer typed helpers whenever one exists.
     pub async fn request_json<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        ensure_public_raw_api_enabled()?;
+        self.request_json_internal(method, path, body).await
+    }
+
+    pub(crate) async fn request_json_internal<T, B>(
         &self,
         method: Method,
         path: &str,
@@ -843,6 +902,7 @@ impl<State> Client<State> {
     ///
     /// The delay function keeps this API runtime-neutral. For Tokio callers,
     /// pass `tokio::time::sleep`.
+    /// This escape hatch requires `raw-api` and `raw-api-acknowledged`.
     pub async fn request_json_with_retry<T, B, F, Fut>(
         &self,
         method: RetryableMethod,
@@ -937,7 +997,22 @@ impl<State> Client<State> {
     ///
     /// When `body` is present and no explicit `Content-Type` header is supplied,
     /// OpenBao receives `application/octet-stream`.
+    /// This escape hatch requires `raw-api` and `raw-api-acknowledged`.
     pub async fn request_bytes_accepting(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        accept: Option<HeaderValue>,
+        body: Option<&[u8]>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<SecretVec> {
+        ensure_public_raw_api_enabled()?;
+        self.request_bytes_accepting_internal(method, path, query, accept, body, accepted_statuses)
+            .await
+    }
+
+    pub(crate) async fn request_bytes_accepting_internal(
         &self,
         method: Method,
         path: &str,
@@ -950,8 +1025,15 @@ impl<State> Client<State> {
         if let Some(accept) = accept {
             headers.push((ACCEPT, accept));
         }
-        self.request_bytes_headers_accepting(method, path, query, &headers, body, accepted_statuses)
-            .await
+        self.request_bytes_headers_accepting_internal(
+            method,
+            path,
+            query,
+            &headers,
+            body,
+            accepted_statuses,
+        )
+        .await
     }
 
     /// Sends a raw byte request with explicit headers.
@@ -959,7 +1041,29 @@ impl<State> Client<State> {
     /// Use this for binary protocols that require a specific request or
     /// response MIME type. Header values are validated by `reqwest`; token and
     /// namespace headers are still managed by the client.
+    /// This escape hatch requires `raw-api` and `raw-api-acknowledged`.
     pub async fn request_bytes_headers_accepting(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&[u8]>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<SecretVec> {
+        ensure_public_raw_api_enabled()?;
+        self.request_bytes_headers_accepting_internal(
+            method,
+            path,
+            query,
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    async fn request_bytes_headers_accepting_internal(
         &self,
         method: Method,
         path: &str,
@@ -1413,9 +1517,16 @@ fn openbao_token_from_env_lookup<F>(mut lookup: F) -> Result<SecretString>
 where
     F: FnMut(&str) -> Option<String>,
 {
-    first_env_value(&mut lookup, TOKEN_ENV_KEYS)
-        .map(|(_key, token)| SecretString::from(token))
-        .ok_or(Error::MissingToken)
+    for key in TOKEN_ENV_KEYS {
+        let Some(value) = lookup(key) else {
+            continue;
+        };
+        let token = SecretString::from(value);
+        if !token.expose_secret().trim().is_empty() {
+            return Ok(token);
+        }
+    }
+    Err(Error::MissingToken)
 }
 
 fn first_env_value<F>(lookup: &mut F, keys: &[&'static str]) -> Option<(&'static str, String)>
@@ -1584,6 +1695,41 @@ mod tests {
     #[test]
     fn rejects_http_by_default() {
         assert!(Client::new("http://127.0.0.1:8200").is_err());
+    }
+
+    #[test]
+    fn base_url_rejects_credentials_query_fragment_and_application_path() {
+        for base_url in [
+            "https://user:password@bao.example.com",
+            "https://bao.example.com?token=query-secret",
+            "https://bao.example.com#fragment-secret",
+            "https://bao.example.com/openbao",
+        ] {
+            let error = match OpenBaoConfig::new(base_url) {
+                Ok(_) => panic!("unsafe base URL unexpectedly accepted"),
+                Err(error) => error,
+            };
+            let display = error.to_string();
+            assert!(matches!(error, Error::InvalidBaseUrl(_)));
+            assert!(!display.contains("password"));
+            assert!(!display.contains("query-secret"));
+            assert!(!display.contains("fragment-secret"));
+        }
+    }
+
+    #[cfg(not(feature = "raw-api"))]
+    #[test]
+    fn public_raw_api_is_disabled_without_acknowledgement() {
+        assert!(matches!(
+            super::ensure_public_raw_api_enabled(),
+            Err(Error::RawApiDisabled)
+        ));
+    }
+
+    #[cfg(feature = "raw-api")]
+    #[test]
+    fn public_raw_api_is_enabled_only_by_acknowledged_feature_pair() {
+        assert!(super::ensure_public_raw_api_enabled().is_ok());
     }
 
     #[test]
@@ -1894,6 +2040,22 @@ mod tests {
             .unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(token.expose_secret(), "openbao-token");
         assert!(!format!("{token:?}").contains("openbao-token"));
+    }
+
+    #[test]
+    fn env_token_ingestion_moves_and_preserves_non_empty_values() {
+        let env = env_map([
+            ("OPENBAO_TOKEN", "   "),
+            ("BAO_TOKEN", " token-with-spaces "),
+        ]);
+        let token = openbao_token_from_env_lookup(|key| env.get(key).cloned())
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        assert_eq!(token.expose_secret(), " token-with-spaces ");
+        assert!(
+            validate_token_for_header(&token, super::HeaderMode::VaultToken).is_err(),
+            "environment token whitespace must not be silently normalized"
+        );
     }
 
     fn env_map<const N: usize>(

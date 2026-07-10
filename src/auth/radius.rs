@@ -398,7 +398,7 @@ impl RadiusAuth<'_> {
         };
         let response: RadiusLoginResponse = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/login/{username}", self.mount),
                 Some(&request),
@@ -431,7 +431,7 @@ impl RadiusAuthAdmin<'_> {
             token_type: config.token_type.as_deref(),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -447,7 +447,7 @@ impl RadiusAuthAdmin<'_> {
             policies: user.policies.join(","),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/users/{username}", self.mount),
                 Some(&payload),
@@ -460,7 +460,7 @@ impl RadiusAuthAdmin<'_> {
         let username = validate_radius_username(username)?;
         let envelope: ResponseEnvelope<RadiusUserInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/users/{username}", self.mount),
                 Option::<&Empty>::None,

@@ -2044,7 +2044,7 @@ impl Transit<'_> {
     pub async fn create_key(&self, name: &str, request: &TransitCreateKeyRequest) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(Method::POST, &self.key_path(name, None)?, Some(request))
+            .request_json_internal(Method::POST, &self.key_path(name, None)?, Some(request))
             .await
     }
 
@@ -2052,7 +2052,7 @@ impl Transit<'_> {
     pub async fn read_key(&self, name: &str) -> Result<TransitKeyInfo> {
         let envelope: ResponseEnvelope<TransitKeyInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.key_path(name, None)?,
                 Option::<&Empty>::None,
@@ -2069,7 +2069,7 @@ impl Transit<'_> {
     pub async fn wrapping_key(&self) -> Result<TransitWrappingKey> {
         let envelope: ResponseEnvelope<TransitWrappingKey> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["wrapping_key"])?,
                 Option::<&Empty>::None,
@@ -2124,7 +2124,7 @@ impl Transit<'_> {
     pub async fn update_key(&self, name: &str, request: &TransitUpdateKeyRequest) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.key_path(name, Some("config"))?,
                 Some(request),
@@ -2135,7 +2135,7 @@ impl Transit<'_> {
     /// Rotates a named Transit key to a new key version.
     pub async fn rotate_key(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.key_path(name, Some("rotate"))?,
                 Option::<&Empty>::None,
@@ -2171,7 +2171,7 @@ impl Transit<'_> {
             auto_rotate_period: request.auto_rotate_period.as_deref(),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.key_path(name, Some("import"))?,
                 Some(&payload),
@@ -2205,7 +2205,7 @@ impl Transit<'_> {
             version: request.version,
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.key_path(name, Some("import_version"))?,
                 Some(&payload),
@@ -2231,7 +2231,7 @@ impl Transit<'_> {
     /// Restores a soft-deleted Transit key.
     pub async fn restore_soft_deleted_key(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.key_path(name, Some("soft-delete-restore"))?,
                 Option::<&Empty>::None,
@@ -2291,7 +2291,7 @@ impl Transit<'_> {
     ) -> Result<TransitGlobalKeyConfig> {
         let envelope: ResponseEnvelope<TransitGlobalKeyConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["config", "keys"])?,
                 Some(request),
@@ -2304,7 +2304,7 @@ impl Transit<'_> {
     pub async fn read_global_key_config(&self) -> Result<TransitGlobalKeyConfig> {
         let envelope: ResponseEnvelope<TransitGlobalKeyConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["config", "keys"])?,
                 Option::<&Empty>::None,
@@ -2340,7 +2340,7 @@ impl Transit<'_> {
         }
         let envelope: ResponseEnvelope<TransitExportResponse> = self
             .client
-            .request_json(Method::GET, &self.path(&segments)?, Option::<&Empty>::None)
+            .request_json_internal(Method::GET, &self.path(&segments)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -2353,7 +2353,7 @@ impl Transit<'_> {
         let name = validate_key_name(name)?.join("/");
         let envelope: ResponseEnvelope<TransitBackup> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["backup", &name])?,
                 Option::<&Empty>::None,
@@ -2383,14 +2383,14 @@ impl Transit<'_> {
             None => self.path(&["restore"])?,
         };
         self.client
-            .request_json(Method::POST, &path, Some(&payload))
+            .request_json_internal(Method::POST, &path, Some(&payload))
             .await
     }
 
     /// Trims older Transit key versions up to `min_available_version`.
     pub async fn trim_key(&self, name: &str, request: &TransitTrimRequest) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.key_path(name, Some("trim"))?,
                 Some(request),
@@ -2406,7 +2406,7 @@ impl Transit<'_> {
         let request = TransitCacheConfig::new(request.size)?;
         let envelope: ResponseEnvelope<TransitCacheConfig> = self
             .client
-            .request_json(Method::POST, &self.path(&["cache-config"])?, Some(&request))
+            .request_json_internal(Method::POST, &self.path(&["cache-config"])?, Some(&request))
             .await?;
         Ok(envelope.data)
     }
@@ -2415,7 +2415,7 @@ impl Transit<'_> {
     pub async fn read_cache_config(&self) -> Result<TransitCacheConfig> {
         let envelope: ResponseEnvelope<TransitCacheConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["cache-config"])?,
                 Option::<&Empty>::None,
@@ -2435,7 +2435,7 @@ impl Transit<'_> {
     ) -> Result<TransitCsrResponse> {
         let envelope: ResponseEnvelope<TransitCsrResponse> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.key_path(name, Some("csr"))?,
                 Some(request),
@@ -2455,7 +2455,7 @@ impl Transit<'_> {
     ) -> Result<TransitCertificateChain> {
         let envelope: ResponseEnvelope<TransitCertificateChain> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.key_path(name, Some("set-certificate"))?,
                 Some(request),
@@ -2773,7 +2773,7 @@ impl Transit<'_> {
     {
         let envelope: ResponseEnvelope<T> = self
             .client
-            .request_json(method, path, Some(request))
+            .request_json_internal(method, path, Some(request))
             .await?;
         Ok(envelope.data)
     }

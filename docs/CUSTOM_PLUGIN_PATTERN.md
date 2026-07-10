@@ -5,6 +5,15 @@ know ahead of time. Use `Client::request_json` as the transport primitive, but
 wrap it in a small typed module so application code does not pass ad hoc paths,
 unredacted secrets, or loosely shaped JSON values around the codebase.
 
+Public raw transports are disabled by default. Enable both `raw-api` and
+`raw-api-acknowledged` only after reviewing the local wrapper. These features
+explicitly acknowledge that a generic request can bypass operation-specific
+typed validation and feature gates:
+
+```toml
+openbao = { version = "1", features = ["raw-api", "raw-api-acknowledged"] }
+```
+
 Recommended pattern:
 
 - keep plugin paths in one module;
@@ -18,6 +27,8 @@ Recommended pattern:
   string lists before exposing them to application code;
 - cover the wrapper with a mock HTTP test that asserts the documented method
   and path.
+- expose only fixed operations from the wrapper; do not accept caller-selected
+  methods or full endpoint paths.
 
 Do not build a generic `Plugin` or `SecretEngine` trait around this pattern.
 OpenBao plugin schemas are deployment-specific; a trait that only forwards to

@@ -2420,6 +2420,7 @@ impl<'a> WrappingContext<'a> {
         T: DeserializeOwned,
         B: Serialize + ?Sized,
     {
+        crate::client::ensure_public_raw_api_enabled()?;
         let headers = [(
             HeaderName::from_static("x-vault-wrap-ttl"),
             self.ttl.clone(),
@@ -2502,7 +2503,7 @@ impl<'a, T> WrappedResponse<'a, T> {
             token: self.wrap_info.token.expose_secret(),
         };
         self.client
-            .request_json(Method::POST, "sys/wrapping/unwrap", Some(&payload))
+            .request_json_internal(Method::POST, "sys/wrapping/unwrap", Some(&payload))
             .await
     }
 }
@@ -3774,7 +3775,7 @@ impl<State> Sys<'_, State> {
     /// Reads `/sys/init` initialization status.
     pub async fn init_status(&self) -> Result<InitStatus> {
         self.client
-            .request_json(Method::GET, "sys/init", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/init", Option::<&Empty>::None)
             .await
     }
 
@@ -3804,7 +3805,7 @@ impl<State> Sys<'_, State> {
     /// Reads `/sys/seal-status`.
     pub async fn seal_status(&self) -> Result<SealStatus> {
         self.client
-            .request_json(Method::GET, "sys/seal-status", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/seal-status", Option::<&Empty>::None)
             .await
     }
 
@@ -3874,21 +3875,21 @@ impl<State> Sys<'_, State> {
     /// Reads `/sys/leader`.
     pub async fn leader_status(&self) -> Result<LeaderStatus> {
         self.client
-            .request_json(Method::GET, "sys/leader", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/leader", Option::<&Empty>::None)
             .await
     }
 
     /// Reads `/sys/ha-status`.
     pub async fn ha_status(&self) -> Result<HaStatus> {
         self.client
-            .request_json(Method::GET, "sys/ha-status", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/ha-status", Option::<&Empty>::None)
             .await
     }
 
     /// Reads `/sys/key-status`.
     pub async fn key_status(&self) -> Result<KeyStatus> {
         self.client
-            .request_json(Method::GET, "sys/key-status", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/key-status", Option::<&Empty>::None)
             .await
     }
 
@@ -3914,7 +3915,7 @@ impl<State> Sys<'_, State> {
     /// backwards compatibility guarantees.
     pub async fn ui_namespaces(&self) -> Result<UiNamespaces> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/internal/ui/namespaces",
                 Option::<&Empty>::None,
@@ -3928,7 +3929,7 @@ impl<State> Sys<'_, State> {
     /// support without backwards compatibility guarantees.
     pub async fn ui_mounts(&self) -> Result<UiMounts> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/internal/ui/mounts",
                 Option::<&Empty>::None,
@@ -3960,7 +3961,7 @@ impl<State> Sys<'_, State> {
     pub async fn metrics_prometheus(&self) -> Result<String> {
         let body = self
             .client
-            .request_bytes_accepting(
+            .request_bytes_accepting_internal(
                 Method::GET,
                 "sys/metrics",
                 &[("format", "prometheus".to_owned())],
@@ -3983,7 +3984,7 @@ impl<State> Sys<'_, State> {
     pub async fn host_info_json(&self) -> Result<JsonValue> {
         let envelope: ResponseEnvelope<JsonValue> = self
             .client
-            .request_json(Method::GET, "sys/host-info", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/host-info", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -3996,7 +3997,7 @@ impl<State> Sys<'_, State> {
     /// and content-type protections.
     pub async fn sanitized_config_state_json(&self) -> Result<JsonValue> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/config/state/sanitized",
                 Option::<&Empty>::None,
@@ -4007,14 +4008,14 @@ impl<State> Sys<'_, State> {
     /// Reads runtime logger levels from `/sys/loggers`.
     pub async fn logger_levels(&self) -> Result<LoggerLevels> {
         self.client
-            .request_json(Method::GET, "sys/loggers", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/loggers", Option::<&Empty>::None)
             .await
     }
 
     /// Reads one runtime logger level from `/sys/loggers/:name`.
     pub async fn logger_level(&self, name: &str) -> Result<LoggerLevels> {
         self.client
-            .request_json(Method::GET, &sys_logger_path(name)?, Option::<&Empty>::None)
+            .request_json_internal(Method::GET, &sys_logger_path(name)?, Option::<&Empty>::None)
             .await
     }
 }
@@ -4039,7 +4040,7 @@ impl Sys<'_, Unauthenticated> {
             validate_key_share_options(shares, threshold)?;
         }
         self.client
-            .request_json(Method::POST, "sys/init", Some(request))
+            .request_json_internal(Method::POST, "sys/init", Some(request))
             .await
     }
 
@@ -4049,7 +4050,7 @@ impl Sys<'_, Unauthenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_unseal(&self, request: &OperatorUnsealRequest) -> Result<UnsealStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/unseal",
                 Some(&OperatorUnsealPayload {
@@ -4087,7 +4088,7 @@ impl Sys<'_, Unauthenticated> {
 
         let init_response: InitResponse = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/init",
                 Some(&InitPayload {
@@ -4145,7 +4146,7 @@ impl Sys<'_, Unauthenticated> {
 
     async fn unseal_once(&self, key: &SecretString) -> Result<UnsealStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/unseal",
                 Some(&UnsealPayload {
@@ -4214,7 +4215,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<SysRandomResponse> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_random_path(None, request.bytes),
                 Some(&payload),
@@ -4235,7 +4236,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<SysRandomResponse> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_random_path(Some(source), request.bytes),
                 Some(&payload),
@@ -4256,7 +4257,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<SysHashResponse> = self
             .client
-            .request_json(Method::POST, &sys_hash_path(algorithm), Some(&payload))
+            .request_json_internal(Method::POST, &sys_hash_path(algorithm), Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -4267,7 +4268,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_seal(&self) -> Result<Empty> {
         self.client
-            .request_json(Method::PUT, "sys/seal", Option::<&Empty>::None)
+            .request_json_internal(Method::PUT, "sys/seal", Option::<&Empty>::None)
             .await
     }
 
@@ -4277,7 +4278,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rotate_keyring(&self) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, "sys/rotate/keyring", Option::<&Empty>::None)
+            .request_json_internal(Method::POST, "sys/rotate/keyring", Option::<&Empty>::None)
             .await
     }
 
@@ -4289,7 +4290,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn step_down_leader(&self) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, "sys/step-down", Option::<&Empty>::None)
+            .request_json_internal(Method::POST, "sys/step-down", Option::<&Empty>::None)
             .await
     }
 
@@ -4299,7 +4300,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_status(&self) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json(Method::GET, "sys/rekey/init", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/rekey/init", Option::<&Empty>::None)
             .await
     }
 
@@ -4313,7 +4314,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
         self.client
-            .request_json(Method::POST, "sys/rekey/init", Some(request))
+            .request_json_internal(Method::POST, "sys/rekey/init", Some(request))
             .await
     }
 
@@ -4323,7 +4324,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_cancel(&self) -> Result<Empty> {
         self.client
-            .request_json(Method::DELETE, "sys/rekey/init", Option::<&Empty>::None)
+            .request_json_internal(Method::DELETE, "sys/rekey/init", Option::<&Empty>::None)
             .await
     }
 
@@ -4336,7 +4337,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/rekey/update",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4356,7 +4357,7 @@ impl Sys<'_, Authenticated> {
         target: OperatorRotateTarget,
     ) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &rotate_init_path(target),
                 Option::<&Empty>::None,
@@ -4375,7 +4376,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
         self.client
-            .request_json(Method::POST, &rotate_init_path(target), Some(request))
+            .request_json_internal(Method::POST, &rotate_init_path(target), Some(request))
             .await
     }
 
@@ -4385,7 +4386,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rotate_cancel(&self, target: OperatorRotateTarget) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 &rotate_init_path(target),
                 Option::<&Empty>::None,
@@ -4403,7 +4404,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &rotate_update_path(target),
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4420,7 +4421,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_generate_root_status(&self) -> Result<OperatorTokenGenerationStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/generate-root/attempt",
                 Option::<&Empty>::None,
@@ -4439,7 +4440,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorTokenGenerationStartRequest,
     ) -> Result<OperatorTokenGenerationStart> {
         self.client
-            .request_json(Method::POST, "sys/generate-root/attempt", Some(request))
+            .request_json_internal(Method::POST, "sys/generate-root/attempt", Some(request))
             .await
     }
 
@@ -4449,7 +4450,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_generate_root_cancel(&self) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 "sys/generate-root/attempt",
                 Option::<&Empty>::None,
@@ -4469,7 +4470,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorTokenGenerationStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/generate-root/update",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4489,7 +4490,7 @@ impl Sys<'_, Authenticated> {
         &self,
     ) -> Result<OperatorTokenGenerationStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/generate-recovery-token/attempt",
                 Option::<&Empty>::None,
@@ -4509,7 +4510,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorTokenGenerationStartRequest,
     ) -> Result<OperatorTokenGenerationStart> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/generate-recovery-token/attempt",
                 Some(request),
@@ -4524,7 +4525,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_generate_recovery_token_cancel(&self) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 "sys/generate-recovery-token/attempt",
                 Option::<&Empty>::None,
@@ -4541,7 +4542,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorTokenGenerationStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/generate-recovery-token/update",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4563,7 +4564,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<DecodeTokenResponse> {
         let envelope: ResponseEnvelope<DecodeTokenResponse> = self
             .client
-            .request_json(Method::POST, "sys/decode-token", Some(request))
+            .request_json_internal(Method::POST, "sys/decode-token", Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -4578,7 +4579,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_recovery_key_status(&self) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/rekey-recovery-key/init",
                 Option::<&Empty>::None,
@@ -4596,7 +4597,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
         self.client
-            .request_json(Method::POST, "sys/rekey-recovery-key/init", Some(request))
+            .request_json_internal(Method::POST, "sys/rekey-recovery-key/init", Some(request))
             .await
     }
 
@@ -4606,7 +4607,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_recovery_key_cancel(&self) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 "sys/rekey-recovery-key/init",
                 Option::<&Empty>::None,
@@ -4623,7 +4624,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/rekey-recovery-key/update",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4642,7 +4643,7 @@ impl Sys<'_, Authenticated> {
         &self,
     ) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/rekey-recovery-key/verify",
                 Option::<&Empty>::None,
@@ -4658,7 +4659,7 @@ impl Sys<'_, Authenticated> {
         &self,
     ) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 "sys/rekey-recovery-key/verify",
                 Option::<&Empty>::None,
@@ -4675,7 +4676,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/rekey-recovery-key/verify",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4692,7 +4693,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_recovery_key_backup(&self) -> Result<OperatorRecoveryKeyBackup> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/rekey/recovery-key-backup",
                 Option::<&Empty>::None,
@@ -4706,7 +4707,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_recovery_key_delete_backup(&self) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 "sys/rekey/recovery-key-backup",
                 Option::<&Empty>::None,
@@ -4812,7 +4813,7 @@ impl Sys<'_, Authenticated> {
             query.push(("debug", debug.to_string()));
         }
         self.client
-            .request_bytes_accepting(
+            .request_bytes_accepting_internal(
                 Method::GET,
                 &pprof_path(profile),
                 &query,
@@ -4827,7 +4828,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_mounts(&self) -> Result<BTreeMap<String, MountInfo>> {
         let envelope: ResponseEnvelope<MountInfoMap> = self
             .client
-            .request_json(Method::GET, "sys/mounts", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/mounts", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data.0)
     }
@@ -4836,7 +4837,7 @@ impl Sys<'_, Authenticated> {
     pub async fn read_mount(&self, mount_path: &str) -> Result<MountInfo> {
         let envelope: ResponseEnvelope<MountInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &sys_path("sys/mounts", mount_path, None)?,
                 Option::<&Empty>::None,
@@ -4852,7 +4853,7 @@ impl Sys<'_, Authenticated> {
         request: &MountEnableRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_path("sys/mounts", mount_path, None)?,
                 Some(request),
@@ -4884,7 +4885,7 @@ impl Sys<'_, Authenticated> {
     /// Reads tune data for a secrets engine.
     pub async fn read_mount_tune(&self, mount_path: &str) -> Result<MountConfig> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &sys_path("sys/mounts", mount_path, Some("tune"))?,
                 Option::<&Empty>::None,
@@ -4895,7 +4896,7 @@ impl Sys<'_, Authenticated> {
     /// Tunes a secrets engine.
     pub async fn tune_mount(&self, mount_path: &str, config: &MountConfig) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_path("sys/mounts", mount_path, Some("tune"))?,
                 Some(config),
@@ -4907,7 +4908,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_auth_methods(&self) -> Result<BTreeMap<String, MountInfo>> {
         let envelope: ResponseEnvelope<MountInfoMap> = self
             .client
-            .request_json(Method::GET, "sys/auth", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/auth", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data.0)
     }
@@ -4919,7 +4920,7 @@ impl Sys<'_, Authenticated> {
         request: &AuthEnableRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_path("sys/auth", mount_path, None)?,
                 Some(request),
@@ -4942,7 +4943,7 @@ impl Sys<'_, Authenticated> {
     /// Reads tune data for an auth method.
     pub async fn read_auth_tune(&self, mount_path: &str) -> Result<MountConfig> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &sys_path("sys/auth", mount_path, Some("tune"))?,
                 Option::<&Empty>::None,
@@ -4953,7 +4954,7 @@ impl Sys<'_, Authenticated> {
     /// Tunes an auth method.
     pub async fn tune_auth_method(&self, mount_path: &str, config: &MountConfig) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_path("sys/auth", mount_path, Some("tune"))?,
                 Some(config),
@@ -4968,7 +4969,7 @@ impl Sys<'_, Authenticated> {
     /// path or a path hosted by a mount.
     pub async fn ui_mount_details(&self, path: &str) -> Result<UiMountDetails> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &internal_ui_mount_path(path)?,
                 Option::<&Empty>::None,
@@ -4979,7 +4980,7 @@ impl Sys<'_, Authenticated> {
     /// Lists ACL policies.
     pub async fn list_policies(&self) -> Result<PolicyList> {
         self.client
-            .request_json(Method::GET, "sys/policy", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/policy", Option::<&Empty>::None)
             .await
     }
 
@@ -4988,7 +4989,7 @@ impl Sys<'_, Authenticated> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         self.client
-            .request_json(
+            .request_json_internal(
                 method,
                 &sys_path("sys/policy", prefix, None)?,
                 Option::<&Empty>::None,
@@ -4999,7 +5000,7 @@ impl Sys<'_, Authenticated> {
     /// Reads one ACL policy.
     pub async fn read_policy(&self, name: &str) -> Result<PolicyInfo> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &sys_path("sys/policy", name, None)?,
                 Option::<&Empty>::None,
@@ -5010,7 +5011,7 @@ impl Sys<'_, Authenticated> {
     /// Creates or updates an ACL policy.
     pub async fn write_policy(&self, name: &str, request: &PolicyWriteRequest) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_path("sys/policy", name, None)?,
                 Some(request),
@@ -5035,14 +5036,14 @@ impl Sys<'_, Authenticated> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         self.client
-            .request_json(method, "sys/policies/password", Option::<&Empty>::None)
+            .request_json_internal(method, "sys/policies/password", Option::<&Empty>::None)
             .await
     }
 
     /// Reads one password policy.
     pub async fn read_password_policy(&self, name: &str) -> Result<PasswordPolicy> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &sys_path("sys/policies/password", name, None)?,
                 Option::<&Empty>::None,
@@ -5060,7 +5061,7 @@ impl Sys<'_, Authenticated> {
         request: &PasswordPolicyWriteRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_path("sys/policies/password", name, None)?,
                 Some(request),
@@ -5083,7 +5084,7 @@ impl Sys<'_, Authenticated> {
     /// Generates a password from an existing password policy.
     pub async fn generate_password(&self, name: &str) -> Result<GeneratedPassword> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &sys_path("sys/policies/password", name, Some("generate"))?,
                 Option::<&Empty>::None,
@@ -5105,7 +5106,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Capabilities> = self
             .client
-            .request_json(Method::POST, "sys/capabilities-self", Some(&payload))
+            .request_json_internal(Method::POST, "sys/capabilities-self", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5124,7 +5125,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Capabilities> = self
             .client
-            .request_json(Method::POST, "sys/capabilities", Some(&payload))
+            .request_json_internal(Method::POST, "sys/capabilities", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5147,7 +5148,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Capabilities> = self
             .client
-            .request_json(Method::POST, "sys/capabilities-accessor", Some(&payload))
+            .request_json_internal(Method::POST, "sys/capabilities-accessor", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5160,7 +5161,7 @@ impl Sys<'_, Authenticated> {
     /// future fields.
     pub async fn resultant_acl(&self) -> Result<ResultantAcl> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/internal/ui/resultant-acl",
                 Option::<&Empty>::None,
@@ -5177,7 +5178,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn in_flight_requests(&self) -> Result<InFlightRequests> {
         self.client
-            .request_json(Method::GET, "sys/in-flight-req", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/in-flight-req", Option::<&Empty>::None)
             .await
     }
 
@@ -5190,7 +5191,7 @@ impl Sys<'_, Authenticated> {
         request.validate()?;
         let envelope: MfaValidateEnvelope = self
             .client
-            .request_json(Method::POST, "sys/mfa/validate", Some(request))
+            .request_json_internal(Method::POST, "sys/mfa/validate", Some(request))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -5199,7 +5200,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_audit_devices(&self) -> Result<BTreeMap<String, AuditDevice>> {
         let devices: AuditDeviceMap = self
             .client
-            .request_json(Method::GET, "sys/audit", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/audit", Option::<&Empty>::None)
             .await?;
         Ok(devices.0)
     }
@@ -5211,7 +5212,7 @@ impl Sys<'_, Authenticated> {
         request: &AuditEnableRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_path("sys/audit", path, None)?,
                 Some(request),
@@ -5240,7 +5241,7 @@ impl Sys<'_, Authenticated> {
             input: input.expose_secret(),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_path("sys/audit-hash", path, None)?,
                 Some(&payload),
@@ -5253,7 +5254,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao requires `sudo` capability for this endpoint.
     pub async fn list_audited_request_headers(&self) -> Result<AuditedRequestHeaders> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/config/auditing/request-headers",
                 Option::<&Empty>::None,
@@ -5270,7 +5271,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<AuditedRequestHeaderConfig> {
         let headers: BTreeMap<String, AuditedRequestHeaderConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &audited_request_header_path(name)?,
                 Option::<&Empty>::None,
@@ -5321,7 +5322,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<LeaseLookup> = self
             .client
-            .request_json(Method::POST, "sys/leases/lookup", Some(&payload))
+            .request_json_internal(Method::POST, "sys/leases/lookup", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5340,7 +5341,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Option<Empty>> = self
             .client
-            .request_json(Method::POST, "sys/leases/renew", Some(&payload))
+            .request_json_internal(Method::POST, "sys/leases/renew", Some(&payload))
             .await?;
         Ok(LeaseRenewal {
             lease_id: envelope.lease_id,
@@ -5442,7 +5443,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_plugins(&self) -> Result<PluginCatalog> {
         let envelope: ResponseEnvelope<PluginCatalog> = self
             .client
-            .request_json(Method::GET, "sys/plugins/catalog", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/plugins/catalog", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5453,7 +5454,7 @@ impl Sys<'_, Authenticated> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<PluginList> = self
             .client
-            .request_json(
+            .request_json_internal(
                 method,
                 &plugin_catalog_type_path(plugin_type)?,
                 Option::<&Empty>::None,
@@ -5491,7 +5492,7 @@ impl Sys<'_, Authenticated> {
             oci: request.oci,
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &plugin_catalog_entry_path(plugin_type, name)?,
                 Some(&payload),
@@ -5547,7 +5548,7 @@ impl Sys<'_, Authenticated> {
     pub async fn reload_plugin_backend(&self, request: &PluginReloadRequest) -> Result<Empty> {
         let payload = validate_plugin_reload_request(request)?;
         self.client
-            .request_json(Method::POST, "sys/plugins/reload/backend", Some(&payload))
+            .request_json_internal(Method::POST, "sys/plugins/reload/backend", Some(&payload))
             .await
     }
 
@@ -5556,7 +5557,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao does not persist this change across reload or restart.
     pub async fn set_logger_levels(&self, level: LoggerLevel) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/loggers",
                 Some(&LoggerLevelPayload {
@@ -5571,7 +5572,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao does not persist this change across reload or restart.
     pub async fn set_logger_level(&self, name: &str, level: LoggerLevel) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &sys_logger_path(name)?,
                 Some(&LoggerLevelPayload {
@@ -5610,7 +5611,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao requires `sudo` capability for this endpoint.
     pub async fn cors_config(&self) -> Result<CorsConfig> {
         self.client
-            .request_json(Method::GET, "sys/config/cors", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/config/cors", Option::<&Empty>::None)
             .await
     }
 
@@ -5621,7 +5622,7 @@ impl Sys<'_, Authenticated> {
     pub async fn write_cors_config(&self, request: &CorsConfigRequest) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(Method::POST, "sys/config/cors", Some(request))
+            .request_json_internal(Method::POST, "sys/config/cors", Some(request))
             .await
     }
 
@@ -5644,7 +5645,7 @@ impl Sys<'_, Authenticated> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         self.client
-            .request_json(method, "sys/version-history", Option::<&Empty>::None)
+            .request_json_internal(method, "sys/version-history", Option::<&Empty>::None)
             .await
     }
 
@@ -5654,7 +5655,7 @@ impl Sys<'_, Authenticated> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<NamespaceList> = self
             .client
-            .request_json(method, "sys/namespaces", Option::<&Empty>::None)
+            .request_json_internal(method, "sys/namespaces", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5675,7 +5676,7 @@ impl Sys<'_, Authenticated> {
     /// Reads namespace information through `/sys/namespaces/:path`.
     pub async fn read_namespace(&self, path: &str) -> Result<NamespaceInfo> {
         self.client
-            .request_json(Method::GET, &namespace_path(path)?, Option::<&Empty>::None)
+            .request_json_internal(Method::GET, &namespace_path(path)?, Option::<&Empty>::None)
             .await
     }
 
@@ -5734,7 +5735,7 @@ impl Sys<'_, Authenticated> {
     pub async fn read_rate_limit_quota_config(&self) -> Result<RateLimitQuotaConfig> {
         let envelope: ResponseEnvelope<RateLimitQuotaConfig> = self
             .client
-            .request_json(Method::GET, "sys/quotas/config", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/quotas/config", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5746,7 +5747,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<Empty> {
         validate_rate_limit_quota_config(request)?;
         self.client
-            .request_json(Method::POST, "sys/quotas/config", Some(request))
+            .request_json_internal(Method::POST, "sys/quotas/config", Some(request))
             .await
     }
 
@@ -5768,7 +5769,7 @@ impl Sys<'_, Authenticated> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<RateLimitQuotaList> = self
             .client
-            .request_json(method, "sys/quotas/rate-limit", Option::<&Empty>::None)
+            .request_json_internal(method, "sys/quotas/rate-limit", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5781,7 +5782,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<Empty> {
         validate_rate_limit_quota_request(request)?;
         self.client
-            .request_json(Method::POST, &rate_limit_quota_path(name)?, Some(request))
+            .request_json_internal(Method::POST, &rate_limit_quota_path(name)?, Some(request))
             .await
     }
 
@@ -5789,7 +5790,7 @@ impl Sys<'_, Authenticated> {
     pub async fn read_rate_limit_quota(&self, name: &str) -> Result<RateLimitQuotaInfo> {
         let envelope: ResponseEnvelope<RateLimitQuotaInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &rate_limit_quota_path(name)?,
                 Option::<&Empty>::None,
@@ -5814,7 +5815,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_locked_users(&self) -> Result<LockedUsers> {
         let envelope: ResponseEnvelope<LockedUsers> = self
             .client
-            .request_json(Method::GET, "sys/locked-users", Option::<&Empty>::None)
+            .request_json_internal(Method::GET, "sys/locked-users", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5830,7 +5831,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<LockedUsers> = self
             .client
-            .request_json(Method::GET, "sys/locked-users", Some(&payload))
+            .request_json_internal(Method::GET, "sys/locked-users", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5873,7 +5874,7 @@ impl Sys<'_, Authenticated> {
             non_voter: request.non_voter,
         };
         self.client
-            .request_json(Method::POST, "sys/storage/raft/join", Some(&payload))
+            .request_json_internal(Method::POST, "sys/storage/raft/join", Some(&payload))
             .await
     }
 
@@ -5881,7 +5882,7 @@ impl Sys<'_, Authenticated> {
     pub async fn raft_configuration(&self) -> Result<RaftConfiguration> {
         let envelope: ResponseEnvelope<RaftConfiguration> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/storage/raft/configuration",
                 Option::<&Empty>::None,
@@ -5928,7 +5929,7 @@ impl Sys<'_, Authenticated> {
     /// production snapshots may require a future streaming API.
     pub async fn raft_snapshot(&self) -> Result<SecretVec> {
         self.client
-            .request_bytes_accepting(
+            .request_bytes_accepting_internal(
                 Method::GET,
                 "sys/storage/raft/snapshot",
                 &[],
@@ -5946,7 +5947,7 @@ impl Sys<'_, Authenticated> {
     pub async fn raft_restore_snapshot(&self, snapshot: &[u8]) -> Result<Empty> {
         validate_raft_snapshot(snapshot)?;
         self.client
-            .request_bytes_accepting(
+            .request_bytes_accepting_internal(
                 Method::POST,
                 "sys/storage/raft/snapshot",
                 &[],
@@ -5965,7 +5966,7 @@ impl Sys<'_, Authenticated> {
     pub async fn raft_force_restore_snapshot(&self, snapshot: &[u8]) -> Result<Empty> {
         validate_raft_snapshot(snapshot)?;
         self.client
-            .request_bytes_accepting(
+            .request_bytes_accepting_internal(
                 Method::POST,
                 "sys/storage/raft/snapshot-force",
                 &[],
@@ -5983,7 +5984,7 @@ impl Sys<'_, Authenticated> {
     /// helper returns JSON under the normal response-size protections.
     pub async fn raft_autopilot_state_json(&self) -> Result<JsonValue> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/storage/raft/autopilot/state",
                 Option::<&Empty>::None,
@@ -5994,7 +5995,7 @@ impl Sys<'_, Authenticated> {
     /// Reads Raft Autopilot configuration.
     pub async fn raft_autopilot_config(&self) -> Result<RaftAutopilotConfig> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 "sys/storage/raft/autopilot/configuration",
                 Option::<&Empty>::None,
@@ -6006,7 +6007,7 @@ impl Sys<'_, Authenticated> {
     pub async fn write_raft_autopilot_config(&self, config: &RaftAutopilotConfig) -> Result<Empty> {
         config.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "sys/storage/raft/autopilot/configuration",
                 Some(config),
@@ -6022,14 +6023,14 @@ impl Sys<'_, Authenticated> {
     pub async fn remount(&self, request: &RemountRequest) -> Result<RemountResponse> {
         request.validate()?;
         self.client
-            .request_json(Method::POST, "sys/remount", Some(request))
+            .request_json_internal(Method::POST, "sys/remount", Some(request))
             .await
     }
 
     /// Reads the status of a mount migration.
     pub async fn remount_status(&self, migration_id: &str) -> Result<RemountStatus> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &remount_status_path(migration_id)?,
                 Option::<&Empty>::None,
@@ -6067,7 +6068,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<WrappingLookup> = self
             .client
-            .request_json(Method::POST, "sys/wrapping/lookup", Some(&payload))
+            .request_json_internal(Method::POST, "sys/wrapping/lookup", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -6105,14 +6106,18 @@ impl Sys<'_, Authenticated> {
                 };
                 let envelope: ResponseEnvelope<T> = self
                     .client
-                    .request_json(Method::POST, "sys/wrapping/unwrap", Some(&payload))
+                    .request_json_internal(Method::POST, "sys/wrapping/unwrap", Some(&payload))
                     .await?;
                 Ok(envelope.data)
             }
             None => {
                 let envelope: ResponseEnvelope<T> = self
                     .client
-                    .request_json(Method::POST, "sys/wrapping/unwrap", Option::<&Empty>::None)
+                    .request_json_internal(
+                        Method::POST,
+                        "sys/wrapping/unwrap",
+                        Option::<&Empty>::None,
+                    )
                     .await?;
                 Ok(envelope.data)
             }
@@ -6126,7 +6131,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Option<Empty>> = self
             .client
-            .request_json(Method::POST, "sys/wrapping/rewrap", Some(&payload))
+            .request_json_internal(Method::POST, "sys/wrapping/rewrap", Some(&payload))
             .await?;
         envelope.wrap_info.ok_or(Error::MissingField("wrap_info"))
     }

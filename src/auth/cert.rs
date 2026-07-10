@@ -330,7 +330,7 @@ impl CertAuth<'_> {
         };
         let response: CertLoginResponse = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
                 Some(&request),
@@ -344,7 +344,7 @@ impl CertAuthAdmin<'_> {
     /// Configures the TLS certificate auth method.
     pub async fn configure(&self, config: &CertAuthConfig) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(config),
@@ -357,7 +357,7 @@ impl CertAuthAdmin<'_> {
         role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/certs/{name}", self.mount),
                 Some(role),
@@ -370,7 +370,7 @@ impl CertAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<CertRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/certs/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -418,7 +418,7 @@ impl CertAuthAdmin<'_> {
     pub async fn write_crl(&self, name: &str, crl: &CertCrl) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/crls/{name}", self.mount),
                 Some(crl),
@@ -431,7 +431,7 @@ impl CertAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<CertCrlInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/crls/{name}", self.mount),
                 Option::<&Empty>::None,

@@ -102,6 +102,11 @@ memory-lock-acknowledged = []
 kani = []
 tls12-acknowledged = []
 allow-weak-jitter-fallback-acknowledged = []
+# Public raw JSON/byte transport can bypass typed endpoint validation and
+# feature gates. Keep it disabled unless a deployment-specific wrapper has
+# been reviewed and explicitly acknowledged.
+raw-api = []
+raw-api-acknowledged = []
 # Production operator APIs for init/unseal/rekey/rotate and PKI root deletion.
 # These endpoints can expose, mutate, or destroy root, unseal, recovery,
 # certificate-authority, and encryption-key material. They are disabled by

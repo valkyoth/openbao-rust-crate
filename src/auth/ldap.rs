@@ -542,7 +542,7 @@ impl LdapAuth<'_> {
         };
         let response: LdapAuthLoginResponse = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/login/{username}", self.mount),
                 Some(&request),
@@ -599,7 +599,7 @@ impl LdapAuthAdmin<'_> {
             token_type: config.token_type.as_deref(),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -611,7 +611,7 @@ impl LdapAuthAdmin<'_> {
     pub async fn read_config(&self) -> Result<LdapAuthConfig> {
         let envelope: ResponseEnvelope<LdapAuthConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/config", self.mount),
                 Option::<&Empty>::None,
@@ -672,7 +672,7 @@ impl LdapAuthAdmin<'_> {
             groups: mapping.groups.join(","),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/{kind}/{name}", self.mount),
                 Some(&payload),
@@ -684,7 +684,7 @@ impl LdapAuthAdmin<'_> {
         let name = validate_ldap_path_name(name)?;
         let envelope: ResponseEnvelope<LdapAuthMappingInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/{kind}/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -710,7 +710,7 @@ impl LdapAuthAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<LdapAuthList> = self
             .client
-            .request_json(
+            .request_json_internal(
                 method,
                 &format!("auth/{}/{kind}", self.mount),
                 Option::<&Empty>::None,

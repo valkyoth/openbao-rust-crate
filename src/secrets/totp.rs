@@ -436,7 +436,7 @@ impl Totp<'_> {
     pub async fn read_key(&self, name: &str) -> Result<TotpKeyInfo> {
         let envelope: crate::ResponseEnvelope<TotpKeyInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path("keys", name)?,
                 Option::<&Empty>::None,
@@ -475,7 +475,7 @@ impl Totp<'_> {
     /// Deletes a TOTP key definition.
     pub async fn delete_key(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 &self.path("keys", name)?,
                 Option::<&Empty>::None,
@@ -487,7 +487,7 @@ impl Totp<'_> {
     pub async fn generate_code(&self, name: &str) -> Result<TotpCode> {
         let envelope: crate::ResponseEnvelope<TotpCode> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path("code", name)?,
                 Option::<&Empty>::None,
@@ -507,7 +507,7 @@ impl Totp<'_> {
         };
         let envelope: crate::ResponseEnvelope<TotpValidateResponse> = self
             .client
-            .request_json(Method::POST, &self.path("code", name)?, Some(&payload))
+            .request_json_internal(Method::POST, &self.path("code", name)?, Some(&payload))
             .await?;
         Ok(envelope.data)
     }

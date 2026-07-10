@@ -1,0 +1,11 @@
+[package]
+name = "reqwest-native-unification-check"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+openbao = { path = "../../..", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["native-tls"] }

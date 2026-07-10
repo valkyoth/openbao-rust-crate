@@ -297,7 +297,7 @@ impl UserpassAuth<'_> {
         };
         let response: UserpassLoginResponse = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/login/{username}", self.mount),
                 Some(&request),
@@ -325,7 +325,7 @@ impl UserpassAuthAdmin<'_> {
             token_no_default_policy: user.token_no_default_policy,
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/users/{username}", self.mount),
                 Some(&payload),
@@ -338,7 +338,7 @@ impl UserpassAuthAdmin<'_> {
         let username = validate_username(username)?;
         let envelope: ResponseEnvelope<UserpassUserInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/users/{username}", self.mount),
                 Option::<&Empty>::None,
@@ -367,7 +367,7 @@ impl UserpassAuthAdmin<'_> {
             password: password.expose_secret(),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/users/{username}/password", self.mount),
                 Some(&request),
@@ -382,7 +382,7 @@ impl UserpassAuthAdmin<'_> {
             token_policies: policies,
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/users/{username}/policies", self.mount),
                 Some(&request),
@@ -396,7 +396,7 @@ impl UserpassAuthAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<UserpassUserList> = self
             .client
-            .request_json(
+            .request_json_internal(
                 method,
                 &format!("auth/{}/users", self.mount),
                 Option::<&Empty>::None,

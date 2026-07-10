@@ -5,7 +5,10 @@ use std::collections::BTreeMap;
 
 use reqwest::Method;
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Visitor};
+use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::{IgnoredAny, MapAccess, Visitor},
+};
 
 use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
@@ -434,10 +437,19 @@ impl OidcCallbackRequest {
                 "OIDC state must not be empty".into(),
             ));
         }
-        if self.code.is_none() && self.id_token.is_none() {
-            return Err(Error::InvalidParameter(
-                "OIDC callback requires code or id_token".into(),
-            ));
+        match (&self.code, &self.id_token) {
+            (Some(code), None) if !code.expose_secret().is_empty() => {}
+            (None, Some(id_token)) if !id_token.expose_secret().is_empty() => {}
+            (Some(_), Some(_)) => {
+                return Err(Error::InvalidParameter(
+                    "OIDC callback accepts code or id_token, not both".into(),
+                ));
+            }
+            _ => {
+                return Err(Error::InvalidParameter(
+                    "OIDC callback requires one non-empty credential".into(),
+                ));
+            }
         }
         if let Some(client_nonce) = &self.client_nonce
             && client_nonce.trim().is_empty()
@@ -494,7 +506,7 @@ impl OidcPollRequest {
 }
 
 /// Metadata returned after a successful JWT login.
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 pub struct JwtLoginMetadata {
     /// Token accessor. Accessors can revoke or look up token metadata, so they
     /// are treated as secret material.
@@ -508,12 +520,25 @@ pub struct JwtLoginMetadata {
     /// Whether the token is renewable.
     #[serde(default)]
     pub renewable: bool,
-    /// Metadata returned by OpenBao, such as the JWT role.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_bounded_string_map_or_default"
-    )]
-    pub metadata: BTreeMap<String, String>,
+    /// Secret-aware metadata returned by OpenBao.
+    ///
+    /// With `oauth2_metadata`, values can include OAuth access, ID, and
+    /// refresh tokens. `Debug` therefore reports only the number of entries.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_metadata")]
+    pub metadata: BTreeMap<String, SecretString>,
+}
+
+impl fmt::Debug for JwtLoginMetadata {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("JwtLoginMetadata")
+            .field("accessor", &"<redacted>")
+            .field("policies", &self.policies)
+            .field("lease_duration", &self.lease_duration)
+            .field("renewable", &self.renewable)
+            .field("metadata_entry_count", &self.metadata.len())
+            .finish()
+    }
 }
 
 #[derive(Serialize)]
@@ -570,11 +595,48 @@ struct JwtLoginAuth {
     lease_duration: u64,
     #[serde(default)]
     renewable: bool,
-    #[serde(
-        default,
-        deserialize_with = "deserialize_bounded_string_map_or_default"
-    )]
-    metadata: BTreeMap<String, String>,
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_metadata")]
+    metadata: BTreeMap<String, SecretString>,
+}
+
+fn deserialize_bounded_secret_metadata<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(BoundedSecretMetadataVisitor)
+}
+
+struct BoundedSecretMetadataVisitor;
+
+impl<'de> Visitor<'de> for BoundedSecretMetadataVisitor {
+    type Value = BTreeMap<String, SecretString>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a bounded JWT/OIDC metadata object")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        let mut entry_count = 0;
+        while entry_count < crate::MAX_RESPONSE_STRINGS {
+            let Some((key, value)) = map.next_entry::<String, SecretString>()? else {
+                return Ok(values);
+            };
+            entry_count += 1;
+            values.insert(key, value);
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "JWT/OIDC metadata exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
 }
 
 impl Client<Unauthenticated> {
@@ -624,7 +686,7 @@ impl JwtAuth<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<OidcAuthUrlResponse> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/oidc/auth_url", self.mount),
                 Some(request),
@@ -686,7 +748,7 @@ impl JwtAuth<'_> {
         };
         let response: JwtLoginResponse = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
                 Some(&request),
@@ -728,7 +790,7 @@ impl JwtAuth<'_> {
         request.validate()?;
         let response: JwtLoginResponse = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/oidc/poll", self.mount),
                 Some(request),
@@ -773,7 +835,7 @@ impl JwtAuthAdmin<'_> {
             namespace_in_state: config.namespace_in_state,
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -785,7 +847,7 @@ impl JwtAuthAdmin<'_> {
     pub async fn read_config(&self) -> Result<JwtConfig> {
         let envelope: ResponseEnvelope<JwtConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/config", self.mount),
                 Option::<&Empty>::None,
@@ -799,7 +861,7 @@ impl JwtAuthAdmin<'_> {
         role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/role/{name}", self.mount),
                 Some(role),
@@ -812,7 +874,7 @@ impl JwtAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<JwtRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/role/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -827,7 +889,7 @@ impl JwtAuthAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<JwtRoleList> = self
             .client
-            .request_json(
+            .request_json_internal(
                 method,
                 &format!("auth/{}/role", self.mount),
                 Option::<&Empty>::None,
@@ -887,7 +949,10 @@ mod tests {
 
         assert_eq!(auth.client_token.expose_secret(), "token-value");
         assert_eq!(auth.accessor.expose_secret(), "accessor-value");
-        assert_eq!(auth.metadata.get("role").map(String::as_str), Some("web"));
+        assert_eq!(
+            auth.metadata.get("role").map(SecretString::expose_secret),
+            Some("web")
+        );
     }
 
     #[test]
@@ -913,6 +978,74 @@ mod tests {
         let debug = format!("{config:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("client-secret"));
+    }
+
+    #[test]
+    fn oidc_callback_requires_exactly_one_non_empty_credential() {
+        let both = super::OidcCallbackRequest {
+            state: "state".into(),
+            code: Some(SecretString::from("code")),
+            id_token: Some(SecretString::from("id-token")),
+            client_nonce: None,
+        };
+        assert!(both.validate().is_err());
+
+        let empty_code =
+            super::OidcCallbackRequest::with_code("state", SecretString::from(String::new()));
+        assert!(empty_code.validate().is_err());
+
+        let empty_token =
+            super::OidcCallbackRequest::with_id_token("state", SecretString::from(String::new()));
+        assert!(empty_token.validate().is_err());
+
+        assert!(
+            super::OidcCallbackRequest::with_code("state", SecretString::from("code"))
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            super::OidcCallbackRequest::with_id_token("state", SecretString::from("id-token"))
+                .validate()
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn jwt_login_metadata_redacts_oauth_values() {
+        let metadata: super::JwtLoginMetadata = serde_json::from_value(serde_json::json!({
+            "accessor": "accessor-secret-value",
+            "policies": ["default"],
+            "lease_duration": 60,
+            "renewable": true,
+            "metadata": {
+                "access_token": "oauth-access-token",
+                "refresh_token": "oauth-refresh-token"
+            }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        let debug = format!("{metadata:?}");
+
+        assert_eq!(
+            metadata.metadata["access_token"].expose_secret(),
+            "oauth-access-token"
+        );
+        assert!(debug.contains("metadata_entry_count"));
+        assert!(!debug.contains("oauth-access-token"));
+        assert!(!debug.contains("oauth-refresh-token"));
+        assert!(!debug.contains("accessor-secret-value"));
+    }
+
+    #[test]
+    fn jwt_login_metadata_map_is_bounded() {
+        let metadata = (0..=crate::MAX_RESPONSE_STRINGS)
+            .map(|index| (format!("key-{index}"), serde_json::json!("secret")))
+            .collect::<serde_json::Map<_, _>>();
+        let result = serde_json::from_value::<super::JwtLoginMetadata>(serde_json::json!({
+            "accessor": "accessor",
+            "metadata": metadata
+        }));
+
+        assert!(result.is_err());
     }
 
     #[test]

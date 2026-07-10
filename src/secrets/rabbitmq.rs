@@ -238,7 +238,7 @@ impl RabbitMq<'_> {
     /// Creates or updates the RabbitMQ connection configuration.
     pub async fn configure_connection(&self, config: &RabbitMqConnectionConfig) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["config", "connection"])?,
                 Some(config),
@@ -249,7 +249,7 @@ impl RabbitMq<'_> {
     /// Creates or updates the RabbitMQ credential lease configuration.
     pub async fn configure_lease(&self, config: &RabbitMqLeaseConfig) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["config", "lease"])?,
                 Some(config),
@@ -261,7 +261,7 @@ impl RabbitMq<'_> {
     pub async fn write_role(&self, name: &str, role: &RabbitMqRole) -> Result<Empty> {
         role.validate()?;
         self.client
-            .request_json(Method::POST, &self.path(&["roles", name])?, Some(role))
+            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
@@ -269,7 +269,7 @@ impl RabbitMq<'_> {
     pub async fn read_role(&self, name: &str) -> Result<RabbitMqRole> {
         let envelope: ResponseEnvelope<RabbitMqRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -321,7 +321,7 @@ impl RabbitMq<'_> {
     pub async fn credentials(&self, name: &str) -> Result<RabbitMqCredentials> {
         let envelope: ResponseEnvelope<RabbitMqCredentialData> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["creds", name])?,
                 Option::<&Empty>::None,

@@ -579,7 +579,7 @@ impl Ldap<'_> {
     pub async fn write_config(&self, config: &LdapConfig) -> Result<Empty> {
         config.validate()?;
         self.client
-            .request_json(Method::POST, &self.path(&["config"])?, Some(config))
+            .request_json_internal(Method::POST, &self.path(&["config"])?, Some(config))
             .await
     }
 
@@ -587,7 +587,7 @@ impl Ldap<'_> {
     pub async fn read_config(&self) -> Result<LdapConfig> {
         let envelope: ResponseEnvelope<LdapConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["config"])?,
                 Option::<&Empty>::None,
@@ -604,7 +604,7 @@ impl Ldap<'_> {
     /// Rotates the LDAP bind user's password.
     pub async fn rotate_root(&self) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["rotate-root"])?, Some(&Empty {}))
+            .request_json_internal(Method::POST, &self.path(&["rotate-root"])?, Some(&Empty {}))
             .await
     }
 
@@ -612,7 +612,7 @@ impl Ldap<'_> {
     pub async fn write_static_role(&self, name: &str, role: &LdapStaticRole) -> Result<Empty> {
         role.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["static-role", name])?,
                 Some(role),
@@ -624,7 +624,7 @@ impl Ldap<'_> {
     pub async fn read_static_role(&self, name: &str) -> Result<LdapStaticRole> {
         let envelope: ResponseEnvelope<LdapStaticRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["static-role", name])?,
                 Option::<&Empty>::None,
@@ -647,7 +647,7 @@ impl Ldap<'_> {
     pub async fn static_credentials(&self, name: &str) -> Result<LdapStaticCredentials> {
         let envelope: ResponseEnvelope<LdapStaticCredentials> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["static-cred", name])?,
                 Option::<&Empty>::None,
@@ -659,7 +659,7 @@ impl Ldap<'_> {
     /// Rotates a static LDAP role password.
     pub async fn rotate_static_role(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["rotate-role", name])?,
                 Some(&Empty {}),
@@ -671,7 +671,7 @@ impl Ldap<'_> {
     pub async fn write_dynamic_role(&self, name: &str, role: &LdapDynamicRole) -> Result<Empty> {
         role.validate()?;
         self.client
-            .request_json(Method::POST, &self.path(&["role", name])?, Some(role))
+            .request_json_internal(Method::POST, &self.path(&["role", name])?, Some(role))
             .await
     }
 
@@ -679,7 +679,7 @@ impl Ldap<'_> {
     pub async fn read_dynamic_role(&self, name: &str) -> Result<LdapDynamicRole> {
         let envelope: ResponseEnvelope<LdapDynamicRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["role", name])?,
                 Option::<&Empty>::None,
@@ -697,7 +697,7 @@ impl Ldap<'_> {
     pub async fn dynamic_credentials(&self, name: &str) -> Result<LdapDynamicCredentials> {
         let envelope: ResponseEnvelope<LdapDynamicCredentialData> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["creds", name])?,
                 Option::<&Empty>::None,
@@ -717,7 +717,7 @@ impl Ldap<'_> {
     pub async fn write_library_set(&self, name: &str, set: &LdapLibrarySet) -> Result<Empty> {
         set.validate()?;
         self.client
-            .request_json(Method::POST, &self.path(&["library", name])?, Some(set))
+            .request_json_internal(Method::POST, &self.path(&["library", name])?, Some(set))
             .await
     }
 
@@ -725,7 +725,7 @@ impl Ldap<'_> {
     pub async fn read_library_set(&self, name: &str) -> Result<LdapLibrarySet> {
         let envelope: ResponseEnvelope<LdapLibrarySet> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["library", name])?,
                 Option::<&Empty>::None,
@@ -748,7 +748,7 @@ impl Ldap<'_> {
     pub async fn library_status(&self, name: &str) -> Result<LdapLibraryStatus> {
         let envelope: ResponseEnvelope<LdapLibraryStatus> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["library", name, "status"])?,
                 Option::<&Empty>::None,
@@ -766,7 +766,7 @@ impl Ldap<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<LdapCheckOutData> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["library", name, "check-out"])?,
                 Some(request),
@@ -786,7 +786,7 @@ impl Ldap<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<LdapCheckIn> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["library", name, "check-in"])?,
                 Some(request),
@@ -805,7 +805,7 @@ impl Ldap<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<LdapCheckIn> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["library", "manage", name, "check-in"])?,
                 Some(request),

@@ -255,8 +255,10 @@ Replace hand-written wrappers in layers:
    structs.
 4. Replace logging of raw HTTP errors with sanitized `openbao::Error`
    handling.
-5. Move custom plugin or unsupported endpoint calls behind a small local typed
-   wrapper around `Client::request_json`.
+5. Enable `raw-api` plus `raw-api-acknowledged`, then move custom plugin or
+   unsupported endpoint calls behind a small local typed wrapper around
+   `Client::request_json`. The acknowledgement is required because raw calls
+   bypass operation-specific typed validation and feature gates.
 6. Add tests that assert documented HTTP method, path, headers, and redaction
    behavior for each local wrapper.
 

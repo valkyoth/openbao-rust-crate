@@ -3,6 +3,7 @@
 /fuzz/corpus/
 /fuzz/target/
 /fuzz/Cargo.lock
+/tests/fixtures/*/target/
 /.env
 /.env.*
 !/deploy/podman/openbao.dev.env.example

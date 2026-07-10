@@ -16,6 +16,9 @@ cargo clippy --all-targets -- -D warnings
 echo "checks: clippy all features"
 cargo clippy --all-targets --all-features -- -D warnings
 
+echo "checks: reqwest TLS feature unification"
+cargo run --manifest-path tests/fixtures/reqwest-native-unification/Cargo.toml --locked
+
 echo "checks: tests default"
 cargo test --all-targets
 

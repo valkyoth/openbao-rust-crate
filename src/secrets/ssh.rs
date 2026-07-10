@@ -703,7 +703,7 @@ impl Ssh<'_> {
         let payload = SshLookupPayload { ip };
         let envelope: ResponseEnvelope<SshRoleList> = self
             .client
-            .request_json(Method::POST, &self.path(&["lookup"])?, Some(&payload))
+            .request_json_internal(Method::POST, &self.path(&["lookup"])?, Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -712,7 +712,7 @@ impl Ssh<'_> {
     pub async fn write_role(&self, name: &str, request: &SshRoleRequest) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(Method::POST, &self.path(&["roles", name])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(request))
             .await
     }
 
@@ -720,7 +720,7 @@ impl Ssh<'_> {
     pub async fn read_role(&self, name: &str) -> Result<SshRoleInfo> {
         let envelope: ResponseEnvelope<SshRoleInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -732,7 +732,7 @@ impl Ssh<'_> {
     /// Deletes an SSH role.
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -744,7 +744,7 @@ impl Ssh<'_> {
     pub async fn read_zero_address_roles(&self) -> Result<SshRoleList> {
         let envelope: ResponseEnvelope<SshRoleList> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["config", "zeroaddress"])?,
                 Option::<&Empty>::None,
@@ -760,7 +760,7 @@ impl Ssh<'_> {
             roles: &'a [String],
         }
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["config", "zeroaddress"])?,
                 Some(&Payload { roles }),
@@ -771,7 +771,7 @@ impl Ssh<'_> {
     /// Deletes zero-address role configuration.
     pub async fn delete_zero_address_roles(&self) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 &self.path(&["config", "zeroaddress"])?,
                 Option::<&Empty>::None,
@@ -787,7 +787,7 @@ impl Ssh<'_> {
     ) -> Result<SshCredentials> {
         let envelope: ResponseEnvelope<SshCredentials> = self
             .client
-            .request_json(Method::POST, &self.path(&["creds", role])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["creds", role])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -796,7 +796,7 @@ impl Ssh<'_> {
     pub async fn read_issuer_config(&self) -> Result<SshIssuerConfig> {
         let envelope: ResponseEnvelope<SshIssuerConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["config", "issuers"])?,
                 Option::<&Empty>::None,
@@ -812,7 +812,7 @@ impl Ssh<'_> {
     ) -> Result<SshIssuerConfig> {
         let envelope: ResponseEnvelope<SshIssuerConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["config", "issuers"])?,
                 Some(request),
@@ -853,7 +853,7 @@ impl Ssh<'_> {
         let payload = request.payload();
         let envelope: ResponseEnvelope<SshIssuerInfo> = self
             .client
-            .request_json(Method::POST, &self.path(&["config", "ca"])?, Some(&payload))
+            .request_json_internal(Method::POST, &self.path(&["config", "ca"])?, Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -872,7 +872,7 @@ impl Ssh<'_> {
         };
         let envelope: ResponseEnvelope<SshIssuerInfo> = self
             .client
-            .request_json(Method::POST, &path, Some(&payload))
+            .request_json_internal(Method::POST, &path, Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -881,7 +881,7 @@ impl Ssh<'_> {
     pub async fn read_issuer(&self, issuer_ref: &str) -> Result<SshIssuerInfo> {
         let envelope: ResponseEnvelope<SshIssuerInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["issuer", issuer_ref])?,
                 Option::<&Empty>::None,
@@ -901,7 +901,7 @@ impl Ssh<'_> {
     ) -> Result<SshIssuerInfo> {
         let envelope: ResponseEnvelope<SshIssuerInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::PATCH,
                 &self.path(&["issuer", issuer_ref])?,
                 Some(request),
@@ -914,7 +914,7 @@ impl Ssh<'_> {
     pub async fn read_ca_public_key(&self) -> Result<SshPublicKeyInfo> {
         let envelope: ResponseEnvelope<SshPublicKeyInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["config", "ca"])?,
                 Option::<&Empty>::None,
@@ -952,7 +952,7 @@ impl Ssh<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<SshSignResponse> = self
             .client
-            .request_json(Method::POST, &self.path(&["sign", role])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["sign", role])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -962,7 +962,7 @@ impl Ssh<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<SshIssueResponse> = self
             .client
-            .request_json(Method::POST, &self.path(&["issue", role])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["issue", role])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -974,7 +974,7 @@ impl Ssh<'_> {
         };
         let envelope: ResponseEnvelope<SshVerifyResponse> = self
             .client
-            .request_json(Method::POST, &self.path(&["verify"])?, Some(&payload))
+            .request_json_internal(Method::POST, &self.path(&["verify"])?, Some(&payload))
             .await?;
         Ok(envelope.data)
     }

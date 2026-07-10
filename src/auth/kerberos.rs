@@ -547,7 +547,7 @@ impl KerberosAuthAdmin<'_> {
             add_group_aliases: config.add_group_aliases,
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -559,7 +559,7 @@ impl KerberosAuthAdmin<'_> {
     pub async fn read_config(&self) -> Result<KerberosConfig> {
         let envelope: ResponseEnvelope<KerberosConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/config", self.mount),
                 Option::<&Empty>::None,
@@ -601,7 +601,7 @@ impl KerberosAuthAdmin<'_> {
             token_type: config.token_type.as_deref(),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/config/ldap", self.mount),
                 Some(&payload),
@@ -613,7 +613,7 @@ impl KerberosAuthAdmin<'_> {
     pub async fn read_ldap_config(&self) -> Result<KerberosLdapConfig> {
         let envelope: ResponseEnvelope<KerberosLdapConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/config/ldap", self.mount),
                 Option::<&Empty>::None,
@@ -629,7 +629,7 @@ impl KerberosAuthAdmin<'_> {
             policies: group.policies.join(","),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/groups/{name}", self.mount),
                 Some(&payload),
@@ -642,7 +642,7 @@ impl KerberosAuthAdmin<'_> {
         let name = validate_kerberos_group_name(name)?;
         let envelope: ResponseEnvelope<KerberosGroupInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/groups/{name}", self.mount),
                 Option::<&Empty>::None,

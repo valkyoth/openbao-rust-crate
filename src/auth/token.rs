@@ -416,7 +416,7 @@ impl Token<'_> {
         request.validate()?;
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json(Method::POST, "auth/token/create-orphan", Some(request))
+            .request_json_internal(Method::POST, "auth/token/create-orphan", Some(request))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -437,7 +437,7 @@ impl Token<'_> {
         };
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json(Method::POST, &path, Some(request))
+            .request_json_internal(Method::POST, &path, Some(request))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -446,7 +446,7 @@ impl Token<'_> {
     pub async fn lookup_self(&self) -> Result<TokenInfo> {
         let envelope: ResponseEnvelope<TokenInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "auth/token/lookup-self",
                 Option::<&Empty>::None,
@@ -462,7 +462,7 @@ impl Token<'_> {
         };
         let envelope: ResponseEnvelope<TokenInfo> = self
             .client
-            .request_json(Method::POST, "auth/token/lookup", Some(&payload))
+            .request_json_internal(Method::POST, "auth/token/lookup", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -474,7 +474,7 @@ impl Token<'_> {
         };
         let envelope: ResponseEnvelope<TokenInfo> = self
             .client
-            .request_json(Method::POST, "auth/token/lookup-accessor", Some(&payload))
+            .request_json_internal(Method::POST, "auth/token/lookup-accessor", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -485,7 +485,7 @@ impl Token<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<TokenAccessorList> = self
             .client
-            .request_json(method, "auth/token/accessors", Option::<&Empty>::None)
+            .request_json_internal(method, "auth/token/accessors", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -499,7 +499,7 @@ impl Token<'_> {
         };
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json(Method::POST, "auth/token/renew-self", Some(&payload))
+            .request_json_internal(Method::POST, "auth/token/renew-self", Some(&payload))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -513,7 +513,7 @@ impl Token<'_> {
         };
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json(Method::POST, "auth/token/renew", Some(&payload))
+            .request_json_internal(Method::POST, "auth/token/renew", Some(&payload))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -531,7 +531,7 @@ impl Token<'_> {
         };
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json(Method::POST, "auth/token/renew-accessor", Some(&payload))
+            .request_json_internal(Method::POST, "auth/token/renew-accessor", Some(&payload))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -542,7 +542,7 @@ impl Token<'_> {
             token: token.expose_secret(),
         };
         self.client
-            .request_json(Method::POST, "auth/token/revoke", Some(&payload))
+            .request_json_internal(Method::POST, "auth/token/revoke", Some(&payload))
             .await
     }
 
@@ -552,14 +552,14 @@ impl Token<'_> {
             token: token.expose_secret(),
         };
         self.client
-            .request_json(Method::POST, "auth/token/revoke-orphan", Some(&payload))
+            .request_json_internal(Method::POST, "auth/token/revoke-orphan", Some(&payload))
             .await
     }
 
     /// Revokes the caller's token and its child tokens.
     pub async fn revoke_self(&self) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 "auth/token/revoke-self",
                 Option::<&Empty>::None,
@@ -573,7 +573,7 @@ impl Token<'_> {
             accessor: accessor.expose_secret(),
         };
         self.client
-            .request_json(Method::POST, "auth/token/revoke-accessor", Some(&payload))
+            .request_json_internal(Method::POST, "auth/token/revoke-accessor", Some(&payload))
             .await
     }
 
@@ -582,7 +582,7 @@ impl Token<'_> {
         role.validate()?;
         let role_name = crate::path::validate_mount_path(role_name)?.join("/");
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/token/roles/{role_name}"),
                 Some(role),
@@ -595,7 +595,7 @@ impl Token<'_> {
         let role_name = crate::path::validate_mount_path(role_name)?.join("/");
         let envelope: ResponseEnvelope<TokenRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/token/roles/{role_name}"),
                 Option::<&Empty>::None,
@@ -610,7 +610,7 @@ impl Token<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<TokenRoleList> = self
             .client
-            .request_json(method, "auth/token/roles", Option::<&Empty>::None)
+            .request_json_internal(method, "auth/token/roles", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -634,7 +634,7 @@ impl Token<'_> {
     /// stores; callers should run it deliberately, not on hot request paths.
     pub async fn tidy(&self) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, "auth/token/tidy", Option::<&Empty>::None)
+            .request_json_internal(Method::POST, "auth/token/tidy", Option::<&Empty>::None)
             .await
     }
 }

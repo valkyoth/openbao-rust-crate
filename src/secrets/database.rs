@@ -389,7 +389,7 @@ impl Database<'_> {
             extra: &config.extra,
         };
         self.client
-            .request_json(Method::POST, &self.path(&["config", name])?, Some(&payload))
+            .request_json_internal(Method::POST, &self.path(&["config", name])?, Some(&payload))
             .await
     }
 
@@ -397,7 +397,7 @@ impl Database<'_> {
     pub async fn read_connection(&self, name: &str) -> Result<DatabaseConnectionInfo> {
         let envelope: ResponseEnvelope<DatabaseConnectionInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["config", name])?,
                 Option::<&Empty>::None,
@@ -419,14 +419,14 @@ impl Database<'_> {
     /// Resets a database connection plugin.
     pub async fn reset_connection(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["reset", name])?, Some(&Empty {}))
+            .request_json_internal(Method::POST, &self.path(&["reset", name])?, Some(&Empty {}))
             .await
     }
 
     /// Rotates the root credentials for a database connection.
     pub async fn rotate_root(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["rotate-root", name])?,
                 Some(&Empty {}),
@@ -437,7 +437,7 @@ impl Database<'_> {
     /// Creates or updates a dynamic database role.
     pub async fn write_role(&self, name: &str, role: &DatabaseRole) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["roles", name])?, Some(role))
+            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
@@ -445,7 +445,7 @@ impl Database<'_> {
     pub async fn read_role(&self, name: &str) -> Result<DatabaseRole> {
         let envelope: ResponseEnvelope<DatabaseRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -477,7 +477,7 @@ impl Database<'_> {
     pub async fn credentials(&self, name: &str) -> Result<DatabaseCredentials> {
         let envelope: ResponseEnvelope<DatabaseCredentialData> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["creds", name])?,
                 Option::<&Empty>::None,
@@ -489,7 +489,7 @@ impl Database<'_> {
     /// Creates or updates a static database role.
     pub async fn write_static_role(&self, name: &str, role: &DatabaseStaticRole) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["static-roles", name])?,
                 Some(role),
@@ -501,7 +501,7 @@ impl Database<'_> {
     pub async fn read_static_role(&self, name: &str) -> Result<DatabaseStaticRole> {
         let envelope: ResponseEnvelope<DatabaseStaticRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["static-roles", name])?,
                 Option::<&Empty>::None,
@@ -533,7 +533,7 @@ impl Database<'_> {
     pub async fn static_credentials(&self, name: &str) -> Result<DatabaseStaticCredentials> {
         let envelope: ResponseEnvelope<DatabaseStaticCredentials> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["static-creds", name])?,
                 Option::<&Empty>::None,
@@ -545,7 +545,7 @@ impl Database<'_> {
     /// Rotates credentials for a static database role.
     pub async fn rotate_static_role(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["rotate-role", name])?,
                 Some(&Empty {}),

@@ -6456,7 +6456,10 @@ async fn jwt_login_sends_documented_path_and_secret_jwt() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(login.accessor.expose_secret(), "jwt-accessor");
-    assert_eq!(login.metadata.get("role").map(String::as_str), Some("web"));
+    assert_eq!(
+        login.metadata.get("role").map(SecretString::expose_secret),
+        Some("web")
+    );
     assert_eq!(client.base_url().as_str(), format!("http://{addr}/"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));

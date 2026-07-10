@@ -264,7 +264,7 @@ impl Kv2<'_> {
     {
         let envelope: Kv2ReadEnvelope<T> = self
             .client
-            .request_json(Method::GET, &self.data_path(path)?, Option::<&Empty>::None)
+            .request_json_internal(Method::GET, &self.data_path(path)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -385,7 +385,7 @@ impl Kv2<'_> {
         let payload = Kv2WritePayload { data, options };
         let envelope: ResponseEnvelope<Kv2WriteResponse> = self
             .client
-            .request_json(Method::POST, &self.data_path(path)?, Some(&payload))
+            .request_json_internal(Method::POST, &self.data_path(path)?, Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -428,7 +428,7 @@ impl Kv2<'_> {
     /// Deletes the latest version of a KV v2 secret.
     pub async fn delete_latest(&self, path: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 &self.data_path(path)?,
                 Option::<&Empty>::None,
@@ -440,7 +440,7 @@ impl Kv2<'_> {
     pub async fn delete_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
         let payload = VersionsPayload { versions };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.version_path("delete", path)?,
                 Some(&payload),
@@ -452,7 +452,7 @@ impl Kv2<'_> {
     pub async fn undelete_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
         let payload = VersionsPayload { versions };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.version_path("undelete", path)?,
                 Some(&payload),
@@ -464,7 +464,7 @@ impl Kv2<'_> {
     pub async fn destroy_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
         let payload = VersionsPayload { versions };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.version_path("destroy", path)?,
                 Some(&payload),
@@ -504,7 +504,7 @@ impl Kv2<'_> {
     pub async fn config(&self) -> Result<Kv2Config> {
         let envelope: ResponseEnvelope<Kv2Config> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.mount_path("config")?,
                 Option::<&Empty>::None,
@@ -516,7 +516,7 @@ impl Kv2<'_> {
     /// Updates backend-level KV v2 configuration.
     pub async fn configure(&self, config: &Kv2Config) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.mount_path("config")?, Some(config))
+            .request_json_internal(Method::POST, &self.mount_path("config")?, Some(config))
             .await
     }
 
@@ -524,7 +524,7 @@ impl Kv2<'_> {
     pub async fn metadata(&self, path: &str) -> Result<Kv2KeyMetadata> {
         let envelope: ResponseEnvelope<Kv2KeyMetadata> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.metadata_path(path)?,
                 Option::<&Empty>::None,
@@ -536,7 +536,7 @@ impl Kv2<'_> {
     /// Replaces KV v2 metadata for a key.
     pub async fn put_metadata(&self, path: &str, metadata: &Kv2MetadataOptions) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.metadata_path(path)?, Some(metadata))
+            .request_json_internal(Method::POST, &self.metadata_path(path)?, Some(metadata))
             .await
     }
 
@@ -559,7 +559,7 @@ impl Kv2<'_> {
     /// Permanently deletes all KV v2 metadata and versions for a key.
     pub async fn delete_metadata(&self, path: &str) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::DELETE,
                 &self.metadata_path(path)?,
                 Option::<&Empty>::None,

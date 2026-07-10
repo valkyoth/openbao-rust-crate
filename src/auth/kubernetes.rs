@@ -228,7 +228,7 @@ impl KubernetesAuth<'_> {
         };
         let response: KubernetesLoginResponse = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
                 Some(&request),
@@ -252,7 +252,7 @@ impl KubernetesAuthAdmin<'_> {
             disable_local_ca_jwt: config.disable_local_ca_jwt,
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -264,7 +264,7 @@ impl KubernetesAuthAdmin<'_> {
     pub async fn read_config(&self) -> Result<KubernetesConfig> {
         let envelope: ResponseEnvelope<KubernetesConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/config", self.mount),
                 Option::<&Empty>::None,
@@ -277,7 +277,7 @@ impl KubernetesAuthAdmin<'_> {
     pub async fn write_role(&self, name: &str, role: &KubernetesRole) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &format!("auth/{}/role/{name}", self.mount),
                 Some(role),
@@ -290,7 +290,7 @@ impl KubernetesAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<KubernetesRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &format!("auth/{}/role/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -305,7 +305,7 @@ impl KubernetesAuthAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<KubernetesRoleList> = self
             .client
-            .request_json(
+            .request_json_internal(
                 method,
                 &format!("auth/{}/role", self.mount),
                 Option::<&Empty>::None,

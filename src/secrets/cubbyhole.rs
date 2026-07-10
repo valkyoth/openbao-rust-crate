@@ -59,7 +59,7 @@ impl Cubbyhole<'_> {
     {
         let envelope: ResponseEnvelope<T> = self
             .client
-            .request_json(Method::GET, &self.path(path)?, Option::<&Empty>::None)
+            .request_json_internal(Method::GET, &self.path(path)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -94,14 +94,14 @@ impl Cubbyhole<'_> {
         T: Serialize,
     {
         self.client
-            .request_json(Method::POST, &self.path(path)?, Some(&data))
+            .request_json_internal(Method::POST, &self.path(path)?, Some(&data))
             .await
     }
 
     /// Deletes a Cubbyhole secret scoped to the authenticated token.
     pub async fn delete(&self, path: &str) -> Result<Empty> {
         self.client
-            .request_json(Method::DELETE, &self.path(path)?, Option::<&Empty>::None)
+            .request_json_internal(Method::DELETE, &self.path(path)?, Option::<&Empty>::None)
             .await
     }
 
@@ -111,7 +111,7 @@ impl Cubbyhole<'_> {
             .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<CubbyholeList> = self
             .client
-            .request_json(method, &self.path(path)?, Option::<&Empty>::None)
+            .request_json_internal(method, &self.path(path)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }

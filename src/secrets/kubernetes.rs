@@ -338,7 +338,7 @@ impl KubernetesSecrets<'_> {
     /// Creates or updates the Kubernetes secrets engine configuration.
     pub async fn write_config(&self, config: &KubernetesSecretsConfig) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["config"])?, Some(config))
+            .request_json_internal(Method::POST, &self.path(&["config"])?, Some(config))
             .await
     }
 
@@ -346,7 +346,7 @@ impl KubernetesSecrets<'_> {
     pub async fn read_config(&self) -> Result<KubernetesSecretsConfig> {
         let envelope: ResponseEnvelope<KubernetesSecretsConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["config"])?,
                 Option::<&Empty>::None,
@@ -371,7 +371,7 @@ impl KubernetesSecrets<'_> {
     pub async fn write_role(&self, name: &str, role: &KubernetesSecretsRole) -> Result<Empty> {
         role.validate()?;
         self.client
-            .request_json(Method::POST, &self.path(&["roles", name])?, Some(role))
+            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
@@ -379,7 +379,7 @@ impl KubernetesSecrets<'_> {
     pub async fn read_role(&self, name: &str) -> Result<KubernetesSecretsRole> {
         let envelope: ResponseEnvelope<KubernetesSecretsRole> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -438,7 +438,7 @@ impl KubernetesSecrets<'_> {
         }
         let envelope: ResponseEnvelope<KubernetesCredentialData> = self
             .client
-            .request_json(Method::POST, &self.path(&["creds", role])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["creds", role])?, Some(request))
             .await?;
         Ok(kubernetes_credentials_from_envelope(envelope))
     }

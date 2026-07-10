@@ -49,7 +49,7 @@ impl Kv1<'_> {
     {
         let envelope: ResponseEnvelope<T> = self
             .client
-            .request_json(Method::GET, &self.path(path)?, Option::<&Empty>::None)
+            .request_json_internal(Method::GET, &self.path(path)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -60,14 +60,14 @@ impl Kv1<'_> {
         T: Serialize,
     {
         self.client
-            .request_json(Method::POST, &self.path(path)?, Some(&data))
+            .request_json_internal(Method::POST, &self.path(path)?, Some(&data))
             .await
     }
 
     /// Deletes a KV v1 secret.
     pub async fn delete(&self, path: &str) -> Result<Empty> {
         self.client
-            .request_json(Method::DELETE, &self.path(path)?, Option::<&Empty>::None)
+            .request_json_internal(Method::DELETE, &self.path(path)?, Option::<&Empty>::None)
             .await
     }
 
@@ -77,7 +77,7 @@ impl Kv1<'_> {
             .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<Kv1List> = self
             .client
-            .request_json(method, &self.path(path)?, Option::<&Empty>::None)
+            .request_json_internal(method, &self.path(path)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }

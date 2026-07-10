@@ -318,6 +318,8 @@ openbao = { version = "1", features = ["time"] }
 | `tls12-acknowledged` | no | Explicit acknowledgment for legacy TLS 1.2 compatibility. TLS 1.3 remains the default and is strongly preferred for high-security OpenBao deployments. |
 | `allow-sha1-acknowledged` | no | Explicit opt-in for legacy Transit SHA-1 selection. Disabled by default. |
 | `allow-weak-jitter-fallback-acknowledged` | no | Explicit acknowledgment for using a timing-based retry jitter fallback if OS randomness fails. Default builds skip jitter rather than use the weak fallback. |
+| `raw-api` | no | Enables public raw JSON, byte, retry, and response-wrapping transports for audited deployment-specific wrappers. Requires `raw-api-acknowledged`; typed helpers do not require it. |
+| `raw-api-acknowledged` | no | Explicit acknowledgment that public raw transports bypass typed endpoint validation and operation-specific feature gates. Never enable it merely to avoid adding a typed helper. |
 | `rustls-tls` | yes | Rustls transport configuration. |
 | `native-tls` | no | Legacy native TLS support. Requires `native-tls-acknowledged` after audit. |
 | `native-tls-acknowledged` | no | Explicit acknowledgment for audited native TLS builds. |
@@ -394,7 +396,7 @@ zero `planned` and zero `decision` rows.
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, named-issuer issue/sign, named-issuer sign-intermediate, revoke, revoke-with-key, revoked/revocation-queue/detailed certificate lists, issuer CRL resign, certificate list/read, issuer/key list/read/delete/update, issuer revoke, default issuer/key config, cluster config, auto-tidy config, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, operator-gated default root deletion with explicit confirmation, operator-gated sign-verbatim/sign-self-issued/cross-sign/sign-revocation-list, CEL role management and CEL issue/sign, current-doc field expansion for role/generation/CRL/tidy structs, CA/key import, ACME config/EAB/directory URL, CRL rotate, delta CRL rotate, tidy, tidy status, and tidy cancel are implemented. Unauthenticated public CA/CRL/cert and OCSP protocol reads stay external. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
-| Custom plugin patterns | Yes | Documented wrapper pattern for typed plugin-specific APIs over `Client::request_json`. |
+| Custom plugin patterns | Gated | Documented wrapper pattern for typed plugin-specific APIs over `Client::request_json`; requires `raw-api` plus `raw-api-acknowledged` after the wrapper is audited. |
 
 ### System Backend And Operations
 
@@ -1301,6 +1303,11 @@ async fn main() -> Result<()> {
 ```
 
 Request a typed response-wrapped JSON result:
+
+Response wrapping accepts an arbitrary endpoint path and therefore requires
+`raw-api` plus `raw-api-acknowledged`. Audit and centralize every wrapped path
+in application code; ordinary typed engine helpers do not require these
+features.
 
 ```rust,no_run
 use openbao::{Client, Method, ResponseEnvelope, Result, SecretString};

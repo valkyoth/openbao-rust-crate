@@ -31,6 +31,8 @@ pub enum Error {
     ///
     /// The static reason never contains the rejected input.
     InvalidOpenBaoVersionRequirement(&'static str),
+    /// A public raw request was attempted without explicit acknowledgement.
+    RawApiDisabled,
     /// A crate invariant was violated.
     Internal(&'static str),
     /// Bootstrap convergence detected that a concurrent writer changed the
@@ -83,6 +85,10 @@ impl fmt::Display for Error {
             Self::InvalidOpenBaoVersionRequirement(message) => {
                 write!(formatter, "invalid OpenBao version requirement: {message}")
             }
+            Self::RawApiDisabled => write!(
+                formatter,
+                "OpenBao raw request APIs require raw-api and raw-api-acknowledged"
+            ),
             Self::Internal(message) => write!(formatter, "internal OpenBao SDK error: {message}"),
             Self::BootstrapContention(message) => {
                 write!(

@@ -2242,7 +2242,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityEntityUpsert> = self
             .client
-            .request_json(Method::POST, &self.path(&["entity"])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["entity"])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -2251,7 +2251,7 @@ impl Identity<'_> {
     pub async fn read_entity_by_id(&self, id: &str) -> Result<IdentityEntityInfo> {
         let envelope: ResponseEnvelope<IdentityEntityInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["entity", "id", id])?,
                 Option::<&Empty>::None,
@@ -2269,7 +2269,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityEntityUpsert> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["entity", "id", id])?,
                 Some(request),
@@ -2290,7 +2290,7 @@ impl Identity<'_> {
     ) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["entity", "batch-delete"])?,
                 Some(request),
@@ -2306,7 +2306,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityEntityInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["lookup", "entity"])?,
                 Some(request),
@@ -2319,7 +2319,7 @@ impl Identity<'_> {
     pub async fn merge_entities(&self, request: &IdentityEntityMergeRequest) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["entity", "merge"])?,
                 Some(request),
@@ -2341,7 +2341,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityEntityUpsert> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["entity", "name", name])?,
                 Some(request),
@@ -2354,7 +2354,7 @@ impl Identity<'_> {
     pub async fn read_entity_by_name(&self, name: &str) -> Result<IdentityEntityInfo> {
         let envelope: ResponseEnvelope<IdentityEntityInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["entity", "name", name])?,
                 Option::<&Empty>::None,
@@ -2378,7 +2378,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityGroupUpsert> = self
             .client
-            .request_json(Method::POST, &self.path(&["group"])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["group"])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -2387,7 +2387,7 @@ impl Identity<'_> {
     pub async fn read_group_by_id(&self, id: &str) -> Result<IdentityGroupInfo> {
         let envelope: ResponseEnvelope<IdentityGroupInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["group", "id", id])?,
                 Option::<&Empty>::None,
@@ -2405,7 +2405,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityGroupUpsert> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["group", "id", id])?,
                 Some(request),
@@ -2432,7 +2432,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityGroupInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["lookup", "group"])?,
                 Some(request),
@@ -2450,7 +2450,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityGroupUpsert> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["group", "name", name])?,
                 Some(request),
@@ -2463,7 +2463,7 @@ impl Identity<'_> {
     pub async fn read_group_by_name(&self, name: &str) -> Result<IdentityGroupInfo> {
         let envelope: ResponseEnvelope<IdentityGroupInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["group", "name", name])?,
                 Option::<&Empty>::None,
@@ -2490,7 +2490,7 @@ impl Identity<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityAliasUpsert> = self
             .client
-            .request_json(Method::POST, &self.path(&["entity-alias"])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["entity-alias"])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -2499,7 +2499,7 @@ impl Identity<'_> {
     pub async fn read_entity_alias_by_id(&self, id: &str) -> Result<IdentityAliasInfo> {
         let envelope: ResponseEnvelope<IdentityAliasInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["entity-alias", "id", id])?,
                 Option::<&Empty>::None,
@@ -2525,7 +2525,7 @@ impl Identity<'_> {
     ) -> Result<IdentityAliasUpsert> {
         let envelope: ResponseEnvelope<IdentityAliasUpsert> = self
             .client
-            .request_json(Method::POST, &self.path(&["group-alias"])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["group-alias"])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -2534,7 +2534,7 @@ impl Identity<'_> {
     pub async fn read_group_alias_by_id(&self, id: &str) -> Result<IdentityAliasInfo> {
         let envelope: ResponseEnvelope<IdentityAliasInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["group-alias", "id", id])?,
                 Option::<&Empty>::None,
@@ -2556,7 +2556,7 @@ impl Identity<'_> {
     /// Writes Identity OIDC token backend configuration.
     pub async fn write_oidc_config(&self, request: &IdentityOidcConfigRequest) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "config"])?,
                 Some(request),
@@ -2568,7 +2568,7 @@ impl Identity<'_> {
     pub async fn read_oidc_config(&self) -> Result<IdentityOidcConfig> {
         let envelope: ResponseEnvelope<IdentityOidcConfig> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "config"])?,
                 Option::<&Empty>::None,
@@ -2585,7 +2585,7 @@ impl Identity<'_> {
     ) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "key", name])?,
                 Some(request),
@@ -2597,7 +2597,7 @@ impl Identity<'_> {
     pub async fn read_oidc_key(&self, name: &str) -> Result<IdentityOidcKeyInfo> {
         let envelope: ResponseEnvelope<IdentityOidcKeyInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "key", name])?,
                 Option::<&Empty>::None,
@@ -2624,7 +2624,7 @@ impl Identity<'_> {
     ) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "key", name, "rotate"])?,
                 Some(request),
@@ -2640,7 +2640,7 @@ impl Identity<'_> {
     ) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "role", name])?,
                 Some(request),
@@ -2652,7 +2652,7 @@ impl Identity<'_> {
     pub async fn read_oidc_role(&self, name: &str) -> Result<IdentityOidcRoleInfo> {
         let envelope: ResponseEnvelope<IdentityOidcRoleInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "role", name])?,
                 Option::<&Empty>::None,
@@ -2675,7 +2675,7 @@ impl Identity<'_> {
     pub async fn generate_oidc_token(&self, name: &str) -> Result<IdentityOidcToken> {
         let envelope: ResponseEnvelope<IdentityOidcToken> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "token", name])?,
                 Option::<&Empty>::None,
@@ -2696,7 +2696,7 @@ impl Identity<'_> {
             client_id: request.client_id.as_deref(),
         };
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "introspect"])?,
                 Some(&payload),
@@ -2709,7 +2709,7 @@ impl Identity<'_> {
     /// OpenBao serves this as a plain OIDC response, not a `data` envelope.
     pub async fn read_oidc_discovery(&self) -> Result<IdentityOidcDiscovery> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", ".well-known", "openid-configuration"])?,
                 Option::<&Empty>::None,
@@ -2723,7 +2723,7 @@ impl Identity<'_> {
     /// bounded during deserialization to avoid disproportionate allocations.
     pub async fn read_oidc_jwks(&self) -> Result<IdentityOidcJwks> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", ".well-known", "keys"])?,
                 Option::<&Empty>::None,
@@ -2739,7 +2739,7 @@ impl Identity<'_> {
     ) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "provider", name])?,
                 Some(request),
@@ -2751,7 +2751,7 @@ impl Identity<'_> {
     pub async fn read_oidc_provider(&self, name: &str) -> Result<IdentityOidcProviderInfo> {
         let envelope: ResponseEnvelope<IdentityOidcProviderInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "provider", name])?,
                 Option::<&Empty>::None,
@@ -2791,7 +2791,7 @@ impl Identity<'_> {
         request: &IdentityOidcScopeRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "scope", name])?,
                 Some(request),
@@ -2803,7 +2803,7 @@ impl Identity<'_> {
     pub async fn read_oidc_scope(&self, name: &str) -> Result<IdentityOidcScopeInfo> {
         let envelope: ResponseEnvelope<IdentityOidcScopeInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "scope", name])?,
                 Option::<&Empty>::None,
@@ -2830,7 +2830,7 @@ impl Identity<'_> {
     ) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "client", name])?,
                 Some(request),
@@ -2842,7 +2842,7 @@ impl Identity<'_> {
     pub async fn read_oidc_client(&self, name: &str) -> Result<IdentityOidcClientInfo> {
         let envelope: ResponseEnvelope<IdentityOidcClientInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "client", name])?,
                 Option::<&Empty>::None,
@@ -2869,7 +2869,7 @@ impl Identity<'_> {
     ) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["oidc", "assignment", name])?,
                 Some(request),
@@ -2881,7 +2881,7 @@ impl Identity<'_> {
     pub async fn read_oidc_assignment(&self, name: &str) -> Result<IdentityOidcAssignmentInfo> {
         let envelope: ResponseEnvelope<IdentityOidcAssignmentInfo> = self
             .client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "assignment", name])?,
                 Option::<&Empty>::None,
@@ -2907,7 +2907,7 @@ impl Identity<'_> {
     /// OIDC client library for browser-based flows.
     pub async fn read_oidc_provider_discovery(&self, name: &str) -> Result<IdentityOidcDiscovery> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&[
                     "oidc",
@@ -2924,7 +2924,7 @@ impl Identity<'_> {
     /// Reads public OIDC JSON Web Keys for a named provider.
     pub async fn read_oidc_provider_jwks(&self, name: &str) -> Result<IdentityOidcJwks> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::GET,
                 &self.path(&["oidc", "provider", name, ".well-known", "keys"])?,
                 Option::<&Empty>::None,
@@ -3137,7 +3137,7 @@ impl Identity<'_> {
     {
         let envelope: ResponseEnvelope<T> = self
             .client
-            .request_json(Method::GET, &self.path(tail)?, Option::<&Empty>::None)
+            .request_json_internal(Method::GET, &self.path(tail)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -3147,7 +3147,7 @@ impl Identity<'_> {
         T: Serialize + ?Sized,
     {
         self.client
-            .request_json(Method::POST, &self.path(tail)?, Some(request))
+            .request_json_internal(Method::POST, &self.path(tail)?, Some(request))
             .await
     }
 
@@ -3158,7 +3158,7 @@ impl Identity<'_> {
     {
         let envelope: ResponseEnvelope<U> = self
             .client
-            .request_json(Method::POST, &self.path(tail)?, Some(request))
+            .request_json_internal(Method::POST, &self.path(tail)?, Some(request))
             .await?;
         Ok(envelope.data)
     }

@@ -18,6 +18,9 @@
 //! password policies, resultant ACL inspection, operator-gated root/recovery
 //! token ceremonies, in-flight request diagnostics, plugin catalog operations,
 //! SSH, TOTP, and raw JSON calls for advanced users.
+//! Public raw JSON, byte, and response-wrapping transports require the
+//! non-default `raw-api` plus `raw-api-acknowledged` features because they
+//! bypass typed endpoint validation and operation-specific feature gates.
 //! Selected system endpoints that return non-JSON data, such as Prometheus
 //! metrics and capped Raft snapshots, are exposed through typed helpers rather
 //! than a public raw-body escape hatch.
@@ -81,6 +84,12 @@ compile_error!(
     "The memory-lock feature asks sanitization to lock secret buffers out of swap. \
      Review OS mlock/VirtualLock limits, failure behavior, and deployment quotas before enabling it. \
      Add feature \"memory-lock-acknowledged\" to confirm this host-level control was audited."
+);
+
+#[cfg(all(feature = "raw-api", not(feature = "raw-api-acknowledged")))]
+compile_error!(
+    "The raw-api feature exposes generic JSON and byte transports that bypass typed endpoint validation and operation-specific feature gates. \
+     Add feature \"raw-api-acknowledged\" only after auditing every deployment-specific raw wrapper."
 );
 
 #[cfg(all(

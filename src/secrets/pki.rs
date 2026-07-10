@@ -1744,7 +1744,7 @@ impl Pki<'_> {
         request: &PkiSetSignedIntermediateRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["intermediate", "set-signed"])?,
                 Some(request),
@@ -1755,7 +1755,7 @@ impl Pki<'_> {
     /// Creates or replaces a PKI role.
     pub async fn write_role(&self, name: &str, role: &PkiRole) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["roles", name])?, Some(role))
+            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
@@ -1816,7 +1816,7 @@ impl Pki<'_> {
     /// Sets PKI URL configuration.
     pub async fn write_urls(&self, config: &PkiUrlsConfig) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["config", "urls"])?, Some(config))
+            .request_json_internal(Method::POST, &self.path(&["config", "urls"])?, Some(config))
             .await
     }
 
@@ -1833,7 +1833,7 @@ impl Pki<'_> {
     /// Sets the default PKI issuer configuration.
     pub async fn write_issuers_config(&self, config: &PkiIssuersConfig) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["config", "issuers"])?,
                 Some(config),
@@ -1854,7 +1854,7 @@ impl Pki<'_> {
     /// Sets the default PKI key configuration.
     pub async fn write_keys_config(&self, config: &PkiKeysConfig) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["config", "keys"])?, Some(config))
+            .request_json_internal(Method::POST, &self.path(&["config", "keys"])?, Some(config))
             .await
     }
 
@@ -1871,7 +1871,7 @@ impl Pki<'_> {
     /// Sets PKI cluster-local configuration.
     pub async fn write_cluster_config(&self, config: &PkiClusterConfig) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["config", "cluster"])?,
                 Some(config),
@@ -1892,7 +1892,7 @@ impl Pki<'_> {
     /// Sets PKI CRL configuration.
     pub async fn write_crl_config(&self, config: &PkiCrlConfig) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["config", "crl"])?, Some(config))
+            .request_json_internal(Method::POST, &self.path(&["config", "crl"])?, Some(config))
             .await
     }
 
@@ -1919,7 +1919,7 @@ impl Pki<'_> {
     /// Starts PKI tidy with the requested options.
     pub async fn tidy(&self, request: &PkiTidyRequest) -> Result<Empty> {
         self.client
-            .request_json(Method::POST, &self.path(&["tidy"])?, Some(request))
+            .request_json_internal(Method::POST, &self.path(&["tidy"])?, Some(request))
             .await
     }
 
@@ -1956,7 +1956,7 @@ impl Pki<'_> {
     /// Sets PKI automatic tidy configuration.
     pub async fn write_auto_tidy_config(&self, config: &PkiAutoTidyConfig) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["config", "auto-tidy"])?,
                 Some(config),
@@ -2450,7 +2450,7 @@ impl Pki<'_> {
     /// workflow against the OpenBao version they deploy.
     pub async fn write_cel_role(&self, name: &str, role: &PkiCelRoleRequest) -> Result<Empty> {
         self.client
-            .request_json(
+            .request_json_internal(
                 Method::POST,
                 &self.path(&["cel", "roles", name])?,
                 Some(role),
@@ -2583,7 +2583,10 @@ impl Pki<'_> {
         T: for<'de> Deserialize<'de>,
         B: Serialize + ?Sized,
     {
-        let envelope: ResponseEnvelope<T> = self.client.request_json(method, path, request).await?;
+        let envelope: ResponseEnvelope<T> = self
+            .client
+            .request_json_internal(method, path, request)
+            .await?;
         Ok(envelope.data)
     }
 
