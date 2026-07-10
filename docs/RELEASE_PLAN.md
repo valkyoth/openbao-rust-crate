@@ -1,13 +1,14 @@
 # Release Plan
 
 This plan starts at `0.1.0` and reached `1.0.0`, the first stable release.
-The endpoint-by-endpoint OpenBao `2.5.x` matrix currently tracks `643`
-documented endpoint rows, with `597/643` (`92.8%`) strict typed or
-operator-gated coverage and zero `planned` or `decision` rows. The remaining
-rows are intentionally addressed as `partial`, `raw`, `external`, or
-`rejected` where that boundary is safer than first-class typed SDK coverage.
-The pre-`1.0` line extended through `0.15.0`; that final scope was trialed
-before the stable API freeze.
+The endpoint-by-endpoint OpenBao `2.5.5` inventory contains `643` unique
+documented method/path rows. The pre-`1.0` matrix reported `597/643` (`92.8%`)
+as strict typed or operator-gated coverage, but the post-`1.1` exact-source
+audit found at least 33 false typed classifications. The corrected current
+upper bound is therefore `564/643` (`87.7%`), before field-level completeness
+is counted. [`OPENBAO_2_5_FULL_SUPPORT_AUDIT.md`](OPENBAO_2_5_FULL_SUPPORT_AUDIT.md)
+records the evidence and confirmed gaps. The pre-`1.0` line extended through
+`0.15.0`; that final scope was trialed before the stable API freeze.
 
 After `1.0.0`, the expected line is stable maintenance, security fixes,
 OpenBao compatibility fixes, and reviewed security-focused minor updates. Every
@@ -33,6 +34,15 @@ OpenBao endpoint boundary intact.
 Rust `1.96.1` the primary checked toolchain while preserving the documented
 Rust `1.90.0` compatibility floor.
 
+`1.2.0` adds explicit multi-version OpenBao compatibility. It is delivered as
+ordered, pentest-gated commits on `main`, without intermediate crate versions
+or tags. The complete architecture, exact historical release inventory,
+security invariants, commit sequence, and stop criteria are defined in
+[`OPENBAO_VERSION_COMPATIBILITY_PLAN.md`](OPENBAO_VERSION_COMPATIBILITY_PLAN.md).
+The package version changes to `1.2.0` only after every checkpoint is complete
+and the exact release candidate passes the full historical matrix and final
+pentest.
+
 ## Standing Release Gates
 
 Every release:
@@ -54,18 +64,17 @@ Every release:
 
 ## Finalization Policy
 
-- Anything valuable enough for the stable crate landed between `0.9.0` and
-  `0.15.0`, or was explicitly rejected/delegated before `1.0.0`.
-- The stable readiness target is not blindly `100% typed`; it is `100%`
-  addressed endpoint rows. A row may be addressed as `typed`, `typed-gated`,
-  `partial`, `raw`, `external`, or rejected with a documented safe alternative.
-  The `1.0.0` candidate has no remaining `planned` implementation rows.
-- No endpoint row may remain classified as `planned` or `decision` when
-  `1.0.0` is tagged.
-- After `1.0.0`, endpoint expansion is not planned unless OpenBao adds stable
-  API surface that must be tracked. Security, correctness, compatibility,
-  documentation, dependency, and reviewed security-type migrations may land in
-  the stable `1.x` line.
+- `1.0.0` used a narrower definition of complete support: every endpoint row
+  was addressed, but protocol handoffs and explicit rejections were accepted.
+- The `1.2.0` goal supersedes that boundary for OpenBao `2.5.5`. Every one of
+  the 643 documented operations and its request/response contract must be
+  first-class typed or typed-gated coverage. Generic raw requests, URL-only
+  handoffs, `partial`, `external`, and `rejected` classifications do not count.
+- Compatibility with OpenBao `2.0.0` through `2.5.5` is version-specific and
+  append-only. New server profiles must not overwrite the behavior retained
+  for an older supported server.
+- Arbitrary undocumented external plugin schemas and third-party service
+  behavior remain outside the core-server support claim.
 
 ## Downstream Ergonomics Backlog
 
@@ -647,3 +656,33 @@ Stop criteria:
 - release notes, changelog, README, and metadata validation cover the `1.1.2`
   candidate;
 - all-feature tests and GitHub CI pass before tagging.
+
+### 1.2.0 - Multi-Version OpenBao Compatibility
+
+Implementation is governed by
+[`OPENBAO_VERSION_COMPATIBILITY_PLAN.md`](OPENBAO_VERSION_COMPATIBILITY_PLAN.md).
+There are no intermediate version bumps or tags: each ordered commit must pass
+required CI and an exact-commit pentest before the next goal begins.
+
+Stop criteria:
+
+- immutable compatibility profiles cover every listed stable OpenBao release
+  from `2.0.0` through `2.5.5`;
+- the corrected OpenBao `2.5.5` matrix covers all 643 rows as typed or
+  typed-gated, with zero partial, raw, external, rejected, planned, or decision
+  rows and explicit request/response field evidence;
+- exact and range requirements, strict detection, explicit assumed mode, and
+  acknowledged unknown-newer behavior are implemented and documented;
+- typed endpoint dispatch selects a reviewed version variant before request
+  transmission and never retries a different route after an HTTP failure;
+- endpoint removals in newer OpenBao releases do not overwrite compatible
+  older profiles, except where crate security policy explicitly blocks an
+  unsafe operation;
+- request-field availability and response-shape differences are validated by
+  version;
+- every endpoint/profile cell has a tested or explicitly bounded status;
+- pull-request, scheduled, and release compatibility matrices are enforced;
+- the README and security documentation distinguish tested wire compatibility
+  from security endorsement of an old server;
+- all standard release gates, the all-release integration gate, GitHub checks,
+  and the final exact-commit pentest pass before tagging `v1.2.0`.
