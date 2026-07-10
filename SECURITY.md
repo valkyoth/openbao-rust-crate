@@ -102,6 +102,14 @@ or the operating system.
 Token and namespace header values are also copied into HTTP-stack header
 structures that are marked sensitive for logging but are not sanitized on drop by
 the underlying `http`/`hyper`/`reqwest` types.
+OpenBao's OIDC browser callback endpoint carries an authorization code or ID
+token in a GET query string. The optional `oidc-get-callback-acknowledged`
+helper avoids an additional crate-owned plaintext `String`, but the resulting
+URL and transport buffers cannot be sanitized by this crate. Do not enable the
+feature until OpenBao, reverse proxies, service meshes, and observability
+systems are configured to log the path only and omit the complete query
+string. Prefer direct/device polling where browser callback compatibility is
+not required.
 Tokens loaded from environment variables are moved directly into
 `SecretString` without an intermediate trimmed copy, but the operating system's
 process environment remains outside the crate's sanitization control. Prefer a
@@ -112,6 +120,12 @@ High-assurance deployments should combine this crate with process isolation,
 encrypted swap or disabled swap, core-dump restrictions, short process
 lifetimes for highly sensitive workflows, and host-level memory protections
 appropriate to the environment.
+
+The runtime-neutral readiness helpers cap sleeps to their remaining retry
+budget, but cannot interrupt an in-flight HTTP future. Enable `tokio-helpers`
+and use `Sys::wait_ready` or `Sys::wait_until_unsealed` when the supplied
+timeout must cancel the complete HTTP-and-delay operation at a strict overall
+deadline.
 
 Base64 helpers used by Transit byte operations and system random byte helpers
 move base64 text into `SecretString`, but exposing text from dependency APIs is

@@ -6465,6 +6465,51 @@ async fn jwt_login_sends_documented_path_and_secret_jwt() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "oidc-get-callback-acknowledged")]
+#[tokio::test]
+async fn acknowledged_oidc_callback_uses_documented_sensitive_query_path() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with(
+            "GET /v1/auth/jwt/oidc/callback?state=session%2Fstate&code=authorization-code&client_nonce=session-nonce HTTP/1.1"
+        ));
+        let body = r#"{"auth":{"client_token":"oidc-token","accessor":"oidc-accessor","policies":["default"],"lease_duration":3600,"renewable":true}}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+    let jwt = client.jwt().unwrap_or_else(|error| panic!("{error}"));
+    let callback = openbao::auth::jwt::OidcCallbackRequest::with_code(
+        "session/state",
+        SecretString::from("authorization-code"),
+    )
+    .with_client_nonce("session-nonce");
+
+    let (_client, login) = jwt
+        .oidc_callback(&callback)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(login.accessor.expose_secret(), "oidc-accessor");
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[tokio::test]
 async fn jwt_admin_config_and_role_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));

@@ -82,6 +82,7 @@ check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep 'channel = "1.97.0"' rust-toolchain.toml
 check_grep 'rustup toolchain install 1.90.0' scripts/ci_install_rust.sh
 check_grep 'cargo +1.90.0 check --locked --all-targets --all-features' scripts/checks.sh
+check_grep 'oidc-get-callback-acknowledged = \["jwt-auth"\]' Cargo.toml
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
 check_grep 'unsafe_code = "forbid"' Cargo.toml
 check_grep '0.1.0 - Secure Core And KV v2' docs/RELEASE_PLAN.md
@@ -129,6 +130,11 @@ fi
 
 if sed -n '/^default = \[/,/^\]/p' Cargo.toml | grep -q 'radius-auth'; then
   echo "legacy RADIUS auth feature must not be in default features" >&2
+  exit 1
+fi
+
+if sed -n '/^default = \[/,/^\]/p' Cargo.toml | grep -q 'oidc-get-callback-acknowledged'; then
+  echo "OIDC GET callback acknowledgment must not be in default features" >&2
   exit 1
 fi
 

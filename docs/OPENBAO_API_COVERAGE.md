@@ -145,7 +145,9 @@ Support plan:
 - `0.5.0`: userpass login and user administration are implemented; JWT login
   plus JWT/OIDC config and role administration helpers are implemented.
 - `0.8.0`: JWT/OIDC browser flow helpers for authorization URL, callback, and
-  direct/device polling are implemented.
+  direct/device polling are implemented. On the `2.0.0` development line, GET
+  callback redemption requires `oidc-get-callback-acknowledged` because the
+  provider credential necessarily enters the URL query string.
 - `0.7.0`: AppRole role and SecretID administration is implemented. Admin
   bootstrap orchestration for auth method enablement, AppRole role
   convergence, and explicit SecretID issuance is implemented.

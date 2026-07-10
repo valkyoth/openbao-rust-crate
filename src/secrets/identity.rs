@@ -1026,12 +1026,22 @@ impl fmt::Debug for IdentityOidcIntrospectRequest {
 }
 
 /// Identity OIDC introspection response.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Default)]
 pub struct IdentityOidcIntrospection {
     /// Whether OpenBao considers the token active.
     pub active: bool,
     /// Additional RFC 7662/OpenBao claims returned by the endpoint.
     pub extra: BTreeMap<String, JsonValue>,
+}
+
+impl fmt::Debug for IdentityOidcIntrospection {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityOidcIntrospection")
+            .field("active", &self.active)
+            .field("claim_count", &self.extra.len())
+            .finish()
+    }
 }
 
 impl<'de> Deserialize<'de> for IdentityOidcIntrospection {
@@ -3631,6 +3641,18 @@ mod tests {
         let debug = format!("{client:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("client-secret"));
+
+        let introspection =
+            serde_json::from_value::<IdentityOidcIntrospection>(serde_json::json!({
+                "active": true,
+                "email": "private@example.com",
+                "groups": ["security-admins"]
+            }))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let debug = format!("{introspection:?}");
+        assert!(debug.contains("claim_count: 2"));
+        assert!(!debug.contains("private@example.com"));
+        assert!(!debug.contains("security-admins"));
     }
 
     #[test]

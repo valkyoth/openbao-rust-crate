@@ -72,6 +72,9 @@ cubbyhole = []
 database = []
 identity = []
 jwt-auth = []
+# OpenBao's browser callback endpoint places an authorization code or ID token
+# in a GET query string. Keep this transport residual out of default builds.
+oidc-get-callback-acknowledged = ["jwt-auth"]
 kerberos-auth = []
 kubernetes-auth = []
 ldap-auth = []

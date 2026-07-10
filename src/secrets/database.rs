@@ -51,7 +51,13 @@ pub struct DatabaseConnectionConfig {
     /// Whether to disable username/password escaping in supported plugins.
     pub disable_escaping: Option<bool>,
     /// Additional plugin-specific string fields.
-    pub extra: BTreeMap<String, String>,
+    ///
+    /// Extension schemas are deployment- and plugin-specific, so the crate
+    /// cannot safely determine whether an unknown value is credential
+    /// material. Values therefore fail closed as [`SecretString`] and are
+    /// redacted from [`Debug`](fmt::Debug). Prefer the typed fields above when
+    /// the plugin supports them.
+    pub extra: BTreeMap<String, SecretString>,
 }
 
 impl DatabaseConnectionConfig {
@@ -78,13 +84,13 @@ impl fmt::Debug for DatabaseConnectionConfig {
             .field("username", &self.username)
             .field("password", &self.password.as_ref().map(|_| "<redacted>"))
             .field("disable_escaping", &self.disable_escaping)
-            .field("extra", &self.extra)
+            .field("extra_field_count", &self.extra.len())
             .finish()
     }
 }
 
 /// Database connection configuration returned by OpenBao.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Default, Deserialize)]
 pub struct DatabaseConnectionInfo {
     /// Roles allowed to use this connection.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
@@ -111,6 +117,23 @@ pub struct DatabaseConnectionInfo {
         deserialize_with = "deserialize_bounded_string_vec"
     )]
     pub root_credentials_rotate_statements: Vec<String>,
+}
+
+impl fmt::Debug for DatabaseConnectionInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DatabaseConnectionInfo")
+            .field("allowed_roles", &self.allowed_roles)
+            .field("connection_detail_count", &self.connection_details.len())
+            .field("password_policy", &self.password_policy)
+            .field("plugin_name", &self.plugin_name)
+            .field("plugin_version", &self.plugin_version)
+            .field(
+                "root_credentials_rotate_statement_count",
+                &self.root_credentials_rotate_statements.len(),
+            )
+            .finish()
+    }
 }
 
 /// List response for database connections or roles.
@@ -310,31 +333,6 @@ impl fmt::Debug for DatabaseStaticCredentials {
     }
 }
 
-#[derive(Serialize)]
-struct DatabaseConnectionPayload<'a> {
-    plugin_name: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    plugin_version: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    verify_connection: Option<bool>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    allowed_roles: Vec<&'a str>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    root_rotation_statements: Vec<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    password_policy: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    connection_url: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    username: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    password: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    disable_escaping: Option<bool>,
-    #[serde(flatten)]
-    extra: &'a BTreeMap<String, String>,
-}
-
 #[derive(Deserialize)]
 struct DatabaseCredentialData {
     username: String,
@@ -368,28 +366,8 @@ impl Database<'_> {
         name: &str,
         config: &DatabaseConnectionConfig,
     ) -> Result<Empty> {
-        let payload = DatabaseConnectionPayload {
-            plugin_name: &config.plugin_name,
-            plugin_version: config.plugin_version.as_deref(),
-            verify_connection: config.verify_connection,
-            allowed_roles: config.allowed_roles.iter().map(String::as_str).collect(),
-            root_rotation_statements: config
-                .root_rotation_statements
-                .iter()
-                .map(String::as_str)
-                .collect(),
-            password_policy: config.password_policy.as_deref(),
-            connection_url: config
-                .connection_url
-                .as_ref()
-                .map(SecretString::expose_secret),
-            username: config.username.as_deref(),
-            password: config.password.as_ref().map(SecretString::expose_secret),
-            disable_escaping: config.disable_escaping,
-            extra: &config.extra,
-        };
         self.client
-            .request_json_internal(Method::POST, &self.path(&["config", name])?, Some(&payload))
+            .request_json_internal(Method::POST, &self.path(&["config", name])?, Some(config))
             .await
     }
 
@@ -657,7 +635,7 @@ impl Serialize for DatabaseConnectionConfig {
             map.serialize_entry("disable_escaping", &disable_escaping)?;
         }
         for (key, value) in &self.extra {
-            map.serialize_entry(key, value)?;
+            map.serialize_entry(key, value.expose_secret())?;
         }
         map.end()
     }
@@ -785,7 +763,39 @@ mod tests {
 
     use secrecy::{ExposeSecret, SecretString};
 
-    use super::{DatabaseCredentials, DatabaseList, DatabaseRole, DatabaseStaticCredentials};
+    use super::{
+        DatabaseConnectionConfig, DatabaseConnectionInfo, DatabaseCredentials, DatabaseList,
+        DatabaseRole, DatabaseStaticCredentials,
+    };
+
+    #[test]
+    fn database_connection_extension_values_are_secret_and_debug_redacted() {
+        let mut config = DatabaseConnectionConfig::new("custom-database-plugin");
+        config.extra.insert(
+            "private_key".to_owned(),
+            SecretString::from("plugin-private-key"),
+        );
+
+        let debug = format!("{config:?}");
+        assert!(debug.contains("extra_field_count"));
+        assert!(!debug.contains("private_key"));
+        assert!(!debug.contains("plugin-private-key"));
+
+        let serialized = serde_json::to_value(&config).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(serialized["private_key"], "plugin-private-key");
+
+        let info = serde_json::from_value::<DatabaseConnectionInfo>(serde_json::json!({
+            "plugin_name": "custom-database-plugin",
+            "connection_details": {
+                "private_key": "returned-plugin-private-key"
+            }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        let debug = format!("{info:?}");
+        assert!(debug.contains("connection_detail_count"));
+        assert!(!debug.contains("private_key"));
+        assert!(!debug.contains("returned-plugin-private-key"));
+    }
 
     #[test]
     fn database_credentials_debug_redacts_password_and_lease() {

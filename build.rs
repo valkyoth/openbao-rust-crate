@@ -16,4 +16,9 @@ fn main() {
             "cargo:warning=memory-lock is enabled. Verify host mlock/VirtualLock limits, swap policy, and failure handling for this deployment."
         );
     }
+    if std::env::var_os("CARGO_FEATURE_OIDC_GET_CALLBACK_ACKNOWLEDGED").is_some() {
+        println!(
+            "cargo:warning=OIDC GET callback support is enabled. Authorization codes or ID tokens enter URL and HTTP-stack buffers; enforce query-free access logging."
+        );
+    }
 }

@@ -227,8 +227,9 @@ Confirmed gaps include fields or variants for:
 
 - Entity merge `conflicting_alias_ids_to_keep`.
 - Built-in database plugin connection fields are not fully typed. The current
-  `extra: BTreeMap<String, String>` cannot faithfully represent documented
-  booleans, integers, lists, PEM material, or secret-bearing plugin options.
+  secret-aware, string-only extension map prevents unknown values from entering
+  ordinary `String` fields or `Debug`, but cannot faithfully represent
+  documented booleans, integers, lists, or structured plugin options.
 - PostgreSQL, MySQL/MariaDB, Cassandra, InfluxDB, and Valkey need reviewed
   plugin-specific typed connection builders and secret-aware debug behavior.
 

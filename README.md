@@ -57,7 +57,8 @@ Implemented now:
 - TLS certificate auth login, method config, CA role, and CRL administration
   helpers.
 - JWT login plus JWT/OIDC auth method config, role administration, browser
-  authorization URL, callback, and direct/device polling helpers.
+  authorization URL and direct/device polling helpers, plus explicitly
+  acknowledged GET callback redemption.
 - LDAP auth login plus config and user/group policy mapping helpers.
 - RADIUS login plus config and user policy mapping helpers.
 - Kerberos login plus service-account, LDAP config, and group policy mapping
@@ -300,7 +301,8 @@ openbao = { version = "1", features = ["time"] }
 | `cubbyhole` | yes | Token-scoped Cubbyhole read/write/delete/list helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
 | `identity` | yes | Identity entity, group, entity-alias, and group-alias helpers. |
-| `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, callback, and poll helpers. |
+| `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, and direct/device poll helpers. |
+| `oidc-get-callback-acknowledged` | no | Enables OIDC browser callback redemption over OpenBao's documented GET endpoint. Authorization codes or ID tokens necessarily enter URL and HTTP-stack buffers; enforce query-free access logging on OpenBao and every intermediary. |
 | `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, and group mapping helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
@@ -323,7 +325,7 @@ openbao = { version = "1", features = ["time"] }
 | `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
-| `tokio-helpers` | no | Enables Tokio convenience helpers such as `Sys::wait_until_unsealed`. Runtime-neutral variants remain available without this feature. |
+| `tokio-helpers` | no | Enables strict-deadline Tokio convenience helpers such as `Sys::wait_ready` and `Sys::wait_until_unsealed`. Runtime-neutral retry-budget variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
 | `kani` | no | Inert feature reserved for Kani proof harness builds. Normal users do not need it; `scripts/check_kani.sh` enables it with the Rust `1.90.0` Kani toolchain. |
 | `memory-lock` | no | Enables `sanitization` memory-lock support for secret buffers where the host permits it. Requires `memory-lock-acknowledged`; verify OS mlock/VirtualLock limits and swap policy before enabling. |
@@ -383,7 +385,7 @@ zero `planned` and zero `decision` rows.
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, create/create-orphan, renew/renew-accessor, revoke, revoke-self, and revoke-accessor helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
-| JWT/OIDC | Yes | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL, callback, and direct/device poll helpers. |
+| JWT/OIDC | Gated callback | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL, and direct/device poll helpers. GET callback redemption requires `oidc-get-callback-acknowledged` because credentials enter the URL query string. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
 | RADIUS auth | Gated | Login, method config, user create/read/list/delete, paginated user list helpers. Available only with `radius-auth` plus `radius-auth-acknowledged` because legacy RADIUS uses MD5-based authenticators. |
 | Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group create/read/list/delete mapping helpers. |
@@ -404,7 +406,7 @@ zero `planned` and zero `decision` rows.
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
 | Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, JWKS, OIDC provider/scope/client/assignment admin, named-provider discovery/JWKS, MFA method management, TOTP MFA generation/admin actions, and MFA login-enforcement helpers are implemented. Named-provider OIDC browser protocol flows stay external. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
-| Database credentials | Yes | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. |
+| Database credentials | Partial | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. Unknown plugin extension values fail closed as `SecretString` and are excluded from `Debug`; complete typed builders for every built-in plugin remain planned for the `2.0.0` compatibility work. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional raw-byte helpers, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR generation, and certificate-chain install helpers. Import wrappers accept externally wrapped `SecretString` ciphertext or public-key-only import material; raw private or symmetric key bytes stay outside the default endpoint wrappers. The non-default `transit-import` plus `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP wrapping helper for audited development and automation use. |
 | PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, named-issuer issue/sign, named-issuer sign-intermediate, revoke, revoke-with-key, revoked/revocation-queue/detailed certificate lists, issuer CRL resign, certificate list/read, issuer/key list/read/delete/update, issuer revoke, default issuer/key config, cluster config, auto-tidy config, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, operator-gated default root deletion with explicit confirmation, operator-gated sign-verbatim/sign-self-issued/cross-sign/sign-revocation-list, CEL role management and CEL issue/sign, current-doc field expansion for role/generation/CRL/tidy structs, CA/key import, ACME config/EAB/directory URL, CRL rotate, delta CRL rotate, tidy, tidy status, and tidy cancel are implemented. Unauthenticated public CA/CRL/cert and OCSP protocol reads stay external. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
@@ -633,7 +635,10 @@ async fn main() -> Result<()> {
 ```
 
 Start an OIDC browser login and handle the callback without logging returned
-token material:
+token material. Callback redemption requires the non-default
+`oidc-get-callback-acknowledged` feature. Before enabling it, configure OpenBao,
+reverse proxies, service meshes, and observability systems to log only the URL
+path and never the query string:
 
 ```rust,no_run
 use openbao::auth::jwt::{OidcAuthUrlRequest, OidcCallbackRequest};
@@ -1266,7 +1271,8 @@ async fn main() -> Result<()> {
 }
 ```
 
-Wait for OpenBao readiness with a runtime-provided sleep function:
+Wait for OpenBao readiness with a strict Tokio deadline. This requires the
+non-default `tokio-helpers` feature:
 
 ```rust,no_run
 use openbao::{Client, Result, SecretString};
@@ -1279,10 +1285,9 @@ async fn main() -> Result<()> {
 
     client
         .sys()
-        .wait_ready_with_delay(
+        .wait_ready(
             Duration::from_secs(30),
             Duration::from_millis(250),
-            tokio::time::sleep,
         )
         .await?;
 
@@ -1291,7 +1296,8 @@ async fn main() -> Result<()> {
 }
 ```
 
-Wait until an initialized OpenBao node is unsealed:
+Wait until an initialized OpenBao node is unsealed with a strict Tokio
+deadline. This requires the non-default `tokio-helpers` feature:
 
 ```rust,no_run
 use openbao::{Client, Result};
@@ -1303,10 +1309,9 @@ async fn main() -> Result<()> {
 
     let status = client
         .sys()
-        .wait_until_unsealed_with_delay(
+        .wait_until_unsealed(
             Duration::from_secs(60),
             Duration::from_millis(250),
-            tokio::time::sleep,
         )
         .await?;
 

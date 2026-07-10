@@ -25,6 +25,8 @@ All notable changes to this project are documented here.
   Rust `1.90.0` as the MSRV, now enforced by a locked all-target, all-feature
   CI compilation check.
 - Updated pinned `taiki-e/install-action` CI action to `v2.83.0`.
+- Added strict-overall-deadline Tokio readiness and unseal helpers and capped
+  runtime-neutral readiness sleeps to their remaining retry budget.
 
 ### Security
 
@@ -36,6 +38,12 @@ All notable changes to this project are documented here.
 - Release-lock inputs are opened without following symbolic links and are read
   through bounded file descriptors; RustSec checks use a private per-run
   advisory database unless an explicit database path is supplied.
+- Database plugin extension values now fail closed as `SecretString`, and
+  database extension details plus Identity OIDC introspection claims are
+  excluded from `Debug` output.
+- OIDC GET callback redemption now requires the non-default
+  `oidc-get-callback-acknowledged` feature and avoids the previous additional
+  plaintext query-value copies before constructing the unavoidable URL.
 
 ## 1.1.2 - 2026-07-04
 

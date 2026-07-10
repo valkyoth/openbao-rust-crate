@@ -21,6 +21,9 @@
 //! Public raw JSON, byte, and response-wrapping transports require the
 //! non-default `raw-api` plus `raw-api-acknowledged` features because they
 //! bypass typed endpoint validation and operation-specific feature gates.
+//! OIDC browser callback redemption requires the non-default
+//! `oidc-get-callback-acknowledged` feature because OpenBao places an
+//! authorization code or ID token in the callback URL query string.
 //! Selected system endpoints that return non-JSON data, such as Prometheus
 //! metrics and capped Raft snapshots, are exposed through typed helpers rather
 //! than a public raw-body escape hatch.

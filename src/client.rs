@@ -1000,7 +1000,7 @@ impl<State> Client<State> {
         self.request_json_query_headers_accepting(
             method,
             path,
-            &[],
+            &[] as &[(&str, String)],
             headers,
             body,
             accepted_statuses,
@@ -1013,6 +1013,23 @@ impl<State> Client<State> {
         method: Method,
         path: &str,
         query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_json_query_headers_accepting(method, path, query, &[], body, accepted_statuses)
+            .await
+    }
+
+    #[cfg(feature = "oidc-get-callback-acknowledged")]
+    pub(crate) async fn request_json_secret_query_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, &str)],
         body: Option<&B>,
         accepted_statuses: &[StatusCode],
     ) -> Result<T>
@@ -1144,11 +1161,11 @@ impl<State> Client<State> {
         read_response_bytes(response, self.config.max_response_bytes).await
     }
 
-    pub(crate) async fn request_json_query_headers_accepting<T, B>(
+    pub(crate) async fn request_json_query_headers_accepting<T, B, Q>(
         &self,
         method: Method,
         path: &str,
-        query: &[(&str, String)],
+        query: &[(&str, Q)],
         headers: &[(HeaderName, HeaderValue)],
         body: Option<&B>,
         accepted_statuses: &[StatusCode],
@@ -1156,12 +1173,13 @@ impl<State> Client<State> {
     where
         T: DeserializeOwned,
         B: Serialize + ?Sized,
+        Q: AsRef<str>,
     {
         let mut url = self.url_for_path(path)?;
         if !query.is_empty() {
             let mut pairs = url.query_pairs_mut();
             for (key, value) in query {
-                pairs.append_pair(key, value);
+                pairs.append_pair(key, value.as_ref());
             }
         }
         let is_sensitive = self.token.is_some()

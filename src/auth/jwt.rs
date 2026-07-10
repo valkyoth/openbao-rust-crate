@@ -431,6 +431,7 @@ impl OidcCallbackRequest {
         self
     }
 
+    #[cfg(any(feature = "oidc-get-callback-acknowledged", test))]
     fn validate(&self) -> Result<()> {
         if self.state.trim().is_empty() {
             return Err(Error::InvalidParameter(
@@ -698,7 +699,12 @@ impl JwtAuth<'_> {
     /// Completes an OIDC callback and returns an authenticated client.
     ///
     /// The callback parameters are sent as query values because OpenBao
-    /// documents the callback endpoint as a `GET` endpoint.
+    /// documents the callback endpoint as a `GET` endpoint. This method is
+    /// available only with `oidc-get-callback-acknowledged`: the authorization
+    /// code or ID token necessarily enters a non-sanitizing URL buffer and may
+    /// be recorded by query-aware access logs. Deployments must disable query
+    /// logging on OpenBao and every intermediary before enabling the feature.
+    #[cfg(feature = "oidc-get-callback-acknowledged")]
     pub async fn oidc_callback(
         self,
         request: &OidcCallbackRequest,
@@ -757,25 +763,28 @@ impl JwtAuth<'_> {
         response.auth.ok_or(Error::MissingField("auth"))
     }
 
+    #[cfg(feature = "oidc-get-callback-acknowledged")]
     async fn oidc_callback_response(&self, request: &OidcCallbackRequest) -> Result<JwtLoginAuth> {
         request.validate()?;
         // SECURITY: OAuth2 codes and ID tokens are passed as query values
         // because OpenBao documents this callback as GET. The shared client
         // transport treats any query-bearing request as sensitive, so default
-        // builds still require HTTPS and sanitized transport errors.
-        let mut query = vec![("state", request.state.clone())];
+        // builds still require HTTPS and sanitized transport errors. Borrowed
+        // values avoid an additional ordinary String copy before reqwest owns
+        // the unavoidable URL buffer.
+        let mut query = vec![("state", request.state.as_str())];
         if let Some(code) = &request.code {
-            query.push(("code", code.expose_secret().to_owned()));
+            query.push(("code", code.expose_secret()));
         }
         if let Some(id_token) = &request.id_token {
-            query.push(("id_token", id_token.expose_secret().to_owned()));
+            query.push(("id_token", id_token.expose_secret()));
         }
         if let Some(client_nonce) = &request.client_nonce {
-            query.push(("client_nonce", client_nonce.clone()));
+            query.push(("client_nonce", client_nonce.as_str()));
         }
         let response: JwtLoginResponse = self
             .client
-            .request_json_query_accepting(
+            .request_json_secret_query_accepting(
                 Method::GET,
                 &format!("auth/{}/oidc/callback", self.mount),
                 &query,

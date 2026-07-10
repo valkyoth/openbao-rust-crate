@@ -3824,16 +3824,33 @@ impl<State> Sys<'_, State> {
         timeout: std::time::Duration,
         interval: std::time::Duration,
     ) -> Result<SealStatus> {
-        self.wait_until_unsealed_with_delay(timeout, interval, tokio::time::sleep)
-            .await
+        if timeout.is_zero() {
+            return Err(Error::InvalidTimeout(
+                "OpenBao unseal wait timeout must be greater than zero",
+            ));
+        }
+        match tokio::time::timeout(
+            timeout,
+            self.wait_until_unsealed_with_delay(timeout, interval, tokio::time::sleep),
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(_) => Err(Error::InvalidTimeout(
+                "OpenBao did not become unsealed within timeout",
+            )),
+        }
     }
 
     /// Polls `/sys/seal-status` until OpenBao is initialized and unsealed.
     ///
     /// This runtime-neutral variant lets callers provide their own async delay
     /// function. It is useful for custom runtimes and deterministic tests.
-    /// Transport failures are retried until `timeout`; non-transient errors are
-    /// returned immediately.
+    /// Transport failures are retried until the retry budget is exhausted;
+    /// non-transient errors are returned immediately. Sleeps are capped to the
+    /// remaining budget, but this runtime-neutral method cannot interrupt an
+    /// in-flight HTTP future. Use [`Self::wait_until_unsealed`] with
+    /// `tokio-helpers` when `timeout` must be a strict overall deadline.
     pub async fn wait_until_unsealed_with_delay<F, Fut>(
         &self,
         timeout: std::time::Duration,
@@ -3866,6 +3883,85 @@ impl<State> Sys<'_, State> {
             if elapsed >= timeout {
                 return Err(Error::InvalidTimeout(
                     "OpenBao did not become unsealed within timeout",
+                ));
+            }
+            delay(interval.min(timeout.saturating_sub(elapsed))).await;
+        }
+    }
+
+    /// Polls `/sys/health` until OpenBao is initialized, unsealed, and active.
+    ///
+    /// Available only with the non-default `tokio-helpers` feature. The entire
+    /// HTTP-and-delay future is bounded by `timeout`, so a slow in-flight
+    /// request is cancelled when the deadline expires.
+    ///
+    /// The caller's Tokio runtime must have time enabled.
+    #[cfg(feature = "tokio-helpers")]
+    pub async fn wait_ready(
+        &self,
+        timeout: std::time::Duration,
+        interval: std::time::Duration,
+    ) -> Result<Health> {
+        if timeout.is_zero() {
+            return Err(Error::InvalidTimeout(
+                "OpenBao readiness timeout must be greater than zero",
+            ));
+        }
+        match tokio::time::timeout(
+            timeout,
+            self.wait_ready_with_delay(timeout, interval, tokio::time::sleep),
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(_) => Err(Error::InvalidTimeout(
+                "OpenBao did not become ready within timeout",
+            )),
+        }
+    }
+
+    /// Polls `/sys/health` until OpenBao is initialized, unsealed, and active.
+    ///
+    /// This helper is runtime-neutral: callers provide the async delay
+    /// function. Sleeps are capped to the remaining retry budget. Transport
+    /// failures, rate limiting, sealed responses, and server errors are
+    /// retried; non-transient errors are returned immediately. This method
+    /// cannot interrupt an in-flight HTTP future, so use [`Self::wait_ready`]
+    /// with `tokio-helpers` when `timeout` must be a strict overall deadline.
+    pub async fn wait_ready_with_delay<F, Fut>(
+        &self,
+        timeout: std::time::Duration,
+        interval: std::time::Duration,
+        mut delay: F,
+    ) -> Result<Health>
+    where
+        F: FnMut(std::time::Duration) -> Fut,
+        Fut: core::future::Future<Output = ()>,
+    {
+        if timeout.is_zero() {
+            return Err(Error::InvalidTimeout(
+                "OpenBao readiness timeout must be greater than zero",
+            ));
+        }
+        if interval.is_zero() {
+            return Err(Error::InvalidTimeout(
+                "OpenBao readiness poll interval must be greater than zero",
+            ));
+        }
+        let start = std::time::Instant::now();
+        loop {
+            match self.health().await {
+                Ok(health) if health.initialized && !health.sealed && !health.standby => {
+                    return Ok(health);
+                }
+                Ok(_) => {}
+                Err(error) if error.is_temporary() => {}
+                Err(error) => return Err(error),
+            }
+            let elapsed = start.elapsed();
+            if elapsed >= timeout {
+                return Err(Error::InvalidTimeout(
+                    "OpenBao did not become ready within timeout",
                 ));
             }
             delay(interval.min(timeout.saturating_sub(elapsed))).await;
@@ -4155,52 +4251,6 @@ impl Sys<'_, Unauthenticated> {
                 }),
             )
             .await
-    }
-
-    /// Polls `/sys/health` until OpenBao is initialized, unsealed, and active.
-    ///
-    /// This helper is runtime-neutral: callers provide the async delay
-    /// function, such as `tokio::time::sleep`. It returns the ready health
-    /// response, or an SDK error after `timeout` elapses. Transport failures,
-    /// rate limiting, sealed responses, and server errors are retried until the
-    /// timeout; non-transient errors are returned immediately.
-    pub async fn wait_ready_with_delay<F, Fut>(
-        &self,
-        timeout: std::time::Duration,
-        interval: std::time::Duration,
-        mut delay: F,
-    ) -> Result<Health>
-    where
-        F: FnMut(std::time::Duration) -> Fut,
-        Fut: core::future::Future<Output = ()>,
-    {
-        if timeout.is_zero() {
-            return Err(Error::InvalidTimeout(
-                "OpenBao readiness timeout must be greater than zero",
-            ));
-        }
-        if interval.is_zero() {
-            return Err(Error::InvalidTimeout(
-                "OpenBao readiness poll interval must be greater than zero",
-            ));
-        }
-        let start = std::time::Instant::now();
-        loop {
-            match self.health().await {
-                Ok(health) if health.initialized && !health.sealed && !health.standby => {
-                    return Ok(health);
-                }
-                Ok(_) => {}
-                Err(error) if error.is_temporary() => {}
-                Err(error) => return Err(error),
-            }
-            if start.elapsed() >= timeout {
-                return Err(Error::InvalidTimeout(
-                    "OpenBao did not become ready within timeout",
-                ));
-            }
-            delay(interval).await;
-        }
     }
 }
 
@@ -7459,6 +7509,65 @@ mod tests {
         };
 
         assert!(matches!(error, crate::Error::InvalidTimeout(_)));
+    }
+
+    #[tokio::test]
+    async fn wait_ready_runtime_neutral_sleep_is_capped_to_remaining_budget() {
+        let client =
+            crate::Client::new("https://127.0.0.1:1").unwrap_or_else(|error| panic!("{error}"));
+        let start = std::time::Instant::now();
+        let error = match client
+            .sys()
+            .wait_ready_with_delay(
+                std::time::Duration::from_millis(10),
+                std::time::Duration::from_secs(5),
+                tokio::time::sleep,
+            )
+            .await
+        {
+            Ok(_) => panic!("closed port should not become ready"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(error, crate::Error::InvalidTimeout(_)));
+        assert!(start.elapsed() < std::time::Duration::from_secs(1));
+    }
+
+    #[cfg(feature = "tokio-helpers")]
+    #[tokio::test]
+    async fn tokio_readiness_helpers_enforce_overall_deadlines() {
+        let client =
+            crate::Client::new("https://127.0.0.1:1").unwrap_or_else(|error| panic!("{error}"));
+
+        let start = std::time::Instant::now();
+        let ready_error = match client
+            .sys()
+            .wait_ready(
+                std::time::Duration::from_millis(10),
+                std::time::Duration::from_secs(5),
+            )
+            .await
+        {
+            Ok(_) => panic!("closed port should not become ready"),
+            Err(error) => error,
+        };
+        assert!(matches!(ready_error, crate::Error::InvalidTimeout(_)));
+        assert!(start.elapsed() < std::time::Duration::from_secs(1));
+
+        let start = std::time::Instant::now();
+        let unseal_error = match client
+            .sys()
+            .wait_until_unsealed(
+                std::time::Duration::from_millis(10),
+                std::time::Duration::from_secs(5),
+            )
+            .await
+        {
+            Ok(_) => panic!("closed port should not become unsealed"),
+            Err(error) => error,
+        };
+        assert!(matches!(unseal_error, crate::Error::InvalidTimeout(_)));
+        assert!(start.elapsed() < std::time::Duration::from_secs(1));
     }
 
     #[tokio::test]
