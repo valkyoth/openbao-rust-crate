@@ -41,9 +41,9 @@ EXPECTED_TAGGED_SNAPSHOT_SHA256 = "511d18f9bf894cba50c857c247cf3a22b8fd352914403
 EXPECTED_OPENAPI_SNAPSHOT_SHA256 = "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4"
 EXPECTED_EVIDENCE_SHA256 = "1813d10fb9fdc0df7231035d391d5af288f0ba443ed105cb3816e7269557eab4"
 EXPECTED_OUTPUT_SHA256 = {
-    "docs/openbao-2.5-contract-matrix.json": "18b388265de2a834198f979c48d33919adee0d70232d452c659d5e99a269584e",
-    "docs/openbao-2.5-endpoint-matrix.csv": "80706c4ceb7263ad85c8dcf592f2e96b62229efa29e0cc3cb8582c9156188072",
-    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "742238404d61215d46cf8ff90067997d6d1e045cc2afc9067a49cd1636a2bfd7",
+    "docs/openbao-2.5-contract-matrix.json": "853a10e33946a5a9e994dd2e8b854137fef842244ead915b25f2d1fbd16925d4",
+    "docs/openbao-2.5-endpoint-matrix.csv": "48048cf05cb11664373e0fea05782daab78bb8ec66f6ab931149272eba2bdfa2",
+    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "3de2755e378dc1a0176d5db96481b695457f188b985962e6fe5c7d008da42fa6",
 }
 MAX_INPUT_BYTES = 16 * 1024 * 1024
 MAX_OUTPUT_BYTES = 32 * 1024 * 1024
@@ -92,7 +92,7 @@ SYSTEM_DISPOSITION_OVERRIDES = {
     "GET /sys/internal/inspect/router/root": "typed-gated",
     "GET /sys/internal/inspect/router/storage": "typed-gated",
     "GET /sys/internal/inspect/router/uuid": "typed-gated",
-    "GET /sys/monitor": "omitted",
+    "GET /sys/monitor": "typed-gated",
 }
 
 AUTH_DISPOSITION_OVERRIDES = {

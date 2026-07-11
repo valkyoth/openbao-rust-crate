@@ -25,6 +25,76 @@ use openbao::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "monitor-stream")]
+use futures_core::Stream;
+
+#[cfg(feature = "monitor-stream")]
+#[tokio::test]
+async fn sys_monitor_stream_uses_documented_query_and_bounded_frames() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut health, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut health);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+        write_json_response(
+            &mut health,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.5.5"}"#,
+        );
+
+        let (mut monitor, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut monitor);
+        assert!(request.starts_with("GET /v1/sys/monitor?log_level=warn&log_format=json HTTP/1.1"));
+        assert!(
+            request
+                .to_ascii_lowercase()
+                .contains("x-vault-token: test-token")
+        );
+        monitor
+            .write_all(
+                b"HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ntransfer-encoding: chunked\r\n\r\n8\r\n{\"a\":1}\n\r\n8\r\n{\"b\":2}\n\r\n0\r\n\r\n",
+            )
+            .unwrap_or_else(|error| panic!("{error}"));
+    });
+
+    let policy = OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 5, 5))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(SecretString::from("test-token"));
+    let options = openbao::sys::MonitorOptions::default()
+        .with_log_level(openbao::sys::MonitorLogLevel::Warn)
+        .with_log_format(openbao::sys::MonitorLogFormat::Json)
+        .with_max_frame_bytes(32)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let mut stream = client
+        .sys()
+        .monitor(options)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let first = std::future::poll_fn(|context| core::pin::Pin::new(&mut stream).poll_next(context))
+        .await
+        .and_then(core::result::Result::ok)
+        .unwrap_or_else(|| panic!("missing monitor frame"));
+    assert_eq!(
+        first
+            .with_str(str::to_owned)
+            .unwrap_or_else(|error| panic!("{error}")),
+        r#"{"a":1}"#
+    );
+    drop(stream);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[cfg(feature = "unstable-internal-ops")]
 #[tokio::test]
 async fn unstable_internal_system_helpers_are_gated_and_typed() {

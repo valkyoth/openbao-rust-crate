@@ -3482,7 +3482,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.monitor.31691ac3a18a5972",
         OpenBaoHttpMethod::Get,
         "/sys/monitor",
-        OpenBaoOperationDisposition::OmittedLegacyClaim,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),

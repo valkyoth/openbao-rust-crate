@@ -30,8 +30,8 @@ compatibility certification.
 
 | Status | Rows |
 | --- | ---: |
-| `unverified` | 643 |
-| `confirmed-gap` | 1 |
+| `unverified` | 644 |
+| `confirmed-gap` | 0 |
 | `typed` | 0 |
 | `typed-gated` | 0 |
 
@@ -41,7 +41,7 @@ compatibility certification.
 | --- | ---: | ---: | ---: |
 | `auth` | 105 | 105 | 0 |
 | `secret` | 347 | 347 | 0 |
-| `system` | 192 | 191 | 1 |
+| `system` | 192 | 192 | 0 |
 
 ## OpenAPI Reconciliation
 

@@ -192068,7 +192068,7 @@
       },
       "legacy_matrix": {
         "note": "Reviewed during version-aware endpoint migration.",
-        "status": "omitted"
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -192117,7 +192117,7 @@
       ],
       "operation_key": "GET /sys/monitor",
       "path": "/sys/monitor",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,

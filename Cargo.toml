@@ -99,6 +99,7 @@ transit-bytes = ["dep:base64-ng"]
 transit-import = ["dep:aes-kw", "dep:base64-ng", "dep:openssl", "dep:rand"]
 transit-import-acknowledged = []
 sys = []
+monitor-stream = ["sys", "dep:bytes", "dep:futures-core", "reqwest/stream"]
 http2 = ["reqwest/http2"]
 time = ["dep:time"]
 tokio-helpers = ["dep:tokio"]
@@ -150,6 +151,8 @@ sensitive-http-test-only-acknowledged = []
 [dependencies]
 aes-kw = { version = "0.3.1", default-features = false, optional = true }
 base64-ng = { version = "1.3.7", default-features = false, features = ["alloc"], optional = true }
+bytes = { version = "1.12.1", optional = true }
+futures-core = { version = "0.3.32", optional = true }
 getrandom = "0.4.3"
 rand = { version = "0.10.2", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }

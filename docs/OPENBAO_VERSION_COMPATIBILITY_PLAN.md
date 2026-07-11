@@ -704,6 +704,8 @@ Pentest focus:
 
 ### Commit 14A: Add Bounded Streaming Transport
 
+Status: implemented. Pentest this commit from `ae9fb44de5cc0d2fe240745b542b31110bca67bb` to the resulting Commit 14A hash.
+
 Suggested commit title: `Add bounded OpenBao monitor streaming`
 
 Goal:

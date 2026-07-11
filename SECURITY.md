@@ -107,6 +107,19 @@ post-write detection signal when verification sees that a concurrent writer
 changed the converged value; it is not a lock and cannot prove that no race
 occurred.
 
+## System Log Streaming
+
+The non-default `monitor-stream` feature exposes operational logs that may
+contain paths, identifiers, or application-provided values. `MonitorFrame`
+stores each line in sanitizing memory and redacts its contents from `Debug`,
+while crate tracing records only the request metadata already described in
+this policy. Frames and individual retained transport chunks are each capped
+at 1 MiB and returned as untrusted bytes; JSON format is not eagerly parsed.
+The stream polls the HTTP body directly,
+without a producer task or channel, so consumer polling supplies back-pressure.
+Dropping the stream drops the response body and cancels the request. Transport-
+owned receive chunks remain subject to the residual-memory boundary below.
+
 ## Residual Secret Memory
 
 After a JSON request body is handed to `reqwest`, the transport stack, TLS

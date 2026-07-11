@@ -59,8 +59,8 @@ The replacement matrix reports:
 
 | Classification | Rows |
 | --- | ---: |
-| `unverified` | 643 |
-| `confirmed-gap` | 1 |
+| `unverified` | 644 |
+| `confirmed-gap` | 0 |
 | `typed` | 0 |
 | `typed-gated` | 0 |
 | Total | 644 |
@@ -87,7 +87,7 @@ new full-support goal:
 | Identity OIDC provider protocol | 3 | Add typed authorize, token, and userinfo operations with PKCE and secret-aware token handling. |
 | System UI headers | 4 | Add sudo-sensitive typed read, write, list, and delete helpers. |
 | Internal counters | 2 | Add gated typed entity and token counter responses with stability warnings. |
-| System monitor | 1 | Add a bounded streaming API with back-pressure and cancellation. |
+| System monitor | 1 | Completed in compatibility Commit 14A with a non-default bounded streaming API, direct consumer back-pressure, cancellation on drop, and redacted sanitizing frames. |
 | Internal request inspection | 1 | Add an operator-gated response whose raw token and accessor fields are secret-aware. |
 | Internal router inspection | 4 | Add operator-gated bounded router inspection response types. |
 
@@ -111,10 +111,12 @@ starting point; the generated matrix is the current source of truth:
 | Key rotation | 11 | Legacy keyring alias, root rotation, automatic rotation config read/write aliases, verification, and backup operations are absent. |
 | PKI CRL rotation | 2 | The docs specify GET for CRL and delta-CRL rotation; current helpers send POST. |
 
-Compatibility Commits 10 through 14 have moved reviewed system,
+Compatibility Commits 10 through 14A have moved reviewed system,
 authentication, KV, Cubbyhole, Transit, PKI, Identity, and remaining engine
-rows out of the confirmed-gap set. The remaining confirmed gap is
-`GET /sys/monitor`. No support percentage is published from this backlog.
+rows out of the confirmed-gap set. There are no remaining confirmed gaps.
+The 644 rows remain `unverified` until Commit 18 links exact helper, field,
+security, transport, and test evidence; no support percentage is published
+from this backlog.
 
 ### Exact Confirmed False-Typed Operations
 

@@ -2080,6 +2080,41 @@ impl<State> Client<State> {
         .await
     }
 
+    #[cfg(feature = "monitor-stream")]
+    pub(crate) async fn request_sys_stream_internal(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        accepted_statuses: &[StatusCode],
+    ) -> Result<reqwest::Response> {
+        let resolved = self
+            .resolve_registered_openbao_endpoint("/sys/", &method, path, query)
+            .await?;
+        let mut url = self.url_for_path(path)?;
+        {
+            let mut pairs = url.query_pairs_mut();
+            for (key, value) in query {
+                pairs.append_pair(key, value);
+            }
+        }
+        let response = self
+            .send_sensitive_bytes_request(resolved.method(), url, &[], None)
+            .await?;
+        let status = response.status();
+        if accepted_statuses.contains(&status) {
+            return Ok(response);
+        }
+        let errors = read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
+            .await
+            .map(|envelope| envelope.errors)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|error| crate::error::sanitize_api_error(&error))
+            .collect();
+        Err(Error::Api { status, errors })
+    }
+
     /// Sends a raw authenticated or unauthenticated JSON request.
     ///
     /// `path` is relative to `/v1`. It is validated and joined as URL path
@@ -3264,8 +3299,8 @@ mod tests {
         ],
     );
 
-    const SECURITY_BLOCKED_ENDPOINT: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(
-        "sys.monitor.blocked",
+    const MONITOR_ENDPOINT: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(
+        "sys.monitor",
         &[OpenBaoEndpointVariant::new(
             "openbao.get.sys.monitor.31691ac3a18a5972",
             OpenBaoVersion::new(2, 0, 0),
@@ -3463,20 +3498,11 @@ mod tests {
         assert!(matches!(substituted, Error::InvalidPath(_)));
         assert!(!substituted.to_string().contains("secret-route-marker"));
 
-        let blocked = client
-            .resolve_openbao_endpoint(
-                SECURITY_BLOCKED_ENDPOINT,
-                "sys/monitor",
-                &[] as &[(&str, &str)],
-            )
-            .await;
-        assert!(matches!(
-            blocked,
-            Err(Error::UnsupportedOpenBaoCapability {
-                endpoint: "sys.monitor.blocked",
-                version
-            }) if version == OpenBaoVersion::new(2, 5, 5)
-        ));
+        let monitor = client
+            .resolve_openbao_endpoint(MONITOR_ENDPOINT, "sys/monitor", &[] as &[(&str, &str)])
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(monitor.endpoint(), "sys.monitor");
 
         let overlap = client
             .resolve_openbao_endpoint(OVERLAPPING_ENDPOINT, "sys/health", &[] as &[(&str, &str)])

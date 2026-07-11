@@ -95,6 +95,8 @@ check_workflow_tool_version() {
 echo "checking current crates.io versions used by this crate"
 check_manifest_crate_version aes-kw
 check_manifest_crate_version base64-ng
+check_manifest_crate_version bytes
+check_manifest_crate_version futures-core
 check_manifest_crate_version getrandom
 check_manifest_crate_version openssl
 check_manifest_crate_version rand

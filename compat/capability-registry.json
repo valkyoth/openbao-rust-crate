@@ -1,6 +1,6 @@
 {
   "api_snapshot_lock_sha256": "440fbaef87506b3b463689892abb9c0c741e2382676e3c92c4e21fa8cd2a3af6",
-  "contract_matrix_sha256": "18b388265de2a834198f979c48d33919adee0d70232d452c659d5e99a269584e",
+  "contract_matrix_sha256": "853a10e33946a5a9e994dd2e8b854137fef842244ead915b25f2d1fbd16925d4",
   "generator_version": 1,
   "operations": [
     {
@@ -3730,7 +3730,7 @@
       ]
     },
     {
-      "disposition": "omitted",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.monitor.31691ac3a18a5972",
       "method": "GET",
       "path_template": "/sys/monitor",
@@ -9596,9 +9596,8 @@
   "schema": "openbao-capability-registry/v1",
   "summary": {
     "dispositions": {
-      "omitted": 1,
       "typed": 580,
-      "typed-gated": 84,
+      "typed-gated": 85,
       "unlinked": 1
     },
     "operation_count": 666,

@@ -1200,7 +1200,7 @@ mod tests {
     }
 
     #[test]
-    fn generated_profiles_preserve_removed_and_intentionally_omitted_routes() {
+    fn generated_profiles_preserve_removed_and_feature_gated_routes() {
         let historical = openbao_operations()
             .iter()
             .copied()
@@ -1238,7 +1238,7 @@ mod tests {
         );
         assert_eq!(
             monitor.disposition(),
-            OpenBaoOperationDisposition::OmittedLegacyClaim
+            OpenBaoOperationDisposition::LegacyTypedGatedClaim
         );
     }
 

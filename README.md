@@ -387,6 +387,7 @@ openbao = { version = "1", features = ["time"] }
 | `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Requires `transit-import-acknowledged`; uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, post-quantum, or security-boundary claim. Do not use it for classified or high-assurance key wrapping. |
 | `transit-import-acknowledged` | no | Explicit acknowledgment that Transit BYOK software wrapping passes key material through software memory and OpenSSL-managed heap. |
 | `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
+| `monitor-stream` | no | Enables typed `/sys/monitor` streaming. Frames are sanitizing, line-delimited, and capped at 1 MiB; direct body polling provides consumer back-pressure and dropping the stream cancels the request. Log bytes remain untrusted and are redacted from `Debug`. Implies `sys`. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables strict-deadline Tokio convenience helpers such as `Sys::wait_ready` and `Sys::wait_until_unsealed`. Runtime-neutral retry-budget variants remain available without this feature. |
@@ -523,7 +524,7 @@ evidence is linked. It is an implementation backlog, not a support percentage.
 | Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, count, tidy, and `RenewalHint` timing helpers for caller-owned renewal loops. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate, token ceremonies, in-flight diagnostics, PKI root deletion | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. PKI root deletion also requires `PkiRootDeletion::confirm()` at the call site. |
-| System backend closure | Yes | Modern ACL, auth-mount reads, lease listings, barrier/key-share rotation, password policies, root/recovery token ceremonies, local token decoding, resultant ACL, legacy recovery-key rekey, and in-flight inspection are typed. UI headers and internal counter/request/router inspection require `unstable-internal-ops`; monitor streaming remains intentionally omitted. |
+| System backend closure | Yes | Modern ACL, auth-mount reads, lease listings, barrier/key-share rotation, password policies, root/recovery token ceremonies, local token decoding, resultant ACL, legacy recovery-key rekey, and in-flight inspection are typed. UI headers and internal counter/request/router inspection require `unstable-internal-ops`; bounded system-log streaming requires `monitor-stream`. |
 
 ## Examples
 
@@ -1466,6 +1467,39 @@ async fn main() -> Result<()> {
         .await?;
 
     println!("OpenBao {} is unsealed", status.version);
+    Ok(())
+}
+```
+
+Consume bounded system-log frames with direct transport back-pressure. This
+requires the non-default `monitor-stream` feature. Keep frame handling
+secret-aware because server logs can contain operational identifiers or
+application-provided values:
+
+```rust,no_run
+use core::pin::Pin;
+use openbao::{Client, Result, SecretString, futures_core::Stream};
+use openbao::sys::{MonitorLogFormat, MonitorLogLevel, MonitorOptions};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let options = MonitorOptions::default()
+        .with_log_level(MonitorLogLevel::Warn)
+        .with_log_format(MonitorLogFormat::Json)
+        .with_max_frame_bytes(64 * 1024)?;
+    let mut logs = client.sys().monitor(options).await?;
+
+    while let Some(frame) =
+        std::future::poll_fn(|context| Pin::new(&mut logs).poll_next(context)).await
+    {
+        let frame = frame?;
+        frame.with_bytes(|bytes| {
+            // Parse or forward `bytes` through an application-owned secure sink.
+            let _bounded_length = bytes.len();
+        });
+    }
     Ok(())
 }
 ```

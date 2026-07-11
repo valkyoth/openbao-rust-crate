@@ -1,7 +1,17 @@
 //! System backend helpers.
 
 use core::{fmt, marker::PhantomData};
+#[cfg(feature = "monitor-stream")]
+use core::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 use std::{collections::BTreeMap, net::IpAddr};
+
+#[cfg(feature = "monitor-stream")]
+use bytes::Bytes;
+#[cfg(feature = "monitor-stream")]
+use futures_core::Stream;
 
 use reqwest::{
     Method, StatusCode, Url,
@@ -27,6 +37,12 @@ use crate::{
 
 const MAX_SYS_RANDOM_BYTES: u64 = 1_048_576;
 const MAX_RAFT_SNAPSHOT_BYTES: usize = 256 * 1024 * 1024;
+#[cfg(feature = "monitor-stream")]
+const DEFAULT_MONITOR_FRAME_BYTES: usize = 64 * 1024;
+#[cfg(feature = "monitor-stream")]
+const MAX_MONITOR_FRAME_BYTES: usize = 1024 * 1024;
+#[cfg(feature = "monitor-stream")]
+const MAX_MONITOR_TRANSPORT_CHUNK_BYTES: usize = 1024 * 1024;
 #[cfg(feature = "operator-ops")]
 const MAX_SYS_PPROF_SECONDS: u16 = 300;
 
@@ -34,6 +50,299 @@ const MAX_SYS_PPROF_SECONDS: u16 = 300;
 #[derive(Debug)]
 pub struct Sys<'a, State> {
     client: &'a Client<State>,
+}
+
+/// Minimum OpenBao log severity included by [`Sys::monitor`].
+#[cfg(feature = "monitor-stream")]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum MonitorLogLevel {
+    /// Trace, debug, informational, warning, and error messages.
+    Trace,
+    /// Debug, informational, warning, and error messages.
+    Debug,
+    /// Informational, warning, and error messages.
+    #[default]
+    Info,
+    /// Warning and error messages.
+    Warn,
+    /// Error messages only.
+    Error,
+}
+
+#[cfg(feature = "monitor-stream")]
+impl MonitorLogLevel {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Trace => "trace",
+            Self::Debug => "debug",
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Error => "error",
+        }
+    }
+}
+
+/// Wire format returned by [`Sys::monitor`].
+#[cfg(feature = "monitor-stream")]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum MonitorLogFormat {
+    /// OpenBao's human-readable standard log format.
+    #[default]
+    Standard,
+    /// One server-controlled JSON value per frame.
+    Json,
+}
+
+#[cfg(feature = "monitor-stream")]
+impl MonitorLogFormat {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::Standard => "standard",
+            Self::Json => "json",
+        }
+    }
+}
+
+/// Bounded options for the OpenBao system-log monitor stream.
+#[cfg(feature = "monitor-stream")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MonitorOptions {
+    log_level: MonitorLogLevel,
+    log_format: MonitorLogFormat,
+    max_frame_bytes: usize,
+}
+
+#[cfg(feature = "monitor-stream")]
+impl Default for MonitorOptions {
+    fn default() -> Self {
+        Self {
+            log_level: MonitorLogLevel::Info,
+            log_format: MonitorLogFormat::Standard,
+            max_frame_bytes: DEFAULT_MONITOR_FRAME_BYTES,
+        }
+    }
+}
+
+#[cfg(feature = "monitor-stream")]
+impl MonitorOptions {
+    /// Selects the minimum emitted log severity.
+    #[must_use]
+    pub const fn with_log_level(mut self, log_level: MonitorLogLevel) -> Self {
+        self.log_level = log_level;
+        self
+    }
+
+    /// Selects standard text or JSON log frames.
+    #[must_use]
+    pub const fn with_log_format(mut self, log_format: MonitorLogFormat) -> Self {
+        self.log_format = log_format;
+        self
+    }
+
+    /// Sets the per-frame byte limit.
+    ///
+    /// The accepted range is 1 byte through 1 MiB. This limit applies before
+    /// callers inspect or decode the server-controlled frame.
+    pub fn with_max_frame_bytes(mut self, max_frame_bytes: usize) -> Result<Self> {
+        if !(1..=MAX_MONITOR_FRAME_BYTES).contains(&max_frame_bytes) {
+            return Err(Error::InvalidParameter(
+                "monitor frame limit must be between 1 byte and 1 MiB".into(),
+            ));
+        }
+        self.max_frame_bytes = max_frame_bytes;
+        Ok(self)
+    }
+}
+
+/// One bounded, sanitizing OpenBao monitor frame.
+///
+/// Frame contents are operationally sensitive and are therefore omitted from
+/// `Debug`. The bytes exclude the trailing line-feed delimiter. JSON frames
+/// remain raw bytes so this crate does not allocate an attacker-selected JSON
+/// object graph or assume that server log data is trustworthy.
+#[cfg(feature = "monitor-stream")]
+pub struct MonitorFrame {
+    format: MonitorLogFormat,
+    contents: SecretVec,
+}
+
+#[cfg(feature = "monitor-stream")]
+impl MonitorFrame {
+    /// Returns the selected wire format.
+    #[must_use]
+    pub const fn format(&self) -> MonitorLogFormat {
+        self.format
+    }
+
+    /// Returns the frame length in bytes.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.contents.len()
+    }
+
+    /// Returns whether this frame is empty.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.contents.is_empty()
+    }
+
+    /// Inspects the bounded frame bytes without making another plaintext copy.
+    pub fn with_bytes<R>(&self, inspect: impl FnOnce(&[u8]) -> R) -> R {
+        self.contents.with_secret(inspect)
+    }
+
+    /// Inspects a UTF-8 frame without retaining invalid bytes in the error.
+    pub fn with_str<R>(&self, inspect: impl FnOnce(&str) -> R) -> Result<R> {
+        self.contents.with_secret(|bytes| {
+            let text = core::str::from_utf8(bytes)
+                .map_err(|_| Error::Decode("OpenBao monitor frame is not valid UTF-8".into()))?;
+            Ok(inspect(text))
+        })
+    }
+}
+
+#[cfg(feature = "monitor-stream")]
+impl fmt::Debug for MonitorFrame {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("MonitorFrame")
+            .field("format", &self.format)
+            .field("len", &self.contents.len())
+            .field("contents", &"<redacted>")
+            .finish()
+    }
+}
+
+/// Lazy, bounded stream returned by [`Sys::monitor`].
+///
+/// The HTTP body is polled only when the consumer polls this stream. No
+/// producer task or queue is created, so a slow consumer applies back-pressure
+/// directly to the transport. Dropping the stream drops the response body and
+/// cancels the request.
+#[cfg(feature = "monitor-stream")]
+pub struct MonitorStream {
+    body: Pin<Box<dyn Stream<Item = core::result::Result<Bytes, reqwest::Error>> + Send>>,
+    chunk: Option<Bytes>,
+    chunk_offset: usize,
+    pending: SecretVec,
+    format: MonitorLogFormat,
+    max_frame_bytes: usize,
+    terminal: bool,
+}
+
+#[cfg(feature = "monitor-stream")]
+impl fmt::Debug for MonitorStream {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("MonitorStream")
+            .field("format", &self.format)
+            .field("max_frame_bytes", &self.max_frame_bytes)
+            .field("buffered_bytes", &self.pending.len())
+            .field("terminal", &self.terminal)
+            .finish_non_exhaustive()
+    }
+}
+
+#[cfg(feature = "monitor-stream")]
+impl MonitorStream {
+    fn new(response: reqwest::Response, options: MonitorOptions) -> Self {
+        Self {
+            body: Box::pin(response.bytes_stream()),
+            chunk: None,
+            chunk_offset: 0,
+            // Allocate the declared public bound once. SecretVec then never
+            // needs a geometric growth allocation that could exceed it.
+            pending: SecretVec::with_capacity(options.max_frame_bytes),
+            format: options.log_format,
+            max_frame_bytes: options.max_frame_bytes,
+            terminal: false,
+        }
+    }
+
+    fn finish_frame(&mut self, suffix: &[u8]) -> MonitorFrame {
+        let mut contents = SecretVec::with_capacity(self.pending.len() + suffix.len());
+        self.pending
+            .with_secret(|pending| contents.extend_from_slice(pending));
+        contents.extend_from_slice(suffix);
+        self.pending.clear_secret();
+        MonitorFrame {
+            format: self.format,
+            contents,
+        }
+    }
+
+    fn frame_too_large(&mut self) -> Poll<Option<Result<MonitorFrame>>> {
+        self.terminal = true;
+        self.chunk = None;
+        self.pending.clear_secret();
+        Poll::Ready(Some(Err(Error::Decode(
+            "OpenBao monitor frame exceeds configured limit".into(),
+        ))))
+    }
+}
+
+#[cfg(feature = "monitor-stream")]
+impl Stream for MonitorStream {
+    type Item = Result<MonitorFrame>;
+
+    fn poll_next(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        if this.terminal {
+            return Poll::Ready(None);
+        }
+
+        loop {
+            if let Some(chunk) = this.chunk.take() {
+                let remaining = &chunk[this.chunk_offset..];
+                if let Some(newline) = remaining.iter().position(|byte| *byte == b'\n') {
+                    if this.pending.len().saturating_add(newline) > this.max_frame_bytes {
+                        return this.frame_too_large();
+                    }
+                    let frame = this.finish_frame(&remaining[..newline]);
+                    this.chunk_offset += newline + 1;
+                    if this.chunk_offset < chunk.len() {
+                        this.chunk = Some(chunk);
+                    } else {
+                        this.chunk_offset = 0;
+                    }
+                    return Poll::Ready(Some(Ok(frame)));
+                }
+                if this.pending.len().saturating_add(remaining.len()) > this.max_frame_bytes {
+                    return this.frame_too_large();
+                }
+                this.pending.extend_from_slice(remaining);
+                this.chunk_offset = 0;
+            }
+
+            match this.body.as_mut().poll_next(context) {
+                Poll::Pending => return Poll::Pending,
+                Poll::Ready(Some(Ok(chunk))) if chunk.is_empty() => {}
+                Poll::Ready(Some(Ok(chunk))) => {
+                    if chunk.len() > MAX_MONITOR_TRANSPORT_CHUNK_BYTES {
+                        this.terminal = true;
+                        this.pending.clear_secret();
+                        return Poll::Ready(Some(Err(Error::Decode(
+                            "OpenBao monitor transport chunk exceeds internal limit".into(),
+                        ))));
+                    }
+                    this.chunk = Some(chunk);
+                }
+                Poll::Ready(Some(Err(error))) => {
+                    this.terminal = true;
+                    return Poll::Ready(Some(Err(crate::error::http_transport_error(error))));
+                }
+                Poll::Ready(None) => {
+                    this.terminal = true;
+                    if this.pending.is_empty() {
+                        return Poll::Ready(None);
+                    }
+                    return Poll::Ready(Some(Ok(this.finish_frame(&[]))));
+                }
+            }
+        }
+    }
 }
 
 /// OpenBao health response.
@@ -4484,6 +4793,25 @@ impl Sys<'_, Unauthenticated> {
 }
 
 impl Sys<'_, Authenticated> {
+    /// Streams bounded frames from `/sys/monitor`.
+    ///
+    /// This diagnostic endpoint can expose request paths, identifiers, and
+    /// application-provided log fields. Treat every returned frame as
+    /// sensitive and untrusted. The request remains active until the returned
+    /// stream reaches EOF, fails, or is dropped.
+    #[cfg(feature = "monitor-stream")]
+    pub async fn monitor(&self, options: MonitorOptions) -> Result<MonitorStream> {
+        let query = [
+            ("log_level", options.log_level.as_str().to_owned()),
+            ("log_format", options.log_format.as_str().to_owned()),
+        ];
+        let response = self
+            .client
+            .request_sys_stream_internal(Method::GET, "sys/monitor", &query, &[StatusCode::OK])
+            .await?;
+        Ok(MonitorStream::new(response, options))
+    }
+
     /// Generates random bytes through `/sys/tools/random`.
     ///
     /// OpenBao defaults to platform entropy, 32 bytes, and base64 output when
@@ -8113,6 +8441,21 @@ mod tests {
     #![allow(clippy::panic)]
 
     use secrecy::{ExposeSecret, SecretString};
+    #[cfg(feature = "monitor-stream")]
+    use std::{
+        collections::VecDeque,
+        pin::Pin,
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+        task::{Context, Poll, Waker},
+    };
+
+    #[cfg(feature = "monitor-stream")]
+    use bytes::Bytes;
+    #[cfg(feature = "monitor-stream")]
+    use futures_core::Stream;
 
     use super::{
         AuditEnableRequest, AuditedRequestHeaders, AuthEnableRequest, Capabilities, Capability,
@@ -8135,6 +8478,8 @@ mod tests {
         OperatorKeyShareUpdateResponse, OperatorKeySharesRequest, OperatorRecoveryKeyBackup,
         OperatorTokenGenerationStart, OperatorTokenGenerationStatus,
     };
+    #[cfg(feature = "monitor-stream")]
+    use super::{MonitorLogFormat, MonitorOptions, MonitorStream};
     #[cfg(feature = "operator-ops")]
     use super::{
         PprofOptions, PprofProfile, RawCompression, RawEncoding, RawList, RawReadOptions,
@@ -9463,5 +9808,155 @@ mod tests {
             })
             .is_err()
         );
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    struct ReadyChunks(VecDeque<Bytes>);
+
+    #[cfg(feature = "monitor-stream")]
+    impl Stream for ReadyChunks {
+        type Item = core::result::Result<Bytes, reqwest::Error>;
+
+        fn poll_next(
+            mut self: Pin<&mut Self>,
+            _context: &mut Context<'_>,
+        ) -> Poll<Option<Self::Item>> {
+            Poll::Ready(self.0.pop_front().map(Ok))
+        }
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    struct DropProbeStream(Arc<AtomicBool>);
+
+    #[cfg(feature = "monitor-stream")]
+    impl Stream for DropProbeStream {
+        type Item = core::result::Result<Bytes, reqwest::Error>;
+
+        fn poll_next(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            Poll::Pending
+        }
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    impl Drop for DropProbeStream {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    fn test_monitor_stream(chunks: &[&[u8]], max_frame_bytes: usize) -> MonitorStream {
+        MonitorStream {
+            body: Box::pin(ReadyChunks(
+                chunks
+                    .iter()
+                    .map(|chunk| Bytes::copy_from_slice(chunk))
+                    .collect(),
+            )),
+            chunk: None,
+            chunk_offset: 0,
+            pending: sanitization::SecretVec::empty(),
+            format: MonitorLogFormat::Json,
+            max_frame_bytes,
+            terminal: false,
+        }
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    fn poll_monitor(stream: &mut MonitorStream) -> Option<crate::Result<super::MonitorFrame>> {
+        let mut context = Context::from_waker(Waker::noop());
+        match Pin::new(stream).poll_next(&mut context) {
+            Poll::Ready(value) => value,
+            Poll::Pending => panic!("ready test stream unexpectedly pending"),
+        }
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    #[test]
+    fn monitor_stream_bounds_and_redacts_frames() {
+        let mut stream =
+            test_monitor_stream(&[b"{\"message\":\"caf\xc3", b"\xa9\"}\nnext\nlast"], 64);
+
+        let first = poll_monitor(&mut stream)
+            .and_then(core::result::Result::ok)
+            .unwrap_or_else(|| panic!("missing first monitor frame"));
+        assert_eq!(first.format(), MonitorLogFormat::Json);
+        let first_text = first
+            .with_str(str::to_owned)
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(first_text, "{\"message\":\"café\"}");
+        assert!(!format!("{first:?}").contains("caf"));
+
+        let second = poll_monitor(&mut stream)
+            .and_then(core::result::Result::ok)
+            .unwrap_or_else(|| panic!("missing second monitor frame"));
+        let second_text = second
+            .with_str(str::to_owned)
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(second_text, "next");
+        let last = poll_monitor(&mut stream)
+            .and_then(core::result::Result::ok)
+            .unwrap_or_else(|| panic!("missing final monitor frame"));
+        let last_text = last
+            .with_str(str::to_owned)
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(last_text, "last");
+        assert!(poll_monitor(&mut stream).is_none());
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    #[test]
+    fn monitor_stream_stops_after_oversized_frame() {
+        let mut stream = test_monitor_stream(&[b"1234", b"5\nignored\n"], 4);
+        let error = poll_monitor(&mut stream)
+            .and_then(core::result::Result::err)
+            .unwrap_or_else(|| panic!("oversized monitor frame unexpectedly succeeded"));
+        assert!(error.to_string().contains("exceeds configured limit"));
+        assert!(!error.to_string().contains("12345"));
+        assert!(poll_monitor(&mut stream).is_none());
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    #[test]
+    fn monitor_stream_rejects_oversized_transport_chunks() {
+        let oversized = vec![b'x'; super::MAX_MONITOR_TRANSPORT_CHUNK_BYTES + 1];
+        let mut stream = test_monitor_stream(&[&oversized], super::MAX_MONITOR_FRAME_BYTES);
+        let error = poll_monitor(&mut stream)
+            .and_then(core::result::Result::err)
+            .unwrap_or_else(|| panic!("oversized monitor chunk unexpectedly succeeded"));
+        assert!(
+            error
+                .to_string()
+                .contains("transport chunk exceeds internal limit")
+        );
+        assert!(poll_monitor(&mut stream).is_none());
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    #[test]
+    fn monitor_options_reject_unbounded_frame_limits() {
+        assert!(MonitorOptions::default().with_max_frame_bytes(0).is_err());
+        assert!(
+            MonitorOptions::default()
+                .with_max_frame_bytes(super::MAX_MONITOR_FRAME_BYTES + 1)
+                .is_err()
+        );
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    #[test]
+    fn dropping_monitor_stream_cancels_owned_body() {
+        let dropped = Arc::new(AtomicBool::new(false));
+        let stream = MonitorStream {
+            body: Box::pin(DropProbeStream(Arc::clone(&dropped))),
+            chunk: None,
+            chunk_offset: 0,
+            pending: sanitization::SecretVec::empty(),
+            format: MonitorLogFormat::Standard,
+            max_frame_bytes: 64,
+            terminal: false,
+        };
+        drop(stream);
+        assert!(dropped.load(Ordering::SeqCst));
     }
 }

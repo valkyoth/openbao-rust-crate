@@ -28,6 +28,9 @@
 //! Selected system endpoints that return non-JSON data, such as Prometheus
 //! metrics and capped Raft snapshots, are exposed through typed helpers rather
 //! than a public raw-body escape hatch.
+//! The non-default `monitor-stream` feature exposes `/sys/monitor` as a lazy,
+//! bounded stream of sanitizing frames. Frames remain untrusted log data;
+//! their contents are never included in crate `Debug` or tracing output.
 //!
 //! `AdminBootstrap` performs read-compare-write convergence. Run only one
 //! bootstrap plan per OpenBao cluster at a time unless the caller provides an
@@ -182,6 +185,8 @@ pub use compatibility::{
 };
 pub use duration::{RenewalHint, duration_to_bao_string};
 pub use error::{Error, Result};
+#[cfg(feature = "monitor-stream")]
+pub use futures_core;
 pub use path::{validate_endpoint_path, validate_mount_path};
 pub use plugin::PluginMount;
 pub use policy::{AclCapability, AclPolicyBuilder};
