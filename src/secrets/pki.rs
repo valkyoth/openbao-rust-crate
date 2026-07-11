@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use reqwest::{
     Method, StatusCode, Url,
-    header::{CONTENT_TYPE, HeaderValue},
+    header::{ACCEPT, CONTENT_TYPE, HeaderValue},
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
@@ -15,7 +15,7 @@ use serde::{
 };
 
 use crate::{
-    Authenticated, Client, Error, JsonValue, Result,
+    Authenticated, Client, Error, JsonValue, Result, SecretVec, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_map,
@@ -28,6 +28,72 @@ use crate::{
 pub struct Pki<'a> {
     client: &'a Client<Authenticated>,
     mount: Vec<String>,
+}
+
+/// Unauthenticated handle for public PKI protocol and distribution endpoints.
+///
+/// This handle is available only from [`Client<Unauthenticated>`], ensuring
+/// OpenBao tokens are never attached to public certificate, CRL, OCSP, or ACME
+/// directory requests.
+#[derive(Debug)]
+pub struct PkiPublic<'a> {
+    client: &'a Client<Unauthenticated>,
+    mount: Vec<String>,
+}
+
+/// Output representation for issuer certificate and CRL distribution reads.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PkiPublicFormat {
+    /// DER-encoded binary data.
+    Der,
+    /// PEM-encoded text data.
+    Pem,
+    /// OpenBao's JSON representation.
+    Json,
+}
+
+/// Scope of an OpenBao PKI ACME directory.
+#[cfg(feature = "acme-protocol")]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PkiAcmeScope {
+    /// Mount-wide default directory.
+    Default,
+    /// Directory restricted to one issuer.
+    Issuer(String),
+    /// Directory restricted to one role.
+    Role(String),
+    /// Directory restricted to one issuer and role.
+    IssuerRole {
+        /// Issuer reference used by the directory.
+        issuer_ref: String,
+        /// Role used by the directory.
+        role: String,
+    },
+}
+
+/// Handoff configuration for an established ACME protocol client.
+///
+/// This crate deliberately does not implement JWS signing, nonce management,
+/// order polling, or challenge fulfillment. Pass this configuration to an
+/// ACME client library that owns those protocol state machines.
+#[cfg(feature = "acme-protocol")]
+#[derive(Clone)]
+pub struct PkiAcmeClientConfig {
+    /// OpenBao ACME directory URL.
+    pub directory_url: Url,
+    /// Optional OpenBao external-account-binding credential.
+    pub external_account_binding: Option<PkiAcmeEabToken>,
+}
+
+#[cfg(feature = "acme-protocol")]
+impl fmt::Debug for PkiAcmeClientConfig {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PkiAcmeClientConfig")
+            .field("directory_url", &self.directory_url)
+            .field("external_account_binding", &self.external_account_binding)
+            .finish()
+    }
 }
 
 /// Confirmation token required by [`Pki::delete_root`].
@@ -210,6 +276,12 @@ pub struct PkiRole {
     #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub postal_code: Vec<String>,
+    /// Uses the CSR common name when signing through this role.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_csr_common_name: Option<bool>,
+    /// Uses CSR SAN values when signing through this role.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub use_csr_sans: Option<bool>,
 }
 
 /// PKI role list.
@@ -248,6 +320,9 @@ pub struct PkiUrlsConfig {
     /// Enables templating in configured URLs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enable_templating: Option<bool>,
+    /// Enables AIA URL templating on issuer distribution endpoints.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enable_aia_url_templating: Option<bool>,
 }
 
 /// PKI issuer configuration.
@@ -397,6 +472,15 @@ pub struct PkiGenerateRootRequest {
     /// Default extended key usage OIDs.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub ext_key_usage_oids: Vec<String>,
+    /// Adds basic constraints to generated authority certificates.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub add_basic_constraints: Option<bool>,
+    /// Signature algorithm used for authority revocation signatures.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revocation_signature_algorithm: Option<String>,
+    /// Enables AIA URL templating for the generated issuer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enable_aia_url_templating: Option<bool>,
 }
 
 /// Request for generating an intermediate CA CSR.
@@ -482,6 +566,15 @@ pub struct PkiGenerateIntermediateRequest {
     /// Default extended key usage OIDs.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub ext_key_usage_oids: Vec<String>,
+    /// Adds basic constraints to generated authority certificates.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub add_basic_constraints: Option<bool>,
+    /// Signature algorithm used for authority revocation signatures.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revocation_signature_algorithm: Option<String>,
+    /// Enables AIA URL templating for the generated issuer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enable_aia_url_templating: Option<bool>,
 }
 
 /// Request for generating standalone PKI key material.
@@ -869,6 +962,13 @@ pub struct PkiAutoTidyConfig {
         skip_serializing_if = "Option::is_none"
     )]
     pub safety_buffer: Option<String>,
+    /// Safety buffer applied specifically to revoked certificates.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub revoked_safety_buffer: Option<String>,
     /// Revocation queue safety buffer duration.
     #[serde(
         default,
@@ -928,6 +1028,22 @@ pub struct PkiCrlBundle {
     /// CRL serial number, when returned.
     #[serde(default)]
     pub serial_number: Option<String>,
+    /// Next CRL update timestamp or duration returned by OpenBao.
+    #[serde(default)]
+    pub next_update: Option<String>,
+}
+
+/// X.509 extension included in a manually signed CRL.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PkiCrlExtension {
+    /// Extension object identifier.
+    pub id: String,
+    /// Whether the extension is critical.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub critical: Option<bool>,
+    /// Extension value in the encoding expected by OpenBao.
+    pub value: String,
 }
 
 /// Request for manually signing a revocation list.
@@ -949,6 +1065,15 @@ pub struct PkiSignRevocationListRequest {
     /// Revoked certificate entries to include.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub revoked_certs: Vec<PkiRevokedCertificateEntry>,
+    /// Requested next-update duration or timestamp.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_update: Option<String>,
+    /// Safety buffer applied to revoked entries.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revoked_safety_buffer: Option<String>,
+    /// Additional reviewed X.509 CRL extensions.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub extensions: Vec<PkiCrlExtension>,
 }
 
 /// Revoked certificate entry used by manual CRL signing.
@@ -987,6 +1112,12 @@ pub struct PkiIssueRequest {
     /// Excludes the common name from DNS SANs.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exclude_cn_from_sans: Option<bool>,
+    /// Explicit subject key identifier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skid: Option<String>,
+    /// Requires certificate and issuer signature algorithms to match.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub require_matching_certificate_algorithms: Option<bool>,
 }
 
 impl PkiIssueRequest {
@@ -1022,6 +1153,12 @@ pub struct PkiSignRequest {
     /// Certificate return format.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
+    /// Explicit subject key identifier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skid: Option<String>,
+    /// Requires certificate and issuer signature algorithms to match.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub require_matching_certificate_algorithms: Option<bool>,
 }
 
 /// Request for sign-verbatim certificate signing.
@@ -1070,6 +1207,12 @@ pub struct PkiSignVerbatimRequest {
     /// Marks basic constraints valid on non-CA certificates.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub basic_constraints_valid_for_non_ca: Option<bool>,
+    /// Explicit subject key identifier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skid: Option<String>,
+    /// Requires certificate and issuer signature algorithms to match.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub require_matching_certificate_algorithms: Option<bool>,
 }
 
 #[cfg(feature = "operator-ops")]
@@ -1299,6 +1442,9 @@ pub struct PkiIssuerInfo {
     /// Revocation time formatted as RFC3339, when returned.
     #[serde(default)]
     pub revocation_time_rfc3339: Option<String>,
+    /// Signature algorithm used for issuer revocation signatures.
+    #[serde(default)]
+    pub revocation_signature_algorithm: Option<String>,
 }
 
 /// PKI key list.
@@ -1347,6 +1493,9 @@ pub struct PkiIssuerPatch {
     /// Leaf not-after behavior, such as `truncate` or `err`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub leaf_not_after_behavior: Option<String>,
+    /// Signature algorithm used for issuer revocation signatures.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub revocation_signature_algorithm: Option<String>,
 }
 
 /// Response from PKI CA/key import endpoints.
@@ -1472,7 +1621,11 @@ impl ListEntries for PkiAcmeEabList {
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct PkiCelRoleRequest {
     /// CEL expression evaluated by OpenBao.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "cel_program",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub expression: Option<String>,
     /// Optional description for this CEL role.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1488,7 +1641,7 @@ pub struct PkiCelRoleRequest {
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct PkiCelRole {
     /// CEL expression evaluated by OpenBao.
-    #[serde(default)]
+    #[serde(default, alias = "cel_program")]
     pub expression: Option<String>,
     /// Optional description for this CEL role.
     #[serde(default)]
@@ -1521,6 +1674,240 @@ impl Client<Authenticated> {
             client: self,
             mount: validate_mount_path(&mount)?,
         })
+    }
+}
+
+impl Client<Unauthenticated> {
+    /// Uses public endpoints on the PKI engine mounted at `mount`.
+    pub fn pki_public(&self, mount: impl Into<String>) -> Result<PkiPublic<'_>> {
+        let mount = mount.into();
+        Ok(PkiPublic {
+            client: self,
+            mount: validate_mount_path(&mount)?,
+        })
+    }
+}
+
+impl PkiPublic<'_> {
+    /// Reads the default CA certificate as DER.
+    pub async fn ca_der(&self) -> Result<SecretVec> {
+        self.get(&["ca"], "application/pkix-cert").await
+    }
+
+    /// Reads the default CA certificate as PEM.
+    pub async fn ca_pem(&self) -> Result<SecretVec> {
+        self.get(&["ca", "pem"], "application/x-pem-file").await
+    }
+
+    /// Reads the default CA chain as PEM.
+    pub async fn ca_chain_pem(&self) -> Result<SecretVec> {
+        self.get(&["ca_chain"], "application/x-pem-file").await
+    }
+
+    /// Reads the legacy CA distribution path as DER.
+    pub async fn legacy_ca_der(&self) -> Result<SecretVec> {
+        self.get(&["cert", "ca"], "application/pkix-cert").await
+    }
+
+    /// Reads the legacy CA-chain distribution path as PEM.
+    pub async fn legacy_ca_chain_pem(&self) -> Result<SecretVec> {
+        self.get(&["cert", "ca_chain"], "application/x-pem-file")
+            .await
+    }
+
+    /// Reads the current CRL as DER.
+    pub async fn crl_der(&self) -> Result<SecretVec> {
+        self.get(&["crl"], "application/pkix-crl").await
+    }
+
+    /// Reads the current CRL as PEM.
+    pub async fn crl_pem(&self) -> Result<SecretVec> {
+        self.get(&["crl", "pem"], "application/x-pem-file").await
+    }
+
+    /// Reads the current delta CRL as DER.
+    pub async fn delta_crl_der(&self) -> Result<SecretVec> {
+        self.get(&["crl", "delta"], "application/pkix-crl").await
+    }
+
+    /// Reads the current delta CRL as PEM.
+    pub async fn delta_crl_pem(&self) -> Result<SecretVec> {
+        self.get(&["crl", "delta", "pem"], "application/x-pem-file")
+            .await
+    }
+
+    /// Reads the legacy CRL distribution path as DER.
+    pub async fn legacy_crl_der(&self) -> Result<SecretVec> {
+        self.get(&["cert", "crl"], "application/pkix-crl").await
+    }
+
+    /// Reads the legacy delta-CRL distribution path as DER.
+    pub async fn legacy_delta_crl_der(&self) -> Result<SecretVec> {
+        self.get(&["cert", "delta-crl"], "application/pkix-crl")
+            .await
+    }
+
+    /// Reads a stored certificate by serial as DER.
+    pub async fn certificate_der(&self, serial: &str) -> Result<SecretVec> {
+        self.get(&["cert", serial, "raw"], "application/pkix-cert")
+            .await
+    }
+
+    /// Reads a stored certificate by serial as PEM.
+    pub async fn certificate_pem(&self, serial: &str) -> Result<SecretVec> {
+        self.get(&["cert", serial, "raw", "pem"], "application/x-pem-file")
+            .await
+    }
+
+    /// Reads an issuer certificate in the requested representation.
+    pub async fn issuer_certificate(
+        &self,
+        issuer_ref: &str,
+        format: PkiPublicFormat,
+    ) -> Result<SecretVec> {
+        let (suffix, accept) = match format {
+            PkiPublicFormat::Der => ("der", "application/pkix-cert"),
+            PkiPublicFormat::Pem => ("pem", "application/x-pem-file"),
+            PkiPublicFormat::Json => ("json", "application/json"),
+        };
+        self.get(&["issuer", issuer_ref, suffix], accept).await
+    }
+
+    /// Reads an issuer CRL or delta CRL in the requested representation.
+    pub async fn issuer_crl(
+        &self,
+        issuer_ref: &str,
+        delta: bool,
+        format: PkiPublicFormat,
+    ) -> Result<SecretVec> {
+        let (suffix, accept) = match format {
+            PkiPublicFormat::Der => (Some("der"), "application/pkix-crl"),
+            PkiPublicFormat::Pem => (Some("pem"), "application/x-pem-file"),
+            PkiPublicFormat::Json => (None, "application/json"),
+        };
+        let mut tail = vec!["issuer", issuer_ref, "crl"];
+        if delta {
+            tail.push("delta");
+        }
+        if let Some(suffix) = suffix {
+            tail.push(suffix);
+        }
+        self.get(&tail, accept).await
+    }
+
+    /// Sends a DER OCSP request using the documented POST transport.
+    pub async fn ocsp_post(&self, request_der: &[u8]) -> Result<SecretVec> {
+        if request_der.is_empty() {
+            return Err(Error::InvalidParameter(
+                "OCSP request must not be empty".into(),
+            ));
+        }
+        self.bytes(
+            Method::POST,
+            &self.path(&["ocsp"])?,
+            &[
+                (
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/ocsp-request"),
+                ),
+                (
+                    ACCEPT,
+                    HeaderValue::from_static("application/ocsp-response"),
+                ),
+            ],
+            Some(request_der),
+        )
+        .await
+    }
+
+    /// Sends a URL-safe base64 encoded DER OCSP request using GET.
+    ///
+    /// Encoding and ASN.1 parsing remain the responsibility of the caller's
+    /// OCSP library; this helper validates and transports one path segment.
+    pub async fn ocsp_get_encoded(&self, encoded_request: &str) -> Result<SecretVec> {
+        if encoded_request.is_empty()
+            || !encoded_request
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+        {
+            return Err(Error::InvalidParameter(
+                "encoded OCSP request must be unpadded URL-safe base64".into(),
+            ));
+        }
+        self.bytes(
+            Method::GET,
+            &self.path(&["ocsp", encoded_request])?,
+            &[(
+                ACCEPT,
+                HeaderValue::from_static("application/ocsp-response"),
+            )],
+            None,
+        )
+        .await
+    }
+
+    /// Builds a reviewed handoff configuration for an ACME client library.
+    #[cfg(feature = "acme-protocol")]
+    pub fn acme_client_config(
+        &self,
+        scope: PkiAcmeScope,
+        external_account_binding: Option<PkiAcmeEabToken>,
+    ) -> Result<PkiAcmeClientConfig> {
+        let path = match scope {
+            PkiAcmeScope::Default => self.path(&["acme", "directory"])?,
+            PkiAcmeScope::Issuer(issuer_ref) => {
+                self.path(&["issuer", &issuer_ref, "acme", "directory"])?
+            }
+            PkiAcmeScope::Role(role) => self.path(&["roles", &role, "acme", "directory"])?,
+            PkiAcmeScope::IssuerRole { issuer_ref, role } => {
+                self.path(&["issuer", &issuer_ref, "roles", &role, "acme", "directory"])?
+            }
+        };
+        Ok(PkiAcmeClientConfig {
+            directory_url: self.client.url_for_path(&path)?,
+            external_account_binding,
+        })
+    }
+
+    async fn get(&self, tail: &[&str], accept: &'static str) -> Result<SecretVec> {
+        self.bytes(
+            Method::GET,
+            &self.path(tail)?,
+            &[(ACCEPT, HeaderValue::from_static(accept))],
+            None,
+        )
+        .await
+    }
+
+    async fn bytes(
+        &self,
+        method: Method,
+        path: &str,
+        headers: &[(reqwest::header::HeaderName, HeaderValue)],
+        body: Option<&[u8]>,
+    ) -> Result<SecretVec> {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_bytes_headers_accepting(
+                "/pki/",
+                "pki",
+                &mount,
+                method,
+                path,
+                &[] as &[(&str, String)],
+                headers,
+                body,
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
+    fn path(&self, tail: &[&str]) -> Result<String> {
+        let mut segments = self.mount.clone();
+        for segment in tail {
+            segments.extend(validate_endpoint_path(segment)?);
+        }
+        Ok(segments.join("/"))
     }
 }
 
@@ -1613,14 +2000,13 @@ impl Pki<'_> {
     /// deletion.
     #[cfg(feature = "operator-ops")]
     pub async fn delete_root(&self, _confirmation: PkiRootDeletion) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["root"])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["root"])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Generates an intermediate CA CSR and key material.
@@ -1743,19 +2129,17 @@ impl Pki<'_> {
         &self,
         request: &PkiSetSignedIntermediateRequest,
     ) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["intermediate", "set-signed"])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["intermediate", "set-signed"])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Creates or replaces a PKI role.
     pub async fn write_role(&self, name: &str, role: &PkiRole) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(role))
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
@@ -1793,14 +2177,13 @@ impl Pki<'_> {
 
     /// Deletes a PKI role.
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["roles", name])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["roles", name])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Reads PKI URL configuration.
@@ -1815,8 +2198,7 @@ impl Pki<'_> {
 
     /// Sets PKI URL configuration.
     pub async fn write_urls(&self, config: &PkiUrlsConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["config", "urls"])?, Some(config))
+        self.request(Method::POST, &self.path(&["config", "urls"])?, Some(config))
             .await
     }
 
@@ -1832,13 +2214,12 @@ impl Pki<'_> {
 
     /// Sets the default PKI issuer configuration.
     pub async fn write_issuers_config(&self, config: &PkiIssuersConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["config", "issuers"])?,
-                Some(config),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["config", "issuers"])?,
+            Some(config),
+        )
+        .await
     }
 
     /// Reads the default PKI key configuration.
@@ -1853,8 +2234,7 @@ impl Pki<'_> {
 
     /// Sets the default PKI key configuration.
     pub async fn write_keys_config(&self, config: &PkiKeysConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["config", "keys"])?, Some(config))
+        self.request(Method::POST, &self.path(&["config", "keys"])?, Some(config))
             .await
     }
 
@@ -1870,13 +2250,12 @@ impl Pki<'_> {
 
     /// Sets PKI cluster-local configuration.
     pub async fn write_cluster_config(&self, config: &PkiClusterConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["config", "cluster"])?,
-                Some(config),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["config", "cluster"])?,
+            Some(config),
+        )
+        .await
     }
 
     /// Reads PKI CRL configuration.
@@ -1891,15 +2270,14 @@ impl Pki<'_> {
 
     /// Sets PKI CRL configuration.
     pub async fn write_crl_config(&self, config: &PkiCrlConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["config", "crl"])?, Some(config))
+        self.request(Method::POST, &self.path(&["config", "crl"])?, Some(config))
             .await
     }
 
     /// Rotates the CRL.
     pub async fn rotate_crl(&self) -> Result<PkiRotateCrlResponse> {
         self.enveloped(
-            Method::POST,
+            Method::GET,
             &self.path(&["crl", "rotate"])?,
             Option::<&Empty>::None,
         )
@@ -1909,7 +2287,7 @@ impl Pki<'_> {
     /// Rotates the delta CRL.
     pub async fn rotate_delta_crl(&self) -> Result<PkiRotateCrlResponse> {
         self.enveloped(
-            Method::POST,
+            Method::GET,
             &self.path(&["crl", "rotate-delta"])?,
             Option::<&Empty>::None,
         )
@@ -1918,8 +2296,7 @@ impl Pki<'_> {
 
     /// Starts PKI tidy with the requested options.
     pub async fn tidy(&self, request: &PkiTidyRequest) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["tidy"])?, Some(request))
+        self.request(Method::POST, &self.path(&["tidy"])?, Some(request))
             .await
     }
 
@@ -1955,13 +2332,12 @@ impl Pki<'_> {
 
     /// Sets PKI automatic tidy configuration.
     pub async fn write_auto_tidy_config(&self, config: &PkiAutoTidyConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["config", "auto-tidy"])?,
-                Some(config),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["config", "auto-tidy"])?,
+            Some(config),
+        )
+        .await
     }
 
     /// Issues a certificate and private key using a PKI role.
@@ -2146,10 +2522,10 @@ impl Pki<'_> {
     ) -> Result<PkiDetailedCertificateList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
+        let mut query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
+        query.insert(0, ("detailed", "true".to_owned()));
         let envelope: ResponseEnvelope<PkiDetailedCertificateList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(&["certs", "detailed"])?,
                 &query,
@@ -2191,6 +2567,11 @@ impl Pki<'_> {
         issuer_ref: &str,
         request: &PkiSignRevocationListRequest,
     ) -> Result<PkiCrlBundle> {
+        if request.extensions.len() > crate::response::MAX_RESPONSE_STRINGS {
+            return Err(Error::InvalidParameter(
+                "PKI CRL extensions exceed item limit".into(),
+            ));
+        }
         self.enveloped(
             Method::POST,
             &self.path(&["issuer", issuer_ref, "sign-revocation-list"])?,
@@ -2219,14 +2600,13 @@ impl Pki<'_> {
 
     /// Deletes a PKI issuer by issuer reference.
     pub async fn delete_issuer(&self, issuer_ref: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["issuer", issuer_ref])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["issuer", issuer_ref])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Lists PKI keys.
@@ -2249,14 +2629,13 @@ impl Pki<'_> {
 
     /// Deletes a PKI key by key reference.
     pub async fn delete_key(&self, key_ref: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["key", key_ref])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["key", key_ref])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Patches PKI issuer metadata with JSON Merge Patch semantics.
@@ -2434,14 +2813,13 @@ impl Pki<'_> {
 
     /// Deletes an unused ACME EAB token.
     pub async fn delete_acme_eab_token(&self, key_id: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["eab", key_id])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["eab", key_id])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Writes a PKI CEL role.
@@ -2449,13 +2827,12 @@ impl Pki<'_> {
     /// CEL roles are newer OpenBao PKI functionality; callers should test this
     /// workflow against the OpenBao version they deploy.
     pub async fn write_cel_role(&self, name: &str, role: &PkiCelRoleRequest) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["cel", "roles", name])?,
-                Some(role),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["cel", "roles", name])?,
+            Some(role),
+        )
+        .await
     }
 
     /// Patches a PKI CEL role with JSON Merge Patch semantics.
@@ -2500,14 +2877,13 @@ impl Pki<'_> {
 
     /// Deletes a PKI CEL role.
     pub async fn delete_cel_role(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["cel", "roles", name])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["cel", "roles", name])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Issues a certificate and private key using a PKI CEL role.
@@ -2583,10 +2959,7 @@ impl Pki<'_> {
         T: for<'de> Deserialize<'de>,
         B: Serialize + ?Sized,
     {
-        let envelope: ResponseEnvelope<T> = self
-            .client
-            .request_json_internal(method, path, request)
-            .await?;
+        let envelope: ResponseEnvelope<T> = self.request(method, path, request).await?;
         Ok(envelope.data)
     }
 
@@ -2602,10 +2975,102 @@ impl Pki<'_> {
         B: Serialize + ?Sized,
     {
         let envelope: ResponseEnvelope<T> = self
-            .client
-            .request_json_headers_accepting(method, path, headers, request, &[StatusCode::OK])
+            .request_query_headers(
+                method,
+                path,
+                &[] as &[(&str, String)],
+                headers,
+                request,
+                &[StatusCode::OK],
+            )
             .await?;
         Ok(envelope.data)
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize + ?Sized,
+    {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_json_internal("/pki/", "pki", &mount, method, path, body)
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize + ?Sized,
+    {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_json_accepting(
+                "/pki/",
+                "pki",
+                &mount,
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B, Q, K>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        self.request_query_headers(method, path, query, &[], body, accepted_statuses)
+            .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn request_query_headers<T, B, Q, K>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(reqwest::header::HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/pki/",
+                "pki",
+                &mount,
+                method,
+                path,
+                query,
+                headers,
+                body,
+                accepted_statuses,
+            )
+            .await
     }
 
     fn path(&self, tail: &[&str]) -> Result<String> {
@@ -2959,6 +3424,9 @@ mod tests {
             max_path_length: Some(1),
             key_usage: vec!["CertSign".to_owned()],
             ext_key_usage_oids: vec!["1.2.3.4".to_owned()],
+            add_basic_constraints: Some(true),
+            revocation_signature_algorithm: Some("SHA256WithRSA".to_owned()),
+            enable_aia_url_templating: Some(true),
             ..Default::default()
         };
         let value = serde_json::to_value(request).unwrap_or_else(|error| panic!("{error}"));
@@ -2970,6 +3438,27 @@ mod tests {
         assert_eq!(value["max_path_length"], 1);
         assert_eq!(value["key_usage"][0], "CertSign");
         assert_eq!(value["ext_key_usage_oids"][0], "1.2.3.4");
+        assert_eq!(value["add_basic_constraints"], true);
+        assert_eq!(value["revocation_signature_algorithm"], "SHA256WithRSA");
+        assert_eq!(value["enable_aia_url_templating"], true);
+    }
+
+    #[test]
+    fn pki_cel_requests_use_the_documented_program_field() {
+        let value = serde_json::to_value(super::PkiCelRoleRequest {
+            expression: Some("subject.common_name == 'web'".to_owned()),
+            description: None,
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(value.get("expression").is_none());
+        assert_eq!(value["cel_program"], "subject.common_name == 'web'");
+
+        let role: super::PkiCelRole =
+            serde_json::from_value(value).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            role.expression.as_deref(),
+            Some("subject.common_name == 'web'")
+        );
     }
 
     #[test]
@@ -3328,5 +3817,44 @@ mod tests {
         );
         assert!(pki.issuer_acme_directory_url("../issuer").is_err());
         assert!(pki.role_acme_directory_url("web?x=1").is_err());
+    }
+
+    #[cfg(feature = "acme-protocol")]
+    #[test]
+    fn pki_acme_handoff_covers_all_scopes_and_redacts_eab_key() {
+        let config = crate::OpenBaoConfig::new("http://127.0.0.1:8200")
+            .and_then(crate::OpenBaoConfig::allow_localhost_http)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = crate::Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+        let pki = client
+            .pki_public("team/pki")
+            .unwrap_or_else(|error| panic!("{error}"));
+        let scopes = [
+            super::PkiAcmeScope::Default,
+            super::PkiAcmeScope::Issuer("root".to_owned()),
+            super::PkiAcmeScope::Role("web".to_owned()),
+            super::PkiAcmeScope::IssuerRole {
+                issuer_ref: "root".to_owned(),
+                role: "web".to_owned(),
+            },
+        ];
+        for scope in scopes {
+            let config = pki
+                .acme_client_config(
+                    scope,
+                    Some(super::PkiAcmeEabToken {
+                        created_on: None,
+                        id: "eab-id".to_owned(),
+                        key_type: Some("hs".to_owned()),
+                        acme_directory: None,
+                        key: SecretString::from("eab-secret"),
+                    }),
+                )
+                .unwrap_or_else(|error| panic!("{error}"));
+            assert!(config.directory_url.path().ends_with("/acme/directory"));
+            let debug = format!("{config:?}");
+            assert!(debug.contains("<redacted>"));
+            assert!(!debug.contains("eab-secret"));
+        }
     }
 }

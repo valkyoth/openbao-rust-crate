@@ -30,8 +30,8 @@ compatibility certification.
 
 | Status | Rows |
 | --- | ---: |
-| `unverified` | 611 |
-| `confirmed-gap` | 33 |
+| `unverified` | 641 |
+| `confirmed-gap` | 3 |
 | `typed` | 0 |
 | `typed-gated` | 0 |
 
@@ -40,16 +40,16 @@ compatibility certification.
 | Area | Rows | Unverified | Confirmed gap |
 | --- | ---: | ---: | ---: |
 | `auth` | 105 | 105 | 0 |
-| `secret` | 347 | 315 | 32 |
+| `secret` | 347 | 345 | 2 |
 | `system` | 192 | 191 | 1 |
 
 ## OpenAPI Reconciliation
 
 | Match state | Expanded operations |
 | --- | ---: |
-| `absent` | 41 |
+| `absent` | 42 |
 | `ambiguous` | 11 |
-| `exact-pattern` | 611 |
+| `exact-pattern` | 610 |
 
 An absent or ambiguous OpenAPI match is retained as an explicit review
 item; it is never converted into typed coverage. Tagged documentation

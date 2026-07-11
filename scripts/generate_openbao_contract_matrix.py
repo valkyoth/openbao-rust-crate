@@ -41,9 +41,9 @@ EXPECTED_TAGGED_SNAPSHOT_SHA256 = "511d18f9bf894cba50c857c247cf3a22b8fd352914403
 EXPECTED_OPENAPI_SNAPSHOT_SHA256 = "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4"
 EXPECTED_EVIDENCE_SHA256 = "1813d10fb9fdc0df7231035d391d5af288f0ba443ed105cb3816e7269557eab4"
 EXPECTED_OUTPUT_SHA256 = {
-    "docs/openbao-2.5-contract-matrix.json": "8889cd6c6639caa452fcf3b41c7571f21d90d629eef2e6e45a32efe1139d55fd",
-    "docs/openbao-2.5-endpoint-matrix.csv": "4461068d7d1e3788aa598456a3b736de2592c51aeca49267d120060f150a4ffb",
-    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "2a6820506c982aecba172129e3f2a20d600f3707d86e18b5aa670f816039d293",
+    "docs/openbao-2.5-contract-matrix.json": "f07a4aab2718d113d89a7052a9fb71ca56830ef083a6613e3bb7446d17bd175e",
+    "docs/openbao-2.5-endpoint-matrix.csv": "5141dcc54fdc6abb876284ff0717b5e8fcbfabc6cc8bd1190ffac9353be38bbe",
+    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "8adab843f4b742b495a4f9c20e029f24044f1b6366a65733dea0267c9ce0ccae",
 }
 MAX_INPUT_BYTES = 16 * 1024 * 1024
 MAX_OUTPUT_BYTES = 32 * 1024 * 1024
@@ -61,14 +61,20 @@ INCLUDE_ROW = re.compile(r"^\s*@include\s+['\"]([^'\"]{1,256})['\"]\s*$", re.ASC
 OPTIONAL_SEGMENT = re.compile(r"\(/:([A-Za-z0-9_-]{1,128})\)")
 PLACEHOLDER = re.compile(r"^(?::[^/]+|\{[^/]+\}|\([^/]+\))$")
 
+# These two tagged PKI rows are authored relative to the PKI mount even though
+# their leading slash makes them appear absolute. The exact OpenAPI and live
+# route use the mounted `/pki/certs/...` form.
+DOCUMENTATION_PATH_CORRECTIONS = {
+    "/certs/revocation-queue": "/pki/certs/revocation-queue",
+    "/certs/revoked": "/pki/certs/revoked",
+}
+
 # Confirmed operation gaps from the source audit. Previous non-strict rows are
 # also gaps; everything else remains unverified until a helper and test are
 # linked explicitly in a later compatibility commit.
 CONFIRMED_FALSE_TYPED = frozenset(
     line.strip()
     for line in """
-GET /pki/crl/rotate
-GET /pki/crl/rotate-delta
 """.splitlines()
     if line.strip()
 )
@@ -102,6 +108,39 @@ SECRET_DISPOSITION_OVERRIDES = {
     "SCAN /:secret-mount-path/metadata/:path": "typed",
     "LIST /:secret-mount-path/detailed-metadata/:path": "typed",
     "SCAN /:secret-mount-path/detailed-metadata/:path": "typed",
+}
+
+PKI_DISPOSITION_OVERRIDES = {
+    "ACME /pki/acme/directory": "typed-gated",
+    "ACME /pki/issuer/:issuer_ref/acme/directory": "typed-gated",
+    "ACME /pki/issuer/:issuer_ref/roles/:role/acme/directory": "typed-gated",
+    "ACME /pki/roles/:role/acme/directory": "typed-gated",
+    "GET /pki/ca": "typed",
+    "GET /pki/ca/pem": "typed",
+    "GET /pki/ca_chain": "typed",
+    "GET /pki/cert/:serial/raw": "typed",
+    "GET /pki/cert/:serial/raw/pem": "typed",
+    "GET /pki/cert/ca": "typed",
+    "GET /pki/cert/ca_chain": "typed",
+    "GET /pki/cert/crl": "typed",
+    "GET /pki/cert/delta-crl": "typed",
+    "GET /pki/crl": "typed",
+    "GET /pki/crl/delta": "typed",
+    "GET /pki/crl/delta/pem": "typed",
+    "GET /pki/crl/pem": "typed",
+    "GET /pki/crl/rotate": "typed",
+    "GET /pki/crl/rotate-delta": "typed",
+    "GET /pki/issuer/:issuer_ref/crl": "typed",
+    "GET /pki/issuer/:issuer_ref/crl/delta": "typed",
+    "GET /pki/issuer/:issuer_ref/crl/delta/der": "typed",
+    "GET /pki/issuer/:issuer_ref/crl/delta/pem": "typed",
+    "GET /pki/issuer/:issuer_ref/crl/der": "typed",
+    "GET /pki/issuer/:issuer_ref/crl/pem": "typed",
+    "GET /pki/issuer/:issuer_ref/der": "typed",
+    "GET /pki/issuer/:issuer_ref/json": "typed",
+    "GET /pki/issuer/:issuer_ref/pem": "typed",
+    "GET /pki/ocsp/<base 64+URL encoded ocsp DER request>": "typed",
+    "POST /pki/ocsp": "typed",
 }
 
 
@@ -705,7 +744,7 @@ def build_matrix(evidence: dict[str, Any], openapi: dict[str, Any]) -> dict[str,
     rows: list[dict[str, Any]] = []
     for source_row in evidence["operations"]:
         methods = source_row["methods"]
-        path = source_row["path"]
+        path = DOCUMENTATION_PATH_CORRECTIONS.get(source_row["path"], source_row["path"])
         variants = source_row["variants"]
         source = variants[0]["source"]
         openapi_methods = [openapi_contract(method, path, source, paths, schemas) for method in methods]
@@ -731,6 +770,8 @@ def build_matrix(evidence: dict[str, Any], openapi: dict[str, Any]) -> dict[str,
             override = AUTH_DISPOSITION_OVERRIDES.get(key)
         if override is None:
             override = SECRET_DISPOSITION_OVERRIDES.get(key)
+        if override is None:
+            override = PKI_DISPOSITION_OVERRIDES.get(key)
         if override is not None:
             prior = {
                 "status": override,

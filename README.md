@@ -97,8 +97,9 @@ Implemented now:
   multi-issuer issue/sign flows, role write/read/list/delete/patch, CEL roles,
   issue, sign, revoke, revoke-with-key, certificate list/read, issuer/key
   list/read/delete/update, issuer revoke, CA/key import, ACME config/EAB and
-  directory URL helpers, CRL and delta-CRL management, tidy, tidy status, and
-  tidy cancel helpers.
+  typed client handoff, unauthenticated CA/certificate/CRL distribution and
+  OCSP helpers, CRL and delta-CRL management, tidy, tidy status, and tidy
+  cancel helpers.
 - Transit key create, read, list, delete, config update, rotate, export, BYOK
   wrapping-key/import/import-version/export helpers, soft-delete/restore,
   cache/global config, CSR generation, certificate-chain install, backup,
@@ -378,7 +379,7 @@ openbao = { version = "1", features = ["time"] }
 | `token` | yes | Token lifecycle, create-orphan, accessor renewal/revocation, token role, tidy, and revoke-orphan helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
-| `pki` | yes | PKI authority, issuer/key metadata/import, role, role patch, issue/sign, revoke, cert read/list, ACME config/EAB/directory URL, CRL config/rotate, tidy, tidy status, and tidy cancel helpers. |
+| `pki` | yes | PKI authority, issuer/key metadata/import, role, issue/sign/revoke, unauthenticated CA/certificate/CRL distribution, OCSP, ACME administration, CRL, and tidy helpers. |
 | `ssh` | yes | SSH roles, OTP credentials, issuer management, CA sign/issue, issuer config, and OTP verification helpers. |
 | `totp` | yes | TOTP key and code helpers. |
 | `transit` | yes | Transit key lifecycle, batch cryptography, and single-operation cryptography helpers. |
@@ -390,6 +391,7 @@ openbao = { version = "1", features = ["time"] }
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables strict-deadline Tokio convenience helpers such as `Sys::wait_ready` and `Sys::wait_until_unsealed`. Runtime-neutral retry-budget variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
+| `acme-protocol` | no | Enables the typed PKI ACME directory/EAB handoff configuration for established ACME client libraries. The crate does not implement JWS, nonce, order, or challenge state machines. Implies `pki`. |
 | `kani` | no | Inert feature reserved for Kani proof harness builds. Normal users do not need it; `scripts/check_kani.sh` enables it with the Rust `1.90.0` Kani toolchain. |
 | `memory-lock` | no | Enables `sanitization` memory-lock support for secret buffers where the host permits it. Requires `memory-lock-acknowledged`; verify OS mlock/VirtualLock limits and swap policy before enabling. |
 | `memory-lock-acknowledged` | no | Explicit acknowledgment for audited memory-lock builds. Memory locking is a host-level hardening control, not a guarantee that HTTP/TLS/kernel buffers avoid swap. |
@@ -476,7 +478,7 @@ evidence is linked. It is an implementation backlog, not a support percentage.
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Partial | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. Unknown request and response plugin extension values fail closed as `SecretString` and are excluded from `Debug`; request extensions cannot shadow typed connection fields. Complete typed builders for every built-in plugin remain planned for the `2.0.0` compatibility work. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional raw-byte helpers, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR generation, and certificate-chain install helpers. Import wrappers accept externally wrapped `SecretString` ciphertext or public-key-only import material; raw private or symmetric key bytes stay outside the default endpoint wrappers. The non-default `transit-import` plus `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP wrapping helper for audited development and automation use. |
-| PKI | Partial | Authority generation/signing/install, URL/CRL config, roles, role patch, issue, sign, named-issuer issue/sign, named-issuer sign-intermediate, revoke, revoke-with-key, revoked/revocation-queue/detailed certificate lists, issuer CRL resign, certificate list/read, issuer/key list/read/delete/update, issuer revoke, default issuer/key config, cluster config, auto-tidy config, root rotate/replace, standalone key generation, multi-issuer root/intermediate generation, operator-gated default root deletion with explicit confirmation, operator-gated sign-verbatim/sign-self-issued/cross-sign/sign-revocation-list, CEL role management and CEL issue/sign, current-doc field expansion for role/generation/CRL/tidy structs, CA/key import, ACME config/EAB/directory URL, CRL rotate, delta CRL rotate, tidy, tidy status, and tidy cancel are implemented. Unauthenticated public CA/CRL/cert and OCSP protocol reads stay external. |
+| PKI | Yes | Authority, issuer/key, role, issuance, revocation, CRL, tidy, CEL, ACME administration, multi-issuer, and operator-gated destructive/unconstrained workflows are typed. `PkiPublic` provides token-free bounded CA/certificate/CRL and OCSP transport; `acme-protocol` provides reviewed directory/EAB handoff configuration for established ACME clients. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
 | SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
 | Custom plugin patterns | Gated | Documented wrapper pattern for typed plugin-specific APIs over `Client::request_json`; requires `raw-api` plus `raw-api-acknowledged` after the wrapper is audited. |
@@ -1026,10 +1028,12 @@ async fn main() -> Result<()> {
 }
 ```
 
-Provision ACME external account binding and hand it to an ACME client:
+With `acme-protocol`, provision ACME external account binding and hand it to
+an ACME client:
 
 ```rust,no_run
-use openbao::{Client, ExposeSecret, Result, SecretString};
+use openbao::secrets::pki::PkiAcmeScope;
+use openbao::{Client, Result, SecretString};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -1038,16 +1042,17 @@ async fn main() -> Result<()> {
     let pki = client.pki("pki")?;
 
     let eab = pki.generate_role_acme_eab("tls-server").await?;
-    let directory_url = pki.role_acme_directory_url("tls-server")?;
+    let public_client = Client::new("https://bao.example.com:8200")?;
+    let acme = public_client.pki_public("pki")?.acme_client_config(
+        PkiAcmeScope::Role("tls-server".to_owned()),
+        Some(eab),
+    )?;
 
-    let _eab_hmac_key_for_acme_client = eab.key.expose_secret();
-
-    // Pass `directory_url`, `eab.id`, and the exposed EAB HMAC key to a
-    // dedicated ACME client such as instant-acme or acme2. That client owns
-    // account registration, nonce handling, challenge responses, polling, and
-    // certificate download. Treat `eab.key` as credential material.
-    println!("ACME directory: {directory_url}");
-    println!("EAB key id: {}", eab.id);
+    // Pass `acme.directory_url` and `acme.external_account_binding` to a
+    // dedicated ACME client. That library owns JWS, nonces, orders,
+    // challenges, polling, and certificate download. The EAB key remains a
+    // SecretString and is redacted from Debug.
+    println!("ACME directory: {}", acme.directory_url);
 
     Ok(())
 }

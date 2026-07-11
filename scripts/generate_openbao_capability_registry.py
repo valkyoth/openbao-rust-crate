@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from generate_openbao_contract_matrix import (
+    DOCUMENTATION_PATH_CORRECTIONS,
     EXPECTED_OUTPUT_SHA256 as CONTRACT_OUTPUT_HASHES,
     verify as verify_contract_matrix,
 )
@@ -40,8 +41,8 @@ MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_OPERATIONS = 2048
 MAX_PATH_BYTES = 4096
 EXPECTED_OPERATION_COUNT = 664
-EXPECTED_REGISTRY_SHA256 = "60eba09fbb5f16b7565dbe6447a79460ee2671cc2cd056f397ca2c6c658f7291"
-EXPECTED_RUST_SHA256 = "949813be4f8a260bd9ac0770942ca37115b2c6828468e8d194b74449fa5d87e5"
+EXPECTED_REGISTRY_SHA256 = "d47bf51eb299bb0ab851c488ad694678b28374fe54a4731733298176dd7e59fd"
+EXPECTED_RUST_SHA256 = "61faa5e964dffffaf2d4fa70db8c805a0334e35ee89eea590362392a25f55adc"
 EXPECTED_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -155,7 +156,9 @@ def documented_operations(document: dict[str, Any], version: str) -> set[tuple[s
         raise RegistryError("tagged documentation snapshot identity is invalid")
     result: set[tuple[str, str]] = set()
     for operation in document.get("operations", []):
-        key = validate_operation(operation.get("method"), operation.get("path"))
+        path = operation.get("path")
+        path = DOCUMENTATION_PATH_CORRECTIONS.get(path, path)
+        key = validate_operation(operation.get("method"), path)
         result.add(key)
     return result
 

@@ -29,7 +29,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.acme.pki.acme.directory.87559f3155381b97",
         OpenBaoHttpMethod::Acme,
         "/pki/acme/directory",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -42,7 +42,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.acme.pki.issuer.issuer.ref.acme.directory.4162bddaf48d0fcd",
         OpenBaoHttpMethod::Acme,
         "/pki/issuer/:issuer_ref/acme/directory",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -55,7 +55,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.acme.pki.issuer.issuer.ref.roles.role.acme.directory.b8c5ee9b21bdab91",
         OpenBaoHttpMethod::Acme,
         "/pki/issuer/:issuer_ref/roles/:role/acme/directory",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -68,7 +68,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.acme.pki.roles.role.acme.directory.ca4cbe7087842163",
         OpenBaoHttpMethod::Acme,
         "/pki/roles/:role/acme/directory",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2282,7 +2282,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.ca.07ba8eeac62a04ea",
         OpenBaoHttpMethod::Get,
         "/pki/ca",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2295,7 +2295,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.ca.chain.dafbeccb0535f2d2",
         OpenBaoHttpMethod::Get,
         "/pki/ca_chain",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2308,7 +2308,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.ca.pem.022a762ba80c1b3a",
         OpenBaoHttpMethod::Get,
         "/pki/ca/pem",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2339,7 +2339,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.cert.ca.chain.6dbe4dd20724d2b7",
         OpenBaoHttpMethod::Get,
         "/pki/cert/ca_chain",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2352,7 +2352,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.cert.ca.d276cbc0d26b2d2d",
         OpenBaoHttpMethod::Get,
         "/pki/cert/ca",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2365,7 +2365,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.cert.crl.6953aadb35c40b14",
         OpenBaoHttpMethod::Get,
         "/pki/cert/crl",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2378,7 +2378,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.cert.delta.crl.26b2c2bf38e8830b",
         OpenBaoHttpMethod::Get,
         "/pki/cert/delta-crl",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2404,7 +2404,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.cert.serial.raw.675afa92a58d61e4",
         OpenBaoHttpMethod::Get,
         "/pki/cert/:serial/raw",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2417,7 +2417,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.cert.serial.raw.pem.ff04cd1d83b66153",
         OpenBaoHttpMethod::Get,
         "/pki/cert/:serial/raw/pem",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2521,7 +2521,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.crl.d6fa966fadf6f354",
         OpenBaoHttpMethod::Get,
         "/pki/crl",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2534,7 +2534,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.crl.delta.da4370f4892e5c10",
         OpenBaoHttpMethod::Get,
         "/pki/crl/delta",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2547,7 +2547,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.crl.delta.pem.5de403ff7d29cff7",
         OpenBaoHttpMethod::Get,
         "/pki/crl/delta/pem",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2560,7 +2560,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.crl.pem.ec8d4cef5aef49fc",
         OpenBaoHttpMethod::Get,
         "/pki/crl/pem",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2599,7 +2599,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.crl.delta.der.9b0a782a7585f15d",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/crl/delta/der",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2612,7 +2612,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.crl.delta.fecc27a2a5c89b0c",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/crl/delta",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2625,7 +2625,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.crl.delta.pem.89fdaa46671de23d",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/crl/delta/pem",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2638,7 +2638,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.crl.der.9b7faa2fd4ea16d7",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/crl/der",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2651,7 +2651,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.crl.fd91c2a50ad68f78",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/crl",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2664,7 +2664,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.crl.pem.58802878cfe585b9",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/crl/pem",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2677,7 +2677,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.der.68afc7414c711751",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/der",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2703,7 +2703,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.json.fa0976e98be86397",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/json",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2716,7 +2716,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.issuer.issuer.ref.pem.6ea12b5f13f674e9",
         OpenBaoHttpMethod::Get,
         "/pki/issuer/:issuer_ref/pem",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2742,7 +2742,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.pki.ocsp.base.64.url.encoded.ocsp.der.request.d9c3b3fea5936ed2",
         OpenBaoHttpMethod::Get,
         "/pki/ocsp/<base 64+URL encoded ocsp DER request>",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -4370,32 +4370,6 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
-        "openbao.list.certs.revocation.queue.cbad84ecc6a1491e",
-        OpenBaoHttpMethod::List,
-        "/certs/revocation-queue",
-        OpenBaoOperationDisposition::LegacyTypedClaim,
-        &[
-            OpenBaoCapabilityRange::generated(
-                OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 5, 5),
-                OpenBaoCapabilityEvidence::TaggedDocumentation,
-            ),
-        ],
-    ),
-    OpenBaoOperation::generated(
-        "openbao.list.certs.revoked.79b8c7e4e4272d62",
-        OpenBaoHttpMethod::List,
-        "/certs/revoked",
-        OpenBaoOperationDisposition::LegacyTypedClaim,
-        &[
-            OpenBaoCapabilityRange::generated(
-                OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 5, 5),
-                OpenBaoCapabilityEvidence::TaggedDocumentation,
-            ),
-        ],
-    ),
-    OpenBaoOperation::generated(
         "openbao.list.cubbyhole.path.b44039007ac6c737",
         OpenBaoHttpMethod::List,
         "/cubbyhole/:path",
@@ -4738,6 +4712,32 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.list.pki.certs.revocation.queue.f05bdbcfad2240e5",
+        OpenBaoHttpMethod::List,
+        "/pki/certs/revocation-queue",
+        OpenBaoOperationDisposition::LegacyTypedClaim,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.list.pki.certs.revoked.ea93a49d5605b85b",
+        OpenBaoHttpMethod::List,
+        "/pki/certs/revoked",
+        OpenBaoOperationDisposition::LegacyTypedClaim,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
                 OpenBaoVersion::new(2, 5, 5),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
             ),
@@ -7137,7 +7137,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.post.pki.ocsp.41f72184970bae51",
         OpenBaoHttpMethod::Post,
         "/pki/ocsp",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),

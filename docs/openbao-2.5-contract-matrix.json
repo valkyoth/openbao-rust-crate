@@ -28067,59 +28067,12 @@
       ],
       "openapi": [
         {
-          "http_method": "GET",
-          "match": "exact-pattern",
-          "operation_id": "kv-read-path",
-          "parameters": [
-            {
-              "coverage": "unverified",
-              "crate_field": null,
-              "in": "path",
-              "name": "kv_v1_mount_path",
-              "required": true,
-              "schema": {
-                "default": "kv-v1",
-                "type": "string"
-              },
-              "secret_classification": "unreviewed"
-            },
-            {
-              "coverage": "unverified",
-              "crate_field": null,
-              "in": "path",
-              "name": "path",
-              "required": true,
-              "schema": {
-                "type": "string"
-              },
-              "secret_classification": "unreviewed"
-            },
-            {
-              "coverage": "unverified",
-              "crate_field": null,
-              "in": "query",
-              "name": "list",
-              "required": false,
-              "schema": {
-                "type": "string"
-              },
-              "secret_classification": "unreviewed"
-            }
-          ],
-          "path": "/{kv_v1_mount_path}/{path}",
-          "request_fields": [],
-          "request_media_types": [],
-          "request_schemas": [],
-          "response_fields": [],
-          "response_media_types": [],
-          "response_schemas": [],
-          "schema_review": [],
-          "sudo": false,
-          "unauthenticated": false
+          "candidates": [],
+          "match": "absent"
         }
       ],
-      "operation_key": "LIST /certs/revocation-queue",
-      "path": "/certs/revocation-queue",
+      "operation_key": "LIST /pki/certs/revocation-queue",
+      "path": "/pki/certs/revocation-queue",
       "review_status": "unverified",
       "security": {
         "authentication_review": "required",
@@ -28132,9 +28085,7 @@
         "fixture": [],
         "live": [],
         "mock_http": [],
-        "openapi": [
-          "kv-read-path"
-        ],
+        "openapi": [],
         "unit": []
       },
       "version": "2.5.5"
@@ -29182,27 +29133,16 @@
         {
           "http_method": "GET",
           "match": "exact-pattern",
-          "operation_id": "kv-read-path",
+          "operation_id": "pki-list-revoked-certs",
           "parameters": [
             {
               "coverage": "unverified",
               "crate_field": null,
               "in": "path",
-              "name": "kv_v1_mount_path",
+              "name": "pki_mount_path",
               "required": true,
               "schema": {
-                "default": "kv-v1",
-                "type": "string"
-              },
-              "secret_classification": "unreviewed"
-            },
-            {
-              "coverage": "unverified",
-              "crate_field": null,
-              "in": "path",
-              "name": "path",
-              "required": true,
-              "schema": {
+                "default": "pki",
                 "type": "string"
               },
               "secret_classification": "unreviewed"
@@ -29212,27 +29152,45 @@
               "crate_field": null,
               "in": "query",
               "name": "list",
-              "required": false,
+              "required": true,
               "schema": {
+                "enum": [
+                  "true"
+                ],
                 "type": "string"
               },
               "secret_classification": "unreviewed"
             }
           ],
-          "path": "/{kv_v1_mount_path}/{path}",
+          "path": "/{pki_mount_path}/certs/revoked",
           "request_fields": [],
           "request_media_types": [],
           "request_schemas": [],
-          "response_fields": [],
-          "response_media_types": [],
-          "response_schemas": [],
+          "response_fields": [
+            {
+              "coverage": "unverified",
+              "crate_field": null,
+              "path": "keys",
+              "required": false,
+              "schema": {
+                "type": "array"
+              },
+              "secret_classification": "unreviewed"
+            }
+          ],
+          "response_media_types": [
+            "application/json"
+          ],
+          "response_schemas": [
+            "PkiListRevokedCertsResponse"
+          ],
           "schema_review": [],
           "sudo": false,
           "unauthenticated": false
         }
       ],
-      "operation_key": "LIST /certs/revoked",
-      "path": "/certs/revoked",
+      "operation_key": "LIST /pki/certs/revoked",
+      "path": "/pki/certs/revoked",
       "review_status": "unverified",
       "security": {
         "authentication_review": "required",
@@ -29246,7 +29204,7 @@
         "live": [],
         "mock_http": [],
         "openapi": [
-          "kv-read-path"
+          "pki-list-revoked-certs"
         ],
         "unit": []
       },
@@ -55130,8 +55088,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL and EAB helpers.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "ACME"
@@ -55144,7 +55102,7 @@
       ],
       "operation_key": "ACME /pki/acme/directory",
       "path": "/pki/acme/directory",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -55616,8 +55574,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -55711,7 +55669,7 @@
       ],
       "operation_key": "GET /pki/ca",
       "path": "/pki/ca",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -55912,8 +55870,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -56007,7 +55965,7 @@
       ],
       "operation_key": "GET /pki/ca/pem",
       "path": "/pki/ca/pem",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -56208,8 +56166,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -56303,7 +56261,7 @@
       ],
       "operation_key": "GET /pki/ca_chain",
       "path": "/pki/ca_chain",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -66913,8 +66871,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -67019,7 +66977,7 @@
       ],
       "operation_key": "GET /pki/cert/:serial/raw",
       "path": "/pki/cert/:serial/raw",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -67220,8 +67178,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -67326,7 +67284,7 @@
       ],
       "operation_key": "GET /pki/cert/:serial/raw/pem",
       "path": "/pki/cert/:serial/raw/pem",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -67527,8 +67485,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -67633,7 +67591,7 @@
       ],
       "operation_key": "GET /pki/cert/ca",
       "path": "/pki/cert/ca",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -67834,8 +67792,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -67929,7 +67887,7 @@
       ],
       "operation_key": "GET /pki/cert/ca_chain",
       "path": "/pki/cert/ca_chain",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -68130,8 +68088,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -68225,7 +68183,7 @@
       ],
       "operation_key": "GET /pki/cert/crl",
       "path": "/pki/cert/crl",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -68426,8 +68384,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -68521,7 +68479,7 @@
       ],
       "operation_key": "GET /pki/cert/delta-crl",
       "path": "/pki/cert/delta-crl",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -93034,8 +92992,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -93129,7 +93087,7 @@
       ],
       "operation_key": "GET /pki/crl",
       "path": "/pki/crl",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -93330,8 +93288,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -93425,7 +93383,7 @@
       ],
       "operation_key": "GET /pki/crl/delta",
       "path": "/pki/crl/delta",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -93626,8 +93584,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -93721,7 +93679,7 @@
       ],
       "operation_key": "GET /pki/crl/delta/pem",
       "path": "/pki/crl/delta/pem",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -93922,8 +93880,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -94017,7 +93975,7 @@
       ],
       "operation_key": "GET /pki/crl/pem",
       "path": "/pki/crl/pem",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -95724,7 +95682,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Typed PKI helper exists.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed"
       },
       "methods": [
@@ -95778,7 +95736,7 @@
       ],
       "operation_key": "GET /pki/crl/rotate",
       "path": "/pki/crl/rotate",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -97485,7 +97443,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Typed PKI specialized revocation, CEL, named-issuer hierarchy, or delta-CRL helper exists.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed"
       },
       "methods": [
@@ -97539,7 +97497,7 @@
       ],
       "operation_key": "GET /pki/crl/rotate-delta",
       "path": "/pki/crl/rotate-delta",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -108020,8 +107978,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL and EAB helpers.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "ACME"
@@ -108034,7 +107992,7 @@
       ],
       "operation_key": "ACME /pki/issuer/:issuer_ref/acme/directory",
       "path": "/pki/issuer/:issuer_ref/acme/directory",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -108517,8 +108475,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -108583,7 +108541,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/crl",
       "path": "/pki/issuer/:issuer_ref/crl",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -108784,8 +108742,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -108850,7 +108808,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/crl/delta",
       "path": "/pki/issuer/:issuer_ref/crl/delta",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -109051,8 +109009,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -109117,7 +109075,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/crl/delta/der",
       "path": "/pki/issuer/:issuer_ref/crl/delta/der",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -109318,8 +109276,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -109384,7 +109342,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/crl/delta/pem",
       "path": "/pki/issuer/:issuer_ref/crl/delta/pem",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -109585,8 +109543,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -109651,7 +109609,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/crl/der",
       "path": "/pki/issuer/:issuer_ref/crl/der",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -109852,8 +109810,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -109918,7 +109876,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/crl/pem",
       "path": "/pki/issuer/:issuer_ref/crl/pem",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -110119,8 +110077,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -110215,7 +110173,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/der",
       "path": "/pki/issuer/:issuer_ref/der",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -111806,8 +111764,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -111902,7 +111860,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/json",
       "path": "/pki/issuer/:issuer_ref/json",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -112103,8 +112061,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated public CA/certificate/CRL endpoint; fetch directly with TLS, CRL, or external HTTP tooling.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -112199,7 +112157,7 @@
       ],
       "operation_key": "GET /pki/issuer/:issuer_ref/pem",
       "path": "/pki/issuer/:issuer_ref/pem",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -115413,8 +115371,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL and EAB helpers.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "ACME"
@@ -115427,7 +115385,7 @@
       ],
       "operation_key": "ACME /pki/issuer/:issuer_ref/roles/:role/acme/directory",
       "path": "/pki/issuer/:issuer_ref/roles/:role/acme/directory",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -134947,8 +134905,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "OCSP responder protocol endpoint is handled by OCSP/TLS clients, not this SDK.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "POST"
@@ -134986,7 +134944,7 @@
       ],
       "operation_key": "POST /pki/ocsp",
       "path": "/pki/ocsp",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -135187,8 +135145,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "OCSP responder protocol endpoint is handled by OCSP/TLS clients, not this SDK.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -135237,7 +135195,7 @@
       ],
       "operation_key": "GET /pki/ocsp/<base 64+URL encoded ocsp DER request>",
       "path": "/pki/ocsp/<base 64+URL encoded ocsp DER request>",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -146814,8 +146772,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "ACME protocol flow is intentionally handled by ACME clients; crate provides directory URL and EAB helpers.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "ACME"
@@ -146828,7 +146786,7 @@
       ],
       "operation_key": "ACME /pki/roles/:role/acme/directory",
       "path": "/pki/roles/:role/acme/directory",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,

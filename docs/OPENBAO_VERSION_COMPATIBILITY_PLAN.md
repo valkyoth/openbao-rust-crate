@@ -642,6 +642,8 @@ Pentest focus:
 
 ### Commit 13: Migrate PKI Operations
 
+Status: implemented. Pentest this commit from `604b1178fe759280b741fe1bf83c09c2c441e58f` to the resulting Commit 13 hash.
+
 Suggested commit title: `Version OpenBao PKI routing`
 
 Goal:

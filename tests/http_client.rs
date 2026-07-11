@@ -462,6 +462,17 @@ fn write_json_response(stream: &mut impl Write, status: &str, body: &str) {
         .unwrap_or_else(|error| panic!("{error}"));
 }
 
+fn write_bytes_response(stream: &mut impl Write, content_type: &str, body: &[u8]) {
+    let headers = format!(
+        "HTTP/1.1 200 OK\r\ncontent-type: {content_type}\r\nconnection: close\r\ncontent-length: {}\r\n\r\n",
+        body.len()
+    );
+    stream
+        .write_all(headers.as_bytes())
+        .and_then(|()| stream.write_all(body))
+        .unwrap_or_else(|error| panic!("{error}"));
+}
+
 fn http_request_is_complete(request: &[u8]) -> bool {
     let Some(header_end) = request.windows(4).position(|window| window == b"\r\n\r\n") else {
         return false;
@@ -706,6 +717,47 @@ async fn strict_secret_routing_rejects_newer_kv_and_transit_capabilities_locally
         .await;
     assert!(matches!(
         csr,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+}
+
+#[tokio::test]
+async fn strict_pki_routing_rejects_newer_capabilities_locally() {
+    let client_for = |version| {
+        let policy =
+            OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+        Client::from_config(
+            OpenBaoConfig::new("https://bao.example.com")
+                .map(|config| config.compatibility_policy(policy))
+                .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .and_then(|client| client.try_with_token(SecretString::from("token")))
+        .unwrap_or_else(|error| panic!("{error}"))
+    };
+
+    let cel = client_for(OpenBaoVersion::new(2, 3, 2))
+        .pki("pki")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .write_cel_role(
+            "web",
+            &openbao::secrets::pki::PkiCelRoleRequest {
+                expression: Some("subject.common_name == 'web'".to_owned()),
+                description: None,
+            },
+        )
+        .await;
+    assert!(matches!(
+        cel,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+
+    let detailed = client_for(OpenBaoVersion::new(2, 1, 1))
+        .pki("pki")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .list_certificates_detailed(None, None)
+        .await;
+    assert!(matches!(
+        detailed,
         Err(Error::UnsupportedOpenBaoCapability { .. })
     ));
 }
@@ -1436,6 +1488,73 @@ async fn raw_byte_request_sends_custom_protocol_headers() {
         .unwrap_or_else(|error| panic!("{error}"));
     response.with_secret(|bytes| assert_eq!(bytes, b"ocsp-response-der"));
 
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn pki_public_distribution_and_ocsp_are_unauthenticated_and_bounded() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        for index in 0..4 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(!request.to_ascii_lowercase().contains("x-vault-token:"));
+            match index {
+                0 => {
+                    assert!(request.starts_with("GET /v1/team/pki/ca HTTP/1.1"));
+                    assert!(request.contains("accept: application/pkix-cert"));
+                    write_bytes_response(&mut stream, "application/pkix-cert", b"ca-der");
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/team/pki/issuer/root/pem HTTP/1.1"));
+                    assert!(request.contains("accept: application/x-pem-file"));
+                    write_bytes_response(&mut stream, "application/x-pem-file", b"issuer-pem");
+                }
+                2 => {
+                    assert!(request.starts_with("POST /v1/team/pki/ocsp HTTP/1.1"));
+                    assert!(request.contains("content-type: application/ocsp-request"));
+                    assert!(request.contains("accept: application/ocsp-response"));
+                    assert!(request.ends_with("ocsp-request-der"));
+                    write_bytes_response(&mut stream, "application/ocsp-response", b"ocsp-post");
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/team/pki/ocsp/MEUCIQ HTTP/1.1"));
+                    assert!(request.contains("accept: application/ocsp-response"));
+                    write_bytes_response(&mut stream, "application/ocsp-response", b"ocsp-get");
+                }
+                _ => unreachable!(),
+            }
+        }
+    });
+
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"));
+    let pki = client
+        .pki_public("team/pki")
+        .unwrap_or_else(|error| panic!("{error}"));
+    pki.ca_der()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_secret(|value| assert_eq!(value, b"ca-der"));
+    pki.issuer_certificate("root", openbao::secrets::pki::PkiPublicFormat::Pem)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_secret(|value| assert_eq!(value, b"issuer-pem"));
+    pki.ocsp_post(b"ocsp-request-der")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_secret(|value| assert_eq!(value, b"ocsp-post"));
+    pki.ocsp_get_encoded("MEUCIQ")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_secret(|value| assert_eq!(value, b"ocsp-get"));
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
@@ -8950,7 +9069,7 @@ async fn pki_authority_crl_and_tidy_paths_are_documented() {
                     "{}"
                 }
                 5 => {
-                    assert!(request.starts_with("POST /v1/pki/crl/rotate HTTP/1.1"));
+                    assert!(request.starts_with("GET /v1/pki/crl/rotate HTTP/1.1"));
                     r#"{"data":{"success":true}}"#
                 }
                 6 => {
@@ -9521,7 +9640,7 @@ async fn pki_specialized_flows_use_documented_paths() {
                     r#"{"data":{"certificate":"issuer-signed-intermediate","serial_number":"30:01"}}"#
                 }
                 1 => {
-                    assert!(request.starts_with("POST /v1/pki/crl/rotate-delta HTTP/1.1"));
+                    assert!(request.starts_with("GET /v1/pki/crl/rotate-delta HTTP/1.1"));
                     r#"{"data":{"success":true}}"#
                 }
                 2 => {
@@ -9534,7 +9653,7 @@ async fn pki_specialized_flows_use_documented_paths() {
                 }
                 4 => {
                     assert!(request.starts_with(
-                        "LIST /v1/pki/certs/detailed?after=30%3A01&limit=10 HTTP/1.1"
+                        "LIST /v1/pki/certs/detailed?detailed=true&after=30%3A01&limit=10 HTTP/1.1"
                     ));
                     r#"{"data":{"keys":["30:03"],"key_info":{"30:03":1893456003}}}"#
                 }
@@ -9546,7 +9665,7 @@ async fn pki_specialized_flows_use_documented_paths() {
                 }
                 6 => {
                     assert!(request.starts_with("POST /v1/pki/cel/roles/web-cel HTTP/1.1"));
-                    assert!(request.contains(r#""expression":"subject.common_name.endsWith"#));
+                    assert!(request.contains(r#""cel_program":"subject.common_name.endsWith"#));
                     "{}"
                 }
                 7 => {

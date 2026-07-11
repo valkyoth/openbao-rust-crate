@@ -1725,6 +1725,42 @@ impl<State> Client<State> {
         .await
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_secret_bytes_headers_accepting<Q, K>(
+        &self,
+        scope_prefix: &'static str,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&[u8]>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<SecretVec>
+    where
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let registry_path = Self::secret_registry_path(documented_mount, actual_mount, path)?;
+        let resolved = self
+            .resolve_registered_openbao_endpoint(scope_prefix, &method, &registry_path, query)
+            .await?;
+        let normalized_query = query
+            .iter()
+            .map(|(key, value)| (key.as_ref(), value.as_ref().to_owned()))
+            .collect::<Vec<_>>();
+        self.request_bytes_headers_accepting_internal(
+            resolved.method(),
+            path,
+            &normalized_query,
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
     pub(crate) async fn request_auth_json_internal<T, B>(
         &self,
         documented_mount: &'static str,
@@ -2139,30 +2175,6 @@ impl<State> Client<State> {
     {
         self.request_json_query_accepting(method, path, &[], body, accepted_statuses)
             .await
-    }
-
-    #[cfg_attr(not(any(feature = "sys", feature = "kv2")), allow(dead_code))]
-    pub(crate) async fn request_json_headers_accepting<T, B>(
-        &self,
-        method: Method,
-        path: &str,
-        headers: &[(HeaderName, HeaderValue)],
-        body: Option<&B>,
-        accepted_statuses: &[StatusCode],
-    ) -> Result<T>
-    where
-        T: DeserializeOwned,
-        B: Serialize + ?Sized,
-    {
-        self.request_json_query_headers_accepting(
-            method,
-            path,
-            &[] as &[(&str, String)],
-            headers,
-            body,
-            accepted_statuses,
-        )
-        .await
     }
 
     pub(crate) async fn request_json_query_accepting<T, B>(
@@ -2820,7 +2832,9 @@ fn route_segments_match_at(
             ((actual_index + 1)..=actual.len()).any(|next_actual| {
                 route_segments_match_at(template, actual, template_index + 1, next_actual, memo)
             })
-        } else if expected.starts_with(':') {
+        } else if expected.starts_with(':')
+            || (expected.starts_with('<') && expected.ends_with('>'))
+        {
             actual_index < actual.len()
                 && route_segments_match_at(
                     template,
@@ -3532,6 +3546,14 @@ mod tests {
                     "kubernetes".to_owned(),
                     "role".to_owned(),
                 ],
+                &[],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+        assert!(
+            route_template_matches::<&str, &str>(
+                "/pki/ocsp/<base 64+URL encoded ocsp DER request>",
+                &["pki".to_owned(), "ocsp".to_owned(), "MEUCIQ".to_owned()],
                 &[],
             )
             .unwrap_or_else(|error| panic!("{error}"))

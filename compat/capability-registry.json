@@ -1,10 +1,10 @@
 {
   "api_snapshot_lock_sha256": "440fbaef87506b3b463689892abb9c0c741e2382676e3c92c4e21fa8cd2a3af6",
-  "contract_matrix_sha256": "8889cd6c6639caa452fcf3b41c7571f21d90d629eef2e6e45a32efe1139d55fd",
+  "contract_matrix_sha256": "f07a4aab2718d113d89a7052a9fb71ca56830ef083a6613e3bb7446d17bd175e",
   "generator_version": 1,
   "operations": [
     {
-      "disposition": "external",
+      "disposition": "typed-gated",
       "id": "openbao.acme.pki.acme.directory.87559f3155381b97",
       "method": "ACME",
       "path_template": "/pki/acme/directory",
@@ -18,7 +18,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed-gated",
       "id": "openbao.acme.pki.issuer.issuer.ref.acme.directory.4162bddaf48d0fcd",
       "method": "ACME",
       "path_template": "/pki/issuer/:issuer_ref/acme/directory",
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed-gated",
       "id": "openbao.acme.pki.issuer.issuer.ref.roles.role.acme.directory.b8c5ee9b21bdab91",
       "method": "ACME",
       "path_template": "/pki/issuer/:issuer_ref/roles/:role/acme/directory",
@@ -46,7 +46,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed-gated",
       "id": "openbao.acme.pki.roles.role.acme.directory.ca4cbe7087842163",
       "method": "ACME",
       "path_template": "/pki/roles/:role/acme/directory",
@@ -2434,7 +2434,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.ca.07ba8eeac62a04ea",
       "method": "GET",
       "path_template": "/pki/ca",
@@ -2448,7 +2448,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.ca.chain.dafbeccb0535f2d2",
       "method": "GET",
       "path_template": "/pki/ca_chain",
@@ -2462,7 +2462,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.ca.pem.022a762ba80c1b3a",
       "method": "GET",
       "path_template": "/pki/ca/pem",
@@ -2496,7 +2496,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.cert.ca.chain.6dbe4dd20724d2b7",
       "method": "GET",
       "path_template": "/pki/cert/ca_chain",
@@ -2510,7 +2510,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.cert.ca.d276cbc0d26b2d2d",
       "method": "GET",
       "path_template": "/pki/cert/ca",
@@ -2524,7 +2524,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.cert.crl.6953aadb35c40b14",
       "method": "GET",
       "path_template": "/pki/cert/crl",
@@ -2538,7 +2538,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.cert.delta.crl.26b2c2bf38e8830b",
       "method": "GET",
       "path_template": "/pki/cert/delta-crl",
@@ -2566,7 +2566,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.cert.serial.raw.675afa92a58d61e4",
       "method": "GET",
       "path_template": "/pki/cert/:serial/raw",
@@ -2580,7 +2580,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.cert.serial.raw.pem.ff04cd1d83b66153",
       "method": "GET",
       "path_template": "/pki/cert/:serial/raw/pem",
@@ -2692,7 +2692,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.crl.d6fa966fadf6f354",
       "method": "GET",
       "path_template": "/pki/crl",
@@ -2706,7 +2706,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.crl.delta.da4370f4892e5c10",
       "method": "GET",
       "path_template": "/pki/crl/delta",
@@ -2720,7 +2720,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.crl.delta.pem.5de403ff7d29cff7",
       "method": "GET",
       "path_template": "/pki/crl/delta/pem",
@@ -2734,7 +2734,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.crl.pem.ec8d4cef5aef49fc",
       "method": "GET",
       "path_template": "/pki/crl/pem",
@@ -2776,7 +2776,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.crl.delta.der.9b0a782a7585f15d",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/crl/delta/der",
@@ -2790,7 +2790,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.crl.delta.fecc27a2a5c89b0c",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/crl/delta",
@@ -2804,7 +2804,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.crl.delta.pem.89fdaa46671de23d",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/crl/delta/pem",
@@ -2818,7 +2818,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.crl.der.9b7faa2fd4ea16d7",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/crl/der",
@@ -2832,7 +2832,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.crl.fd91c2a50ad68f78",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/crl",
@@ -2846,7 +2846,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.crl.pem.58802878cfe585b9",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/crl/pem",
@@ -2860,7 +2860,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.der.68afc7414c711751",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/der",
@@ -2888,7 +2888,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.json.fa0976e98be86397",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/json",
@@ -2902,7 +2902,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.issuer.issuer.ref.pem.6ea12b5f13f674e9",
       "method": "GET",
       "path_template": "/pki/issuer/:issuer_ref/pem",
@@ -2930,7 +2930,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.pki.ocsp.base.64.url.encoded.ocsp.der.request.d9c3b3fea5936ed2",
       "method": "GET",
       "path_template": "/pki/ocsp/<base 64+URL encoded ocsp DER request>",
@@ -4693,34 +4693,6 @@
     },
     {
       "disposition": "typed",
-      "id": "openbao.list.certs.revocation.queue.cbad84ecc6a1491e",
-      "method": "LIST",
-      "path_template": "/certs/revocation-queue",
-      "ranges": [
-        {
-          "availability": "documented",
-          "evidence": "tagged-documentation",
-          "maximum": "2.5.5",
-          "minimum": "2.0.0"
-        }
-      ]
-    },
-    {
-      "disposition": "typed",
-      "id": "openbao.list.certs.revoked.79b8c7e4e4272d62",
-      "method": "LIST",
-      "path_template": "/certs/revoked",
-      "ranges": [
-        {
-          "availability": "documented",
-          "evidence": "tagged-documentation",
-          "maximum": "2.5.5",
-          "minimum": "2.0.0"
-        }
-      ]
-    },
-    {
-      "disposition": "typed",
       "id": "openbao.list.cubbyhole.path.b44039007ac6c737",
       "method": "LIST",
       "path_template": "/cubbyhole/:path",
@@ -5092,6 +5064,34 @@
           "evidence": "tagged-documentation",
           "maximum": "2.5.5",
           "minimum": "2.2.0"
+        }
+      ]
+    },
+    {
+      "disposition": "typed",
+      "id": "openbao.list.pki.certs.revocation.queue.f05bdbcfad2240e5",
+      "method": "LIST",
+      "path_template": "/pki/certs/revocation-queue",
+      "ranges": [
+        {
+          "availability": "documented",
+          "evidence": "tagged-documentation",
+          "maximum": "2.5.5",
+          "minimum": "2.0.0"
+        }
+      ]
+    },
+    {
+      "disposition": "typed",
+      "id": "openbao.list.pki.certs.revoked.ea93a49d5605b85b",
+      "method": "LIST",
+      "path_template": "/pki/certs/revoked",
+      "ranges": [
+        {
+          "availability": "documented",
+          "evidence": "tagged-documentation",
+          "maximum": "2.5.5",
+          "minimum": "2.0.0"
         }
       ]
     },
@@ -7676,7 +7676,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.post.pki.ocsp.41f72184970bae51",
       "method": "POST",
       "path_template": "/pki/ocsp",
@@ -9562,10 +9562,10 @@
   "schema": "openbao-capability-registry/v1",
   "summary": {
     "dispositions": {
-      "external": 30,
+      "external": 2,
       "omitted": 1,
-      "typed": 552,
-      "typed-gated": 80,
+      "typed": 576,
+      "typed-gated": 84,
       "unlinked": 1
     },
     "operation_count": 664,

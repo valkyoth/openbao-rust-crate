@@ -344,7 +344,11 @@ pub mod prelude {
     #[cfg(feature = "ldap")]
     pub use crate::secrets::ldap::{Ldap, LdapConfig, LdapDynamicRole, LdapStaticRole};
     #[cfg(feature = "pki")]
-    pub use crate::secrets::pki::{Pki, PkiIssueRequest, PkiRole, PkiTidyRequest, PkiTidyStatus};
+    pub use crate::secrets::pki::{
+        Pki, PkiIssueRequest, PkiPublic, PkiPublicFormat, PkiRole, PkiTidyRequest, PkiTidyStatus,
+    };
+    #[cfg(feature = "acme-protocol")]
+    pub use crate::secrets::pki::{PkiAcmeClientConfig, PkiAcmeScope};
     #[cfg(feature = "rabbitmq")]
     pub use crate::secrets::rabbitmq::{
         RabbitMq, RabbitMqConnectionConfig, RabbitMqCredentials, RabbitMqRole,

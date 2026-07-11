@@ -13,10 +13,12 @@
 - Audit status: exact inventory and field evidence are captured. Public helper,
   transport, security, and test evidence remain intentionally unverified.
 - Release target for closure: `2.0.0`.
-- Implementation progress: compatibility Commit 12 migrated KV v1, KV v2,
+- Implementation progress: compatibility Commits 12 and 13 migrated KV v1, KV v2,
   Cubbyhole, and Transit through exact-release dispatch. KV SCAN and detailed
   metadata are locally rejected before OpenBao 2.2.0; Transit CSR and
-  certificate installation are locally rejected before 2.1.0.
+  certificate installation are locally rejected before 2.1.0. PKI now uses
+  exact-release dispatch, exposes unauthenticated bounded public distribution
+  and OCSP helpers, and provides a feature-gated ACME client handoff.
 
 This is a static audit checkpoint, not a compatibility certification. Live
 OpenAPI capture and behavior tests against the locked `v2.5.5` image remain
@@ -54,8 +56,8 @@ The replacement matrix reports:
 
 | Classification | Rows |
 | --- | ---: |
-| `unverified` | 611 |
-| `confirmed-gap` | 33 |
+| `unverified` | 641 |
+| `confirmed-gap` | 3 |
 | `typed` | 0 |
 | `typed-gated` | 0 |
 | Total | 644 |
@@ -108,9 +110,8 @@ starting point; the generated matrix is the current source of truth:
 
 Compatibility Commits 10 through 12 have moved reviewed system,
 authentication, KV, Cubbyhole, and Transit rows out of the confirmed-gap set.
-The remaining `33` confirmed gaps are PKI/ACME/OCSP public protocol helpers,
-SSH public-key reads, and `sys/monitor`. No support percentage is published
-from this backlog.
+The remaining `3` confirmed gaps are SSH public-key reads and `sys/monitor`.
+No support percentage is published from this backlog.
 
 ### Exact Confirmed False-Typed Operations
 
@@ -217,7 +218,7 @@ rejected according to crate security policy.
 
 ### PKI
 
-Confirmed gaps include fields or variants for:
+Completed in compatibility Commit 13:
 
 - certificate issuance `skid`;
 - self-issued signing `require_matching_certificate_algorithms`;
@@ -228,7 +229,11 @@ Confirmed gaps include fields or variants for:
 - current tidy `revoked_safety_buffer` where not present on every relevant
   request/response type;
 - manual CRL signing `next_update` and complete extension entries;
-- complete CEL program request and response structure.
+- complete CEL program request and response structure;
+- bounded unauthenticated CA, chain, certificate, CRL, and OCSP transports;
+- feature-gated ACME directory and EAB handoff configuration;
+- exact 2.2+ detailed-certificate and 2.4+ CEL route enforcement;
+- CRL rotation aligned to the documented `GET` method.
 
 ### Identity And Database
 
