@@ -48,6 +48,17 @@ EXPECTED_VERSIONS = (
     "2.4.4", "2.5.0", "2.5.1", "2.5.2", "2.5.3", "2.5.4", "2.5.5",
 )
 METHODS = ("ACME", "DELETE", "GET", "HEAD", "LIST", "PATCH", "POST", "PUT", "SCAN")
+MULTI_SEGMENT_PLACEHOLDERS = frozenset({"path", "prefix"})
+SINGLE_SEGMENT_PLACEHOLDERS = frozenset(
+    {
+        "algorithm", "alias-identifier", "bytes", "destination", "hash_algorithm",
+        "id", "issuer_name", "issuer_ref", "key_id", "key_ref", "key_type",
+        "method_id", "migration_id", "mount_accessor", "name", "role", "role_name",
+        "secret-mount-path", "serial", "set_name", "source", "type", "username",
+        "version", "version-number",
+    }
+)
+PLACEHOLDER_NAME = re.compile(r":([A-Za-z0-9_-]{1,128})", re.ASCII)
 DISPOSITIONS = {
     "typed": "typed",
     "typed-gated": "typed-gated",
@@ -97,6 +108,11 @@ def validate_operation(method: Any, path: Any) -> tuple[str, str]:
         or any(byte < 0x20 or byte == 0x7F for byte in encoded)
     ):
         raise RegistryError("capability path template is unsafe")
+    placeholders = set(PLACEHOLDER_NAME.findall(path))
+    if placeholders - MULTI_SEGMENT_PLACEHOLDERS - SINGLE_SEGMENT_PLACEHOLDERS:
+        raise RegistryError("capability placeholder semantics require explicit review")
+    if ":*" in path:
+        raise RegistryError("capability path uses unsupported catch-all syntax")
     return method, path
 
 
@@ -479,6 +495,10 @@ def self_test() -> None:
     injection = copy.deepcopy(registry)
     injection["operations"][0]["path_template"] += "\nunsafe"
     expect_rejected("a generated-code control character", injection)
+
+    unknown_placeholder = copy.deepcopy(registry)
+    unknown_placeholder["operations"][0]["path_template"] += "/:future-semantics"
+    expect_rejected("an unreviewed placeholder semantic", unknown_placeholder)
 
     if canonical_json(build_registry()) != canonical_json(registry) or rust_output(build_registry()) != rust_output(registry):
         raise RegistryError("capability generation is not deterministic")

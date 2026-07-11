@@ -743,8 +743,13 @@ type CachedCompatibilityResult =
 
 enum CompatibilityVerificationState {
     Pending,
-    Running(Vec<Waker>),
+    Running(Vec<CompatibilityWaiter>),
     Complete(CachedCompatibilityResult),
+}
+
+struct CompatibilityWaiter {
+    token: Arc<()>,
+    waker: Waker,
 }
 
 struct ClientCompatibility {
@@ -778,6 +783,7 @@ enum CompatibilityWaitOutcome {
 
 struct CompatibilityWait<'a> {
     compatibility: &'a ClientCompatibility,
+    token: Arc<()>,
 }
 
 impl Future for CompatibilityWait<'_> {
@@ -795,18 +801,35 @@ impl Future for CompatibilityWait<'_> {
             }
             CompatibilityVerificationState::Pending => Poll::Ready(CompatibilityWaitOutcome::Retry),
             CompatibilityVerificationState::Running(waiters) => {
-                if waiters
-                    .iter()
-                    .any(|waiter| waiter.will_wake(context.waker()))
+                if let Some(waiter) = waiters
+                    .iter_mut()
+                    .find(|waiter| Arc::ptr_eq(&waiter.token, &self.token))
                 {
+                    if !waiter.waker.will_wake(context.waker()) {
+                        waiter.waker = context.waker().clone();
+                    }
                     return Poll::Pending;
                 }
                 if waiters.len() >= MAX_COMPATIBILITY_WAITERS {
                     return Poll::Ready(CompatibilityWaitOutcome::TooManyWaiters);
                 }
-                waiters.push(context.waker().clone());
+                waiters.push(CompatibilityWaiter {
+                    token: Arc::clone(&self.token),
+                    waker: context.waker().clone(),
+                });
                 Poll::Pending
             }
+        }
+    }
+}
+
+impl Drop for CompatibilityWait<'_> {
+    fn drop(&mut self) {
+        let Ok(mut state) = self.compatibility.verification.lock() else {
+            return;
+        };
+        if let CompatibilityVerificationState::Running(waiters) = &mut *state {
+            waiters.retain(|waiter| !Arc::ptr_eq(&waiter.token, &self.token));
         }
     }
 }
@@ -865,7 +888,7 @@ impl CompatibilityLeader<'_> {
         };
         self.completed = true;
         for waiter in waiters {
-            waiter.wake();
+            waiter.waker.wake();
         }
     }
 }
@@ -887,7 +910,7 @@ impl Drop for CompatibilityLeader<'_> {
             Vec::new()
         };
         for waiter in waiters {
-            waiter.wake();
+            waiter.waker.wake();
         }
     }
 }
@@ -1119,6 +1142,7 @@ impl<State> Client<State> {
                     CompatibilityVerificationState::Running(_) => {
                         CompatibilityAction::Wait(CompatibilityWait {
                             compatibility: &self.compatibility,
+                            token: Arc::new(()),
                         })
                     }
                     CompatibilityVerificationState::Pending => {
@@ -2320,10 +2344,19 @@ fn route_segments_match_at(
         actual_index == actual.len()
     } else {
         let expected = template[template_index];
-        if expected.starts_with(':') {
+        if route_placeholder_is_multi_segment(expected) {
             ((actual_index + 1)..=actual.len()).any(|next_actual| {
                 route_segments_match_at(template, actual, template_index + 1, next_actual, memo)
             })
+        } else if expected.starts_with(':') {
+            actual_index < actual.len()
+                && route_segments_match_at(
+                    template,
+                    actual,
+                    template_index + 1,
+                    actual_index + 1,
+                    memo,
+                )
         } else if actual_index == actual.len() {
             false
         } else {
@@ -2347,6 +2380,10 @@ fn route_segments_match_at(
     };
     memo[template_index][actual_index] = Some(result);
     result
+}
+
+fn route_placeholder_is_multi_segment(segment: &str) -> bool {
+    matches!(segment, ":path" | ":prefix")
 }
 
 fn is_loopback_url(url: &Url) -> bool {
@@ -3009,6 +3046,78 @@ mod tests {
             )
             .unwrap_or_else(|error| panic!("{error}"))
         );
+
+        let extra_name_segment = vec![
+            "sys".to_owned(),
+            "policies".to_owned(),
+            "password".to_owned(),
+            "team".to_owned(),
+            "app".to_owned(),
+            "generate".to_owned(),
+        ];
+        assert!(
+            !route_template_matches::<&str, &str>(
+                "/sys/policies/password/:name/generate",
+                &extra_name_segment,
+                &[],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+        let multi_segment_path = vec![
+            "sys".to_owned(),
+            "mounts".to_owned(),
+            "team".to_owned(),
+            "approle".to_owned(),
+            "tune".to_owned(),
+        ];
+        assert!(
+            route_template_matches::<&str, &str>(
+                "/sys/mounts/:path/tune",
+                &multi_segment_path,
+                &[],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+    }
+
+    #[test]
+    fn cancelled_compatibility_waiter_removes_its_registration() {
+        let compatibility = super::ClientCompatibility::new(None);
+        *compatibility
+            .verification
+            .lock()
+            .unwrap_or_else(|error| panic!("{error}")) =
+            super::CompatibilityVerificationState::Running(Vec::new());
+        let wait = super::CompatibilityWait {
+            compatibility: &compatibility,
+            token: std::sync::Arc::new(()),
+        };
+        let mut wait = Box::pin(wait);
+        let waker = std::task::Waker::noop();
+        let mut context = std::task::Context::from_waker(waker);
+        assert!(matches!(
+            core::future::Future::poll(wait.as_mut(), &mut context),
+            core::task::Poll::Pending
+        ));
+        assert_eq!(
+            match &*compatibility
+                .verification
+                .lock()
+                .unwrap_or_else(|error| panic!("{error}"))
+            {
+                super::CompatibilityVerificationState::Running(waiters) => waiters.len(),
+                _ => 0,
+            },
+            1
+        );
+        drop(wait);
+        assert!(matches!(
+            &*compatibility
+                .verification
+                .lock()
+                .unwrap_or_else(|error| panic!("{error}")),
+            super::CompatibilityVerificationState::Running(waiters) if waiters.is_empty()
+        ));
     }
 
     #[tokio::test]
