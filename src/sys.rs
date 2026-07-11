@@ -8,9 +8,9 @@ use core::{
 };
 use std::{collections::BTreeMap, net::IpAddr};
 
-#[cfg(feature = "monitor-stream")]
+#[cfg(any(feature = "monitor-stream", feature = "raft-stream"))]
 use bytes::Bytes;
-#[cfg(feature = "monitor-stream")]
+#[cfg(any(feature = "monitor-stream", feature = "raft-stream"))]
 use futures_core::Stream;
 
 use reqwest::{
@@ -36,7 +36,7 @@ use crate::{
 };
 
 const MAX_SYS_RANDOM_BYTES: u64 = 1_048_576;
-const MAX_RAFT_SNAPSHOT_BYTES: usize = 256 * 1024 * 1024;
+const MAX_RAFT_SNAPSHOT_BYTES: u64 = 256 * 1024 * 1024;
 #[cfg(feature = "monitor-stream")]
 const DEFAULT_MONITOR_FRAME_BYTES: usize = 64 * 1024;
 #[cfg(feature = "monitor-stream")]
@@ -7008,7 +7008,10 @@ impl Sys<'_, Authenticated> {
     /// Restores Integrated Storage Raft from a snapshot.
     ///
     /// Snapshot restore can replace cluster state. Use only as part of an
-    /// operator-controlled recovery ceremony.
+    /// operator-controlled recovery ceremony. This in-memory helper is also
+    /// subject to [`crate::OpenBaoConfig::max_request_bytes`]; enable
+    /// `raft-stream` and use `raft_restore_snapshot_stream` for larger
+    /// snapshots.
     pub async fn raft_restore_snapshot(&self, snapshot: &[u8]) -> Result<Empty> {
         validate_raft_snapshot(snapshot)?;
         self.client
@@ -7024,10 +7027,41 @@ impl Sys<'_, Authenticated> {
         Ok(Empty {})
     }
 
+    /// Streams an exact-length Integrated Storage Raft snapshot restore.
+    ///
+    /// This is the required API for snapshots larger than the configured
+    /// in-memory request limit. The stream fails if it yields more or fewer
+    /// bytes than `snapshot_len`, and the declared length cannot exceed 256
+    /// MiB. Available with the `raft-stream` feature.
+    #[cfg(feature = "raft-stream")]
+    pub async fn raft_restore_snapshot_stream<S, E>(
+        &self,
+        stream: S,
+        snapshot_len: u64,
+    ) -> Result<Empty>
+    where
+        S: Stream<Item = core::result::Result<Bytes, E>> + Send + Unpin + 'static,
+        E: Send + 'static,
+    {
+        validate_raft_snapshot_length(snapshot_len)?;
+        self.client
+            .request_sys_exact_stream_accepting(
+                Method::POST,
+                "sys/storage/raft/snapshot",
+                stream,
+                snapshot_len,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await?;
+        Ok(Empty {})
+    }
+
     /// Force-restores Integrated Storage Raft from a snapshot.
     ///
     /// This bypasses OpenBao's checks that auto-unseal or Shamir keys match the
-    /// snapshot. Use only after an explicit operator review.
+    /// snapshot. Use only after an explicit operator review. This in-memory
+    /// helper is subject to [`crate::OpenBaoConfig::max_request_bytes`]; use
+    /// `raft_force_restore_snapshot_stream` for larger snapshots.
     pub async fn raft_force_restore_snapshot(&self, snapshot: &[u8]) -> Result<Empty> {
         validate_raft_snapshot(snapshot)?;
         self.client
@@ -7037,6 +7071,34 @@ impl Sys<'_, Authenticated> {
                 &[],
                 None,
                 Some(snapshot),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await?;
+        Ok(Empty {})
+    }
+
+    /// Streams an exact-length forced Integrated Storage Raft restore.
+    ///
+    /// This bypasses OpenBao's key-matching checks and has the same strict
+    /// length enforcement as [`Self::raft_restore_snapshot_stream`]. Available
+    /// with the `raft-stream` feature.
+    #[cfg(feature = "raft-stream")]
+    pub async fn raft_force_restore_snapshot_stream<S, E>(
+        &self,
+        stream: S,
+        snapshot_len: u64,
+    ) -> Result<Empty>
+    where
+        S: Stream<Item = core::result::Result<Bytes, E>> + Send + Unpin + 'static,
+        E: Send + 'static,
+    {
+        validate_raft_snapshot_length(snapshot_len)?;
+        self.client
+            .request_sys_exact_stream_accepting(
+                Method::POST,
+                "sys/storage/raft/snapshot-force",
+                stream,
+                snapshot_len,
                 &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
             .await?;
@@ -7693,12 +7755,16 @@ fn validate_raft_server_id(server_id: &str) -> Result<()> {
 }
 
 fn validate_raft_snapshot(snapshot: &[u8]) -> Result<()> {
-    if snapshot.is_empty() {
+    validate_raft_snapshot_length(u64::try_from(snapshot.len()).unwrap_or(u64::MAX))
+}
+
+fn validate_raft_snapshot_length(snapshot_len: u64) -> Result<()> {
+    if snapshot_len == 0 {
         return Err(Error::InvalidParameter(
             "Raft snapshot payload must not be empty".into(),
         ));
     }
-    if snapshot.len() > MAX_RAFT_SNAPSHOT_BYTES {
+    if snapshot_len > MAX_RAFT_SNAPSHOT_BYTES {
         return Err(Error::InvalidParameter(format!(
             "Raft snapshot payload exceeds maximum allowed size of {MAX_RAFT_SNAPSHOT_BYTES} bytes"
         )));
@@ -8600,8 +8666,9 @@ mod tests {
         locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
         sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
         validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
-        validate_raft_server_id, validate_raft_snapshot, validate_rate_limit_quota_config,
-        validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
+        validate_raft_server_id, validate_raft_snapshot, validate_raft_snapshot_length,
+        validate_rate_limit_quota_config, validate_rate_limit_quota_request, validate_sha256_hex,
+        validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
     use super::{
@@ -9412,6 +9479,8 @@ mod tests {
         assert!(validate_raft_server_id("raft\n1").is_err());
         assert!(validate_raft_snapshot(b"snapshot").is_ok());
         assert!(validate_raft_snapshot(b"").is_err());
+        assert!(validate_raft_snapshot_length(super::MAX_RAFT_SNAPSHOT_BYTES).is_ok());
+        assert!(validate_raft_snapshot_length(super::MAX_RAFT_SNAPSHOT_BYTES + 1).is_err());
         assert_eq!(
             super::RaftPeerOperation::Remove.as_path_segment(),
             "remove-peer"

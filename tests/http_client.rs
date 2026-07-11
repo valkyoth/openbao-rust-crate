@@ -4,6 +4,12 @@
 #![allow(clippy::panic)]
 #![allow(deprecated)]
 
+#[cfg(feature = "raft-stream")]
+use std::{
+    collections::VecDeque,
+    pin::Pin,
+    task::{Context, Poll},
+};
 use std::{
     io::{Read, Write},
     net::TcpListener,
@@ -17,6 +23,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+#[cfg(feature = "raft-stream")]
+use bytes::Bytes;
 use openbao::{
     Authenticated, Client, Error, Method, OpenBaoCompatibilityPolicy, OpenBaoCompatibilityStatus,
     OpenBaoConfig, OpenBaoVersion, ResponseEnvelope, RetryPolicy, RetryableMethod, Unauthenticated,
@@ -24,6 +32,95 @@ use openbao::{
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "raft-stream")]
+struct TestSnapshotStream {
+    chunks: VecDeque<core::result::Result<Bytes, std::io::Error>>,
+}
+
+#[cfg(feature = "raft-stream")]
+impl Stream for TestSnapshotStream {
+    type Item = core::result::Result<Bytes, std::io::Error>;
+
+    fn poll_next(mut self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Poll::Ready(self.chunks.pop_front())
+    }
+}
+
+#[tokio::test]
+#[cfg(feature = "raft-stream")]
+async fn raft_stream_restore_enforces_length_and_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        for force in [false, true] {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let expected_path = if force {
+                "/v1/sys/storage/raft/snapshot-force"
+            } else {
+                "/v1/sys/storage/raft/snapshot"
+            };
+            assert!(request.starts_with(&format!("POST {expected_path} HTTP/1.1")));
+            assert!(request.contains("content-length: 15"));
+            assert!(request.contains("content-type: application/octet-stream"));
+            assert!(request.contains("stream-snapshot"));
+            stream
+                .write_all(
+                    b"HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n",
+                )
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    let snapshot = || TestSnapshotStream {
+        chunks: VecDeque::from([Ok(Bytes::from_static(b"stream-snapshot"))]),
+    };
+    client
+        .sys()
+        .raft_restore_snapshot_stream(snapshot(), 15)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    client
+        .sys()
+        .raft_force_restore_snapshot_stream(snapshot(), 15)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+#[cfg(all(feature = "raw-api", feature = "raw-api-acknowledged"))]
+async fn oversized_raw_byte_request_fails_before_transport() {
+    let config = OpenBaoConfig::new("https://127.0.0.1:1")
+        .and_then(|config| config.max_request_bytes(1024))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    let body = vec![0_u8; 1025];
+    let error = client
+        .request_bytes_accepting(
+            Method::POST,
+            "sys/storage/raft/snapshot",
+            &[],
+            None,
+            Some(&body),
+            &[reqwest::StatusCode::NO_CONTENT],
+        )
+        .await
+        .err()
+        .unwrap_or_else(|| panic!("oversized raw byte request was accepted"));
+    assert!(error.to_string().contains("configured client limit"));
+}
 
 #[tokio::test]
 async fn versioned_request_fields_fail_before_secret_transport() {
@@ -134,7 +231,7 @@ async fn versioned_request_fields_fail_before_secret_transport() {
     ));
 }
 
-#[cfg(feature = "monitor-stream")]
+#[cfg(any(feature = "monitor-stream", feature = "raft-stream"))]
 use futures_core::Stream;
 
 #[cfg(feature = "monitor-stream")]

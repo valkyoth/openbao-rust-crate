@@ -10,6 +10,7 @@ use core::{
 };
 use std::{
     env, fs,
+    io::{self, Write},
     net::IpAddr,
     sync::{Arc, Mutex},
 };
@@ -19,6 +20,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+#[cfg(feature = "raft-stream")]
+use reqwest::header::CONTENT_LENGTH;
 #[cfg(feature = "rustls-tls")]
 use reqwest::tls::CertificateRevocationList;
 use reqwest::{
@@ -29,6 +32,8 @@ use reqwest::{
 use sanitization::{SecretVec, SecureSanitize};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
+#[cfg(feature = "raft-stream")]
+use {bytes::Bytes, futures_core::Stream};
 
 use crate::{
     Error, Result,
@@ -44,6 +49,9 @@ use crate::{
 
 const MAX_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
 const MIN_RESPONSE_BYTES: usize = 1024;
+const DEFAULT_MAX_REQUEST_BYTES: usize = 8 * 1024 * 1024;
+const MAX_REQUEST_BYTES: usize = 32 * 1024 * 1024;
+const MIN_REQUEST_BYTES: usize = 1024;
 const MAX_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_CONNECT_TIMEOUT: Duration = Duration::from_secs(300);
 const MAX_RETRY_ATTEMPTS: usize = 8;
@@ -323,6 +331,7 @@ pub struct OpenBaoConfig {
     base_url: Url,
     timeout: Duration,
     connect_timeout: Duration,
+    max_request_bytes: usize,
     max_response_bytes: usize,
     user_agent: String,
     namespace: Option<String>,
@@ -352,6 +361,7 @@ impl OpenBaoConfig {
             base_url: url,
             timeout: Duration::from_secs(30),
             connect_timeout: Duration::from_secs(5),
+            max_request_bytes: DEFAULT_MAX_REQUEST_BYTES,
             max_response_bytes: MAX_RESPONSE_BYTES,
             user_agent: "openbao-rust-client".to_owned(),
             namespace: None,
@@ -478,6 +488,27 @@ impl OpenBaoConfig {
             ));
         }
         self.max_response_bytes = bytes;
+        Ok(self)
+    }
+
+    /// Sets the maximum encoded OpenBao request body size.
+    ///
+    /// The default is 8 MiB and the hard maximum is 32 MiB. JSON and form
+    /// bodies stop serialization at this bound, and byte bodies are rejected
+    /// before the transport copy is allocated. Large Raft restores use the
+    /// `raft-stream` feature instead of raising this in-memory limit.
+    pub fn max_request_bytes(mut self, bytes: usize) -> Result<Self> {
+        if bytes < MIN_REQUEST_BYTES {
+            return Err(Error::InvalidParameter(
+                "maximum request size must be at least 1024 bytes".into(),
+            ));
+        }
+        if bytes > MAX_REQUEST_BYTES {
+            return Err(Error::InvalidParameter(
+                "maximum request size cannot exceed 32 MiB".into(),
+            ));
+        }
+        self.max_request_bytes = bytes;
         Ok(self)
     }
 
@@ -712,6 +743,7 @@ impl fmt::Debug for OpenBaoConfig {
             .field("base_url", &self.base_url)
             .field("timeout", &self.timeout)
             .field("connect_timeout", &self.connect_timeout)
+            .field("max_request_bytes", &self.max_request_bytes)
             .field("max_response_bytes", &self.max_response_bytes)
             .field("user_agent", &self.user_agent)
             .field("has_namespace", &self.namespace.is_some())
@@ -1535,15 +1567,16 @@ impl<State> Client<State> {
                 &[] as &[(&str, &str)],
             )
             .await?;
-        let mut encoded = SecretVec::empty();
+        let mut encoded = BoundedSecretWriter::new(self.config.max_request_bytes);
         for (index, (name, value)) in fields.iter().enumerate() {
             if index != 0 {
-                encoded.extend_from_slice(b"&");
+                encoded.try_extend(b"&")?;
             }
-            append_form_component(&mut encoded, name);
-            encoded.extend_from_slice(b"=");
-            append_form_component(&mut encoded, value);
+            append_form_component(&mut encoded, name)?;
+            encoded.try_extend(b"=")?;
+            append_form_component(&mut encoded, value)?;
         }
+        let encoded = encoded.into_secret();
 
         let mut request_headers = Vec::with_capacity(headers.len() + 2);
         request_headers.extend(headers.iter().cloned());
@@ -2495,10 +2528,7 @@ impl<State> Client<State> {
             request.headers_mut().insert(name, value);
         }
         if let Some(payload) = body {
-            let encoded = SecretVec::from_vec(
-                serde_json::to_vec(payload)
-                    .map_err(|_| Error::Decode("OpenBao request could not be encoded".into()))?,
-            );
+            let encoded = encode_bounded_json(payload, self.config.max_request_bytes)?;
             let has_content_type = headers.iter().any(|(name, _value)| *name == CONTENT_TYPE);
             if !has_content_type {
                 request
@@ -2545,6 +2575,9 @@ impl<State> Client<State> {
             request.headers_mut().insert(name, value);
         }
         if let Some(body) = body {
+            if body.len() > self.config.max_request_bytes {
+                return Err(request_body_too_large());
+            }
             if !request.headers().contains_key(CONTENT_TYPE) {
                 request.headers_mut().insert(
                     CONTENT_TYPE,
@@ -2558,6 +2591,52 @@ impl<State> Client<State> {
         }
 
         execute_openbao_http_request(http, request).await
+    }
+
+    #[cfg(feature = "raft-stream")]
+    pub(crate) async fn request_sys_exact_stream_accepting<S, E>(
+        &self,
+        method: Method,
+        path: &str,
+        stream: S,
+        content_length: u64,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<()>
+    where
+        S: Stream<Item = core::result::Result<Bytes, E>> + Send + Unpin + 'static,
+        E: Send + 'static,
+    {
+        let resolved = self
+            .resolve_registered_openbao_endpoint("/sys/", &method, path, &[] as &[(&str, &str)])
+            .await?;
+        let url = self.url_for_path(path)?;
+        self.require_encrypted_transport_for_sensitive_request(&url)?;
+        let content_length_header = HeaderValue::from_str(&content_length.to_string())
+            .map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let headers = [
+            (
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/octet-stream"),
+            ),
+            (CONTENT_LENGTH, content_length_header),
+        ];
+        let body =
+            reqwest::Body::wrap_stream(ExactLengthRequestStream::new(stream, content_length));
+        let response = self
+            .send_sensitive_prevalidated_body_request(resolved.method(), url, &headers, body)
+            .await?;
+        let status = response.status();
+        if accepted_statuses.contains(&status) {
+            return Ok(());
+        }
+        let errors = read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
+            .await
+            .map(|envelope| envelope.errors)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|error| crate::error::sanitize_api_error(&error))
+            .collect();
+        Err(Error::Api { status, errors })
     }
 
     async fn send_sensitive_prevalidated_body_request(
@@ -3254,9 +3333,134 @@ fn sensitive_header_value(value: &str) -> Result<HeaderValue> {
     Ok(header)
 }
 
-fn append_form_component(output: &mut SecretVec, value: &str) {
+struct BoundedSecretWriter {
+    bytes: SecretVec,
+    limit: usize,
+    exceeded: bool,
+}
+
+impl BoundedSecretWriter {
+    fn new(limit: usize) -> Self {
+        Self {
+            bytes: SecretVec::empty(),
+            limit,
+            exceeded: false,
+        }
+    }
+
+    fn try_extend(&mut self, input: &[u8]) -> Result<()> {
+        if input.len() > self.limit.saturating_sub(self.bytes.len()) {
+            self.exceeded = true;
+            return Err(request_body_too_large());
+        }
+        self.bytes.extend_from_slice(input);
+        Ok(())
+    }
+
+    fn into_secret(self) -> SecretVec {
+        self.bytes
+    }
+}
+
+impl Write for BoundedSecretWriter {
+    fn write(&mut self, input: &[u8]) -> io::Result<usize> {
+        if self.try_extend(input).is_err() {
+            return Err(io::Error::other("OpenBao request exceeds client limit"));
+        }
+        Ok(input.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+fn encode_bounded_json<T>(payload: &T, limit: usize) -> Result<SecretVec>
+where
+    T: Serialize + ?Sized,
+{
+    let mut writer = BoundedSecretWriter::new(limit);
+    if serde_json::to_writer(&mut writer, payload).is_err() {
+        return if writer.exceeded {
+            Err(request_body_too_large())
+        } else {
+            Err(Error::Decode("OpenBao request could not be encoded".into()))
+        };
+    }
+    Ok(writer.into_secret())
+}
+
+fn request_body_too_large() -> Error {
+    Error::InvalidParameter("OpenBao request exceeds configured client limit".into())
+}
+
+fn append_form_component(output: &mut BoundedSecretWriter, value: &str) -> Result<()> {
     for character in url::form_urlencoded::byte_serialize(value.as_bytes()) {
-        output.extend_from_slice(character.as_bytes());
+        output.try_extend(character.as_bytes())?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "raft-stream")]
+struct ExactLengthRequestStream<S> {
+    inner: S,
+    remaining: u64,
+    terminal: bool,
+}
+
+#[cfg(feature = "raft-stream")]
+impl<S> ExactLengthRequestStream<S> {
+    const fn new(inner: S, content_length: u64) -> Self {
+        Self {
+            inner,
+            remaining: content_length,
+            terminal: false,
+        }
+    }
+}
+
+#[cfg(feature = "raft-stream")]
+impl<S, E> Stream for ExactLengthRequestStream<S>
+where
+    S: Stream<Item = core::result::Result<Bytes, E>> + Unpin,
+{
+    type Item = io::Result<Bytes>;
+
+    fn poll_next(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        if this.terminal {
+            return Poll::Ready(None);
+        }
+        match Pin::new(&mut this.inner).poll_next(context) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Some(Ok(chunk))) => {
+                let length = u64::try_from(chunk.len()).unwrap_or(u64::MAX);
+                if length > this.remaining {
+                    this.terminal = true;
+                    return Poll::Ready(Some(Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "OpenBao request stream exceeded declared length",
+                    ))));
+                }
+                this.remaining -= length;
+                Poll::Ready(Some(Ok(chunk)))
+            }
+            Poll::Ready(Some(Err(_error))) => {
+                this.terminal = true;
+                Poll::Ready(Some(Err(io::Error::other("OpenBao request stream failed"))))
+            }
+            Poll::Ready(None) if this.remaining == 0 => {
+                this.terminal = true;
+                Poll::Ready(None)
+            }
+            Poll::Ready(None) => {
+                this.terminal = true;
+                Poll::Ready(Some(Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "OpenBao request stream ended before declared length",
+                ))))
+            }
+        }
     }
 }
 
@@ -3273,8 +3477,18 @@ mod tests {
         thread,
     };
 
+    #[cfg(feature = "raft-stream")]
+    use bytes::Bytes;
+    #[cfg(feature = "raft-stream")]
+    use futures_core::Stream;
     use secrecy::{ExposeSecret, SecretString};
     use serde::{Serialize, Serializer};
+    #[cfg(feature = "raft-stream")]
+    use std::{
+        collections::VecDeque,
+        pin::Pin,
+        task::{Context, Poll},
+    };
 
     use crate::{Empty, Error, OpenBaoCompatibilityPolicy, OpenBaoVersion};
 
@@ -3293,6 +3507,101 @@ mod tests {
             OpenBaoVersion::new(2, 5, 5),
         )],
     );
+
+    #[cfg(feature = "raft-stream")]
+    struct TestByteStream {
+        chunks: VecDeque<core::result::Result<Bytes, ()>>,
+    }
+
+    #[cfg(feature = "raft-stream")]
+    impl Stream for TestByteStream {
+        type Item = core::result::Result<Bytes, ()>;
+
+        fn poll_next(
+            mut self: Pin<&mut Self>,
+            _context: &mut Context<'_>,
+        ) -> Poll<Option<Self::Item>> {
+            Poll::Ready(self.chunks.pop_front())
+        }
+    }
+
+    #[test]
+    fn request_body_limits_stop_json_and_form_growth() {
+        let oversized = serde_json::json!({"value": "x".repeat(2048)});
+        let error = super::encode_bounded_json(&oversized, 1024)
+            .err()
+            .unwrap_or_else(|| panic!("oversized JSON request was accepted"));
+        assert!(error.to_string().contains("configured client limit"));
+
+        let mut form = super::BoundedSecretWriter::new(1024);
+        let error = super::append_form_component(&mut form, &"/".repeat(400))
+            .err()
+            .unwrap_or_else(|| panic!("oversized form request was accepted"));
+        assert!(error.to_string().contains("configured client limit"));
+
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.max_request_bytes(1024))
+                .is_ok()
+        );
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.max_request_bytes(0))
+                .is_err()
+        );
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.max_request_bytes(super::MAX_REQUEST_BYTES + 1))
+                .is_err()
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "raft-stream")]
+    fn exact_length_request_stream_rejects_overflow_and_truncation() {
+        fn poll_stream(
+            stream: &mut super::ExactLengthRequestStream<TestByteStream>,
+        ) -> Poll<Option<std::io::Result<Bytes>>> {
+            let waker = std::task::Waker::noop();
+            let mut context = Context::from_waker(waker);
+            Pin::new(stream).poll_next(&mut context)
+        }
+
+        let mut exact = super::ExactLengthRequestStream::new(
+            TestByteStream {
+                chunks: VecDeque::from([Ok(Bytes::from_static(b"exact"))]),
+            },
+            5,
+        );
+        assert!(matches!(poll_stream(&mut exact), Poll::Ready(Some(Ok(_)))));
+        assert!(matches!(poll_stream(&mut exact), Poll::Ready(None)));
+
+        let mut overflow = super::ExactLengthRequestStream::new(
+            TestByteStream {
+                chunks: VecDeque::from([Ok(Bytes::from_static(b"too-long"))]),
+            },
+            3,
+        );
+        assert!(matches!(
+            poll_stream(&mut overflow),
+            Poll::Ready(Some(Err(_)))
+        ));
+
+        let mut truncated = super::ExactLengthRequestStream::new(
+            TestByteStream {
+                chunks: VecDeque::from([Ok(Bytes::from_static(b"short"))]),
+            },
+            8,
+        );
+        assert!(matches!(
+            poll_stream(&mut truncated),
+            Poll::Ready(Some(Ok(_)))
+        ));
+        assert!(matches!(
+            poll_stream(&mut truncated),
+            Poll::Ready(Some(Err(_)))
+        ));
+    }
 
     const CEL_ROLE_DELETE_ENDPOINT: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(
         "pki.cel.role.delete",

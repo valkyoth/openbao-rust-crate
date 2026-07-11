@@ -67,6 +67,9 @@ wherever operationally possible.
   `oidc-get-callback-acknowledged` feature.
 - CRL-bearing TLS configurations fail closed unless Rustls and a root-only
   configured trust store are selected.
+- Request bodies default to an 8 MiB global limit. JSON and form serialization
+  stop at the configured bound, byte bodies are checked before copying, and
+  large Raft restores use exact-length `raft-stream` helpers.
 - Callers that require verified server compatibility must configure an exact,
   range, or automatic strict policy. See `docs/MIGRATION_GUIDE.md` for code
   examples and the complete source migration.

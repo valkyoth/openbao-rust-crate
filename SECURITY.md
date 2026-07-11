@@ -224,6 +224,12 @@ Use `Client::try_with_token` for tokens loaded from configuration or returned
 by another service so invalid header values fail before the first request.
 Lower `OpenBaoConfig::max_response_bytes` for clients that only call
 small-response endpoints.
+Request bodies default to an 8 MiB limit and cannot be configured above 32
+MiB. JSON and form serialization stop before crossing
+`OpenBaoConfig::max_request_bytes`; byte bodies are checked before the
+unavoidable `reqwest::Body` copy. Use the `raft-stream` feature for larger
+Integrated Storage restore payloads. Its exact-length stream rejects overflow
+and truncation and avoids a second complete snapshot allocation.
 
 The `operator-ops` feature exposes production init, unseal, seal, rekey, and
 rotation APIs. It is disabled by default and fails to compile unless

@@ -408,6 +408,7 @@ openbao = { version = "2", features = ["time"] }
 | `transit-import-acknowledged` | no | Explicit acknowledgment that Transit BYOK software wrapping passes key material through software memory and OpenSSL-managed heap. |
 | `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
 | `monitor-stream` | no | Enables typed `/sys/monitor` streaming. Frames are sanitizing, line-delimited, and capped at 1 MiB; direct body polling provides consumer back-pressure and dropping the stream cancels the request. Log bytes remain untrusted and are redacted from `Debug`. Implies `sys`. |
+| `raft-stream` | no | Enables exact-length streaming restore and force-restore for Raft snapshots up to 256 MiB. Overflow, truncation, and stream errors fail the request without first copying the complete snapshot. Implies `sys`. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables strict-deadline Tokio convenience helpers such as `Sys::wait_ready` and `Sys::wait_until_unsealed`. Runtime-neutral retry-budget variants remain available without this feature. |

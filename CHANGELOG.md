@@ -51,6 +51,9 @@ All notable changes to this project are documented here.
   availability APIs. Legacy typed labels remain explicitly named as claims and
   do not become verified compatibility support without later helper and test
   linkage.
+- Added a configurable 8 MiB default request-body limit with bounded JSON and
+  form serialization, plus exact-length `raft-stream` restore helpers for
+  snapshots up to 256 MiB without a second complete snapshot allocation.
 
 ### Changed
 
