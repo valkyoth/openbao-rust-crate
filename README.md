@@ -158,10 +158,9 @@ Implemented now:
 - Generated read-only capability profiles with 666 stable, secret-free
   operation identities and complete exact-release range coverage.
 
-`1.1.2` remains the latest published stable release until the signed
-`v2.0.0-release` replacement source tag is created. The Cargo package version
-remains `2.0.0`. Feature history and release details live in
-[CHANGELOG.md](CHANGELOG.md) and [release-notes](release-notes).
+`1.1.2` remains the latest published stable release until the signed `v2.0.0`
+tag is created. Feature history and release details live in [CHANGELOG.md](CHANGELOG.md)
+and [release-notes](release-notes).
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the stable support policy.
