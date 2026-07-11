@@ -361,7 +361,10 @@ The reported version is trustworthy only to the extent that the configured TLS
 origin and any terminating proxy are trustworthy. For a load-balanced origin,
 the probe proves the version of the backend selected for that request; operators
 must keep backend versions inside the configured exact or rolling-upgrade range
-and enforce that invariant at the load balancer or deployment layer.
+and enforce that invariant at the load balancer or deployment layer. A range
+policy does not compute or enforce the capability intersection of a mixed
+cluster. Use backend affinity or restrict calls and fields to those present
+throughout the complete range until the rollout is homogeneous.
 
 Assumed mode performs no server verification and is always reported as
 `Assumed`. The unknown-newer policy requires
@@ -369,4 +372,11 @@ Assumed mode performs no server verification and is always reported as
 version as acknowledged rather than verified while selecting the newest known
 profile. It is a temporary compatibility escape hatch, not evidence that a
 newer server preserved every operation. Strict mode remains the recommended
-policy.
+policy. Assumed mode must not be used to force an older route against a newer
+server after that route has been removed.
+
+Acknowledged raw transports receive the configured version preflight but
+bypass typed operation selection. External plugin schemas are not covered by
+core-server profiles and must be pinned and tested independently. See
+[`docs/OPENBAO_VERSION_SELECTION.md`](docs/OPENBAO_VERSION_SELECTION.md) for
+the complete deployment and future-release procedure.

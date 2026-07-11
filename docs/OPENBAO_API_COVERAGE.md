@@ -18,11 +18,16 @@ Kerberos auth coverage was refreshed against official `2.5.x` documentation on
 The exact endpoint contract baseline is captured from the official OpenBao
 `v2.5.5` tagged source commit and reconciled with the locked-image OpenAPI
 snapshot. It is summarized in `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md`; the
-machine-readable source of truth is
-`docs/openbao-2.5-contract-matrix.json`, and the CSV is a review index.
-The corrected inventory contains `644` documented rows and `663` expanded
-method/path operations. It fixes the old rendered-documentation parser's
-omission of `HEAD /sys/health`.
+machine-readable extraction is `docs/openbao-2.5-contract-matrix.json`, and the
+CSV is a review index. The finalized multi-version source of truth is
+`compat/version-contract-matrix.json`.
+The tagged-source inventory contains `644` documented rows and `663` expanded
+method/path operations. The locked OpenAPI snapshot adds two documented
+operations absent from that extraction, producing 665 current `2.5.5`
+operations. The supported-release union contains 666 logical operation
+identities because one operation is historical. The version contract expands
+that union to 13,986 operation/profile cells. It also fixes the old rendered-
+documentation parser's omission of `HEAD /sys/health`.
 
 Sources:
 
@@ -73,23 +78,27 @@ Sources:
 
 ## Endpoint Matrix
 
-The `2.0.0` line replaces the former page-level classifications with an exact
-operation contract backlog:
+The `2.0.0` line replaced the former page-level classifications with an exact
+operation contract. The original extraction checkpoint recorded:
 
 - unique tagged-documentation rows: `644`;
 - expanded method/path operations: `663`;
 - exact OpenAPI-pattern matches: `611`;
 - ambiguous OpenAPI matches retained for review: `11`;
 - documented operations absent from the OpenAPI snapshot: `41`;
-- `confirmed-gap` rows: `38`;
-- `unverified` rows: `606`;
-- typed claims in the baseline: `0`.
+- `confirmed-gap` rows at extraction: `38`;
+- `unverified` rows at extraction: `606`;
+- typed claims in that baseline: `0`.
 
-The earlier `597/643` percentage is withdrawn. A row becomes `typed` or
-`typed-gated` only after every documented field has coverage and secret review,
-and a public helper plus test evidence is linked. See
-`docs/OPENBAO_2_5_ENDPOINT_MATRIX.md` for totals and
-`docs/openbao-2.5-contract-matrix.json` for the full contract.
+The earlier `597/643` percentage is withdrawn. The finalized registry contains
+666 logical operation identities across all locked releases and 13,986
+operation/profile cells. Every operation available in a supported profile is
+now `typed`, `typed-gated`, or `security-blocked`; the current `2.5.5` profile
+contains 580 typed and 85 typed-gated operations. Contract and serde evidence
+is endpoint-complete, while live tests remain an explicitly representative
+core-flow subset. See
+`docs/OPENBAO_VERSION_SUPPORT_MATRIX.md` for current totals and
+`compat/version-contract-matrix.json` for the full contract.
 
 ## Foundation
 
@@ -221,9 +230,8 @@ Support plan:
   role/generation/CRL/tidy structs, revocation/CRL management, CEL roles,
   named-issuer sign-intermediate, delta CRL rotation, and operator-gated
   sign-self-issued/cross-sign rows are implemented.
-  Unauthenticated public CA/certificate/CRL reads and OCSP responder endpoints
-  are external protocol/public-distribution
-  boundaries. Full ACME
+  Unauthenticated public CA/certificate/CRL reads and bounded raw OCSP
+  transport are typed. Full ACME
   account/order/authorization/challenge client flows are permanently external:
   use the typed ACME config, EAB, and directory URL helpers to hand off to a
   dedicated ACME client.
@@ -279,9 +287,9 @@ Support plan:
   are implemented.
 - `0.8.0`: token role write/read/list/delete, token tidy, and revoke-orphan are
   implemented.
-- `0.9.0`: token create-orphan and accessor renewal helpers are implemented,
-  completing the typed token endpoint matrix except for the documented
-  lookup-self GET/POST compatibility partial.
+- `0.9.0`: token create-orphan and accessor renewal helpers are implemented.
+  The `2.0.0` version contract represents applicable lookup-self GET and POST
+  forms as separate immutable operation variants rather than a partial claim.
 - `0.10.0`: `sys/mfa/validate` is implemented as the typed second step for
   MFA-enforced login flows, with passcodes, returned client tokens, and
   accessors handled as secret material.
@@ -384,7 +392,8 @@ Finalization work completed before `1.0.0`:
 
 The official `2.5.x` HTTP API documentation states:
 
-- all API routes are prefixed with `/v1`;
+- all API routes are prefixed with `/v1`; this is a routing namespace, not a
+  promise that operation contracts remain compatible between server releases;
 - TLS with certificate verification is expected;
 - tokens are documented through `X-Vault-Token` or `Authorization: Bearer`;
 - `X-Vault-Request: true` is used by the official SDK/CLI behavior;

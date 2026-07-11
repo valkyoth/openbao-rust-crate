@@ -12,6 +12,8 @@
   ·
   <a href="docs/API_STABILITY_AUDIT.md">API Stability</a>
   ·
+  <a href="docs/OPENBAO_VERSION_SELECTION.md">Server Versions</a>
+  ·
   <a href="docs/MIGRATION_GUIDE.md">Migration</a>
   ·
   <a href="SECURITY.md">Security</a>
@@ -212,14 +214,15 @@ The SDK tracks compatibility evidence across this supported range:
 
 ## OpenBao Test Version Support
 
-The SDK targets the OpenBao `2.5.x` API surface. Release testing is pinned to
-the newest OpenBao patch release available for that SDK line:
+The `2.0.0` line carries immutable compatibility profiles for OpenBao `2.0.0`
+through `2.5.5`. Historical wire compatibility and security endorsement are
+separate claims:
 
-| SDK release line | OpenBao version tested |
-| --- | --- |
-| `0.1.0` through `1.0.2` | OpenBao `2.5.4` |
-| `1.1.0` through `1.1.2` | OpenBao `2.5.5` |
-| `2.0.0` development branch | Live core-flow subset passed on all 21 exact releases from OpenBao `2.0.0` through `2.5.5`; immutable tagged-documentation and normalized OpenAPI evidence is also retained for each release. |
+| SDK release line | Compatibility evidence | Security posture |
+| --- | --- | --- |
+| `0.1.0` through `1.0.2` | Release-tested with OpenBao `2.5.4`. | Historical result only; not a current security endorsement. |
+| `1.1.0` through `1.1.2` | Release-tested with OpenBao `2.5.5`. | OpenBao `2.5.5` remains the newest reviewed server profile. |
+| `2.0.0` development branch | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Older profiles provide compatibility, not assurance that later security fixes are present. |
 
 The immutable source and OCI artifact inventory for those historical releases
 is committed under [`compat/`](compat/README.md), together with deterministic
@@ -235,36 +238,44 @@ The generated [exact-version support matrix](docs/OPENBAO_VERSION_SUPPORT_MATRIX
 classifies every operation/profile cell and separates contract coverage from
 representative live and serde evidence.
 The live result is explicitly a tested subset of health, mount, KV, policy,
-token, capability, and response-wrapping behavior. It is not yet a claim that
-every typed helper works on every historical release. Capability profiles
-report exact documented route presence and crate security blocks; legacy typed
-labels remain non-verifying claims until later migration commits attach helper,
-field, transport, and test evidence.
+token, capability, and response-wrapping behavior. Contract classification is
+complete, but it is not a claim that every typed helper was exercised live on
+every historical release.
 
 Inspect a profile without exposing concrete secret paths:
 
 ```rust
-use openbao::{OpenBaoCapabilityProfile, OpenBaoVersion};
+use openbao::{
+    OpenBaoCapabilityAvailability, OpenBaoCapabilityProfile, OpenBaoVersion,
+};
 
 let profile = OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 2, 0))
     .expect("2.2.0 is a locked compatibility profile");
-for status in profile.operations() {
-    let operation = status.operation();
-    println!("{} {}: {:?}", operation.method().as_str(), operation.path_template(), status.availability());
-}
+let documented = profile
+    .operations()
+    .filter(|status| {
+        status.availability() == OpenBaoCapabilityAvailability::DocumentedRoute
+    })
+    .count();
+assert_eq!(documented, 635);
 ```
 
 Select strict runtime verification for new clients:
 
 ```rust
-use openbao::{Client, OpenBaoCompatibilityPolicy, OpenBaoConfig};
+use openbao::{
+    Client, Error, OpenBaoCompatibilityPolicy, OpenBaoCompatibilityStatus,
+    OpenBaoConfig,
+};
 
 # async fn example() -> openbao::Result<()> {
 let config = OpenBaoConfig::new("https://bao.example.com")?
     .compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict());
 let client = Client::from_config(config)?;
 let report = client.compatibility_report().await?;
-println!("verified OpenBao profile: {:?}", report.profile_version());
+if report.status() != OpenBaoCompatibilityStatus::Verified {
+    return Err(Error::Internal("OpenBao profile was not verified"));
+}
 # Ok(())
 # }
 ```
@@ -275,15 +286,16 @@ the selected profile inside that client instance. `assume` is available for
 proxies that block health probing, but its report is always visibly `Assumed`.
 Unknown newer servers fail closed unless the caller constructs the separately
 acknowledged policy. Existing constructors remain unverified unless a policy is
-selected during the `2.0.0` migration.
+selected during the `2.0.0` migration. See the
+[server version selection guide](docs/OPENBAO_VERSION_SELECTION.md) for exact,
+range, mixed-cluster, assumed, and unknown-newer behavior.
 
 The `2.0.0` typed dispatcher selects one immutable operation variant before
 body serialization, derives its HTTP method from the registry, and validates
 the concrete path and required query selectors against the reviewed route
 template. It never probes an alternate route after a 404, 405, transport, or
-decode failure. Endpoint families move onto this dispatcher in the ordered
-compatibility commits, so generated route presence is not yet a claim that
-every existing helper has completed version-aware migration.
+decode failure. All finalized operation identities are typed, typed-gated, or
+security-blocked; the generated matrix contains no planning disposition.
 
 Acknowledged raw JSON and byte APIs deliberately bypass capability selection.
 They still use the configured version policy preflight, TLS, path validation,
@@ -300,7 +312,7 @@ infrastructure failure, not a passing compatibility result.
 
 ```toml
 [dependencies]
-openbao = "1"
+openbao = "2"
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
 ```
@@ -345,7 +357,7 @@ The crate defaults to the common SDK surface:
 
 ```toml
 [dependencies]
-openbao = { version = "1", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
+openbao = { version = "2", features = ["approle", "cert-auth", "cubbyhole", "database", "jwt-auth", "kubernetes-auth", "ldap-auth", "kubernetes", "userpass", "token", "kv1", "kv2", "pki", "ssh", "totp", "transit", "sys", "rustls-tls"] }
 ```
 
 For a smaller build, disable defaults and opt into only what the application
@@ -353,7 +365,7 @@ uses:
 
 ```toml
 [dependencies]
-openbao = { version = "1", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
+openbao = { version = "2", default-features = false, features = ["kv2", "sys", "rustls-tls"] }
 ```
 
 Optional RFC3339 timestamp parsing is available behind the lightweight `time`
@@ -361,7 +373,7 @@ feature:
 
 ```toml
 [dependencies]
-openbao = { version = "1", features = ["time"] }
+openbao = { version = "2", features = ["time"] }
 ```
 
 ## Features
@@ -422,15 +434,21 @@ openbao = { version = "1", features = ["time"] }
 
 ## Support Matrix
 
-The exact OpenBao `2.5.5` contract backlog is summarized in
-[docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md),
-with its machine-readable source of truth in
+The generated
+[exact-version support matrix](docs/OPENBAO_VERSION_SUPPORT_MATRIX.md) covers
+666 logical operation identities across 21 locked OpenBao releases and 13,986
+operation/profile cells. Every operation documented for a supported profile is
+typed, typed-gated, or security-blocked. OpenBao `2.5.5` has 665 documented
+operations: 580 typed and 85 typed-gated.
+
+The original exact-source extraction remains available in
+[docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md) and
 [`docs/openbao-2.5-contract-matrix.json`](docs/openbao-2.5-contract-matrix.json).
-It contains `644` unique tagged-documentation rows and `663` expanded
-method/path operations. The earlier `597/643` coverage claim has been withdrawn:
-the exact baseline intentionally marks all rows `unverified` or
-`confirmed-gap` until public helper, field, transport, security, and test
-evidence is linked. It is an implementation backlog, not a support percentage.
+Its 644 tagged-documentation rows and 663 expanded operations are historical
+audit inputs, not the final support report. Two additional operations came from
+the locked OpenAPI evidence, and one operation exists only in an older profile.
+Classified contract coverage is complete; live integration is the documented
+representative core-flow subset, not 665 endpoint executions per release.
 Version-dependent typed request fields and their exact introduction profiles
 are documented in
 [docs/OPENBAO_REQUEST_FIELD_COMPATIBILITY.md](docs/OPENBAO_REQUEST_FIELD_COMPATIBILITY.md).

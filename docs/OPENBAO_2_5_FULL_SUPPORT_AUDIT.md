@@ -10,8 +10,8 @@
   rows, and `663` expanded method/path operations.
 - The old rendered-documentation matrix omitted `HEAD /sys/health`; the exact
   tagged-source capture corrects that inventory defect.
-- Audit status: exact inventory and field evidence are captured. Public helper,
-  transport, security, and test evidence remain intentionally unverified.
+- Audit status: complete. The initial extraction remains an immutable audit
+  input; the generated compatibility registry is the current result.
 - Release target for closure: `2.0.0`.
 - Implementation progress: compatibility Commits 12 through 14 migrated KV v1, KV v2,
   Cubbyhole, and Transit through exact-release dispatch. KV SCAN and detailed
@@ -21,11 +21,12 @@
   and OCSP helpers, and provides a feature-gated ACME client handoff. Identity,
   database, SSH, LDAP, Kubernetes, RabbitMQ, and TOTP now use exact-release
   dispatch; SSH public-key reads and reviewed built-in database connection
-  option types are complete.
+  option types are complete. Commits 15 through 17 finalized authentication,
+  system, capability, request-field, response-fixture, and contract evidence.
 
-This is a static audit checkpoint, not a compatibility certification. Live
-OpenAPI capture and behavior tests against the locked `v2.5.5` image remain
-required by `OPENBAO_VERSION_COMPATIBILITY_PLAN.md`.
+The static extraction alone is not a compatibility certification. The final
+result combines exact tagged documentation, locked OpenAPI, reviewed helper and
+field links, response fixtures, and representative live core-flow evidence.
 
 ## Meaning Of 100 Percent
 
@@ -53,24 +54,29 @@ database servers, browser rendering, DNS challenge provisioning, or third-party
 identity-provider behavior. It does require a safe first-class crate boundary
 for every OpenBao endpoint participating in those workflows.
 
-## Current Matrix Backlog
+## Final Matrix Result
 
-The replacement matrix reports:
+The `2.5.5` profile reports:
 
-| Classification | Rows |
+| Classification | Operations |
 | --- | ---: |
-| `unverified` | 644 |
-| `confirmed-gap` | 0 |
-| `typed` | 0 |
-| `typed-gated` | 0 |
-| Total | 644 |
+| `typed` | 580 |
+| `typed-gated` | 85 |
+| `security-blocked` | 0 |
+| Total documented | 665 |
 
-The machine-readable source of truth is
-`docs/openbao-2.5-contract-matrix.json`. It records exact tagged source,
+The complete historical union contains 666 operation identities. Across 21
+locked releases, the generated contract contains 13,986 operation/profile
+cells with no unverified or confirmed-gap state.
+
+The original extraction source is `docs/openbao-2.5-contract-matrix.json`. It
+records exact tagged source,
 documented parameters, sampled response fields, normalized OpenAPI evidence,
 transport/security review state, crate helper/type links, and test evidence.
-The CSV is only a review index. No page or module prefix can confer typed
-status.
+The finalized machine-readable source is
+`compat/version-contract-matrix.json`; the generated user-facing report is
+`docs/OPENBAO_VERSION_SUPPORT_MATRIX.md`. No page or module prefix confers
+typed status.
 
 ## Previously Non-Strict Rows
 
@@ -111,12 +117,11 @@ starting point; the generated matrix is the current source of truth:
 | Key rotation | 11 | Legacy keyring alias, root rotation, automatic rotation config read/write aliases, verification, and backup operations are absent. |
 | PKI CRL rotation | 2 | The docs specify GET for CRL and delta-CRL rotation; current helpers send POST. |
 
-Compatibility Commits 10 through 14A have moved reviewed system,
-authentication, KV, Cubbyhole, Transit, PKI, Identity, and remaining engine
-rows out of the confirmed-gap set. There are no remaining confirmed gaps.
-The 644 rows remain `unverified` until Commit 18 links exact helper, field,
-security, transport, and test evidence; no support percentage is published
-from this backlog.
+Compatibility Commits 10 through 17 moved reviewed system, authentication, KV,
+Cubbyhole, Transit, PKI, Identity, and remaining engine rows out of the
+confirmed-gap and legacy-claim sets. There are no remaining confirmed gaps or
+unverified generated dispositions. The generated percentage means classified
+contract coverage only and is kept separate from representative live evidence.
 
 ### Exact Confirmed False-Typed Operations
 
@@ -302,10 +307,10 @@ Every typed status must be derived from explicit operation evidence.
 
 ## Exit Criteria
 
-The `2.5.5` closure is complete only when:
+The `2.5.5` closure is complete:
 
-- all 644 rows and all 663 expanded operations are mechanically classified as
-  `typed` or `typed-gated`;
+- all 665 current operations and the 666-operation historical union are
+  mechanically classified as `typed`, `typed-gated`, or `security-blocked`;
 - all documented parameters and response fields have explicit coverage;
 - generated coverage cannot claim a helper that is absent from the public API;
 - mock, fixture, and live evidence exists at the level promised by each row;

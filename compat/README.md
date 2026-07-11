@@ -6,6 +6,10 @@ themselves certify live behavior or server security. Version-locked behavior
 tests, capability profiles, and security support decisions land in later
 checkpoints.
 
+Application-facing selection guidance, including exact policies, rolling
+ranges, mixed clusters, assumed mode, and future-release onboarding, is in
+[`docs/OPENBAO_VERSION_SELECTION.md`](../docs/OPENBAO_VERSION_SELECTION.md).
+
 ## Release Lock
 
 `releases.lock.json` records the 21 published OpenBao releases selected for the

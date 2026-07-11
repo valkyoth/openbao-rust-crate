@@ -1,13 +1,12 @@
 # API Stability Audit
 
-This document records the API stability audit for the stable `1.x`
-release. The goal is to make the public API commitments explicit while keeping
-documented safety boundaries for endpoints that remain raw, external, partial,
-gated, or rejected.
+This document records the historical stable `1.x` API audit and its `2.0.0`
+finalization. The goal is to make the public API commitments and security
+boundaries explicit.
 
 ## Status
 
-- Release line: `1.x`
+- Release line: `1.x` historical audit; `2.0.0` finalization
 - Started: 2026-06-03
 - Audit status: stable endpoint API frozen at `1.0.0`; `1.0.1` and `1.0.2`
   are compatible maintenance patches, and `1.1.0` is a reviewed
@@ -18,12 +17,16 @@ gated, or rejected.
 - Planning assumption: after `1.0.0`, assume stable maintenance, security
   fixes, OpenBao compatibility fixes, documentation corrections, and reviewed
   security-focused minor migrations.
-- Next major boundary: `2.0.0` combines the multi-version OpenBao compatibility
-  work with intentionally breaking raw-transport, JWT/OIDC secret-metadata,
-  and base-URL hardening. See the migration guide before updating from 1.x.
-- Coverage target: no OpenBao `2.5.x` endpoint row remains classified as
-  `planned` or `decision`; not every row must become first-class typed if a
-  raw, external, partial, gated, or rejected boundary is safer.
+- Major boundary: `2.0.0` combines multi-version OpenBao compatibility with
+  intentionally breaking raw-transport, JWT/OIDC secret-metadata, and base-URL
+  hardening. See the migration guide before updating from 1.x.
+- Final coverage: the compatibility union has 666 logical operation identities
+  and 13,986 operation/profile cells. All operations available in supported
+  profiles are typed, typed-gated, or security-blocked. The current `2.5.5`
+  profile has 665 documented operations: 580 typed and 85 typed-gated.
+- Evidence boundary: contract and serde evidence is complete; live integration
+  coverage is representative rather than an endpoint-by-endpoint execution
+  claim.
 
 ## Stabilization Rules
 
@@ -62,7 +65,7 @@ and now have current API or documentation coverage:
 
 | Area | Current Posture | Planned Decision |
 | --- | --- | --- |
-| Client construction | Typestate client, env construction, shared client, strict TLS defaults, and `2.0.0` opt-in exact/range/automatic/assumed server-version policies with per-client verification caching. The internal typed dispatcher selects one immutable operation variant and validates method/path/query shape before serialization. | Existing constructors remain offline and unverified for migration compatibility; strict verification is the recommended `2.0.0` path. Assumed and acknowledged-newer reports must never be presented as verified. Endpoint-family migrations attach helpers to dispatcher specifications in subsequent checkpoints. |
+| Client construction | Typestate client, env construction, shared client, strict TLS defaults, and `2.0.0` opt-in exact/range/automatic/assumed server-version policies with per-client verification caching. Every typed helper uses the immutable operation dispatcher, which selects and validates method/path/query shape before serialization. | Existing constructors remain offline and unverified for migration compatibility; strict verification is recommended. A range probe observes one backend, not a mixed cluster's capability intersection. Assumed and acknowledged-newer reports must never be presented as verified. |
 | Error handling | Sanitized API errors and common predicates, including typed unsupported-version and unsupported-capability failures carrying only stable version values and secret-free logical endpoint IDs. | Keep helpers value-free and do not expose raw response bodies, concrete paths, query values, URLs, or credentials. |
 | Retry/backoff | `RetryPolicy`, `RetryableMethod`, and `Client::request_json_with_retry` provide explicit exponential backoff with bounded jitter for caller-approved idempotent raw JSON requests. Retryable methods are limited to GET, HEAD, and OpenBao LIST. | Keep default typed helpers single-shot to avoid retrying non-idempotent writes by accident. Do not add global/background retry middleware before `1.0.0`. |
 | Token lifecycle | Typed create/create-orphan, lookup, accessor lookup/list, renew/renew-accessor, revoke/revoke-accessor, role, tidy helpers, plus `RenewalHint` timing guidance. | Reject background auto-renewal for stable scope. No remaining token endpoint decision rows. |
@@ -72,9 +75,9 @@ and now have current API or documentation coverage:
 | Admin bootstrap | Common service bootstrap and preview now include KV v2/Transit/PKI/database/SSH mount convergence, Transit keys, ACL policies, KV v2 values, PKI/database/SSH/AppRole role convergence, Identity entity/group convergence, and explicit credential issuance. | Reject PKI CA setup, database connection configuration, SSH CA setup, and KV v1 convergence for stable bootstrap scope. |
 | Custom plugins | Raw JSON transport and typed wrapper docs exist; `PluginMount`, public path validators, and bounded string-list helpers provide the same safety rails used internally. | Reject generic `Plugin`/`SecretEngine` traits, codegen, and macro approaches for stable scope; plugin schemas are deployment-specific. |
 | Identity | Entity/group/alias lifecycle, lookup, merge, OIDC admin/discovery/token/introspection, MFA method/login-enforcement management, and MFA login validation are implemented. | `0.10.0` resolves the Identity OIDC/MFA implementation scope; keep named-provider `/authorize`, `/token`, and `/userinfo` browser protocol flows external. |
-| PKI | Core CA, issuer/key, role, tidy, ACME config/EAB, issue/sign/revoke helpers, default issuer/key config, named-issuer issue/sign, root rotate/replace, key generation, revoke-with-key, cluster/auto-tidy config, current-doc role/generation/CRL/tidy fields, revocation/CRL management, CEL roles and CEL issue/sign, named-issuer sign-intermediate, delta CRL rotation, operator-gated sign-verbatim/sign-self-issued/cross-sign/sign-revocation-list helpers, and operator-gated default root deletion with explicit confirmation are typed. | `0.12.0` resolves the Tier 1 PKI multi-issuer and authority lifecycle scope, and `0.13.0` resolves the Tier 2 PKI specialized-flow scope. `DELETE /pki/root` remains resolved as `Pki::delete_root(PkiRootDeletion::confirm())`. Unauthenticated public CA/cert/CRL reads plus OCSP remain external protocol/public-distribution endpoints, and full ACME account/order/authorization/challenge flows stay external. |
+| PKI | Core CA, issuer/key, role, tidy, ACME administration, issue/sign/revoke, public CA/certificate/CRL reads, raw OCSP transport, authority lifecycle, CEL, and gated destructive/signing operations are typed. | `DELETE /pki/root` requires `PkiRootDeletion::confirm()`. ACME account/order/authorization/challenge state machines remain a dedicated ACME client's responsibility, while all OpenBao HTTP operation identities have typed or typed-gated transport coverage. |
 | Transit | Lifecycle, batch, byte, signing, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate-install helpers are implemented. Import wrappers accept pre-wrapped `SecretString` ciphertext or public-key-only import material with non-empty constructors and redacted `Debug`; raw private or symmetric key bytes stay outside default endpoint wrappers. The optional `transit-import` helper performs AES-KWP/RSA-OAEP software wrapping behind feature-gated `openssl` and `aes-kw` dependencies. | Keep the helper documented as an ergonomic software helper with no OpenBao, HSM, FIPS, certification, or post-quantum security claims. |
-| System backend | Version-aware sys coverage includes modern ACL, lease, auth-mount, and rotation APIs. Monitor streaming is omitted; internal UI/counter/request/router APIs are typed only behind unstable operator gates. | Operator ceremonies stay behind `operator-ops` plus `operator-ops-acknowledged`; unstable internals additionally require `unstable-internal-ops-acknowledged`. Generated-token decoding is local because OpenBao documents no HTTP decode endpoint. |
+| System backend | Version-aware sys coverage includes ACL, lease, auth-mount, rotation, bounded monitor streaming, and gated internal diagnostics. | Operator ceremonies stay behind `operator-ops` plus `operator-ops-acknowledged`; unstable internals additionally require `unstable-internal-ops-acknowledged`. Generated-token decoding is local because OpenBao documents no HTTP decode endpoint. |
 | Tracing | Optional `tracing` feature instruments the shared HTTP dispatch point with method, validated path, and status only. Paths can contain opaque operational IDs such as lease or entity identifiers, so debug traces are operationally sensitive even though bodies, tokens, and namespaces are not logged. | Reject OpenTelemetry SDK dependencies and custom request hooks for stable scope. Defer W3C `traceparent` propagation past `1.0.0` unless a concrete OpenBao-side correlation use case emerges. |
 | Seal watcher | Readiness polling, seal status, runtime-neutral retry-budget helpers, and strict-overall-deadline `tokio-helpers`-gated `wait_ready` and `wait_until_unsealed` helpers exist. | Reject request-level seal back-pressure because retry, queueing, and concurrency policy belong to the application or middleware layer. |
 | Response wrapping | Sys wrapping lookup/wrap/unwrap/rewrap helpers exist, and `Client::wrapping` provides `WrappingContext` plus `WrappedResponse<T>` for ordinary typed JSON response wrapping with redacted wrapping tokens. | Per-engine wrapped method duplication is rejected; callers use the wrapping context and keep delivery/recipient policy outside the SDK. |

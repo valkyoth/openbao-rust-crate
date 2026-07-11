@@ -816,6 +816,9 @@ Pentest focus:
 
 Suggested commit title: `Document OpenBao server version selection`
 
+Status: implemented. Pentest this commit from
+`ff79f9e7015e3cc54df2d1b9608ee046ce3f0476` to the resulting Commit 18 hash.
+
 Goal:
 
 - update README, API coverage, API stability, migration, security, examples,
@@ -933,8 +936,8 @@ included OpenBao release, receive the correct reviewed endpoint behavior for
 that exact profile, and get a local typed error for unavailable behavior. A
 future profile must be append-only and must not change the endpoint contract,
 test evidence, or generated hash of an older profile. For OpenBao `2.5.5`, all
-644 documented rows, 663 expanded method/path operations, and their documented
-request/response surfaces must be implemented as typed or appropriately gated
-crate APIs; an
+665 current operations, the 666-operation historical union, and their
+documented request/response surfaces must be implemented as typed,
+appropriately gated, or security-blocked crate APIs; an
 external protocol handoff or generic raw request alone does not satisfy the
 full-support target.

@@ -1,8 +1,10 @@
 # Release Plan
 
 This plan starts at `0.1.0` and reached `1.0.0`, the first stable release.
-The exact OpenBao `2.5.5` inventory contains `644` unique documented rows and
-`663` expanded method/path operations. The pre-`1.0` matrix's `597/643`
+The tagged OpenBao `2.5.5` inventory contains `644` unique documented rows and
+`663` expanded method/path operations; two locked-OpenAPI additions produce
+665 current operations, and the historical release union contains 666 logical
+operation identities. The pre-`1.0` matrix's `597/643`
 coverage claim has been withdrawn: the exact-source audit found an omitted
 HEAD operation and page-level classifications without helper, field, security,
 transport, or test evidence. The replacement baseline has `79`
@@ -69,9 +71,9 @@ Every release:
 
 - `1.0.0` used a narrower definition of complete support: every endpoint row
   was addressed, but protocol handoffs and explicit rejections were accepted.
-- The `2.0.0` goal supersedes that boundary for OpenBao `2.5.5`. All 644
-  documented rows, 663 expanded operations, and their request/response
-  contracts must be first-class typed or typed-gated coverage. Generic raw
+- The `2.0.0` goal supersedes that boundary for OpenBao `2.5.5`. All 665
+  current operations and their request/response contracts must be first-class
+  typed, typed-gated, or explicitly security-blocked coverage. Generic raw
   requests, URL-only handoffs, `partial`, `external`, and `rejected`
   classifications do not count.
 - Compatibility with OpenBao `2.0.0` through `2.5.5` is version-specific and
@@ -667,8 +669,9 @@ Stop criteria:
 
 - immutable compatibility profiles cover every listed stable OpenBao release
   from `2.0.0` through `2.5.5`;
-- the corrected OpenBao `2.5.5` matrix covers all 644 rows and 663 expanded
-  operations as typed or typed-gated, with zero unverified or confirmed-gap
+- the corrected OpenBao `2.5.5` matrix covers all 665 current operations and
+  the 666-operation historical union as typed, typed-gated, or explicitly
+  security-blocked, with zero unverified or confirmed-gap
   rows and explicit request/response field evidence;
 - exact and range requirements, strict detection, explicit assumed mode, and
   acknowledged unknown-newer behavior are implemented and documented; verified

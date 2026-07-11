@@ -1,9 +1,11 @@
 # Migration Guide
 
-This guide tracks migrations between stable OpenBao SDK releases. The endpoint
-matrix now has zero `planned` and zero
-`decision` rows; remaining non-typed rows are intentionally documented as raw,
-external, partial, gated, or rejected boundaries.
+This guide tracks migrations between stable OpenBao SDK releases. The `2.0.0`
+contract inventory contains 666 logical operation identities across the
+supported OpenBao release union. Every operation available in a supported
+profile is classified as typed, typed-gated, or security-blocked; there are no
+planned, decision, partial, raw, external, rejected, or unlinked generated
+contract dispositions.
 
 ## From `openbao` 1.1.2 To 2.0.0
 
@@ -104,12 +106,27 @@ blocks it, but reports are never marked verified. Unknown-newer operation
 requires an explicit `UnknownNewerOpenBaoAcknowledgement` and should be used
 only until the new release receives a locked profile.
 
-Typed helpers are being moved onto immutable version-aware dispatch during the
-`2.0.0` checkpoint series. Unsupported typed operations fail locally before
-body serialization and do not fall back to another route after a server error.
-Raw APIs remain caller-versioned escape hatches: selecting a compatibility
-policy does not make an arbitrary raw method/path compatible with the detected
-server.
+Typed helpers now use immutable version-aware dispatch. Unsupported operations
+fail locally before body serialization and do not fall back to another route
+after a server error. A range probe verifies the one backend that answered the
+health request; it does not compute or enforce the capability intersection of
+a mixed-version cluster. During rolling upgrades, use backend affinity or call
+only operations available throughout the configured range.
+
+Assumed mode does not probe the server. Unknown-newer mode verifies the
+reported version but dispatches through the newest known profile, so neither
+mode is evidence that every selected route exists. Raw APIs and external
+plugins remain caller-versioned boundaries: a compatibility policy cannot
+make an arbitrary method/path or deployment-specific plugin schema compatible.
+See [OpenBao Server Version Selection](OPENBAO_VERSION_SELECTION.md) for the
+full selection, reporting, mixed-cluster, and future-release procedure.
+
+The public `OpenBaoOperationDisposition` enum was also finalized for `2.0.0`.
+Replace the former `LegacyTypedClaim` and `LegacyTypedGatedClaim` variants with
+`Typed` and `TypedGated`. The obsolete `ExternalBoundary`, `PartialLegacyClaim`,
+`OmittedLegacyClaim`, and `UnlinkedHistorical` states no longer exist in the
+generated contract; unavailable operations are represented by the profile
+rather than a permissive fallback classification.
 
 ## From `openbao` 1.0.2 To 1.1.0
 

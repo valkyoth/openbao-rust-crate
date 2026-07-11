@@ -11,7 +11,7 @@ explicitly acknowledge that a generic request can bypass operation-specific
 typed validation and feature gates:
 
 ```toml
-openbao = { version = "1", features = ["raw-api", "raw-api-acknowledged"] }
+openbao = { version = "2", features = ["raw-api", "raw-api-acknowledged"] }
 ```
 
 Recommended pattern:

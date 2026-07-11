@@ -45,6 +45,18 @@
 //! plaintext and other request-body secret material as process-resident during
 //! the request lifecycle.
 //!
+//! OpenBao's `/v1` prefix is a routing namespace, not a server-version
+//! compatibility guarantee. New deployments should configure
+//! [`OpenBaoCompatibilityPolicy::automatic_strict`], or use an exact policy
+//! for a pinned server release. Exact, range, and strict policies perform one
+//! public, token-free, namespace-free health probe and cache the result per
+//! client. A range verifies only the backend that answered that probe; callers
+//! must provide backend affinity or restrict mixed clusters to the capability
+//! intersection for the entire range. Assumed and acknowledged-unknown-newer
+//! reports are deliberately not [`OpenBaoCompatibilityStatus::Verified`].
+//! Raw transports bypass typed capability selection, and core profiles cannot
+//! establish compatibility for deployment-specific external plugins.
+//!
 //! With the optional `tracing` feature, request spans include HTTP method,
 //! status, and a redacted URL path shape. Bodies, tokens, and namespaces are
 //! not logged, but even path shapes can reveal operational activity. Deployments
