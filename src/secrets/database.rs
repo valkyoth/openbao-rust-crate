@@ -388,7 +388,7 @@ pub struct PostgreSqlConnectionOptions {
     /// Templated PostgreSQL DSN.
     ///
     /// The DSN must explicitly select `sslmode=verify-full`. Missing, empty,
-    /// duplicated-with-a-final-weaker-value, service-file-only, or weaker TLS
+    /// duplicated, service-file-only, unsupported URI syntax, or weaker TLS
     /// modes require the `insecure-database-tls-acknowledged` Cargo feature.
     /// Both URI query parameters and PostgreSQL keyword/value DSNs are checked.
     pub connection_url: SecretString,
@@ -439,10 +439,12 @@ impl fmt::Debug for PostgreSqlConnectionOptions {
 
 fn postgres_dsn_uses_verify_full(dsn: &str) -> bool {
     if postgres_dsn_uses_uri_syntax(dsn) {
-        postgres_uri_query_sslmode(dsn) == PostgresTlsPosture::VerifyFull
-    } else {
-        postgres_keyword_dsn_sslmode(dsn) == PostgresTlsPosture::VerifyFull
+        return postgres_uri_query_sslmode(dsn) == PostgresTlsPosture::VerifyFull;
     }
+    if postgres_dsn_has_unsupported_uri_like_prefix(dsn) {
+        return false;
+    }
+    postgres_keyword_dsn_sslmode(dsn) == PostgresTlsPosture::VerifyFull
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -452,10 +454,19 @@ enum PostgresTlsPosture {
 }
 
 fn postgres_dsn_uses_uri_syntax(dsn: &str) -> bool {
-    let Some((scheme, _)) = dsn.split_once(':') else {
+    dsn.starts_with("postgresql://") || dsn.starts_with("postgres://")
+}
+
+fn postgres_dsn_has_unsupported_uri_like_prefix(dsn: &str) -> bool {
+    let Some(first) = dsn.split_ascii_whitespace().next() else {
         return false;
     };
-    scheme.eq_ignore_ascii_case("postgresql") || scheme.eq_ignore_ascii_case("postgres")
+    let Some(scheme_separator) = first.find("://") else {
+        return false;
+    };
+    first
+        .find('=')
+        .is_none_or(|assignment| scheme_separator < assignment)
 }
 
 fn postgres_uri_query_sslmode(dsn: &str) -> PostgresTlsPosture {
@@ -466,11 +477,16 @@ fn postgres_uri_query_sslmode(dsn: &str) -> PostgresTlsPosture {
         .split_once('#')
         .map_or(query_and_fragment, |(query, _)| query);
     let mut posture = PostgresTlsPosture::MissingOrInsecure;
+    let mut found = false;
     for parameter in query.split('&') {
         let Some((key, value)) = parameter.split_once('=') else {
             continue;
         };
         if percent_decoded_ascii_eq(key, b"sslmode") {
+            if found {
+                return PostgresTlsPosture::MissingOrInsecure;
+            }
+            found = true;
             posture = if percent_decoded_ascii_eq(value, b"verify-full") {
                 PostgresTlsPosture::VerifyFull
             } else {
@@ -485,6 +501,7 @@ fn postgres_keyword_dsn_sslmode(dsn: &str) -> PostgresTlsPosture {
     let bytes = dsn.as_bytes();
     let mut offset = 0_usize;
     let mut posture = PostgresTlsPosture::MissingOrInsecure;
+    let mut found = false;
     while offset < bytes.len() {
         while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
             offset += 1;
@@ -539,6 +556,10 @@ fn postgres_keyword_dsn_sslmode(dsn: &str) -> PostgresTlsPosture {
         }
 
         if ascii_eq_ignore_case(&bytes[key_start..key_end], b"sslmode") {
+            if found {
+                return PostgresTlsPosture::MissingOrInsecure;
+            }
+            found = true;
             posture = if escaped_ascii_eq(&bytes[value_start..value_end], b"verify-full") {
                 PostgresTlsPosture::VerifyFull
             } else {
@@ -1933,10 +1954,15 @@ mod tests {
             "postgresql://db.example/openbao?sslmode=disable",
             "postgresql://db.example/openbao?sslmode=",
             "postgresql://db.example/openbao?sslmode=verify-full&sslmode=require",
+            "postgresql://db.example/openbao?sslmode=require&sslmode=verify-full",
+            "postgresql://db.example/openbao?sslmode=verify-full&%73slmode=verify-full",
             "postgresql://db.example/openbao?service=production",
+            "POSTGRESQL://db.example/openbao?sslmode=verify-full",
+            "mysql://db.example/openbao?sslmode=verify-full",
             "host=db.example dbname=openbao",
             "host=db.example sslmode=disable dbname=openbao",
             "host=db.example sslmode=verify-full sslmode=prefer",
+            "host=db.example sslmode=prefer sslmode=verify-full",
             "service=production",
         ] {
             assert!(
@@ -1947,9 +1973,8 @@ mod tests {
 
         for dsn in [
             "postgresql://db.example/openbao?sslmode=verify-full",
-            "POSTGRESQL://db.example/openbao?SSLMode=VERIFY-FULL",
+            "postgres://db.example/openbao?SSLMode=VERIFY-FULL",
             "postgresql://db.example/openbao?%73slmode=verify%2Dfull",
-            "postgresql://db.example/openbao?sslmode=require&sslmode=verify-full",
             "host=db.example sslmode=verify-full dbname=openbao",
             "host=db.example sslmode = 'VERIFY-FULL' dbname=openbao",
             r"host=db.example sslmode='verify\-full' dbname=openbao",
