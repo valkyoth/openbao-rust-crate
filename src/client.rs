@@ -33,8 +33,10 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use crate::{
     Error, Result,
     compatibility::{
-        OpenBaoCompatibilityFailure, OpenBaoCompatibilityPolicy, OpenBaoCompatibilityReport,
-        OpenBaoVersion,
+        OpenBaoCapabilityAvailability, OpenBaoCompatibilityFailure, OpenBaoCompatibilityPolicy,
+        OpenBaoCompatibilityReport, OpenBaoEndpointSpec, OpenBaoHttpMethod, OpenBaoOperation,
+        OpenBaoOperationDisposition, OpenBaoVersion, is_generated_profile,
+        latest_generated_profile, openbao_operation, openbao_profile_versions,
     },
     path::{validate_endpoint_path, validate_mount_path},
     response::ErrorEnvelope,
@@ -50,6 +52,9 @@ const DEFAULT_RETRY_JITTER_PERCENT: u8 = 20;
 const MAX_USER_AGENT_BYTES: usize = 512;
 const MAX_COMPATIBILITY_HEALTH_BYTES: usize = 64 * 1024;
 const MAX_COMPATIBILITY_WAITERS: usize = 4096;
+const MAX_ENDPOINT_ID_BYTES: usize = 192;
+const MAX_ENDPOINT_VARIANTS: usize = 16;
+const MAX_OPTIONAL_ROUTE_EXPANSIONS: usize = 8;
 const ADDRESS_ENV_KEYS: &[&str] = &["OPENBAO_ADDR", "BAO_ADDR", "VAULT_ADDR"];
 const TOKEN_ENV_KEYS: &[&str] = &["OPENBAO_TOKEN", "BAO_TOKEN", "VAULT_TOKEN"];
 const NAMESPACE_ENV_KEYS: &[&str] = &["OPENBAO_NAMESPACE", "BAO_NAMESPACE", "VAULT_NAMESPACE"];
@@ -822,6 +827,29 @@ enum CompatibilityAction<'a> {
     Lead(CompatibilityLeader<'a>),
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+pub(crate) struct ResolvedOpenBaoEndpoint {
+    endpoint: &'static str,
+    operation: OpenBaoOperation,
+    method: Method,
+}
+
+#[allow(dead_code)]
+impl ResolvedOpenBaoEndpoint {
+    pub(crate) const fn endpoint(&self) -> &'static str {
+        self.endpoint
+    }
+
+    pub(crate) const fn operation(&self) -> OpenBaoOperation {
+        self.operation
+    }
+
+    pub(crate) fn method(&self) -> Method {
+        self.method.clone()
+    }
+}
+
 impl CompatibilityLeader<'_> {
     fn complete(mut self, result: CachedCompatibilityResult) {
         let waiters = if let Ok(mut state) = self.compatibility.verification.lock() {
@@ -1172,6 +1200,155 @@ impl<State> Client<State> {
                 "health response contained an invalid stable server version",
             )
         })
+    }
+
+    #[allow(dead_code)]
+    pub(crate) async fn resolve_openbao_endpoint<Q, K>(
+        &self,
+        endpoint: OpenBaoEndpointSpec,
+        path: &str,
+        query: &[(K, Q)],
+    ) -> Result<ResolvedOpenBaoEndpoint>
+    where
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let path_segments = validate_endpoint_path(path)?;
+        validate_endpoint_spec(endpoint)?;
+        let report = self.ensure_compatibility().await?;
+        let version = match report.profile_version() {
+            Some(version) => version,
+            None if report.status()
+                == crate::compatibility::OpenBaoCompatibilityStatus::Unverified =>
+            {
+                latest_generated_profile().ok_or(Error::Internal(
+                    "OpenBao compatibility profile inventory is empty",
+                ))?
+            }
+            None => {
+                return Err(Error::Internal(
+                    "OpenBao compatibility report has no routing profile",
+                ));
+            }
+        };
+        if !is_generated_profile(version) {
+            return Err(Error::UnsupportedOpenBaoVersion(version));
+        }
+
+        let mut selected = endpoint
+            .variants()
+            .iter()
+            .copied()
+            .filter(|variant| variant.contains(version));
+        let Some(variant) = selected.next() else {
+            return Err(Error::UnsupportedOpenBaoCapability {
+                endpoint: endpoint.id(),
+                version,
+            });
+        };
+        if selected.next().is_some() {
+            return Err(Error::Internal(
+                "OpenBao endpoint variants overlap for the selected profile",
+            ));
+        }
+        let operation = openbao_operation(variant.operation_id()).ok_or(Error::Internal(
+            "OpenBao endpoint references an unknown registry operation",
+        ))?;
+        match operation.availability(version) {
+            Some(OpenBaoCapabilityAvailability::DocumentedRoute) => {}
+            Some(
+                OpenBaoCapabilityAvailability::NotDocumented
+                | OpenBaoCapabilityAvailability::SecurityBlocked,
+            ) => {
+                return Err(Error::UnsupportedOpenBaoCapability {
+                    endpoint: endpoint.id(),
+                    version,
+                });
+            }
+            None => return Err(Error::UnsupportedOpenBaoVersion(version)),
+        }
+        if !matches!(
+            operation.disposition(),
+            OpenBaoOperationDisposition::LegacyTypedClaim
+                | OpenBaoOperationDisposition::LegacyTypedGatedClaim
+        ) {
+            return Err(Error::UnsupportedOpenBaoCapability {
+                endpoint: endpoint.id(),
+                version,
+            });
+        }
+        if !route_template_matches(operation.path_template(), &path_segments, query)? {
+            return Err(Error::InvalidPath(
+                "request path or query does not match the selected OpenBao endpoint".into(),
+            ));
+        }
+        Ok(ResolvedOpenBaoEndpoint {
+            endpoint: endpoint.id(),
+            operation,
+            method: reqwest_method(operation.method())?,
+        })
+    }
+
+    #[allow(dead_code)]
+    pub(crate) async fn request_endpoint_json_query_headers_accepting<T, B, Q, K>(
+        &self,
+        endpoint: OpenBaoEndpointSpec,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let resolved = self.resolve_openbao_endpoint(endpoint, path, query).await?;
+        let normalized_query = query
+            .iter()
+            .map(|(key, value)| (key.as_ref(), value.as_ref()))
+            .collect::<Vec<_>>();
+        self.request_json_query_headers_accepting(
+            resolved.method(),
+            path,
+            &normalized_query,
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    #[allow(dead_code)]
+    pub(crate) async fn request_endpoint_bytes_headers_accepting<Q, K>(
+        &self,
+        endpoint: OpenBaoEndpointSpec,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&[u8]>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<SecretVec>
+    where
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let resolved = self.resolve_openbao_endpoint(endpoint, path, query).await?;
+        let normalized_query = query
+            .iter()
+            .map(|(key, value)| (key.as_ref(), value.as_ref().to_owned()))
+            .collect::<Vec<_>>();
+        self.request_bytes_headers_accepting_internal(
+            resolved.method(),
+            path,
+            &normalized_query,
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
     }
 
     /// Sends a raw authenticated or unauthenticated JSON request.
@@ -1713,6 +1890,217 @@ fn compatibility_health_status_is_accepted(status: StatusCode) -> bool {
     matches!(status.as_u16(), 200 | 429 | 472 | 473 | 501 | 503)
 }
 
+fn validate_endpoint_spec(endpoint: OpenBaoEndpointSpec) -> Result<()> {
+    let id = endpoint.id();
+    if id.is_empty()
+        || id.len() > MAX_ENDPOINT_ID_BYTES
+        || !id.is_ascii()
+        || !id.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || b"._-".contains(&byte)
+        })
+    {
+        return Err(Error::Internal("OpenBao endpoint identifier is invalid"));
+    }
+    let variants = endpoint.variants();
+    if variants.is_empty() || variants.len() > MAX_ENDPOINT_VARIANTS {
+        return Err(Error::Internal("OpenBao endpoint variant count is invalid"));
+    }
+    for (index, variant) in variants.iter().copied().enumerate() {
+        if variant.minimum() > variant.maximum()
+            || !is_generated_profile(variant.minimum())
+            || !is_generated_profile(variant.maximum())
+        {
+            return Err(Error::Internal("OpenBao endpoint variant range is invalid"));
+        }
+        let operation = openbao_operation(variant.operation_id()).ok_or(Error::Internal(
+            "OpenBao endpoint references an unknown registry operation",
+        ))?;
+        for version in openbao_profile_versions()
+            .iter()
+            .copied()
+            .filter(|version| variant.contains(*version))
+        {
+            if !matches!(
+                operation.availability(version),
+                Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+                    | Some(OpenBaoCapabilityAvailability::SecurityBlocked)
+            ) {
+                return Err(Error::Internal(
+                    "OpenBao endpoint variant exceeds registry evidence",
+                ));
+            }
+        }
+        if variants[..index].iter().copied().any(|previous| {
+            previous.minimum() <= variant.maximum() && variant.minimum() <= previous.maximum()
+        }) {
+            return Err(Error::Internal("OpenBao endpoint variants overlap"));
+        }
+    }
+    Ok(())
+}
+
+fn reqwest_method(method: OpenBaoHttpMethod) -> Result<Method> {
+    match method {
+        OpenBaoHttpMethod::Delete => Ok(Method::DELETE),
+        OpenBaoHttpMethod::Get => Ok(Method::GET),
+        OpenBaoHttpMethod::Head => Ok(Method::HEAD),
+        OpenBaoHttpMethod::List => Method::from_bytes(b"LIST")
+            .map_err(|_| Error::Internal("generated LIST method is invalid")),
+        OpenBaoHttpMethod::Patch => Ok(Method::PATCH),
+        OpenBaoHttpMethod::Post => Ok(Method::POST),
+        OpenBaoHttpMethod::Put => Ok(Method::PUT),
+        OpenBaoHttpMethod::Scan => Method::from_bytes(b"SCAN")
+            .map_err(|_| Error::Internal("generated SCAN method is invalid")),
+        OpenBaoHttpMethod::Acme => Err(Error::Internal(
+            "ACME protocol operations cannot use typed HTTP dispatch",
+        )),
+    }
+}
+
+fn route_template_matches<Q, K>(
+    template: &str,
+    path_segments: &[String],
+    query: &[(K, Q)],
+) -> Result<bool>
+where
+    Q: AsRef<str>,
+    K: AsRef<str>,
+{
+    let (path_template, query_template) = match template.split_once('?') {
+        Some((path, query_template)) if !query_template.contains('?') => {
+            (path, Some(query_template))
+        }
+        Some(_) => return Err(Error::Internal("OpenBao route template query is invalid")),
+        None => (template, None),
+    };
+    let path_matches = expand_optional_route_templates(path_template)?
+        .iter()
+        .any(|expanded| route_path_matches(expanded, path_segments));
+    if !path_matches {
+        return Ok(false);
+    }
+    let Some(query_template) = query_template else {
+        return Ok(true);
+    };
+    for expected in query_template.split('&') {
+        let Some((expected_key, expected_value)) = expected.split_once('=') else {
+            return Err(Error::Internal("OpenBao route template query is invalid"));
+        };
+        if expected_key.is_empty() || expected_value.is_empty() {
+            return Err(Error::Internal("OpenBao route template query is invalid"));
+        }
+        let mut values = query
+            .iter()
+            .filter(|(key, _)| key.as_ref() == expected_key)
+            .map(|(_, value)| value.as_ref());
+        let Some(value) = values.next() else {
+            return Ok(false);
+        };
+        if values.next().is_some()
+            || (expected_value.starts_with(':') && value.is_empty())
+            || (!expected_value.starts_with(':') && value != expected_value)
+        {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn expand_optional_route_templates(template: &str) -> Result<Vec<String>> {
+    let mut expansions = vec![template.to_owned()];
+    loop {
+        let mut changed = false;
+        let mut next = Vec::new();
+        for expansion in expansions {
+            let Some(start) = expansion.find("(/") else {
+                next.push(expansion);
+                continue;
+            };
+            let Some(relative_end) = expansion[start..].find(')') else {
+                return Err(Error::Internal(
+                    "OpenBao optional route template is invalid",
+                ));
+            };
+            let end = start + relative_end;
+            let before = &expansion[..start];
+            let optional = &expansion[start + 1..end];
+            let after = &expansion[end + 1..];
+            next.push(format!("{before}{after}"));
+            next.push(format!("{before}{optional}{after}"));
+            changed = true;
+        }
+        if next.len() > MAX_OPTIONAL_ROUTE_EXPANSIONS {
+            return Err(Error::Internal(
+                "OpenBao optional route expansion limit exceeded",
+            ));
+        }
+        if !changed {
+            return Ok(next);
+        }
+        expansions = next;
+    }
+}
+
+fn route_path_matches(template: &str, path_segments: &[String]) -> bool {
+    if !template.starts_with('/') {
+        return false;
+    }
+    let template_segments = template
+        .trim_start_matches('/')
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<_>>();
+    route_segments_match(&template_segments, path_segments)
+}
+
+fn route_segments_match(template: &[&str], actual: &[String]) -> bool {
+    let mut memo = vec![vec![None; actual.len() + 1]; template.len() + 1];
+    route_segments_match_at(template, actual, 0, 0, &mut memo)
+}
+
+fn route_segments_match_at(
+    template: &[&str],
+    actual: &[String],
+    template_index: usize,
+    actual_index: usize,
+    memo: &mut [Vec<Option<bool>>],
+) -> bool {
+    if let Some(result) = memo[template_index][actual_index] {
+        return result;
+    }
+    let result = if template_index == template.len() {
+        actual_index == actual.len()
+    } else {
+        let expected = template[template_index];
+        if expected.starts_with(':') {
+            ((actual_index + 1)..=actual.len()).any(|next_actual| {
+                route_segments_match_at(template, actual, template_index + 1, next_actual, memo)
+            })
+        } else if actual_index == actual.len() {
+            false
+        } else {
+            let actual_segment = actual[actual_index].as_str();
+            let segment_matches = if expected.starts_with('(') && expected.ends_with(')') {
+                expected[1..expected.len() - 1]
+                    .split('|')
+                    .any(|alternative| !alternative.is_empty() && alternative == actual_segment)
+            } else {
+                expected == actual_segment
+            };
+            segment_matches
+                && route_segments_match_at(
+                    template,
+                    actual,
+                    template_index + 1,
+                    actual_index + 1,
+                    memo,
+                )
+        }
+    };
+    memo[template_index][actual_index] = Some(result);
+    result
+}
+
 fn is_loopback_url(url: &Url) -> bool {
     match url.host_str() {
         Some(host) => host.parse::<IpAddr>().is_ok_and(|addr| addr.is_loopback()),
@@ -2045,16 +2433,144 @@ mod tests {
     #![allow(clippy::panic)]
     #![allow(deprecated)]
 
-    use std::collections::BTreeMap;
+    use std::{
+        collections::BTreeMap,
+        io::{Read, Write},
+        net::TcpListener,
+        sync::atomic::{AtomicBool, Ordering},
+        thread,
+    };
 
     use secrecy::{ExposeSecret, SecretString};
+    use serde::{Serialize, Serializer};
 
-    use crate::Error;
+    use crate::{Empty, Error, OpenBaoCompatibilityPolicy, OpenBaoVersion};
 
     use super::{
         Client, OpenBaoConfig, env_bool, is_cleartext_url, openbao_config_from_env_lookup,
-        openbao_token_from_env_lookup, validate_token_for_header, validate_user_agent,
+        openbao_token_from_env_lookup, route_template_matches, validate_token_for_header,
+        validate_user_agent,
     };
+    use crate::compatibility::{OpenBaoEndpointSpec, OpenBaoEndpointVariant};
+
+    const HEALTH_ENDPOINT: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(
+        "sys.health",
+        &[OpenBaoEndpointVariant::new(
+            "openbao.get.sys.health.e507fdd0e65b1259",
+            OpenBaoVersion::new(2, 0, 0),
+            OpenBaoVersion::new(2, 5, 5),
+        )],
+    );
+
+    const CEL_ROLE_DELETE_ENDPOINT: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(
+        "pki.cel.role.delete",
+        &[OpenBaoEndpointVariant::new(
+            "openbao.delete.pki.cel.roles.name.1388a4e7ce4223e8",
+            OpenBaoVersion::new(2, 4, 0),
+            OpenBaoVersion::new(2, 5, 5),
+        )],
+    );
+
+    const VERSIONED_PROBE_ENDPOINT: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(
+        "test.versioned.probe",
+        &[
+            OpenBaoEndpointVariant::new(
+                "openbao.get.sys.seal.status.21c9eeaaf2f76755",
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 4, 4),
+            ),
+            OpenBaoEndpointVariant::new(
+                "openbao.get.sys.health.e507fdd0e65b1259",
+                OpenBaoVersion::new(2, 5, 0),
+                OpenBaoVersion::new(2, 5, 5),
+            ),
+        ],
+    );
+
+    const SECURITY_BLOCKED_ENDPOINT: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(
+        "sys.monitor.blocked",
+        &[OpenBaoEndpointVariant::new(
+            "openbao.get.sys.monitor.31691ac3a18a5972",
+            OpenBaoVersion::new(2, 0, 0),
+            OpenBaoVersion::new(2, 5, 5),
+        )],
+    );
+
+    const OVERLAPPING_ENDPOINT: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(
+        "test.overlap",
+        &[
+            OpenBaoEndpointVariant::new(
+                "openbao.get.sys.health.e507fdd0e65b1259",
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 0),
+            ),
+            OpenBaoEndpointVariant::new(
+                "openbao.get.sys.health.e507fdd0e65b1259",
+                OpenBaoVersion::new(2, 5, 0),
+                OpenBaoVersion::new(2, 5, 5),
+            ),
+        ],
+    );
+
+    struct SerializationSentinel<'a>(&'a AtomicBool);
+
+    impl Serialize for SerializationSentinel<'_> {
+        fn serialize<S>(&self, _serializer: S) -> core::result::Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            self.0.store(true, Ordering::SeqCst);
+            Err(serde::ser::Error::custom(
+                "serialization sentinel must not be called",
+            ))
+        }
+    }
+
+    async fn versioned_probe_response(
+        status_line: &'static str,
+        body: &'static str,
+    ) -> crate::Result<Empty> {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut request = [0_u8; 2048];
+            let count = stream
+                .read(&mut request)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&request[..count]);
+            assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+            let response = format!(
+                "HTTP/1.1 {status_line}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        });
+        let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 5, 5))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(OpenBaoConfig::allow_localhost_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+        let result = client
+            .request_endpoint_json_query_headers_accepting::<Empty, Empty, &str, &str>(
+                VERSIONED_PROBE_ENDPOINT,
+                "sys/health",
+                &[],
+                &[],
+                None,
+                &[reqwest::StatusCode::OK],
+            )
+            .await;
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
+        result
+    }
 
     #[test]
     fn rejects_http_by_default() {
@@ -2105,6 +2621,166 @@ mod tests {
     #[test]
     fn public_raw_api_is_enabled_only_by_acknowledged_feature_pair() {
         assert!(super::ensure_public_raw_api_enabled().is_ok());
+    }
+
+    #[tokio::test]
+    async fn unsupported_endpoint_fails_before_body_serialization() {
+        let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 0, 0))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new("https://bao.example.com")
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+        let serialized = AtomicBool::new(false);
+        let payload = SerializationSentinel(&serialized);
+
+        let result = client
+            .request_endpoint_json_query_headers_accepting::<Empty, _, &str, &str>(
+                CEL_ROLE_DELETE_ENDPOINT,
+                "pki/cel/roles/example",
+                &[],
+                &[],
+                Some(&payload),
+                &[reqwest::StatusCode::NO_CONTENT],
+            )
+            .await;
+
+        assert!(matches!(
+            result,
+            Err(Error::UnsupportedOpenBaoCapability {
+                endpoint: "pki.cel.role.delete",
+                version
+            }) if version == OpenBaoVersion::new(2, 0, 0)
+        ));
+        assert!(!serialized.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn endpoint_dispatch_derives_method_and_rejects_route_substitution() {
+        let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 5, 5))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new("https://bao.example.com")
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+        let resolved = client
+            .resolve_openbao_endpoint(HEALTH_ENDPOINT, "sys/health", &[] as &[(&str, &str)])
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(resolved.method(), reqwest::Method::GET);
+        assert_eq!(resolved.endpoint(), "sys.health");
+        assert_eq!(resolved.operation().path_template(), "/sys/health");
+
+        let substituted = client
+            .resolve_openbao_endpoint(
+                HEALTH_ENDPOINT,
+                "sys/secret-route-marker",
+                &[] as &[(&str, &str)],
+            )
+            .await;
+        let substituted = match substituted {
+            Ok(_) => panic!("substituted endpoint route unexpectedly resolved"),
+            Err(error) => error,
+        };
+        assert!(matches!(substituted, Error::InvalidPath(_)));
+        assert!(!substituted.to_string().contains("secret-route-marker"));
+
+        let blocked = client
+            .resolve_openbao_endpoint(
+                SECURITY_BLOCKED_ENDPOINT,
+                "sys/monitor",
+                &[] as &[(&str, &str)],
+            )
+            .await;
+        assert!(matches!(
+            blocked,
+            Err(Error::UnsupportedOpenBaoCapability {
+                endpoint: "sys.monitor.blocked",
+                version
+            }) if version == OpenBaoVersion::new(2, 5, 5)
+        ));
+
+        let overlap = client
+            .resolve_openbao_endpoint(OVERLAPPING_ENDPOINT, "sys/health", &[] as &[(&str, &str)])
+            .await;
+        assert!(matches!(overlap, Err(Error::Internal(_))));
+    }
+
+    #[test]
+    fn route_template_matching_handles_optional_alternative_and_query_segments() {
+        let transit = vec![
+            "transit".to_owned(),
+            "export".to_owned(),
+            "encryption-key".to_owned(),
+            "service-key".to_owned(),
+            "3".to_owned(),
+        ];
+        assert!(
+            route_template_matches::<&str, &str>(
+                "/transit/export/:key_type/:name(/:version)",
+                &transit,
+                &[],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+        let rotate = vec![
+            "sys".to_owned(),
+            "rotate".to_owned(),
+            "recovery".to_owned(),
+            "verify".to_owned(),
+        ];
+        assert!(
+            route_template_matches::<&str, &str>(
+                "/sys/rotate/(root|recovery)/verify",
+                &rotate,
+                &[],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+        let plugin = vec![
+            "sys".to_owned(),
+            "plugins".to_owned(),
+            "catalog".to_owned(),
+            "secret".to_owned(),
+            "example".to_owned(),
+        ];
+        assert!(
+            route_template_matches(
+                "/sys/plugins/catalog/:type/:name?version=:version",
+                &plugin,
+                &[("version", "1.2.3")],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+        assert!(
+            !route_template_matches(
+                "/sys/plugins/catalog/:type/:name?version=:version",
+                &plugin,
+                &[("version", "")],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+    }
+
+    #[tokio::test]
+    async fn endpoint_dispatch_does_not_fallback_after_http_failure() {
+        for (status_line, expected) in [
+            ("404 Not Found", reqwest::StatusCode::NOT_FOUND),
+            (
+                "405 Method Not Allowed",
+                reqwest::StatusCode::METHOD_NOT_ALLOWED,
+            ),
+        ] {
+            let result = versioned_probe_response(status_line, r#"{"errors":["missing"]}"#).await;
+            assert!(matches!(
+                result,
+                Err(Error::Api { status, .. }) if status == expected
+            ));
+        }
+
+        let decode = versioned_probe_response("200 OK", "not-json").await;
+        assert!(matches!(decode, Err(Error::Decode(_))));
     }
 
     #[test]

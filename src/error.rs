@@ -44,6 +44,15 @@ pub enum Error {
     UnknownOpenBaoVersion(OpenBaoVersion),
     /// The public health compatibility probe failed without retaining sensitive context.
     OpenBaoCompatibilityProbe(&'static str),
+    /// No immutable routing profile exists for the selected server version.
+    UnsupportedOpenBaoVersion(OpenBaoVersion),
+    /// A typed SDK endpoint is unavailable for the selected server profile.
+    UnsupportedOpenBaoCapability {
+        /// Stable, secret-free logical endpoint identifier.
+        endpoint: &'static str,
+        /// Exact compatibility profile used for dispatch.
+        version: OpenBaoVersion,
+    },
     /// A public raw request was attempted without explicit acknowledgement.
     RawApiDisabled,
     /// A crate invariant was violated.
@@ -112,6 +121,14 @@ impl fmt::Display for Error {
             Self::OpenBaoCompatibilityProbe(message) => {
                 write!(formatter, "OpenBao compatibility probe failed: {message}")
             }
+            Self::UnsupportedOpenBaoVersion(version) => write!(
+                formatter,
+                "OpenBao server version {version} is unsupported for typed endpoint dispatch"
+            ),
+            Self::UnsupportedOpenBaoCapability { endpoint, version } => write!(
+                formatter,
+                "OpenBao capability {endpoint} is unsupported for server version {version}"
+            ),
             Self::RawApiDisabled => write!(
                 formatter,
                 "OpenBao raw request APIs require raw-api and raw-api-acknowledged"

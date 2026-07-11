@@ -680,7 +680,9 @@ Stop criteria:
   policies use one public, credential-free health probe and a cancellation-safe
   per-client cache;
 - typed endpoint dispatch selects a reviewed version variant before request
-  transmission and never retries a different route after an HTTP failure;
+  transmission, derives methods from immutable evidence, validates concrete
+  path/query shape, and never retries a different route after an HTTP or decode
+  failure;
 - endpoint removals in newer OpenBao releases do not overwrite compatible
   older profiles, except where crate security policy explicitly blocks an
   unsafe operation;

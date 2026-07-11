@@ -104,6 +104,13 @@ blocks it, but reports are never marked verified. Unknown-newer operation
 requires an explicit `UnknownNewerOpenBaoAcknowledgement` and should be used
 only until the new release receives a locked profile.
 
+Typed helpers are being moved onto immutable version-aware dispatch during the
+`2.0.0` checkpoint series. Unsupported typed operations fail locally before
+body serialization and do not fall back to another route after a server error.
+Raw APIs remain caller-versioned escape hatches: selecting a compatibility
+policy does not make an arbitrary raw method/path compatible with the detected
+server.
+
 ## From `openbao` 1.0.2 To 1.1.0
 
 `1.1.0` intentionally changes the public owned secret-byte buffer type. The

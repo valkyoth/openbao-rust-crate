@@ -8,8 +8,9 @@
 //! templates across the 21 locked OpenBao releases. Registry evidence reports
 //! what exact tagged documentation contains. Client compatibility policies can
 //! verify and cache the stable version returned by `/sys/health`, or explicitly
-//! select an assumed profile where probing is unavailable. Version-aware route
-//! and field dispatch remains a separate compatibility checkpoint.
+//! select an assumed profile where probing is unavailable. The internal typed
+//! dispatcher binds logical SDK endpoints to reviewed operation variants;
+//! endpoint families adopt that dispatcher in the ordered migration commits.
 
 use core::{fmt, str::FromStr};
 
@@ -762,6 +763,67 @@ pub struct OpenBaoCapabilityProfile {
     version: OpenBaoVersion,
 }
 
+/// Internal logical SDK endpoint with one or more versioned route variants.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct OpenBaoEndpointSpec {
+    id: &'static str,
+    variants: &'static [OpenBaoEndpointVariant],
+}
+
+impl OpenBaoEndpointSpec {
+    #[allow(dead_code)]
+    pub(crate) const fn new(id: &'static str, variants: &'static [OpenBaoEndpointVariant]) -> Self {
+        Self { id, variants }
+    }
+
+    pub(crate) const fn id(self) -> &'static str {
+        self.id
+    }
+
+    pub(crate) const fn variants(self) -> &'static [OpenBaoEndpointVariant] {
+        self.variants
+    }
+}
+
+/// One immutable registry operation selected over an inclusive release range.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct OpenBaoEndpointVariant {
+    operation_id: &'static str,
+    minimum: OpenBaoVersion,
+    maximum: OpenBaoVersion,
+}
+
+impl OpenBaoEndpointVariant {
+    #[allow(dead_code)]
+    pub(crate) const fn new(
+        operation_id: &'static str,
+        minimum: OpenBaoVersion,
+        maximum: OpenBaoVersion,
+    ) -> Self {
+        Self {
+            operation_id,
+            minimum,
+            maximum,
+        }
+    }
+
+    pub(crate) const fn operation_id(self) -> &'static str {
+        self.operation_id
+    }
+
+    pub(crate) const fn minimum(self) -> OpenBaoVersion {
+        self.minimum
+    }
+
+    pub(crate) const fn maximum(self) -> OpenBaoVersion {
+        self.maximum
+    }
+
+    pub(crate) fn contains(self, version: OpenBaoVersion) -> bool {
+        version >= self.minimum && version <= self.maximum
+    }
+}
+
 impl OpenBaoCapabilityProfile {
     /// Selects an exact profile from the immutable release inventory.
     pub fn for_version(version: OpenBaoVersion) -> Option<Self> {
@@ -806,13 +868,13 @@ pub fn openbao_profile_versions() -> &'static [OpenBaoVersion] {
     generated::GENERATED_PROFILE_VERSIONS
 }
 
-fn is_generated_profile(version: OpenBaoVersion) -> bool {
+pub(crate) fn is_generated_profile(version: OpenBaoVersion) -> bool {
     generated::GENERATED_PROFILE_VERSIONS
         .binary_search(&version)
         .is_ok()
 }
 
-fn latest_generated_profile() -> Option<OpenBaoVersion> {
+pub(crate) fn latest_generated_profile() -> Option<OpenBaoVersion> {
     generated::GENERATED_PROFILE_VERSIONS.last().copied()
 }
 

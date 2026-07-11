@@ -268,6 +268,19 @@ Unknown newer servers fail closed unless the caller constructs the separately
 acknowledged policy. Existing constructors remain unverified unless a policy is
 selected during the `2.0.0` migration.
 
+The `2.0.0` typed dispatcher selects one immutable operation variant before
+body serialization, derives its HTTP method from the registry, and validates
+the concrete path and required query selectors against the reviewed route
+template. It never probes an alternate route after a 404, 405, transport, or
+decode failure. Endpoint families move onto this dispatcher in the ordered
+compatibility commits, so generated route presence is not yet a claim that
+every existing helper has completed version-aware migration.
+
+Acknowledged raw JSON and byte APIs deliberately bypass capability selection.
+They still use the configured version policy preflight, TLS, path validation,
+response limits, and redaction controls, but callers remain responsible for
+choosing a route supported by their server version.
+
 Pull requests run that core subset against `2.0.0` and the latest patch in each
 minor line. Nightly, manual release-gate, and version-tag workflows run every
 exact locked release. The matrix publishes sanitized per-release results and a

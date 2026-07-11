@@ -65,11 +65,21 @@ Please include:
   or live-compatibility claim. Security-blocked operation identities are
   maintained in reviewed generator code, and generated documentation cannot
   re-enable them.
+- Version-aware typed dispatch selects exactly one reviewed operation before
+  request serialization. The method comes from immutable registry evidence;
+  concrete paths and required query selectors must match that operation's
+  template. Unsupported, overlapping, malformed, external, and
+  security-blocked selections fail locally without route probing.
+- Typed dispatch never retries another historical route after HTTP 404/405,
+  transport, or decode failure. Such fallback could duplicate writes or let a
+  server response influence capability selection.
 - Public raw JSON, byte, retry, and response-wrapping transports are disabled
   unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
-  bypass typed request validation and operation-specific feature gates; keep
-  every enabled use behind a reviewed local typed wrapper with fixed methods
-  and paths.
+  bypass typed capability selection, endpoint validation, and
+  operation-specific feature gates; keep every enabled use behind a reviewed
+  local typed wrapper with fixed methods and paths. A compatibility policy
+  verifies the server version before raw transmission but does not prove that
+  the caller-selected raw route exists for that version.
 - Base URLs are origins only. User credentials, application paths, query
   strings, and fragments are rejected before a client is built.
 - The selected reqwest TLS backend is set explicitly from this crate's feature
