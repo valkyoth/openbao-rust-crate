@@ -664,7 +664,14 @@ impl Kv2<'_> {
     {
         let mount = self.mount.join("/");
         self.client
-            .request_secret_json_internal("/", "secret", &mount, method, path, body)
+            .request_secret_json_internal(
+                "/:secret-mount-path/",
+                "secret",
+                &mount,
+                method,
+                path,
+                body,
+            )
             .await
     }
 
@@ -705,7 +712,7 @@ impl Kv2<'_> {
         let mount = self.mount.join("/");
         self.client
             .request_secret_json_query_headers_accepting(
-                "/",
+                "/:secret-mount-path/",
                 "secret",
                 &mount,
                 method,

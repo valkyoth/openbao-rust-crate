@@ -5965,33 +5965,39 @@ impl Sys<'_, Authenticated> {
     pub async fn list_policies(&self) -> Result<PolicyList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        self.client
+        let envelope: ResponseEnvelope<PolicyList> = self
+            .client
             .request_sys_json_internal(method, "sys/policies/acl", Option::<&Empty>::None)
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Lists ACL policies below a policy prefix.
     pub async fn list_policies_with_prefix(&self, prefix: &str) -> Result<PolicyList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        self.client
+        let envelope: ResponseEnvelope<PolicyList> = self
+            .client
             .request_sys_json_internal(
                 method,
                 &sys_path("sys/policies/acl", prefix, None)?,
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Reads one ACL policy.
     pub async fn read_policy(&self, name: &str) -> Result<PolicyInfo> {
-        self.client
+        let envelope: ResponseEnvelope<PolicyInfo> = self
+            .client
             .request_sys_json_internal(
                 Method::GET,
                 &sys_path("sys/policies/acl", name, None)?,
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Creates or updates an ACL policy.
@@ -6044,9 +6050,11 @@ impl Sys<'_, Authenticated> {
     pub async fn list_policies_detailed(&self) -> Result<PolicyList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        self.client
+        let envelope: ResponseEnvelope<PolicyList> = self
+            .client
             .request_sys_json_internal(method, "sys/policies/detailed/acl", Option::<&Empty>::None)
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Lists detailed ACL policies below a prefix.
@@ -6055,13 +6063,15 @@ impl Sys<'_, Authenticated> {
     pub async fn list_policies_detailed_with_prefix(&self, prefix: &str) -> Result<PolicyList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        self.client
+        let envelope: ResponseEnvelope<PolicyList> = self
+            .client
             .request_sys_json_internal(
                 method,
                 &sys_path("sys/policies/detailed/acl", prefix, None)?,
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Lists password policies.

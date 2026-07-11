@@ -95,6 +95,9 @@ wherever operationally possible.
 - Immutable source, image, signature, API snapshot, and contract locks for 21
   exact OpenBao releases.
 - 21 checksum-anchored live core-flow results with zero skipped operations.
+- Every live core-flow run selects the same exact locked client profile as its
+  server release; the oldest and newest boundary releases are also exercised
+  locally before tagging.
 - A generated 666-operation capability registry and 13,986-cell exact-version
   support matrix.
 - Versioned serde fixtures, deterministic mutation tests, cargo-fuzz targets,

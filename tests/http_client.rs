@@ -485,15 +485,15 @@ async fn versioned_system_extensions_use_documented_paths() {
                 }
                 1 => {
                     assert!(request.starts_with("LIST /v1/sys/policies/acl HTTP/1.1"));
-                    r#"{"policies":["legacy"],"keys":["modern"]}"#
+                    r#"{"data":{"policies":["legacy"],"keys":["modern"]}}"#
                 }
                 2 => {
                     assert!(request.starts_with("LIST /v1/sys/policies/acl/team HTTP/1.1"));
-                    r#"{"keys":["team/app"]}"#
+                    r#"{"data":{"keys":["team/app"]}}"#
                 }
                 3 => {
                     assert!(request.starts_with("GET /v1/sys/policies/acl/app HTTP/1.1"));
-                    r#"{"name":"app","rules":"path \"secret/data/app\" {}","policy":"legacy","version":2}"#
+                    r#"{"data":{"name":"app","rules":"path \"secret/data/app\" {}","policy":"legacy","version":2}}"#
                 }
                 4 => {
                     assert!(request.starts_with("POST /v1/sys/policies/acl/app HTTP/1.1"));
@@ -505,13 +505,13 @@ async fn versioned_system_extensions_use_documented_paths() {
                 }
                 6 => {
                     assert!(request.starts_with("LIST /v1/sys/policies/detailed/acl HTTP/1.1"));
-                    r#"{"keys":["app"]}"#
+                    r#"{"data":{"keys":["app"]}}"#
                 }
                 7 => {
                     assert!(
                         request.starts_with("LIST /v1/sys/policies/detailed/acl/team HTTP/1.1")
                     );
-                    r#"{"keys":["team/app"]}"#
+                    r#"{"data":{"keys":["team/app"]}}"#
                 }
                 8 => {
                     assert!(request.starts_with("GET /v1/sys/leases?type=irrevocable HTTP/1.1"));
@@ -1119,14 +1119,22 @@ async fn secret_registry_routing_preserves_validated_custom_mounts() {
         .local_addr()
         .unwrap_or_else(|error| panic!("{error}"));
     let server = thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
-        let request = read_http_request(&mut stream);
-        assert!(request.starts_with("GET /v1/team/secrets/data/app/config HTTP/1.1"));
-        write_json_response(
-            &mut stream,
-            "200 OK",
-            r#"{"data":{"data":{"enabled":true},"metadata":{"created_time":"2026-07-11T00:00:00Z","deletion_time":"","destroyed":false,"version":1}}}"#,
-        );
+        for step in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/team/secrets/data/app/config HTTP/1.1"));
+                    r#"{"data":{"data":{"enabled":true},"metadata":{"created_time":"2026-07-11T00:00:00Z","deletion_time":"","destroyed":false,"version":1}}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/team/secrets/config HTTP/1.1"));
+                    r#"{"data":{"max_versions":10,"cas_required":false,"delete_version_after":"0s"}}"#
+                }
+                _ => unreachable!(),
+            };
+            write_json_response(&mut stream, "200 OK", body);
+        }
     });
     let client = Client::from_config(
         OpenBaoConfig::new(format!("http://{addr}"))
@@ -1142,6 +1150,13 @@ async fn secret_registry_routing_preserves_validated_custom_mounts() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(secret.metadata.version, 1);
+    let config = client
+        .kv2("team/secrets")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(config.max_versions, Some(10));
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
@@ -11842,7 +11857,7 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
                     let rules = "path \"secret/data/app/*\" {\n  capabilities = [\"read\"]\n}\npath \"secret/metadata/app/*\" {\n  capabilities = [\"list\"]\n}\n";
                     (
                         "200 OK",
-                        serde_json::json!({"name":"app-read","rules":rules}).to_string(),
+                        serde_json::json!({"data":{"name":"app-read","rules":rules}}).to_string(),
                     )
                 }
                 7 => {

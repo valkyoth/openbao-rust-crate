@@ -77,6 +77,12 @@ All notable changes to this project are documented here.
   generated Python bytecode cannot enter the published archive.
 - Extended latest-action checks to every action used by the compatibility
   workflow, including pinned upload and download artifact actions.
+- Scoped KV v2 dispatch to the generated KV v2 route family so mount-level
+  `config` requests cannot tie with the legacy KV v1 catch-all route.
+- Decoded ACL policy list, prefix-list, detailed-list, and read responses from
+  OpenBao's standard response envelope.
+- Made every live compatibility job select and verify its exact locked client
+  profile, rather than exercising historical servers with the latest profile.
 
 ### Security
 

@@ -6,7 +6,7 @@
 //! and run this file.
 
 #![cfg(all(feature = "kv1", feature = "kv2", feature = "sys", feature = "token"))]
-#![allow(clippy::panic)]
+#![allow(clippy::panic, clippy::print_stderr)]
 
 use std::{
     collections::BTreeMap,
@@ -14,7 +14,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use openbao::{Client, OpenBaoConfig};
+use openbao::{Client, OpenBaoCompatibilityPolicy, OpenBaoConfig, OpenBaoVersion};
 use reqwest::Certificate;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -61,7 +61,11 @@ impl IntegrationEnv {
     }
 
     fn client(self) -> Result<openbao::Client<openbao::Authenticated>, openbao::Error> {
-        let config = OpenBaoConfig::new(self.addr)?.only_root_certificates(vec![self.ca_cert])?;
+        let version = self.expected_version.parse::<OpenBaoVersion>()?;
+        let policy = OpenBaoCompatibilityPolicy::exact(version)?;
+        let config = OpenBaoConfig::new(self.addr)?
+            .only_root_certificates(vec![self.ca_cert])?
+            .compatibility_policy(policy);
         Client::from_config(config)?.try_with_token(self.token)
     }
 }
@@ -74,6 +78,7 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     let expected_version = env.expected_version.clone();
     let result_file = env.result_file.clone();
     let client = env.client()?;
+    eprintln!("OpenBao integration stage: health");
     assert_eq!(client.sys().health().await?.version, expected_version);
     let suffix = unique_suffix()?;
     let kv1_mount = format!("obrs-kv1-{suffix}");
@@ -153,10 +158,12 @@ async fn run_flow(
     auth_mount: &str,
     policy_name: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    eprintln!("OpenBao integration stage: health");
     let seal = client.sys().seal_status().await?;
     assert!(seal.initialized);
     assert!(!seal.sealed);
 
+    eprintln!("OpenBao integration stage: mount-management");
     client
         .sys()
         .enable_mount(kv1_mount, &kv_request("kv", BTreeMap::new()))
@@ -194,6 +201,7 @@ async fn run_flow(
         .tune_auth_method(auth_mount, &auth_tune)
         .await?;
 
+    eprintln!("OpenBao integration stage: kv1");
     let kv1 = client.kv1(kv1_mount)?;
     kv1.write(
         "app/config",
@@ -212,19 +220,23 @@ async fn run_flow(
             .any(|key| key == "config")
     );
 
+    eprintln!("OpenBao integration stage: kv2");
     let kv2 = client.kv2(kv2_mount)?;
+    eprintln!("OpenBao integration stage: kv2-write");
     assert_eq!(
         kv2.write("app/config", json!({ "value": "one" }))
             .await?
             .version,
         1
     );
+    eprintln!("OpenBao integration stage: kv2-patch");
     assert_eq!(
         kv2.patch("app/config", json!({ "extra": "two" }))
             .await?
             .version,
         2
     );
+    eprintln!("OpenBao integration stage: kv2-read");
     let kv2_read = kv2.read::<BTreeMap<String, Value>>("app/config").await?;
     assert_eq!(
         kv2_read.data.get("value").and_then(Value::as_str),
@@ -234,12 +246,16 @@ async fn run_flow(
         kv2_read.data.get("extra").and_then(Value::as_str),
         Some("two")
     );
+    eprintln!("OpenBao integration stage: kv2-metadata");
     assert_eq!(kv2.metadata("app/config").await?.current_version, 2);
+    eprintln!("OpenBao integration stage: kv2-config");
     assert!(kv2.config().await?.max_versions.is_some());
 
+    eprintln!("OpenBao integration stage: token");
     let token_info = client.token().lookup_self().await?;
     assert!(token_info.policies.iter().any(|policy| policy == "root"));
 
+    eprintln!("OpenBao integration stage: policy");
     let capability_path = format!("{kv2_mount}/data/app/config");
     client
         .sys()
@@ -248,7 +264,7 @@ async fn run_flow(
             &openbao::sys::PolicyWriteRequest {
                 policy: format!("path \"{capability_path}\" {{ capabilities = [\"read\"] }}"),
                 expiration: None,
-                ttl: Some("10m".to_owned()),
+                ttl: None,
                 cas: None,
                 cas_required: None,
             },
@@ -272,6 +288,7 @@ async fn run_flow(
             .contains(&capability_path)
     );
 
+    eprintln!("OpenBao integration stage: capabilities");
     let self_capabilities = client
         .sys()
         .capabilities_self([capability_path.clone()])
@@ -315,6 +332,7 @@ async fn run_flow(
     );
     client.token().revoke(&child_token.client_token).await?;
 
+    eprintln!("OpenBao integration stage: response-wrapping");
     let wrap_info = client
         .sys()
         .wrapping_wrap(
