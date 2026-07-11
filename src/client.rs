@@ -1,7 +1,18 @@
 //! OpenBao client construction and raw request helpers.
 
-use core::{fmt, marker::PhantomData, time::Duration};
-use std::{env, fs, net::IpAddr};
+use core::{
+    fmt,
+    future::Future,
+    marker::PhantomData,
+    pin::Pin,
+    task::{Context, Poll, Waker},
+    time::Duration,
+};
+use std::{
+    env, fs,
+    net::IpAddr,
+    sync::{Arc, Mutex},
+};
 #[cfg(feature = "allow-weak-jitter-fallback-acknowledged")]
 use std::{
     sync::atomic::{AtomicU64, Ordering},
@@ -17,10 +28,14 @@ use reqwest::{
 };
 use sanitization::{SecretVec, SecureSanitize};
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
     Error, Result,
+    compatibility::{
+        OpenBaoCompatibilityFailure, OpenBaoCompatibilityPolicy, OpenBaoCompatibilityReport,
+        OpenBaoVersion,
+    },
     path::{validate_endpoint_path, validate_mount_path},
     response::ErrorEnvelope,
 };
@@ -33,6 +48,8 @@ const MAX_RETRY_ATTEMPTS: usize = 8;
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
 const DEFAULT_RETRY_JITTER_PERCENT: u8 = 20;
 const MAX_USER_AGENT_BYTES: usize = 512;
+const MAX_COMPATIBILITY_HEALTH_BYTES: usize = 64 * 1024;
+const MAX_COMPATIBILITY_WAITERS: usize = 4096;
 const ADDRESS_ENV_KEYS: &[&str] = &["OPENBAO_ADDR", "BAO_ADDR", "VAULT_ADDR"];
 const TOKEN_ENV_KEYS: &[&str] = &["OPENBAO_TOKEN", "BAO_TOKEN", "VAULT_TOKEN"];
 const NAMESPACE_ENV_KEYS: &[&str] = &["OPENBAO_NAMESPACE", "BAO_NAMESPACE", "VAULT_NAMESPACE"];
@@ -311,6 +328,7 @@ pub struct OpenBaoConfig {
     root_certificate_mode: RootCertificateMode,
     crl_pem_bundles: Vec<Vec<u8>>,
     client_identity: Option<Identity>,
+    compatibility_policy: Option<OpenBaoCompatibilityPolicy>,
     #[cfg(feature = "sensitive-http-test-only")]
     allow_sensitive_local_http_for_tests: bool,
 }
@@ -339,6 +357,7 @@ impl OpenBaoConfig {
             root_certificate_mode: RootCertificateMode::MergeWithSystem,
             crl_pem_bundles: Vec::new(),
             client_identity: None,
+            compatibility_policy: None,
             #[cfg(feature = "sensitive-http-test-only")]
             allow_sensitive_local_http_for_tests: false,
         })
@@ -474,6 +493,17 @@ impl OpenBaoConfig {
     /// Sets the token header strategy.
     pub fn header_mode(mut self, header_mode: HeaderMode) -> Self {
         self.header_mode = header_mode;
+        self
+    }
+
+    /// Selects a server-version compatibility policy for this client.
+    ///
+    /// Verified policies issue one public, token-free, namespace-free
+    /// `/sys/health` request before the first SDK request and cache the result
+    /// for this client instance. [`OpenBaoCompatibilityPolicy::assume`] performs
+    /// no network probe and is always reported as assumed rather than verified.
+    pub fn compatibility_policy(mut self, policy: OpenBaoCompatibilityPolicy) -> Self {
+        self.compatibility_policy = Some(policy);
         self
     }
 
@@ -687,7 +717,150 @@ impl fmt::Debug for OpenBaoConfig {
             .field("root_certificate_mode", &self.root_certificate_mode)
             .field("crl_bundle_count", &self.crl_pem_bundles.len())
             .field("has_client_identity", &self.client_identity.is_some())
+            .field(
+                "compatibility_policy",
+                &self
+                    .compatibility_policy
+                    .map(OpenBaoCompatibilityPolicy::kind),
+            )
             .finish()
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum CachedCompatibilityFailure {
+    Policy(OpenBaoCompatibilityFailure),
+    Probe(&'static str),
+}
+
+type CachedCompatibilityResult =
+    core::result::Result<OpenBaoCompatibilityReport, CachedCompatibilityFailure>;
+
+enum CompatibilityVerificationState {
+    Pending,
+    Running(Vec<Waker>),
+    Complete(CachedCompatibilityResult),
+}
+
+struct ClientCompatibility {
+    policy: Option<OpenBaoCompatibilityPolicy>,
+    verification: Mutex<CompatibilityVerificationState>,
+}
+
+impl ClientCompatibility {
+    fn new(policy: Option<OpenBaoCompatibilityPolicy>) -> Self {
+        let verification = match policy {
+            None => CompatibilityVerificationState::Complete(Ok(
+                OpenBaoCompatibilityReport::unverified(),
+            )),
+            Some(policy) => match policy.immediate_report() {
+                Some(report) => CompatibilityVerificationState::Complete(Ok(report)),
+                None => CompatibilityVerificationState::Pending,
+            },
+        };
+        Self {
+            policy,
+            verification: Mutex::new(verification),
+        }
+    }
+}
+
+enum CompatibilityWaitOutcome {
+    Complete(CachedCompatibilityResult),
+    Retry,
+    TooManyWaiters,
+}
+
+struct CompatibilityWait<'a> {
+    compatibility: &'a ClientCompatibility,
+}
+
+impl Future for CompatibilityWait<'_> {
+    type Output = CompatibilityWaitOutcome;
+
+    fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
+        let Ok(mut state) = self.compatibility.verification.lock() else {
+            return Poll::Ready(CompatibilityWaitOutcome::Complete(Err(
+                CachedCompatibilityFailure::Probe("compatibility cache lock failed"),
+            )));
+        };
+        match &mut *state {
+            CompatibilityVerificationState::Complete(result) => {
+                Poll::Ready(CompatibilityWaitOutcome::Complete(*result))
+            }
+            CompatibilityVerificationState::Pending => Poll::Ready(CompatibilityWaitOutcome::Retry),
+            CompatibilityVerificationState::Running(waiters) => {
+                if waiters
+                    .iter()
+                    .any(|waiter| waiter.will_wake(context.waker()))
+                {
+                    return Poll::Pending;
+                }
+                if waiters.len() >= MAX_COMPATIBILITY_WAITERS {
+                    return Poll::Ready(CompatibilityWaitOutcome::TooManyWaiters);
+                }
+                waiters.push(context.waker().clone());
+                Poll::Pending
+            }
+        }
+    }
+}
+
+struct CompatibilityLeader<'a> {
+    compatibility: &'a ClientCompatibility,
+    completed: bool,
+}
+
+#[derive(Deserialize)]
+struct CompatibilityHealth {
+    version: String,
+}
+
+enum CompatibilityAction<'a> {
+    Complete(CachedCompatibilityResult),
+    Wait(CompatibilityWait<'a>),
+    Lead(CompatibilityLeader<'a>),
+}
+
+impl CompatibilityLeader<'_> {
+    fn complete(mut self, result: CachedCompatibilityResult) {
+        let waiters = if let Ok(mut state) = self.compatibility.verification.lock() {
+            match core::mem::replace(
+                &mut *state,
+                CompatibilityVerificationState::Complete(result),
+            ) {
+                CompatibilityVerificationState::Running(waiters) => waiters,
+                _ => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        };
+        self.completed = true;
+        for waiter in waiters {
+            waiter.wake();
+        }
+    }
+}
+
+impl Drop for CompatibilityLeader<'_> {
+    fn drop(&mut self) {
+        if self.completed {
+            return;
+        }
+        let waiters = if let Ok(mut state) = self.compatibility.verification.lock() {
+            match core::mem::replace(&mut *state, CompatibilityVerificationState::Pending) {
+                CompatibilityVerificationState::Running(waiters) => waiters,
+                previous => {
+                    *state = previous;
+                    Vec::new()
+                }
+            }
+        } else {
+            Vec::new()
+        };
+        for waiter in waiters {
+            waiter.wake();
+        }
     }
 }
 
@@ -731,12 +904,14 @@ impl ClientBuilder {
             ));
         }
 
+        let compatibility = Arc::new(ClientCompatibility::new(self.config.compatibility_policy));
         Ok(Client {
             config: self.config,
             http,
             sensitive_http,
             tls_backend,
             token: None,
+            compatibility,
             _state: PhantomData,
         })
     }
@@ -798,6 +973,7 @@ pub struct Client<State = Unauthenticated> {
     pub(crate) sensitive_http: reqwest::Client,
     pub(crate) tls_backend: TlsBackend,
     pub(crate) token: Option<SecretString>,
+    compatibility: Arc<ClientCompatibility>,
     pub(crate) _state: PhantomData<State>,
 }
 
@@ -836,6 +1012,7 @@ impl Client<Unauthenticated> {
             sensitive_http: self.sensitive_http,
             tls_backend: self.tls_backend,
             token: Some(token),
+            compatibility: self.compatibility,
             _state: PhantomData,
         }
     }
@@ -861,6 +1038,7 @@ impl Client<Unauthenticated> {
         feature = "kubernetes-auth",
         feature = "ldap-auth",
         feature = "radius-auth",
+        feature = "sys",
         feature = "userpass"
     ))]
     pub(crate) fn clone_without_state(&self) -> Client<Unauthenticated> {
@@ -870,6 +1048,7 @@ impl Client<Unauthenticated> {
             sensitive_http: self.sensitive_http.clone(),
             tls_backend: self.tls_backend,
             token: None,
+            compatibility: Arc::clone(&self.compatibility),
             _state: PhantomData,
         }
     }
@@ -885,6 +1064,114 @@ impl<State> Client<State> {
     #[must_use]
     pub const fn tls_backend(&self) -> TlsBackend {
         self.tls_backend
+    }
+
+    /// Verifies and returns this client's secret-free compatibility report.
+    ///
+    /// Verified policies perform at most one public `/sys/health` probe per
+    /// client instance. Concurrent callers share that result. Assumed mode
+    /// performs no probe, and clients without a selected policy return an
+    /// `Unverified` report while preserving the pre-2.0 request behavior.
+    pub async fn compatibility_report(&self) -> Result<OpenBaoCompatibilityReport> {
+        self.ensure_compatibility().await
+    }
+
+    async fn ensure_compatibility(&self) -> Result<OpenBaoCompatibilityReport> {
+        loop {
+            let action = {
+                let mut verification = self
+                    .compatibility
+                    .verification
+                    .lock()
+                    .map_err(|_| Error::Internal("compatibility cache lock failed"))?;
+                match &*verification {
+                    CompatibilityVerificationState::Complete(result) => {
+                        CompatibilityAction::Complete(*result)
+                    }
+                    CompatibilityVerificationState::Running(_) => {
+                        CompatibilityAction::Wait(CompatibilityWait {
+                            compatibility: &self.compatibility,
+                        })
+                    }
+                    CompatibilityVerificationState::Pending => {
+                        *verification = CompatibilityVerificationState::Running(Vec::new());
+                        CompatibilityAction::Lead(CompatibilityLeader {
+                            compatibility: &self.compatibility,
+                            completed: false,
+                        })
+                    }
+                }
+            };
+
+            match action {
+                CompatibilityAction::Complete(result) => {
+                    return result.map_err(compatibility_error);
+                }
+                CompatibilityAction::Wait(wait) => match wait.await {
+                    CompatibilityWaitOutcome::Complete(result) => {
+                        return result.map_err(compatibility_error);
+                    }
+                    CompatibilityWaitOutcome::Retry => continue,
+                    CompatibilityWaitOutcome::TooManyWaiters => {
+                        return Err(Error::OpenBaoCompatibilityProbe(
+                            "too many concurrent compatibility waiters",
+                        ));
+                    }
+                },
+                CompatibilityAction::Lead(leader) => {
+                    let result = self.evaluate_compatibility_policy().await;
+                    leader.complete(result);
+                    return result.map_err(compatibility_error);
+                }
+            }
+        }
+    }
+
+    async fn evaluate_compatibility_policy(&self) -> CachedCompatibilityResult {
+        let Some(policy) = self.compatibility.policy else {
+            return Ok(OpenBaoCompatibilityReport::unverified());
+        };
+        if let Some(report) = policy.immediate_report() {
+            return Ok(report);
+        }
+        let detected = self.probe_openbao_version().await?;
+        policy
+            .evaluate_detected(detected)
+            .map_err(CachedCompatibilityFailure::Policy)
+    }
+
+    async fn probe_openbao_version(
+        &self,
+    ) -> core::result::Result<OpenBaoVersion, CachedCompatibilityFailure> {
+        let url = self
+            .url_for_path("sys/health")
+            .map_err(|_| CachedCompatibilityFailure::Probe("health URL could not be built"))?;
+        let response = self
+            .send_non_sensitive_json_request(Method::GET, url)
+            .await
+            .map_err(|_| {
+                CachedCompatibilityFailure::Probe("health request could not be completed")
+            })?;
+        if !compatibility_health_status_is_accepted(response.status()) {
+            return Err(CachedCompatibilityFailure::Probe(
+                "health endpoint returned an unexpected status",
+            ));
+        }
+        let health = read_json_response::<CompatibilityHealth>(
+            response,
+            self.config
+                .max_response_bytes
+                .min(MAX_COMPATIBILITY_HEALTH_BYTES),
+        )
+        .await
+        .map_err(|_| {
+            CachedCompatibilityFailure::Probe("health response did not match the expected schema")
+        })?;
+        health.version.parse().map_err(|_| {
+            CachedCompatibilityFailure::Probe(
+                "health response contained an invalid stable server version",
+            )
+        })
     }
 
     /// Sends a raw authenticated or unauthenticated JSON request.
@@ -1126,6 +1413,7 @@ impl<State> Client<State> {
         body: Option<&[u8]>,
         accepted_statuses: &[StatusCode],
     ) -> Result<SecretVec> {
+        self.ensure_compatibility().await?;
         let mut url = self.url_for_path(path)?;
         if !query.is_empty() {
             let mut pairs = url.query_pairs_mut();
@@ -1175,6 +1463,7 @@ impl<State> Client<State> {
         B: Serialize + ?Sized,
         Q: AsRef<str>,
     {
+        self.ensure_compatibility().await?;
         let mut url = self.url_for_path(path)?;
         if !query.is_empty() {
             let mut pairs = url.query_pairs_mut();
@@ -1402,6 +1691,26 @@ impl<State> fmt::Debug for Client<State> {
             .field("token", &self.token.as_ref().map(|_| "<redacted>"))
             .finish_non_exhaustive()
     }
+}
+
+fn compatibility_error(failure: CachedCompatibilityFailure) -> Error {
+    match failure {
+        CachedCompatibilityFailure::Policy(OpenBaoCompatibilityFailure::VersionMismatch {
+            detected,
+            requirement,
+        }) => Error::OpenBaoVersionMismatch {
+            detected,
+            requirement,
+        },
+        CachedCompatibilityFailure::Policy(OpenBaoCompatibilityFailure::UnknownVersion(
+            version,
+        )) => Error::UnknownOpenBaoVersion(version),
+        CachedCompatibilityFailure::Probe(message) => Error::OpenBaoCompatibilityProbe(message),
+    }
+}
+
+fn compatibility_health_status_is_accepted(status: StatusCode) -> bool {
+    matches!(status.as_u16(), 200 | 429 | 472 | 473 | 501 | 503)
 }
 
 fn is_loopback_url(url: &Url) -> bool {

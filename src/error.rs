@@ -4,6 +4,8 @@ use core::fmt;
 
 use reqwest::StatusCode;
 
+use crate::compatibility::{OpenBaoVersion, OpenBaoVersionRequirement};
+
 /// Result alias used by this crate.
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -31,6 +33,17 @@ pub enum Error {
     ///
     /// The static reason never contains the rejected input.
     InvalidOpenBaoVersionRequirement(&'static str),
+    /// The detected server version did not satisfy the selected requirement.
+    OpenBaoVersionMismatch {
+        /// Stable version returned by the public health endpoint.
+        detected: OpenBaoVersion,
+        /// Exact or closed range selected by the caller.
+        requirement: OpenBaoVersionRequirement,
+    },
+    /// The detected stable server version has no immutable compatibility profile.
+    UnknownOpenBaoVersion(OpenBaoVersion),
+    /// The public health compatibility probe failed without retaining sensitive context.
+    OpenBaoCompatibilityProbe(&'static str),
     /// A public raw request was attempted without explicit acknowledgement.
     RawApiDisabled,
     /// A crate invariant was violated.
@@ -84,6 +97,20 @@ impl fmt::Display for Error {
             }
             Self::InvalidOpenBaoVersionRequirement(message) => {
                 write!(formatter, "invalid OpenBao version requirement: {message}")
+            }
+            Self::OpenBaoVersionMismatch {
+                detected,
+                requirement,
+            } => write!(
+                formatter,
+                "OpenBao server version {detected} does not satisfy compatibility requirement {requirement}"
+            ),
+            Self::UnknownOpenBaoVersion(version) => write!(
+                formatter,
+                "OpenBao server version {version} has no locked compatibility profile"
+            ),
+            Self::OpenBaoCompatibilityProbe(message) => {
+                write!(formatter, "OpenBao compatibility probe failed: {message}")
             }
             Self::RawApiDisabled => write!(
                 formatter,

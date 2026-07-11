@@ -6,10 +6,10 @@
 //!
 //! This module also exposes a generated read-only registry of secret-free route
 //! templates across the 21 locked OpenBao releases. Registry evidence reports
-//! what exact tagged documentation contains; it does not query `/sys/health`,
-//! prove that a connected server was checked, or dispatch an HTTP request.
-//! Runtime enforcement lands with the planned client compatibility-policy and
-//! version-aware-dispatch checkpoints.
+//! what exact tagged documentation contains. Client compatibility policies can
+//! verify and cache the stable version returned by `/sys/health`, or explicitly
+//! select an assumed profile where probing is unavailable. Version-aware route
+//! and field dispatch remains a separate compatibility checkpoint.
 
 use core::{fmt, str::FromStr};
 
@@ -17,6 +17,161 @@ use crate::{Error, Result};
 
 const MAX_VERSION_BYTES: usize = 64;
 const MAX_REQUIREMENT_BYTES: usize = (MAX_VERSION_BYTES * 2) + 3;
+
+/// High-level compatibility policy selected for one client instance.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct OpenBaoCompatibilityPolicy {
+    value: OpenBaoCompatibilityPolicyValue,
+}
+
+/// Public classification of an OpenBao compatibility policy.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub enum OpenBaoCompatibilityPolicyKind {
+    /// Detect the server and require one exact locked release.
+    Exact,
+    /// Detect the server and require a release inside one closed locked range.
+    Range,
+    /// Detect the server and require any exact release in the registry.
+    AutomaticStrict,
+    /// Select one exact locked profile without querying the server.
+    Assumed,
+    /// Detect the server and explicitly tolerate a version newer than the registry.
+    AcknowledgedUnknownNewer,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum OpenBaoCompatibilityPolicyValue {
+    Exact(OpenBaoVersion),
+    Range(OpenBaoVersionRequirement),
+    AutomaticStrict,
+    Assumed(OpenBaoVersion),
+    AcknowledgedUnknownNewer,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum OpenBaoCompatibilityFailure {
+    VersionMismatch {
+        detected: OpenBaoVersion,
+        requirement: OpenBaoVersionRequirement,
+    },
+    UnknownVersion(OpenBaoVersion),
+}
+
+/// Explicit acknowledgement required to tolerate an unknown newer server.
+///
+/// This policy uses the newest reviewed compatibility profile when the server
+/// reports a later stable version. It cannot prove that removed or changed
+/// operations remain compatible. Prefer strict mode and add a reviewed release
+/// profile instead.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct UnknownNewerOpenBaoAcknowledgement(());
+
+impl UnknownNewerOpenBaoAcknowledgement {
+    /// Acknowledges the compatibility risk of using the newest known profile.
+    #[must_use]
+    pub const fn acknowledge() -> Self {
+        Self(())
+    }
+}
+
+/// Verification state reported for one client instance.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[non_exhaustive]
+pub enum OpenBaoCompatibilityStatus {
+    /// No compatibility policy was selected and no server version was checked.
+    Unverified,
+    /// The server version was detected and matched a locked profile and policy.
+    Verified,
+    /// A locked profile was explicitly selected without a server probe.
+    Assumed,
+    /// A newer server was detected and the caller acknowledged using the latest profile.
+    AcknowledgedUnknownNewer,
+}
+
+/// Secret-free compatibility result for one client instance.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct OpenBaoCompatibilityReport {
+    status: OpenBaoCompatibilityStatus,
+    policy: Option<OpenBaoCompatibilityPolicyKind>,
+    requirement: Option<OpenBaoVersionRequirement>,
+    detected_version: Option<OpenBaoVersion>,
+    profile_version: Option<OpenBaoVersion>,
+}
+
+impl OpenBaoCompatibilityReport {
+    /// Verification state for this report.
+    pub const fn status(self) -> OpenBaoCompatibilityStatus {
+        self.status
+    }
+
+    /// Selected policy classification, or `None` for an unverified client.
+    pub const fn policy(self) -> Option<OpenBaoCompatibilityPolicyKind> {
+        self.policy
+    }
+
+    /// Exact or closed version requirement selected by the policy, when applicable.
+    pub const fn requirement(self) -> Option<OpenBaoVersionRequirement> {
+        self.requirement
+    }
+
+    /// Stable version returned by `/sys/health`, when a probe was performed.
+    pub const fn detected_version(self) -> Option<OpenBaoVersion> {
+        self.detected_version
+    }
+
+    /// Exact immutable profile selected for request compatibility decisions.
+    pub const fn profile_version(self) -> Option<OpenBaoVersion> {
+        self.profile_version
+    }
+
+    pub(crate) const fn unverified() -> Self {
+        Self {
+            status: OpenBaoCompatibilityStatus::Unverified,
+            policy: None,
+            requirement: None,
+            detected_version: None,
+            profile_version: None,
+        }
+    }
+
+    pub(crate) const fn verified(
+        policy: OpenBaoCompatibilityPolicyKind,
+        detected_version: OpenBaoVersion,
+        requirement: Option<OpenBaoVersionRequirement>,
+    ) -> Self {
+        Self {
+            status: OpenBaoCompatibilityStatus::Verified,
+            policy: Some(policy),
+            requirement,
+            detected_version: Some(detected_version),
+            profile_version: Some(detected_version),
+        }
+    }
+
+    pub(crate) const fn assumed(version: OpenBaoVersion) -> Self {
+        Self {
+            status: OpenBaoCompatibilityStatus::Assumed,
+            policy: Some(OpenBaoCompatibilityPolicyKind::Assumed),
+            requirement: Some(OpenBaoVersionRequirement::exact(version)),
+            detected_version: None,
+            profile_version: Some(version),
+        }
+    }
+
+    pub(crate) const fn acknowledged_unknown_newer(
+        detected_version: OpenBaoVersion,
+        profile_version: OpenBaoVersion,
+    ) -> Self {
+        Self {
+            status: OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer,
+            policy: Some(OpenBaoCompatibilityPolicyKind::AcknowledgedUnknownNewer),
+            requirement: None,
+            detected_version: Some(detected_version),
+            profile_version: Some(profile_version),
+        }
+    }
+}
 
 /// Exact stable OpenBao server version.
 ///
@@ -191,6 +346,166 @@ impl FromStr for OpenBaoVersionRequirement {
         }
 
         Ok(Self::exact(parse_requirement_version(input)?))
+    }
+}
+
+impl OpenBaoCompatibilityPolicy {
+    /// Detects the server and requires one exact locked release.
+    pub fn exact(version: OpenBaoVersion) -> Result<Self> {
+        require_generated_profile(version)?;
+        Ok(Self {
+            value: OpenBaoCompatibilityPolicyValue::Exact(version),
+        })
+    }
+
+    /// Detects the server and requires a version inside a closed locked range.
+    ///
+    /// Both range endpoints must be exact releases in the immutable inventory.
+    pub fn range(requirement: OpenBaoVersionRequirement) -> Result<Self> {
+        require_generated_profile(requirement.minimum())?;
+        require_generated_profile(requirement.maximum())?;
+        Ok(Self {
+            value: OpenBaoCompatibilityPolicyValue::Range(requirement),
+        })
+    }
+
+    /// Detects the server and rejects any version absent from the registry.
+    #[must_use]
+    pub const fn automatic_strict() -> Self {
+        Self {
+            value: OpenBaoCompatibilityPolicyValue::AutomaticStrict,
+        }
+    }
+
+    /// Selects one locked profile without querying `/sys/health`.
+    ///
+    /// Reports produced by this policy are always marked `Assumed`, never
+    /// `Verified`. Use this only where an authenticated proxy blocks the public
+    /// health endpoint and deployment configuration supplies the exact version.
+    pub fn assume(version: OpenBaoVersion) -> Result<Self> {
+        require_generated_profile(version)?;
+        Ok(Self {
+            value: OpenBaoCompatibilityPolicyValue::Assumed(version),
+        })
+    }
+
+    /// Detects the server and tolerates versions newer than the registry.
+    ///
+    /// Unknown older versions and unpublished versions inside the known range
+    /// still fail closed. Newer versions select the latest reviewed profile and
+    /// are reported as acknowledged rather than verified.
+    #[must_use]
+    pub const fn automatic_allow_unknown_newer(
+        _acknowledgement: UnknownNewerOpenBaoAcknowledgement,
+    ) -> Self {
+        Self {
+            value: OpenBaoCompatibilityPolicyValue::AcknowledgedUnknownNewer,
+        }
+    }
+
+    /// Public classification of this policy.
+    pub const fn kind(self) -> OpenBaoCompatibilityPolicyKind {
+        match self.value {
+            OpenBaoCompatibilityPolicyValue::Exact(_) => OpenBaoCompatibilityPolicyKind::Exact,
+            OpenBaoCompatibilityPolicyValue::Range(_) => OpenBaoCompatibilityPolicyKind::Range,
+            OpenBaoCompatibilityPolicyValue::AutomaticStrict => {
+                OpenBaoCompatibilityPolicyKind::AutomaticStrict
+            }
+            OpenBaoCompatibilityPolicyValue::Assumed(_) => OpenBaoCompatibilityPolicyKind::Assumed,
+            OpenBaoCompatibilityPolicyValue::AcknowledgedUnknownNewer => {
+                OpenBaoCompatibilityPolicyKind::AcknowledgedUnknownNewer
+            }
+        }
+    }
+
+    /// Exact or closed version requirement carried by this policy.
+    pub const fn requirement(self) -> Option<OpenBaoVersionRequirement> {
+        match self.value {
+            OpenBaoCompatibilityPolicyValue::Exact(version)
+            | OpenBaoCompatibilityPolicyValue::Assumed(version) => {
+                Some(OpenBaoVersionRequirement::exact(version))
+            }
+            OpenBaoCompatibilityPolicyValue::Range(requirement) => Some(requirement),
+            OpenBaoCompatibilityPolicyValue::AutomaticStrict
+            | OpenBaoCompatibilityPolicyValue::AcknowledgedUnknownNewer => None,
+        }
+    }
+
+    pub(crate) fn immediate_report(self) -> Option<OpenBaoCompatibilityReport> {
+        match self.value {
+            OpenBaoCompatibilityPolicyValue::Assumed(version) => {
+                Some(OpenBaoCompatibilityReport::assumed(version))
+            }
+            _ => None,
+        }
+    }
+
+    pub(crate) fn evaluate_detected(
+        self,
+        detected: OpenBaoVersion,
+    ) -> core::result::Result<OpenBaoCompatibilityReport, OpenBaoCompatibilityFailure> {
+        match self.value {
+            OpenBaoCompatibilityPolicyValue::Exact(expected) => {
+                if detected != expected {
+                    return Err(OpenBaoCompatibilityFailure::VersionMismatch {
+                        detected,
+                        requirement: OpenBaoVersionRequirement::exact(expected),
+                    });
+                }
+                Ok(OpenBaoCompatibilityReport::verified(
+                    self.kind(),
+                    detected,
+                    self.requirement(),
+                ))
+            }
+            OpenBaoCompatibilityPolicyValue::Range(requirement) => {
+                if !requirement.contains(detected) {
+                    return Err(OpenBaoCompatibilityFailure::VersionMismatch {
+                        detected,
+                        requirement,
+                    });
+                }
+                if !is_generated_profile(detected) {
+                    return Err(OpenBaoCompatibilityFailure::UnknownVersion(detected));
+                }
+                Ok(OpenBaoCompatibilityReport::verified(
+                    self.kind(),
+                    detected,
+                    self.requirement(),
+                ))
+            }
+            OpenBaoCompatibilityPolicyValue::AutomaticStrict => {
+                if !is_generated_profile(detected) {
+                    return Err(OpenBaoCompatibilityFailure::UnknownVersion(detected));
+                }
+                Ok(OpenBaoCompatibilityReport::verified(
+                    self.kind(),
+                    detected,
+                    self.requirement(),
+                ))
+            }
+            OpenBaoCompatibilityPolicyValue::Assumed(version) => {
+                Ok(OpenBaoCompatibilityReport::assumed(version))
+            }
+            OpenBaoCompatibilityPolicyValue::AcknowledgedUnknownNewer => {
+                if is_generated_profile(detected) {
+                    return Ok(OpenBaoCompatibilityReport::verified(
+                        self.kind(),
+                        detected,
+                        self.requirement(),
+                    ));
+                }
+                let Some(latest) = latest_generated_profile() else {
+                    return Err(OpenBaoCompatibilityFailure::UnknownVersion(detected));
+                };
+                if detected > latest {
+                    return Ok(OpenBaoCompatibilityReport::acknowledged_unknown_newer(
+                        detected, latest,
+                    ));
+                }
+                Err(OpenBaoCompatibilityFailure::UnknownVersion(detected))
+            }
+        }
     }
 }
 
@@ -497,6 +812,20 @@ fn is_generated_profile(version: OpenBaoVersion) -> bool {
         .is_ok()
 }
 
+fn latest_generated_profile() -> Option<OpenBaoVersion> {
+    generated::GENERATED_PROFILE_VERSIONS.last().copied()
+}
+
+fn require_generated_profile(version: OpenBaoVersion) -> Result<()> {
+    if is_generated_profile(version) {
+        Ok(())
+    } else {
+        Err(invalid_requirement(
+            "compatibility policy version is absent from the locked release inventory",
+        ))
+    }
+}
+
 fn capability_status(
     operation: OpenBaoOperation,
     version: OpenBaoVersion,
@@ -558,8 +887,10 @@ mod tests {
 
     use super::{
         OpenBaoCapabilityAvailability, OpenBaoCapabilityEvidence, OpenBaoCapabilityProfile,
-        OpenBaoHttpMethod, OpenBaoOperationDisposition, OpenBaoVersion, OpenBaoVersionRequirement,
-        openbao_operation, openbao_operations, openbao_profile_versions,
+        OpenBaoCompatibilityFailure, OpenBaoCompatibilityPolicy, OpenBaoCompatibilityPolicyKind,
+        OpenBaoCompatibilityStatus, OpenBaoHttpMethod, OpenBaoOperationDisposition, OpenBaoVersion,
+        OpenBaoVersionRequirement, UnknownNewerOpenBaoAcknowledgement, openbao_operation,
+        openbao_operations, openbao_profile_versions,
     };
     use crate::{Error, Result};
 
@@ -573,6 +904,69 @@ mod tests {
         assert_eq!(version.to_string(), "2.5.5");
         assert!(OpenBaoVersion::new(2, 5, 4) < version);
         assert!(version < OpenBaoVersion::new(3, 0, 0));
+        Ok(())
+    }
+
+    #[test]
+    fn compatibility_policies_require_locked_profiles() -> Result<()> {
+        let known = OpenBaoVersion::new(2, 5, 5);
+        let unpublished = OpenBaoVersion::new(2, 4, 2);
+
+        assert_eq!(
+            OpenBaoCompatibilityPolicy::exact(known)?.kind(),
+            OpenBaoCompatibilityPolicyKind::Exact
+        );
+        assert!(OpenBaoCompatibilityPolicy::exact(unpublished).is_err());
+        assert!(OpenBaoCompatibilityPolicy::assume(unpublished).is_err());
+        assert!(
+            OpenBaoCompatibilityPolicy::range(OpenBaoVersionRequirement::inclusive(
+                OpenBaoVersion::new(2, 4, 1),
+                unpublished,
+            )?)
+            .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
+        let strict = OpenBaoCompatibilityPolicy::automatic_strict();
+        let unknown = OpenBaoVersion::new(2, 6, 0);
+        assert_eq!(
+            strict.evaluate_detected(unknown),
+            Err(OpenBaoCompatibilityFailure::UnknownVersion(unknown))
+        );
+
+        let acknowledged = OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+            UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+        )
+        .evaluate_detected(unknown)
+        .map_err(|_| Error::Internal("acknowledged newer policy rejected a newer version"))?;
+        assert_eq!(
+            acknowledged.status(),
+            OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
+        );
+        assert_eq!(acknowledged.detected_version(), Some(unknown));
+        assert_eq!(
+            acknowledged.profile_version(),
+            Some(OpenBaoVersion::new(2, 5, 5))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn assumed_policy_is_never_reported_as_verified() -> Result<()> {
+        let version = OpenBaoVersion::new(2, 2, 0);
+        let report = OpenBaoCompatibilityPolicy::assume(version)?
+            .immediate_report()
+            .ok_or(Error::Internal("assumed policy did not produce a report"))?;
+        assert_eq!(report.status(), OpenBaoCompatibilityStatus::Assumed);
+        assert_eq!(report.detected_version(), None);
+        assert_eq!(report.profile_version(), Some(version));
+        assert_eq!(
+            report.requirement(),
+            Some(OpenBaoVersionRequirement::exact(version))
+        );
         Ok(())
     }
 

@@ -4222,15 +4222,10 @@ impl Sys<'_, Unauthenticated> {
             ));
         }
 
-        let client = Client {
-            config: self.client.config.clone(),
-            http: self.client.http.clone(),
-            sensitive_http: self.client.sensitive_http.clone(),
-            tls_backend: self.client.tls_backend,
-            token: None,
-            _state: PhantomData,
-        }
-        .try_with_token(init_response.root_token.clone())?;
+        let client = self
+            .client
+            .clone_without_state()
+            .try_with_token(init_response.root_token.clone())?;
 
         Ok(DevBootstrap {
             client,

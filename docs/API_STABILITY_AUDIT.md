@@ -62,7 +62,7 @@ and now have current API or documentation coverage:
 
 | Area | Current Posture | Planned Decision |
 | --- | --- | --- |
-| Client construction | Typestate client, env construction, shared client, strict TLS defaults. | Reviewed for `0.9.0`; no compatibility aliases are needed before `1.0.0` unless a concrete downstream migration issue is found. |
+| Client construction | Typestate client, env construction, shared client, strict TLS defaults, and `2.0.0` opt-in exact/range/automatic/assumed server-version policies with per-client verification caching. | Existing constructors remain offline and unverified for migration compatibility; strict verification is the recommended `2.0.0` path. Assumed and acknowledged-newer reports must never be presented as verified. |
 | Error handling | Sanitized API errors and common predicates. | Reviewed for `0.9.0`; keep helpers value-free and do not expose raw response bodies. |
 | Retry/backoff | `RetryPolicy`, `RetryableMethod`, and `Client::request_json_with_retry` provide explicit exponential backoff with bounded jitter for caller-approved idempotent raw JSON requests. Retryable methods are limited to GET, HEAD, and OpenBao LIST. | Keep default typed helpers single-shot to avoid retrying non-idempotent writes by accident. Do not add global/background retry middleware before `1.0.0`. |
 | Token lifecycle | Typed create/create-orphan, lookup, accessor lookup/list, renew/renew-accessor, revoke/revoke-accessor, role, tidy helpers, plus `RenewalHint` timing guidance. | Reject background auto-renewal for stable scope. No remaining token endpoint decision rows. |

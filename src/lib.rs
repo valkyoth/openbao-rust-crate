@@ -165,8 +165,10 @@ pub use client::{
 };
 pub use compatibility::{
     OpenBaoCapabilityAvailability, OpenBaoCapabilityEvidence, OpenBaoCapabilityProfile,
-    OpenBaoCapabilityRange, OpenBaoCapabilityStatus, OpenBaoHttpMethod, OpenBaoOperation,
-    OpenBaoOperationDisposition, OpenBaoVersion, OpenBaoVersionRequirement, openbao_operation,
+    OpenBaoCapabilityRange, OpenBaoCapabilityStatus, OpenBaoCompatibilityPolicy,
+    OpenBaoCompatibilityPolicyKind, OpenBaoCompatibilityReport, OpenBaoCompatibilityStatus,
+    OpenBaoHttpMethod, OpenBaoOperation, OpenBaoOperationDisposition, OpenBaoVersion,
+    OpenBaoVersionRequirement, UnknownNewerOpenBaoAcknowledgement, openbao_operation,
     openbao_operations, openbao_profile_versions,
 };
 pub use duration::{RenewalHint, duration_to_bao_string};
@@ -203,10 +205,12 @@ pub mod prelude {
         AclCapability, AclPolicyBuilder, Authenticated, BoundedStringList, Certificate, Client,
         ClientBuilder, Empty, Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries,
         ListPageOptions, MAX_RESPONSE_STRINGS, Method, OpenBao, OpenBaoCapabilityAvailability,
-        OpenBaoCapabilityEvidence, OpenBaoCapabilityProfile, OpenBaoConfig, OpenBaoHttpMethod,
-        OpenBaoOperationDisposition, OpenBaoVersion, OpenBaoVersionRequirement, PluginMount,
-        RenewalHint, ResponseEnvelope, Result, SecretString, SecretVec, SecureSanitize,
-        SharedClient, StatusCode, TlsBackend, Unauthenticated, deserialize_bounded_string_vec,
+        OpenBaoCapabilityEvidence, OpenBaoCapabilityProfile, OpenBaoCompatibilityPolicy,
+        OpenBaoCompatibilityPolicyKind, OpenBaoCompatibilityReport, OpenBaoCompatibilityStatus,
+        OpenBaoConfig, OpenBaoHttpMethod, OpenBaoOperationDisposition, OpenBaoVersion,
+        OpenBaoVersionRequirement, PluginMount, RenewalHint, ResponseEnvelope, Result,
+        SecretString, SecretVec, SecureSanitize, SharedClient, StatusCode, TlsBackend,
+        Unauthenticated, UnknownNewerOpenBaoAcknowledgement, deserialize_bounded_string_vec,
         duration_to_bao_string, openbao_operation, openbao_operations, openbao_profile_versions,
         validate_endpoint_path, validate_mount_path,
     };

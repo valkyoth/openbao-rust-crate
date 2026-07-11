@@ -84,6 +84,26 @@ Selection follows this crate's acknowledged TLS feature policy even when Cargo
 feature unification enables another backend on reqwest through a different
 dependency.
 
+`2.0.0` adds opt-in runtime server-version policies. Existing constructors
+remain offline and unverified unless a policy is selected. New deployments
+should select strict verification while constructing the configuration:
+
+```rust
+use openbao::{Client, OpenBaoCompatibilityPolicy, OpenBaoConfig};
+
+# fn build() -> openbao::Result<Client> {
+let config = OpenBaoConfig::new("https://bao.example.com")?
+    .compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict());
+Client::from_config(config)
+# }
+```
+
+Use `OpenBaoCompatibilityPolicy::exact` for a fixed deployment or `range` for
+a controlled rolling upgrade. `assume` avoids the health request when a proxy
+blocks it, but reports are never marked verified. Unknown-newer operation
+requires an explicit `UnknownNewerOpenBaoAcknowledgement` and should be used
+only until the new release receives a locked profile.
+
 ## From `openbao` 1.0.2 To 1.1.0
 
 `1.1.0` intentionally changes the public owned secret-byte buffer type. The

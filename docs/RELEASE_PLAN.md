@@ -676,7 +676,9 @@ Stop criteria:
   operations as typed or typed-gated, with zero unverified or confirmed-gap
   rows and explicit request/response field evidence;
 - exact and range requirements, strict detection, explicit assumed mode, and
-  acknowledged unknown-newer behavior are implemented and documented;
+  acknowledged unknown-newer behavior are implemented and documented; verified
+  policies use one public, credential-free health probe and a cancellation-safe
+  per-client cache;
 - typed endpoint dispatch selects a reviewed version variant before request
   transmission and never retries a different route after an HTTP failure;
 - endpoint removals in newer OpenBao releases do not overwrite compatible

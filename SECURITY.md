@@ -303,3 +303,21 @@ for every auth method and secrets engine. Live core-flow evidence for exact
 OpenBao `2.0.0` through `2.5.5` releases is labeled `tested-subset`; it does not
 extend to every typed helper. Any behavior derived from live testing rather
 than documentation must be marked as such in docs and tests.
+
+`OpenBaoCompatibilityPolicy::automatic_strict`, `exact`, and `range` verify
+the stable version through one unauthenticated, namespace-free `/sys/health`
+request and cache the result only inside that client instance. Compatibility
+probe failures retain neither the request URL nor OpenBao response messages.
+The reported version is trustworthy only to the extent that the configured TLS
+origin and any terminating proxy are trustworthy. For a load-balanced origin,
+the probe proves the version of the backend selected for that request; operators
+must keep backend versions inside the configured exact or rolling-upgrade range
+and enforce that invariant at the load balancer or deployment layer.
+
+Assumed mode performs no server verification and is always reported as
+`Assumed`. The unknown-newer policy requires
+`UnknownNewerOpenBaoAcknowledgement::acknowledge()` and reports the detected
+version as acknowledged rather than verified while selecting the newest known
+profile. It is a temporary compatibility escape hatch, not evidence that a
+newer server preserved every operation. Strict mode remains the recommended
+policy.

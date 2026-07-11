@@ -245,6 +245,29 @@ for status in profile.operations() {
 }
 ```
 
+Select strict runtime verification for new clients:
+
+```rust
+use openbao::{Client, OpenBaoCompatibilityPolicy, OpenBaoConfig};
+
+# async fn example() -> openbao::Result<()> {
+let config = OpenBaoConfig::new("https://bao.example.com")?
+    .compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict());
+let client = Client::from_config(config)?;
+let report = client.compatibility_report().await?;
+println!("verified OpenBao profile: {:?}", report.profile_version());
+# Ok(())
+# }
+```
+
+Strict, exact, and range policies perform one public, token-free and
+namespace-free `/sys/health` preflight before the first SDK request, then cache
+the selected profile inside that client instance. `assume` is available for
+proxies that block health probing, but its report is always visibly `Assumed`.
+Unknown newer servers fail closed unless the caller constructs the separately
+acknowledged policy. Existing constructors remain unverified unless a policy is
+selected during the `2.0.0` migration.
+
 Pull requests run that core subset against `2.0.0` and the latest patch in each
 minor line. Nightly, manual release-gate, and version-tag workflows run every
 exact locked release. The matrix publishes sanitized per-release results and a

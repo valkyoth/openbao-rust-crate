@@ -7,6 +7,7 @@
 use std::{
     io::{Read, Write},
     net::TcpListener,
+    sync::mpsc,
     thread,
     time::Duration,
 };
@@ -17,8 +18,9 @@ use std::{
 };
 
 use openbao::{
-    Authenticated, Client, Error, Method, OpenBaoConfig, ResponseEnvelope, RetryPolicy,
-    RetryableMethod, Unauthenticated, sys::DevBootstrapOptions,
+    Authenticated, Client, Error, Method, OpenBaoCompatibilityPolicy, OpenBaoCompatibilityStatus,
+    OpenBaoConfig, OpenBaoVersion, ResponseEnvelope, RetryPolicy, RetryableMethod, Unauthenticated,
+    UnknownNewerOpenBaoAcknowledgement, sys::DevBootstrapOptions,
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
@@ -79,6 +81,17 @@ fn read_http_request(stream: &mut impl Read) -> String {
     })
 }
 
+fn write_json_response(stream: &mut impl Write, status: &str, body: &str) {
+    let response = format!(
+        "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    stream
+        .write_all(response.as_bytes())
+        .unwrap_or_else(|error| panic!("{error}"));
+}
+
 fn http_request_is_complete(request: &[u8]) -> bool {
     let Some(header_end) = request.windows(4).position(|window| window == b"\r\n\r\n") else {
         return false;
@@ -108,6 +121,365 @@ fn test_operation_id() -> String {
         .unwrap_or_default()
         .as_nanos();
     format!("{timestamp:x}{sequence:x}")
+}
+
+#[tokio::test]
+async fn default_client_compatibility_remains_offline_and_unverified() {
+    let client = Client::new("https://bao.example.com").unwrap_or_else(|error| panic!("{error}"));
+    let report = client
+        .compatibility_report()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(report.status(), OpenBaoCompatibilityStatus::Unverified);
+    assert_eq!(report.policy(), None);
+    assert_eq!(report.detected_version(), None);
+    assert_eq!(report.profile_version(), None);
+}
+
+#[tokio::test]
+async fn exact_compatibility_probe_is_public_sanitized_and_cached() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+        assert!(!request.to_ascii_lowercase().contains("authorization"));
+        assert!(!request.to_ascii_lowercase().contains("x-vault-namespace"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.5.5"}"#,
+        );
+    });
+
+    let policy = OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 5, 5))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .and_then(|config| config.namespace("team-a"))
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(SecretString::from("compat-token")))
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let first = client
+        .compatibility_report()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let second = client
+        .compatibility_report()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(first, second);
+    assert_eq!(first.status(), OpenBaoCompatibilityStatus::Verified);
+    assert_eq!(first.detected_version(), Some(OpenBaoVersion::new(2, 5, 5)));
+    assert_eq!(
+        first.requirement(),
+        Some(openbao::OpenBaoVersionRequirement::exact(
+            OpenBaoVersion::new(2, 5, 5)
+        ))
+    );
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn compatibility_mismatch_fails_before_the_requested_operation() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.4.4"}"#,
+        );
+    });
+
+    let policy = OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 5, 5))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+    let result = client
+        .request_json::<openbao::sys::Health, openbao::Empty>(Method::GET, "sys/health", None)
+        .await;
+    let error = match result {
+        Ok(_) => panic!("mismatched exact version unexpectedly sent the operation"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        error,
+        Error::OpenBaoVersionMismatch {
+            detected,
+            requirement: _
+        } if detected == OpenBaoVersion::new(2, 4, 4)
+    ));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn assumed_compatibility_never_probes_and_remains_visibly_unverified() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.2.0"}"#,
+        );
+    });
+
+    let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 2, 0))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+    let report = client
+        .compatibility_report()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(report.status(), OpenBaoCompatibilityStatus::Assumed);
+    assert_eq!(report.detected_version(), None);
+    let health = client
+        .sys()
+        .health()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(health.version, "2.2.0");
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn concurrent_compatibility_reports_share_one_probe() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.5.5"}"#,
+        );
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict()))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+    let (first, second, third) = tokio::join!(
+        client.compatibility_report(),
+        client.compatibility_report(),
+        client.compatibility_report()
+    );
+    let first = first.unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(second.unwrap_or_else(|error| panic!("{error}")), first);
+    assert_eq!(third.unwrap_or_else(|error| panic!("{error}")), first);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn compatibility_cache_is_isolated_between_client_instances() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        for _ in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+            write_json_response(
+                &mut stream,
+                "200 OK",
+                r#"{"initialized":true,"sealed":false,"version":"2.5.5"}"#,
+            );
+        }
+    });
+
+    let make_client = || {
+        let config = OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .map(|config| {
+                config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict())
+            })
+            .unwrap_or_else(|error| panic!("{error}"));
+        Client::from_config(config).unwrap_or_else(|error| panic!("{error}"))
+    };
+    let first = make_client();
+    let second = make_client();
+    first
+        .compatibility_report()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    second
+        .compatibility_report()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn cancelled_compatibility_leader_allows_a_fresh_probe() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let (accepted_sender, accepted_receiver) = mpsc::channel();
+    let (release_sender, release_receiver) = mpsc::channel();
+    let server = thread::spawn(move || {
+        let (mut first, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut first);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        accepted_sender
+            .send(())
+            .unwrap_or_else(|error| panic!("{error}"));
+        release_receiver
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let body = r#"{"initialized":true,"sealed":false,"version":"2.5.5"}"#;
+        let response = format!(
+            "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let _ = first.write_all(response.as_bytes());
+
+        let (mut second, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut second);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        write_json_response(
+            &mut second,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.5.5"}"#,
+        );
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict()))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client =
+        std::sync::Arc::new(Client::from_config(config).unwrap_or_else(|error| panic!("{error}")));
+    let first_client = std::sync::Arc::clone(&client);
+    let first = tokio::spawn(async move { first_client.compatibility_report().await });
+    tokio::task::spawn_blocking(move || {
+        accepted_receiver
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap_or_else(|error| panic!("{error}"));
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    first.abort();
+    let _ = first.await;
+    release_sender
+        .send(())
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let report = tokio::time::timeout(Duration::from_secs(2), client.compatibility_report())
+        .await
+        .unwrap_or_else(|error| panic!("{error}"))
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(report.status(), OpenBaoCompatibilityStatus::Verified);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn malformed_health_version_is_not_reflected_and_failure_is_cached() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let _request = read_http_request(&mut stream);
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"SECRET-VERSION\r\nVALUE"}"#,
+        );
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict()))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+    for _ in 0..2 {
+        let error = match client.compatibility_report().await {
+            Ok(_) => panic!("malformed health version unexpectedly passed"),
+            Err(error) => error,
+        };
+        let rendered = error.to_string();
+        assert!(!rendered.contains("SECRET-VERSION"));
+        assert!(matches!(error, Error::OpenBaoCompatibilityProbe(_)));
+    }
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn unknown_newer_requires_explicit_acknowledgement() {
+    for acknowledged in [false, true] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let addr = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let _request = read_http_request(&mut stream);
+            write_json_response(
+                &mut stream,
+                "200 OK",
+                r#"{"initialized":true,"sealed":false,"version":"2.6.0"}"#,
+            );
+        });
+        let policy = if acknowledged {
+            OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            )
+        } else {
+            OpenBaoCompatibilityPolicy::automatic_strict()
+        };
+        let config = OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+        let result = client.compatibility_report().await;
+        if acknowledged {
+            let report = result.unwrap_or_else(|error| panic!("{error}"));
+            assert_eq!(
+                report.status(),
+                OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
+            );
+            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 5, 5)));
+        } else {
+            assert!(matches!(result, Err(Error::UnknownOpenBaoVersion(_))));
+        }
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
+    }
 }
 
 #[tokio::test]
