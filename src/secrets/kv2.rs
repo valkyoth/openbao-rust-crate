@@ -13,6 +13,7 @@ use serde::{
     de::{DeserializeOwned, IgnoredAny, MapAccess, Visitor},
     ser::SerializeMap,
 };
+use serde_json::Value as JsonValue;
 
 use crate::{
     Authenticated, Client, Error, Result,
@@ -205,6 +206,15 @@ pub struct Kv2List {
     pub keys: Vec<String>,
 }
 
+/// Recursive KV v2 subkey shape returned without secret values.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Kv2Subkeys {
+    /// Requested version metadata.
+    pub metadata: Kv2Metadata,
+    /// Recursive object shape. Leaf values are JSON `null`.
+    pub subkeys: JsonValue,
+}
+
 impl ListEntries for Kv2List {
     fn entries(&self) -> &[String] {
         &self.keys
@@ -263,8 +273,7 @@ impl Kv2<'_> {
         T: DeserializeOwned,
     {
         let envelope: Kv2ReadEnvelope<T> = self
-            .client
-            .request_json_internal(Method::GET, &self.data_path(path)?, Option::<&Empty>::None)
+            .request(Method::GET, &self.data_path(path)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -307,8 +316,7 @@ impl Kv2<'_> {
     {
         let version = version.to_string();
         let envelope: Kv2ReadEnvelope<T> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 Method::GET,
                 &self.data_path(path)?,
                 &[("version", version)],
@@ -384,8 +392,7 @@ impl Kv2<'_> {
     {
         let payload = Kv2WritePayload { data, options };
         let envelope: ResponseEnvelope<Kv2WriteResponse> = self
-            .client
-            .request_json_internal(Method::POST, &self.data_path(path)?, Some(&payload))
+            .request(Method::POST, &self.data_path(path)?, Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -410,10 +417,10 @@ impl Kv2<'_> {
     {
         let payload = Kv2WritePayload { data, options };
         let envelope: ResponseEnvelope<Kv2WriteResponse> = self
-            .client
-            .request_json_headers_accepting(
+            .request_query_headers(
                 Method::PATCH,
                 &self.data_path(path)?,
+                &[] as &[(&str, String)],
                 &[(
                     CONTENT_TYPE,
                     HeaderValue::from_static("application/merge-patch+json"),
@@ -427,49 +434,45 @@ impl Kv2<'_> {
 
     /// Deletes the latest version of a KV v2 secret.
     pub async fn delete_latest(&self, path: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::DELETE,
-                &self.data_path(path)?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::DELETE,
+            &self.data_path(path)?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Soft-deletes specific KV v2 versions.
     pub async fn delete_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
         let payload = VersionsPayload { versions };
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.version_path("delete", path)?,
-                Some(&payload),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.version_path("delete", path)?,
+            Some(&payload),
+        )
+        .await
     }
 
     /// Restores soft-deleted KV v2 versions.
     pub async fn undelete_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
         let payload = VersionsPayload { versions };
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.version_path("undelete", path)?,
-                Some(&payload),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.version_path("undelete", path)?,
+            Some(&payload),
+        )
+        .await
     }
 
     /// Permanently destroys KV v2 versions.
     pub async fn destroy_versions(&self, path: &str, versions: &[u64]) -> Result<Empty> {
         let payload = VersionsPayload { versions };
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.version_path("destroy", path)?,
-                Some(&payload),
-            )
-            .await
+        self.request(
+            Method::PUT,
+            &self.version_path("destroy", path)?,
+            Some(&payload),
+        )
+        .await
     }
 
     /// Lists keys below a KV v2 metadata path.
@@ -488,10 +491,75 @@ impl Kv2<'_> {
             .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?;
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<Kv2List> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.metadata_path(path)?,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Recursively scans keys below a KV v2 metadata path.
+    ///
+    /// OpenBao supports `SCAN` starting with version 2.2.0.
+    pub async fn scan(
+        &self,
+        path: &str,
+        after: Option<&str>,
+        limit: Option<u64>,
+    ) -> Result<Kv2List> {
+        self.enumerate_metadata("metadata", b"SCAN", path, after, limit)
+            .await
+    }
+
+    /// Lists keys through OpenBao's detailed-metadata route.
+    pub async fn list_detailed_metadata(
+        &self,
+        path: &str,
+        after: Option<&str>,
+        limit: Option<u64>,
+    ) -> Result<Kv2List> {
+        self.enumerate_metadata("detailed-metadata", b"LIST", path, after, limit)
+            .await
+    }
+
+    /// Recursively scans keys through OpenBao's detailed-metadata route.
+    pub async fn scan_detailed_metadata(
+        &self,
+        path: &str,
+        after: Option<&str>,
+        limit: Option<u64>,
+    ) -> Result<Kv2List> {
+        self.enumerate_metadata("detailed-metadata", b"SCAN", path, after, limit)
+            .await
+    }
+
+    /// Reads a secret's recursive key shape without returning secret values.
+    pub async fn subkeys(
+        &self,
+        path: &str,
+        version: Option<u64>,
+        depth: Option<u64>,
+    ) -> Result<Kv2Subkeys> {
+        if matches!(version, Some(0)) {
+            return Err(Error::InvalidParameter(
+                "KV v2 subkeys version must be greater than zero".into(),
+            ));
+        }
+        let mut query = Vec::new();
+        if let Some(version) = version {
+            query.push(("version", version.to_string()));
+        }
+        if let Some(depth) = depth {
+            query.push(("depth", depth.to_string()));
+        }
+        let envelope: ResponseEnvelope<Kv2Subkeys> = self
+            .request_query(
+                Method::GET,
+                &self.version_path("subkeys", path)?,
                 &query,
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
@@ -503,8 +571,7 @@ impl Kv2<'_> {
     /// Reads backend-level KV v2 configuration.
     pub async fn config(&self) -> Result<Kv2Config> {
         let envelope: ResponseEnvelope<Kv2Config> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.mount_path("config")?,
                 Option::<&Empty>::None,
@@ -515,16 +582,14 @@ impl Kv2<'_> {
 
     /// Updates backend-level KV v2 configuration.
     pub async fn configure(&self, config: &Kv2Config) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.mount_path("config")?, Some(config))
+        self.request(Method::POST, &self.mount_path("config")?, Some(config))
             .await
     }
 
     /// Reads KV v2 metadata for a key.
     pub async fn metadata(&self, path: &str) -> Result<Kv2KeyMetadata> {
         let envelope: ResponseEnvelope<Kv2KeyMetadata> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.metadata_path(path)?,
                 Option::<&Empty>::None,
@@ -535,34 +600,116 @@ impl Kv2<'_> {
 
     /// Replaces KV v2 metadata for a key.
     pub async fn put_metadata(&self, path: &str, metadata: &Kv2MetadataOptions) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.metadata_path(path)?, Some(metadata))
+        self.request(Method::POST, &self.metadata_path(path)?, Some(metadata))
             .await
     }
 
     /// Patches KV v2 metadata for a key.
     pub async fn patch_metadata(&self, path: &str, metadata: &Kv2MetadataOptions) -> Result<Empty> {
-        self.client
-            .request_json_headers_accepting(
-                Method::PATCH,
-                &self.metadata_path(path)?,
-                &[(
-                    CONTENT_TYPE,
-                    HeaderValue::from_static("application/merge-patch+json"),
-                )],
-                Some(metadata),
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_query_headers(
+            Method::PATCH,
+            &self.metadata_path(path)?,
+            &[] as &[(&str, String)],
+            &[(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/merge-patch+json"),
+            )],
+            Some(metadata),
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Permanently deletes all KV v2 metadata and versions for a key.
     pub async fn delete_metadata(&self, path: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::DELETE,
-                &self.metadata_path(path)?,
+        self.request(
+            Method::DELETE,
+            &self.metadata_path(path)?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
+    async fn enumerate_metadata(
+        &self,
+        prefix: &str,
+        method: &'static [u8],
+        path: &str,
+        after: Option<&str>,
+        limit: Option<u64>,
+    ) -> Result<Kv2List> {
+        let method =
+            Method::from_bytes(method).map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
+        let envelope: ResponseEnvelope<Kv2List> = self
+            .request_query(
+                method,
+                &self.version_path(prefix, path)?,
+                &query,
                 Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_json_internal("/", "secret", &mount, method, path, body)
+            .await
+    }
+
+    async fn request_query<T, B, Q, K>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        self.request_query_headers(method, path, query, &[], body, accepted_statuses)
+            .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn request_query_headers<T, B, Q, K>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(reqwest::header::HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/",
+                "secret",
+                &mount,
+                method,
+                path,
+                query,
+                headers,
+                body,
+                accepted_statuses,
             )
             .await
     }

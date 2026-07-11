@@ -47,9 +47,17 @@ impl Kv1<'_> {
     where
         T: DeserializeOwned,
     {
+        let mount = self.mount.join("/");
         let envelope: ResponseEnvelope<T> = self
             .client
-            .request_json_internal(Method::GET, &self.path(path)?, Option::<&Empty>::None)
+            .request_secret_json_internal(
+                "/secret/",
+                "secret",
+                &mount,
+                Method::GET,
+                &self.path(path)?,
+                Option::<&Empty>::None,
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -59,25 +67,69 @@ impl Kv1<'_> {
     where
         T: Serialize,
     {
+        let mount = self.mount.join("/");
         self.client
-            .request_json_internal(Method::POST, &self.path(path)?, Some(&data))
+            .request_secret_json_internal(
+                "/secret/",
+                "secret",
+                &mount,
+                Method::POST,
+                &self.path(path)?,
+                Some(&data),
+            )
             .await
     }
 
     /// Deletes a KV v1 secret.
     pub async fn delete(&self, path: &str) -> Result<Empty> {
+        let mount = self.mount.join("/");
         self.client
-            .request_json_internal(Method::DELETE, &self.path(path)?, Option::<&Empty>::None)
+            .request_secret_json_internal(
+                "/secret/",
+                "secret",
+                &mount,
+                Method::DELETE,
+                &self.path(path)?,
+                Option::<&Empty>::None,
+            )
             .await
     }
 
     /// Lists keys below a KV v1 path.
     pub async fn list(&self, path: &str) -> Result<Kv1List> {
-        let method = Method::from_bytes(b"LIST")
-            .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?;
+        self.enumerate(
+            Method::from_bytes(b"LIST")
+                .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?,
+            path,
+        )
+        .await
+    }
+
+    /// Recursively scans keys below a KV v1 path.
+    ///
+    /// OpenBao supports this operation starting with version 2.2.0. Strict
+    /// compatibility policies reject it locally for older servers.
+    pub async fn scan(&self, path: &str) -> Result<Kv1List> {
+        self.enumerate(
+            Method::from_bytes(b"SCAN")
+                .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?,
+            path,
+        )
+        .await
+    }
+
+    async fn enumerate(&self, method: Method, path: &str) -> Result<Kv1List> {
+        let mount = self.mount.join("/");
         let envelope: ResponseEnvelope<Kv1List> = self
             .client
-            .request_json_internal(method, &self.path(path)?, Option::<&Empty>::None)
+            .request_secret_json_internal(
+                "/secret/",
+                "secret",
+                &mount,
+                method,
+                &self.path(path)?,
+                Option::<&Empty>::None,
+            )
             .await?;
         Ok(envelope.data)
     }

@@ -57,9 +57,17 @@ impl Cubbyhole<'_> {
     where
         T: DeserializeOwned,
     {
+        let mount = self.mount.join("/");
         let envelope: ResponseEnvelope<T> = self
             .client
-            .request_json_internal(Method::GET, &self.path(path)?, Option::<&Empty>::None)
+            .request_secret_json_internal(
+                "/cubbyhole/",
+                "cubbyhole",
+                &mount,
+                Method::GET,
+                &self.path(path)?,
+                Option::<&Empty>::None,
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -93,15 +101,31 @@ impl Cubbyhole<'_> {
     where
         T: Serialize,
     {
+        let mount = self.mount.join("/");
         self.client
-            .request_json_internal(Method::POST, &self.path(path)?, Some(&data))
+            .request_secret_json_internal(
+                "/cubbyhole/",
+                "cubbyhole",
+                &mount,
+                Method::POST,
+                &self.path(path)?,
+                Some(&data),
+            )
             .await
     }
 
     /// Deletes a Cubbyhole secret scoped to the authenticated token.
     pub async fn delete(&self, path: &str) -> Result<Empty> {
+        let mount = self.mount.join("/");
         self.client
-            .request_json_internal(Method::DELETE, &self.path(path)?, Option::<&Empty>::None)
+            .request_secret_json_internal(
+                "/cubbyhole/",
+                "cubbyhole",
+                &mount,
+                Method::DELETE,
+                &self.path(path)?,
+                Option::<&Empty>::None,
+            )
             .await
     }
 
@@ -109,9 +133,17 @@ impl Cubbyhole<'_> {
     pub async fn list(&self, path: &str) -> Result<CubbyholeList> {
         let method = Method::from_bytes(b"LIST")
             .map_err(|error| crate::Error::InvalidHeader(error.to_string()))?;
+        let mount = self.mount.join("/");
         let envelope: ResponseEnvelope<CubbyholeList> = self
             .client
-            .request_json_internal(method, &self.path(path)?, Option::<&Empty>::None)
+            .request_secret_json_internal(
+                "/cubbyhole/",
+                "cubbyhole",
+                &mount,
+                method,
+                &self.path(path)?,
+                Option::<&Empty>::None,
+            )
             .await?;
         Ok(envelope.data)
     }

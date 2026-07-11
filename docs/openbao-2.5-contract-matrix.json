@@ -1355,7 +1355,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Typed secrets-engine helper exists.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed"
       },
       "methods": [
@@ -1419,7 +1419,7 @@
       ],
       "operation_key": "LIST /:secret-mount-path/detailed-metadata/:path",
       "path": "/:secret-mount-path/detailed-metadata/:path",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -1535,7 +1535,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Typed secrets-engine helper exists.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed"
       },
       "methods": [
@@ -1549,7 +1549,7 @@
       ],
       "operation_key": "SCAN /:secret-mount-path/detailed-metadata/:path",
       "path": "/:secret-mount-path/detailed-metadata/:path",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -2677,7 +2677,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Typed secrets-engine helper exists.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed"
       },
       "methods": [
@@ -2691,7 +2691,7 @@
       ],
       "operation_key": "SCAN /:secret-mount-path/metadata/:path",
       "path": "/:secret-mount-path/metadata/:path",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -2868,7 +2868,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Typed secrets-engine helper exists.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed"
       },
       "methods": [
@@ -2918,7 +2918,7 @@
       ],
       "operation_key": "GET /:secret-mount-path/subkeys/:path",
       "path": "/:secret-mount-path/subkeys/:path",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -166108,7 +166108,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Typed secrets-engine helper exists.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed"
       },
       "methods": [
@@ -166122,7 +166122,7 @@
       ],
       "operation_key": "SCAN /secret/:path",
       "path": "/secret/:path",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,

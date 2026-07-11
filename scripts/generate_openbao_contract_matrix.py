@@ -41,9 +41,9 @@ EXPECTED_TAGGED_SNAPSHOT_SHA256 = "511d18f9bf894cba50c857c247cf3a22b8fd352914403
 EXPECTED_OPENAPI_SNAPSHOT_SHA256 = "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4"
 EXPECTED_EVIDENCE_SHA256 = "1813d10fb9fdc0df7231035d391d5af288f0ba443ed105cb3816e7269557eab4"
 EXPECTED_OUTPUT_SHA256 = {
-    "docs/openbao-2.5-contract-matrix.json": "ba8f14feb91cf743e9f97ecedeef5b5684db4d2beba6855d04d663942263f32a",
-    "docs/openbao-2.5-endpoint-matrix.csv": "2b29fad7cc98742d4f59286ac2ae62713f6c34ad0379eb4a7396464376f11573",
-    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "814f0b9e51caea7a88fe2b2abd637245065833947b1f82f70e39b2e50c72499d",
+    "docs/openbao-2.5-contract-matrix.json": "8889cd6c6639caa452fcf3b41c7571f21d90d629eef2e6e45a32efe1139d55fd",
+    "docs/openbao-2.5-endpoint-matrix.csv": "4461068d7d1e3788aa598456a3b736de2592c51aeca49267d120060f150a4ffb",
+    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "2a6820506c982aecba172129e3f2a20d600f3707d86e18b5aa670f816039d293",
 }
 MAX_INPUT_BYTES = 16 * 1024 * 1024
 MAX_OUTPUT_BYTES = 32 * 1024 * 1024
@@ -67,11 +67,6 @@ PLACEHOLDER = re.compile(r"^(?::[^/]+|\{[^/]+\}|\([^/]+\))$")
 CONFIRMED_FALSE_TYPED = frozenset(
     line.strip()
     for line in """
-SCAN /secret/:path
-GET /:secret-mount-path/subkeys/:path
-SCAN /:secret-mount-path/metadata/:path
-LIST /:secret-mount-path/detailed-metadata/:path
-SCAN /:secret-mount-path/detailed-metadata/:path
 GET /pki/crl/rotate
 GET /pki/crl/rotate-delta
 """.splitlines()
@@ -99,6 +94,14 @@ AUTH_DISPOSITION_OVERRIDES = {
     "GET/POST /identity/oidc/provider/:name/authorize": "typed",
     "POST /identity/oidc/provider/:name/token": "typed",
     "POST /identity/oidc/provider/:name/userinfo": "typed",
+}
+
+SECRET_DISPOSITION_OVERRIDES = {
+    "SCAN /secret/:path": "typed",
+    "GET /:secret-mount-path/subkeys/:path": "typed",
+    "SCAN /:secret-mount-path/metadata/:path": "typed",
+    "LIST /:secret-mount-path/detailed-metadata/:path": "typed",
+    "SCAN /:secret-mount-path/detailed-metadata/:path": "typed",
 }
 
 
@@ -726,6 +729,8 @@ def build_matrix(evidence: dict[str, Any], openapi: dict[str, Any]) -> dict[str,
         override = SYSTEM_DISPOSITION_OVERRIDES.get(key)
         if override is None:
             override = AUTH_DISPOSITION_OVERRIDES.get(key)
+        if override is None:
+            override = SECRET_DISPOSITION_OVERRIDES.get(key)
         if override is not None:
             prior = {
                 "status": override,

@@ -613,6 +613,8 @@ Pentest focus:
 
 ### Commit 12: Migrate KV And Transit Operations
 
+Status: implemented. Pentest this commit from `f4b743c046f65d06ac4778a9a02d49de969cb525` to the resulting Commit 12 hash.
+
 Suggested commit title: `Version OpenBao KV and Transit routing`
 
 Goal:

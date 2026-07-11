@@ -13,6 +13,10 @@
 - Audit status: exact inventory and field evidence are captured. Public helper,
   transport, security, and test evidence remain intentionally unverified.
 - Release target for closure: `2.0.0`.
+- Implementation progress: compatibility Commit 12 migrated KV v1, KV v2,
+  Cubbyhole, and Transit through exact-release dispatch. KV SCAN and detailed
+  metadata are locally rejected before OpenBao 2.2.0; Transit CSR and
+  certificate installation are locally rejected before 2.1.0.
 
 This is a static audit checkpoint, not a compatibility certification. Live
 OpenAPI capture and behavior tests against the locked `v2.5.5` image remain
@@ -44,14 +48,14 @@ database servers, browser rendering, DNS challenge provisioning, or third-party
 identity-provider behavior. It does require a safe first-class crate boundary
 for every OpenBao endpoint participating in those workflows.
 
-## Exact Matrix Baseline
+## Current Matrix Backlog
 
 The replacement matrix reports:
 
 | Classification | Rows |
 | --- | ---: |
-| `unverified` | 565 |
-| `confirmed-gap` | 79 |
+| `unverified` | 611 |
+| `confirmed-gap` | 33 |
 | `typed` | 0 |
 | `typed-gated` | 0 |
 | Total | 644 |
@@ -86,10 +90,11 @@ The earlier decisions to classify these rows as external or rejected were
 reasonable for a narrower stable SDK. They are superseded by the explicit
 `2.0.0` goal of full documented OpenBao support.
 
-## Confirmed Incorrect Typed Classifications
+## Initial Incorrect Typed Classifications
 
-At least 33 additional rows are currently labelled `typed` or `typed-gated`
-without an exact matching public helper or documented method:
+The initial audit found 33 rows labelled `typed` or `typed-gated` without an
+exact matching public helper or documented method. This table records that
+starting point; the generated matrix is the current source of truth:
 
 | Area | Rows | Confirmed gap |
 | --- | ---: | --- |
@@ -101,10 +106,11 @@ without an exact matching public helper or documented method:
 | Key rotation | 11 | Legacy keyring alias, root rotation, automatic rotation config read/write aliases, verification, and backup operations are absent. |
 | PKI CRL rotation | 2 | The docs specify GET for CRL and delta-CRL rotation; current helpers send POST. |
 
-The exact baseline revokes every prior typed claim until evidence is linked.
-These `33` false classifications plus `46` previously non-strict rows form the
-`79` confirmed-gap rows. The remaining `565` rows are `unverified`, not typed.
-No support percentage is published from this backlog.
+Compatibility Commits 10 through 12 have moved reviewed system,
+authentication, KV, Cubbyhole, and Transit rows out of the confirmed-gap set.
+The remaining `33` confirmed gaps are PKI/ACME/OCSP public protocol helpers,
+SSH public-key reads, and `sys/monitor`. No support percentage is published
+from this backlog.
 
 ### Exact Confirmed False-Typed Operations
 
@@ -186,11 +192,12 @@ examples.
 
 ### KV And Transit
 
-- KV v2 subkey `version` and `depth` options and response shape.
-- Recursive SCAN and detailed metadata result types.
-- Transit encrypt/decrypt `partial_failure_response_code`.
-- Transit sign/verify hash algorithm path variants, including existing SHA-1
-  acknowledgement policy and the security meaning of `none` plus `prehashed`.
+- Completed in compatibility Commit 12: KV v1/v2 SCAN, KV v2 subkey
+  `version`/`depth`, detailed-metadata pagination, Transit partial-failure
+  response controls, and sign/verify hash algorithm path dispatch.
+- Existing SHA-1 acknowledgement policy remains enforced, and `none` plus
+  `prehashed` remain explicit caller choices rather than compatibility
+  fallbacks.
 
 ### SSH
 

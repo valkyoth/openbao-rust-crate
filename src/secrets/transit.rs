@@ -1654,6 +1654,8 @@ pub struct TransitBatchEncryptRequest {
     /// [`Self::try_push`] for externally supplied input. Dispatch methods
     /// enforce this limit regardless of direct field assignment.
     pub batch_input: Vec<TransitEncryptRequest>,
+    /// HTTP status returned when only part of the batch fails.
+    pub partial_failure_response_code: Option<u16>,
 }
 
 /// Batch decryption request using the same endpoint as single-item decryption.
@@ -1667,6 +1669,8 @@ pub struct TransitBatchDecryptRequest {
     /// [`Self::try_push`] for externally supplied input. Dispatch methods
     /// enforce this limit regardless of direct field assignment.
     pub batch_input: Vec<TransitDecryptRequest>,
+    /// HTTP status returned when only part of the batch fails.
+    pub partial_failure_response_code: Option<u16>,
 }
 
 /// Batch rewrap request using the same endpoint as single-item rewrap.
@@ -1981,6 +1985,8 @@ struct TransitVerifyPayload<'a> {
 #[derive(Serialize)]
 struct TransitBatchPayload<T> {
     batch_input: Vec<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    partial_failure_response_code: Option<u16>,
 }
 
 #[derive(Serialize)]
@@ -2043,16 +2049,14 @@ impl Transit<'_> {
     /// Creates a named Transit key.
     pub async fn create_key(&self, name: &str, request: &TransitCreateKeyRequest) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(Method::POST, &self.key_path(name, None)?, Some(request))
+        self.request(Method::POST, &self.key_path(name, None)?, Some(request))
             .await
     }
 
     /// Reads a named Transit key.
     pub async fn read_key(&self, name: &str) -> Result<TransitKeyInfo> {
         let envelope: ResponseEnvelope<TransitKeyInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.key_path(name, None)?,
                 Option::<&Empty>::None,
@@ -2068,8 +2072,7 @@ impl Transit<'_> {
     /// [`Transit::import_key`] or [`Transit::import_key_version`].
     pub async fn wrapping_key(&self) -> Result<TransitWrappingKey> {
         let envelope: ResponseEnvelope<TransitWrappingKey> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["wrapping_key"])?,
                 Option::<&Empty>::None,
@@ -2093,8 +2096,7 @@ impl Transit<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<TransitKeyList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(&["keys"])?,
                 &query,
@@ -2110,37 +2112,34 @@ impl Transit<'_> {
     /// OpenBao requires `deletion_allowed=true` on the key configuration before
     /// this endpoint succeeds.
     pub async fn delete_key(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.key_path(name, None)?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.key_path(name, None)?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Updates a named Transit key's mutable configuration.
     pub async fn update_key(&self, name: &str, request: &TransitUpdateKeyRequest) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.key_path(name, Some("config"))?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.key_path(name, Some("config"))?,
+            Some(request),
+        )
+        .await
     }
 
     /// Rotates a named Transit key to a new key version.
     pub async fn rotate_key(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.key_path(name, Some("rotate"))?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.key_path(name, Some("rotate"))?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Imports a new Transit key from pre-wrapped BYOK ciphertext.
@@ -2170,13 +2169,12 @@ impl Transit<'_> {
             allow_plaintext_backup: request.allow_plaintext_backup,
             auto_rotate_period: request.auto_rotate_period.as_deref(),
         };
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.key_path(name, Some("import"))?,
-                Some(&payload),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.key_path(name, Some("import"))?,
+            Some(&payload),
+        )
+        .await
     }
 
     /// Imports new pre-wrapped key material into an existing imported key.
@@ -2204,13 +2202,12 @@ impl Transit<'_> {
                 .map(|secret| secret.expose_secret()),
             version: request.version,
         };
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.key_path(name, Some("import_version"))?,
-                Some(&payload),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.key_path(name, Some("import_version"))?,
+            Some(&payload),
+        )
+        .await
     }
 
     /// Soft-deletes a Transit key without requiring `deletion_allowed=true`.
@@ -2218,25 +2215,23 @@ impl Transit<'_> {
     /// OpenBao disables cryptographic operations for the key until it is
     /// restored with [`Transit::restore_soft_deleted_key`].
     pub async fn soft_delete_key(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.key_path(name, Some("soft-delete"))?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.key_path(name, Some("soft-delete"))?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Restores a soft-deleted Transit key.
     pub async fn restore_soft_deleted_key(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.key_path(name, Some("soft-delete-restore"))?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.key_path(name, Some("soft-delete-restore"))?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Exports source key material wrapped for another Transit destination key.
@@ -2272,8 +2267,7 @@ impl Transit<'_> {
             .map(|hash| vec![("hash", hash.as_query_value().to_owned())])
             .unwrap_or_default();
         let envelope: ResponseEnvelope<TransitByokExport> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 Method::GET,
                 &self.path(&segments)?,
                 &query,
@@ -2290,8 +2284,7 @@ impl Transit<'_> {
         request: &TransitGlobalKeyConfig,
     ) -> Result<TransitGlobalKeyConfig> {
         let envelope: ResponseEnvelope<TransitGlobalKeyConfig> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["config", "keys"])?,
                 Some(request),
@@ -2303,8 +2296,7 @@ impl Transit<'_> {
     /// Reads global Transit key configuration.
     pub async fn read_global_key_config(&self) -> Result<TransitGlobalKeyConfig> {
         let envelope: ResponseEnvelope<TransitGlobalKeyConfig> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["config", "keys"])?,
                 Option::<&Empty>::None,
@@ -2339,8 +2331,7 @@ impl Transit<'_> {
             segments.push(version);
         }
         let envelope: ResponseEnvelope<TransitExportResponse> = self
-            .client
-            .request_json_internal(Method::GET, &self.path(&segments)?, Option::<&Empty>::None)
+            .request(Method::GET, &self.path(&segments)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -2352,8 +2343,7 @@ impl Transit<'_> {
     pub async fn backup_key(&self, name: &str) -> Result<TransitBackup> {
         let name = validate_key_name(name)?.join("/");
         let envelope: ResponseEnvelope<TransitBackup> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["backup", &name])?,
                 Option::<&Empty>::None,
@@ -2382,20 +2372,17 @@ impl Transit<'_> {
             }
             None => self.path(&["restore"])?,
         };
-        self.client
-            .request_json_internal(Method::POST, &path, Some(&payload))
-            .await
+        self.request(Method::POST, &path, Some(&payload)).await
     }
 
     /// Trims older Transit key versions up to `min_available_version`.
     pub async fn trim_key(&self, name: &str, request: &TransitTrimRequest) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.key_path(name, Some("trim"))?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.key_path(name, Some("trim"))?,
+            Some(request),
+        )
+        .await
     }
 
     /// Writes Transit cache configuration.
@@ -2405,8 +2392,7 @@ impl Transit<'_> {
     ) -> Result<TransitCacheConfig> {
         let request = TransitCacheConfig::new(request.size)?;
         let envelope: ResponseEnvelope<TransitCacheConfig> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["cache-config"])?, Some(&request))
+            .request(Method::POST, &self.path(&["cache-config"])?, Some(&request))
             .await?;
         Ok(envelope.data)
     }
@@ -2414,8 +2400,7 @@ impl Transit<'_> {
     /// Reads Transit cache configuration.
     pub async fn read_cache_config(&self) -> Result<TransitCacheConfig> {
         let envelope: ResponseEnvelope<TransitCacheConfig> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["cache-config"])?,
                 Option::<&Empty>::None,
@@ -2434,8 +2419,7 @@ impl Transit<'_> {
         request: &TransitCsrRequest,
     ) -> Result<TransitCsrResponse> {
         let envelope: ResponseEnvelope<TransitCsrResponse> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.key_path(name, Some("csr"))?,
                 Some(request),
@@ -2454,8 +2438,7 @@ impl Transit<'_> {
         request: &TransitSetCertificateRequest,
     ) -> Result<TransitCertificateChain> {
         let envelope: ResponseEnvelope<TransitCertificateChain> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.key_path(name, Some("set-certificate"))?,
                 Some(request),
@@ -2661,12 +2644,14 @@ impl Transit<'_> {
         request: &TransitBatchEncryptRequest,
     ) -> Result<TransitBatchEncryptResponse> {
         validate_batch_len(request.batch_input.len())?;
+        validate_partial_failure_response_code(request.partial_failure_response_code)?;
         let payload = TransitBatchPayload {
             batch_input: request
                 .batch_input
                 .iter()
                 .map(encrypt_payload)
                 .collect::<Vec<_>>(),
+            partial_failure_response_code: request.partial_failure_response_code,
         };
         self.enveloped(
             Method::POST,
@@ -2683,12 +2668,14 @@ impl Transit<'_> {
         request: &TransitBatchDecryptRequest,
     ) -> Result<TransitBatchDecryptResponse> {
         validate_batch_len(request.batch_input.len())?;
+        validate_partial_failure_response_code(request.partial_failure_response_code)?;
         let payload = TransitBatchPayload {
             batch_input: request
                 .batch_input
                 .iter()
                 .map(decrypt_payload)
                 .collect::<Vec<_>>(),
+            partial_failure_response_code: request.partial_failure_response_code,
         };
         self.enveloped(
             Method::POST,
@@ -2711,6 +2698,7 @@ impl Transit<'_> {
                 .iter()
                 .map(rewrap_payload)
                 .collect::<Vec<_>>(),
+            partial_failure_response_code: None,
         };
         self.enveloped(
             Method::POST,
@@ -2734,6 +2722,7 @@ impl Transit<'_> {
                 .iter()
                 .map(sign_payload)
                 .collect::<Vec<_>>(),
+            partial_failure_response_code: None,
         };
         self.enveloped(
             Method::POST,
@@ -2757,6 +2746,7 @@ impl Transit<'_> {
                 .iter()
                 .map(verify_payload)
                 .collect::<Vec<_>>(),
+            partial_failure_response_code: None,
         };
         self.enveloped(
             Method::POST,
@@ -2771,11 +2761,74 @@ impl Transit<'_> {
         T: for<'de> Deserialize<'de>,
         B: Serialize + ?Sized,
     {
-        let envelope: ResponseEnvelope<T> = self
-            .client
-            .request_json_internal(method, path, Some(request))
-            .await?;
+        let envelope: ResponseEnvelope<T> = self.request(method, path, Some(request)).await?;
         Ok(envelope.data)
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize + ?Sized,
+    {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_json_internal("/transit/", "transit", &mount, method, path, body)
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize + ?Sized,
+    {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_json_accepting(
+                "/transit/",
+                "transit",
+                &mount,
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B, Q, K>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: for<'de> Deserialize<'de>,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let mount = self.mount.join("/");
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/transit/",
+                "transit",
+                &mount,
+                method,
+                path,
+                query,
+                &[],
+                body,
+                accepted_statuses,
+            )
+            .await
     }
 
     fn key_path(&self, name: &str, suffix: Option<&str>) -> Result<String> {
@@ -2829,6 +2882,15 @@ fn validate_batch_len(len: usize) -> Result<()> {
     if len > MAX_TRANSIT_BATCH_ITEMS {
         return Err(Error::InvalidParameter(
             "Transit batch_input exceeds item limit".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_partial_failure_response_code(code: Option<u16>) -> Result<()> {
+    if code.is_some_and(|code| !(100..=599).contains(&code)) {
+        return Err(Error::InvalidParameter(
+            "Transit partial_failure_response_code must be a valid HTTP status".into(),
         ));
     }
     Ok(())
@@ -3429,6 +3491,20 @@ mod tests {
                 .is_err()
         );
         assert_eq!(request.batch_input.len(), super::MAX_TRANSIT_BATCH_ITEMS);
+    }
+
+    #[test]
+    fn transit_partial_failure_status_is_validated_and_serialized() {
+        assert!(super::validate_partial_failure_response_code(Some(207)).is_ok());
+        assert!(super::validate_partial_failure_response_code(Some(99)).is_err());
+        assert!(super::validate_partial_failure_response_code(Some(600)).is_err());
+
+        let payload = super::TransitBatchPayload {
+            batch_input: vec![serde_json::json!({"plaintext":"<redacted>"})],
+            partial_failure_response_code: Some(207),
+        };
+        let value = serde_json::to_value(payload).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["partial_failure_response_code"], 207);
     }
 
     #[cfg(feature = "transit-import")]

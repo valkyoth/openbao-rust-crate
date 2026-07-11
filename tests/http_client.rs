@@ -672,6 +672,78 @@ async fn auth_registry_routing_preserves_validated_custom_mounts() {
 }
 
 #[tokio::test]
+async fn strict_secret_routing_rejects_newer_kv_and_transit_capabilities_locally() {
+    let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 0, 3))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(
+        OpenBaoConfig::new("https://bao.example.com")
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .and_then(|client| client.try_with_token(SecretString::from("token")))
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    let scan = client
+        .kv1("team/secrets")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .scan("services")
+        .await;
+    assert!(matches!(
+        scan,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+
+    let csr = client
+        .transit("team/crypto")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .generate_csr(
+            "signing",
+            &openbao::secrets::transit::TransitCsrRequest {
+                version: None,
+                csr: None,
+            },
+        )
+        .await;
+    assert!(matches!(
+        csr,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+}
+
+#[tokio::test]
+async fn secret_registry_routing_preserves_validated_custom_mounts() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/team/secrets/data/app/config HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"data":{"data":{"enabled":true},"metadata":{"created_time":"2026-07-11T00:00:00Z","deletion_time":"","destroyed":false,"version":1}}}"#,
+        );
+    });
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .and_then(|client| client.try_with_token(SecretString::from("token")))
+    .unwrap_or_else(|error| panic!("{error}"));
+    let secret = client
+        .kv2("team/secrets")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .read::<serde_json::Value>("app/config")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(secret.metadata.version, 1);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn assumed_compatibility_never_probes_and_remains_visibly_unverified() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -1633,6 +1705,85 @@ async fn kv2_list_sends_pagination_query() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(keys.keys, ["config"]);
 
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn kv2_scan_subkeys_detailed_metadata_and_destroy_use_documented_routes() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        for index in 0..4 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let (status, body) = match index {
+                0 => {
+                    assert!(
+                        request.starts_with("SCAN /v1/secret/metadata?after=app&limit=10 HTTP/1.1")
+                    );
+                    ("200 OK", r#"{"data":{"keys":["app/config"]}}"#)
+                }
+                1 => {
+                    assert!(
+                        request
+                            .starts_with("LIST /v1/secret/detailed-metadata/app?limit=5 HTTP/1.1")
+                    );
+                    ("200 OK", r#"{"data":{"keys":["config"]}}"#)
+                }
+                2 => {
+                    assert!(request.starts_with(
+                        "GET /v1/secret/subkeys/app/config?version=2&depth=1 HTTP/1.1"
+                    ));
+                    (
+                        "200 OK",
+                        r#"{"data":{"metadata":{"created_time":"2026-07-11T00:00:00Z","deletion_time":"","destroyed":false,"version":2},"subkeys":{"database":{"username":null}}}}"#,
+                    )
+                }
+                3 => {
+                    assert!(request.starts_with("PUT /v1/secret/destroy/app/config HTTP/1.1"));
+                    assert!(request.contains(r#""versions":[2]"#));
+                    ("204 No Content", "{}")
+                }
+                _ => unreachable!(),
+            };
+            write_json_response(&mut stream, status, body);
+        }
+    });
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .and_then(|client| client.try_with_token(SecretString::from("token")))
+    .unwrap_or_else(|error| panic!("{error}"));
+    let kv = client
+        .kv2("secret")
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        kv.scan("", Some("app"), Some(10))
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .keys,
+        ["app/config"]
+    );
+    assert_eq!(
+        kv.list_detailed_metadata("app", None, Some(5))
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .keys,
+        ["config"]
+    );
+    let subkeys = kv
+        .subkeys("app/config", Some(2), Some(1))
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(subkeys.metadata.version, 2);
+    assert!(subkeys.subkeys["database"]["username"].is_null());
+    kv.destroy_versions("app/config", &[2])
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
@@ -4293,6 +4444,53 @@ async fn transit_encrypt_and_decrypt_use_secret_payloads() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(decrypted.plaintext.expose_secret(), "c2VjcmV0");
 
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn transit_batch_partial_failure_control_is_sent_once() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("POST /v1/transit/encrypt/app-key HTTP/1.1"));
+        assert!(request.contains(r#""partial_failure_response_code":207"#));
+        assert_eq!(
+            request.matches("POST /v1/transit/encrypt/app-key").count(),
+            1
+        );
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"data":{"batch_results":[{"ciphertext":"vault:v1:ciphertext","key_version":1}]}}"#,
+        );
+    });
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .and_then(|client| client.try_with_token(SecretString::from("token")))
+    .unwrap_or_else(|error| panic!("{error}"));
+    let mut request = openbao::secrets::transit::TransitBatchEncryptRequest {
+        batch_input: Vec::new(),
+        partial_failure_response_code: Some(207),
+    };
+    request
+        .try_push(openbao::secrets::transit::TransitEncryptRequest::new(
+            SecretString::from("c2VjcmV0"),
+        ))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let response = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .batch_encrypt("app-key", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(response.batch_results.len(), 1);
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 

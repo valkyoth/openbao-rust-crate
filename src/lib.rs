@@ -338,8 +338,8 @@ pub mod prelude {
     pub use crate::secrets::kv1::{Kv1, Kv1List};
     #[cfg(feature = "kv2")]
     pub use crate::secrets::kv2::{
-        Kv2, Kv2Config, Kv2List, Kv2Metadata, Kv2Secret, Kv2ServiceConfig, Kv2WriteOptions,
-        Kv2WriteResponse,
+        Kv2, Kv2Config, Kv2List, Kv2Metadata, Kv2Secret, Kv2ServiceConfig, Kv2Subkeys,
+        Kv2WriteOptions, Kv2WriteResponse,
     };
     #[cfg(feature = "ldap")]
     pub use crate::secrets::ldap::{Ldap, LdapConfig, LdapDynamicRole, LdapStaticRole};

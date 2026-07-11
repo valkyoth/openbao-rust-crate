@@ -1590,6 +1590,141 @@ impl<State> Client<State> {
         Ok(normalized.join("/"))
     }
 
+    fn secret_registry_path(
+        documented_mount: &'static str,
+        actual_mount: &str,
+        path: &str,
+    ) -> Result<String> {
+        let documented_mount = validate_mount_path(documented_mount)?;
+        if documented_mount.len() != 1 {
+            return Err(Error::Internal(
+                "documented secret mount must contain exactly one path segment",
+            ));
+        }
+        let actual_mount = validate_mount_path(actual_mount)?;
+        let path = validate_endpoint_path(path)?;
+        if path.get(..actual_mount.len()) != Some(actual_mount.as_slice()) {
+            return Err(Error::Internal(
+                "typed secret request path does not match its validated mount",
+            ));
+        }
+
+        let mut normalized = Vec::with_capacity(path.len() - actual_mount.len() + 1);
+        normalized.push(documented_mount[0].clone());
+        normalized.extend(path[actual_mount.len()..].iter().cloned());
+        // Documentation models root secret operations with a required
+        // `:path` placeholder even though OpenBao accepts the bare mount.
+        // This marker is registry-only and is never placed on the wire.
+        if normalized.len() == 1
+            || (normalized.len() == 2
+                && matches!(
+                    normalized[1].as_str(),
+                    "data"
+                        | "delete"
+                        | "destroy"
+                        | "undelete"
+                        | "metadata"
+                        | "detailed-metadata"
+                        | "subkeys"
+                ))
+        {
+            normalized.push("__openbao_root__".to_owned());
+        }
+        Ok(normalized.join("/"))
+    }
+
+    pub(crate) async fn request_secret_json_internal<T, B>(
+        &self,
+        scope_prefix: &'static str,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_secret_json_accepting(
+            scope_prefix,
+            documented_mount,
+            actual_mount,
+            method,
+            path,
+            body,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_secret_json_accepting<T, B>(
+        &self,
+        scope_prefix: &'static str,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_secret_json_query_headers_accepting(
+            scope_prefix,
+            documented_mount,
+            actual_mount,
+            method,
+            path,
+            &[] as &[(&str, String)],
+            &[],
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_secret_json_query_headers_accepting<T, B, Q, K>(
+        &self,
+        scope_prefix: &'static str,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let registry_path = Self::secret_registry_path(documented_mount, actual_mount, path)?;
+        let resolved = self
+            .resolve_registered_openbao_endpoint(scope_prefix, &method, &registry_path, query)
+            .await?;
+        let normalized_query = query
+            .iter()
+            .map(|(key, value)| (key.as_ref(), value.as_ref()))
+            .collect::<Vec<_>>();
+        self.request_json_query_headers_accepting(
+            resolved.method(),
+            path,
+            &normalized_query,
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
     pub(crate) async fn request_auth_json_internal<T, B>(
         &self,
         documented_mount: &'static str,
@@ -2581,6 +2716,9 @@ where
             .filter(|(key, _)| key.as_ref() == expected_key)
             .map(|(_, value)| value.as_ref());
         let Some(value) = values.next() else {
+            if expected_value.starts_with(':') {
+                continue;
+            }
             return Ok(false);
         };
         if values.next().is_some()
@@ -3379,6 +3517,26 @@ mod tests {
             .unwrap_or_else(|error| panic!("{error}"))
         );
         assert!(
+            route_template_matches::<&str, &str>(
+                "/secret/data/:path?version=:version-number",
+                &["secret".to_owned(), "data".to_owned(), "service".to_owned(),],
+                &[],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+        assert!(
+            !route_template_matches::<&str, &str>(
+                "/auth/kubernetes/role?list=true",
+                &[
+                    "auth".to_owned(),
+                    "kubernetes".to_owned(),
+                    "role".to_owned(),
+                ],
+                &[],
+            )
+            .unwrap_or_else(|error| panic!("{error}"))
+        );
+        assert!(
             !route_template_matches(
                 "/sys/plugins/catalog/:type/:name?version=:version",
                 &plugin,
@@ -3417,6 +3575,34 @@ mod tests {
                 &[],
             )
             .unwrap_or_else(|error| panic!("{error}"))
+        );
+    }
+
+    #[test]
+    fn secret_registry_paths_preserve_tail_and_normalize_custom_mounts() {
+        let normalized = Client::<crate::Unauthenticated>::secret_registry_path(
+            "transit",
+            "team/crypto",
+            "team/crypto/keys/signing/csr",
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(normalized, "transit/keys/signing/csr");
+        assert_eq!(
+            Client::<crate::Unauthenticated>::secret_registry_path(
+                "cubbyhole",
+                "cubbyhole",
+                "cubbyhole",
+            )
+            .unwrap_or_else(|error| panic!("{error}")),
+            "cubbyhole/__openbao_root__"
+        );
+        assert!(
+            Client::<crate::Unauthenticated>::secret_registry_path(
+                "transit",
+                "team/crypto",
+                "team/other/keys/signing",
+            )
+            .is_err()
         );
     }
 
