@@ -66,6 +66,7 @@ check_file release-notes/RELEASE_NOTES_1.1.0.md
 check_file release-notes/RELEASE_NOTES_1.1.1.md
 check_file release-notes/RELEASE_NOTES_1.1.2.md
 check_file release-notes/RELEASE_NOTES_2.0.0.md
+check_file release-notes/RELEASE_NOTES_2.0.1.md
 check_file scripts/release_0_6_gate.sh
 check_file scripts/release_0_7_gate.sh
 check_file scripts/release_0_8_gate.sh
@@ -90,7 +91,7 @@ check_file .github/workflows/ci.yml
 check_file .github/workflows/openbao-compatibility.yml
 
 check_grep 'name = "openbao"' Cargo.toml
-check_grep 'version = "2.0.0"' Cargo.toml
+check_grep 'version = "2.0.1"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep '"scripts/\*.py"' Cargo.toml
@@ -112,8 +113,8 @@ check_grep 'workflow_dispatch:' .github/workflows/openbao-compatibility.yml
 check_grep 'persist-credentials: false' .github/workflows/openbao-compatibility.yml
 check_grep 'openbao_ci_matrix.py aggregate' .github/workflows/openbao-compatibility.yml
 check_grep 'scripts/release_2_0_gate.sh' release-notes/RELEASE_NOTES_2.0.0.md
-check_grep 'version = "=2.0.0"' fuzz/Cargo.toml
-check_grep 'version = "=2.0.0"' tests/fixtures/reqwest-native-unification/Cargo.toml
+check_grep 'version = "=2.0.1"' fuzz/Cargo.toml
+check_grep 'version = "=2.0.1"' tests/fixtures/reqwest-native-unification/Cargo.toml
 check_grep 'Unique documented rows: `644`' docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
 check_grep 'oidc-get-callback-acknowledged = \[\]' Cargo.toml
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
@@ -140,6 +141,7 @@ check_grep '1.1.0 - Sanitization Secret Buffer Migration' docs/RELEASE_PLAN.md
 check_grep '1.1.1 - Security Dependency Refresh' docs/RELEASE_PLAN.md
 check_grep '1.1.2 - Rust 1.96.1 Toolchain And Dependency Refresh' docs/RELEASE_PLAN.md
 check_grep '2.0.0 - Multi-Version OpenBao Compatibility' docs/RELEASE_PLAN.md
+check_grep '2.0.1 - Compatibility Documentation Correction' docs/RELEASE_PLAN.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.12.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.13.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_1.0.0.md
@@ -150,7 +152,10 @@ check_grep 'Release date: 2026-06-24' release-notes/RELEASE_NOTES_1.1.1.md
 check_grep 'Release date: 2026-07-04' release-notes/RELEASE_NOTES_1.1.2.md
 check_grep 'Version: 2.0.0' release-notes/RELEASE_NOTES_2.0.0.md
 check_grep 'Release date: 2026-07-11' release-notes/RELEASE_NOTES_2.0.0.md
+check_grep 'Version: 2.0.1' release-notes/RELEASE_NOTES_2.0.1.md
+check_grep 'Release date: 2026-07-11' release-notes/RELEASE_NOTES_2.0.1.md
 check_grep '2.0.0 - 2026-07-11' CHANGELOG.md
+check_grep '2.0.1 - 2026-07-11' CHANGELOG.md
 check_grep 'Audit status:' docs/API_STABILITY_AUDIT.md
 check_grep 'From `vaultrs`' docs/MIGRATION_GUIDE.md
 

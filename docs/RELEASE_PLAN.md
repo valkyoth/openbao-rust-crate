@@ -44,9 +44,10 @@ or tags. The complete architecture, exact historical release inventory,
 security invariants, commit sequence, and stop criteria are defined in
 [`OPENBAO_VERSION_COMPATIBILITY_PLAN.md`](OPENBAO_VERSION_COMPATIBILITY_PLAN.md).
 The package metadata identified `main` as unreleased `2.0.0` throughout the
-breaking checkpoint series. The implementation checkpoints are complete; no
-package or tag is published until the exact release candidate passes the full
-historical matrix and final pentest.
+breaking checkpoint series. The signed release passed the full historical
+matrix and final pentest. `2.0.1` corrects the README and active release
+documentation to describe the shipped compatibility selector and explain how
+current SDK releases safely target older OpenBao servers.
 
 ## Standing Release Gates
 
@@ -692,3 +693,19 @@ Stop criteria:
   from security endorsement of an old server;
 - all standard release gates, the all-release integration gate, GitHub checks,
   and the final exact-commit pentest pass before tagging `v2.0.0`.
+
+### 2.0.1 - Compatibility Documentation Correction
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.0.1`;
+- the README identifies `2.0.x` as the stable line and no longer describes
+  `1.1.2` as the latest release;
+- README guidance shows how to select an exact historical OpenBao profile and
+  distinguishes profile selection from endpoint emulation;
+- active stability and release documentation records that `v2.0.0` passed its
+  release gates;
+- release notes, changelog, metadata validation, and release scripts cover
+  `2.0.1`;
+- all standard release gates and GitHub checks pass before tagging `v2.0.1`.

@@ -6,7 +6,7 @@ boundaries explicit.
 
 ## Status
 
-- Release line: `1.x` historical audit; `2.0.0` release candidate
+- Release line: `1.x` historical audit; stable `2.0.x`
 - Started: 2026-06-03
 - Audit status: stable endpoint API frozen at `1.0.0`; `1.0.1` and `1.0.2`
   are compatible maintenance patches, and `1.1.0` is a reviewed
@@ -27,9 +27,9 @@ boundaries explicit.
 - Evidence boundary: contract and serde evidence is complete; live integration
   coverage is representative rather than an endpoint-by-endpoint execution
   claim.
-- Candidate gate: package metadata and standalone fixture constraints are
-  exactly `2.0.0`; the signed tag remains blocked on green GitHub CI, CodeQL,
-  the full 21-release compatibility workflow, and the exact-commit pentest.
+- Release evidence: signed `v2.0.0` passed GitHub CI, CodeQL, the full
+  21-release compatibility workflow, and the exact-commit pentest. `2.0.1`
+  corrects release documentation without changing the compatibility contract.
 
 ## Stabilization Rules
 

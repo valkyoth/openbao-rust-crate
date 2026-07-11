@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.0.1 - 2026-07-11
+
+### Fixed
+
+- Corrected the README and active release documentation to identify `2.0.x`
+  as the current stable line instead of describing `2.0.0` as an unreleased
+  candidate.
+- Added explicit README guidance for using the current SDK with an older
+  OpenBao server through exact, automatic-strict, range, and assumed version
+  policies.
+- Clarified that exact profiles preserve historical routes only for servers
+  actually running that release; selecting an old profile does not emulate a
+  removed endpoint on a newer server.
+- Updated package, fuzz-workspace, fixture, and release-gate metadata to
+  `2.0.1`.
+
 ## 2.0.0 - 2026-07-11
 
 ### Added

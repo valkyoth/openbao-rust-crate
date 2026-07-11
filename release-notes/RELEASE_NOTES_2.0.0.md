@@ -103,9 +103,9 @@ wherever operationally possible.
 - Versioned serde fixtures, deterministic mutation tests, cargo-fuzz targets,
   focused Kani proofs, unit tests, mock HTTP tests, doctests, Clippy, Rust MSRV
   checks, dependency policy, RustSec audit, CodeQL, package review, and SBOM.
-- The release gate is `scripts/release_2_0_gate.sh`; tagging additionally
-  requires a green all-release GitHub compatibility workflow and a clean
-  independent pentest for the exact candidate commit.
+- The release gate was `scripts/release_2_0_gate.sh`; tagging additionally
+  required a green all-release GitHub compatibility workflow and a clean
+  independent pentest for the exact release commit.
 
 ## Accepted Residual Risks
 
@@ -131,7 +131,8 @@ wherever operationally possible.
 The complete trust boundaries and mitigations are documented in
 `SECURITY.md` and `docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md`.
 
-## Release Rule
+## Release Evidence
 
-Do not create `v2.0.0` until GitHub CI, CodeQL, the full 21-release
-compatibility workflow, and the independent exact-commit pentest are green.
+The signed `v2.0.0` tag was created after GitHub CI, CodeQL, the full
+21-release compatibility workflow, and the independent exact-commit pentest
+were green.

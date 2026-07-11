@@ -39,11 +39,10 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-The latest published stable release is `1.1.2`; `2.0.0` is the current release
-candidate. It adds explicit multi-version compatibility and includes reviewed
-breaking changes to raw transport, JWT/OIDC metadata, and base-URL handling.
-Rust `1.97.0` is the primary checked toolchain; Rust `1.90.0` remains the
-compatibility floor.
+The current stable line is `2.0.x`. It provides explicit, fail-closed OpenBao
+server-version compatibility for every published stable release from `2.0.0`
+through `2.5.5`. Rust `1.97.0` is the primary checked toolchain; Rust `1.90.0`
+remains the compatibility floor.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -158,9 +157,10 @@ Implemented now:
 - Generated read-only capability profiles with 666 stable, secret-free
   operation identities and complete exact-release range coverage.
 
-`1.1.2` remains the latest published stable release until the signed `v2.0.0`
-tag is created. Feature history and release details live in [CHANGELOG.md](CHANGELOG.md)
-and [release-notes](release-notes).
+`2.0.1` is a documentation correction release for the stable `2.0.x` API. It
+documents the shipped compatibility selector and historical OpenBao support
+without changing endpoint behavior. Feature history and release details live
+in [CHANGELOG.md](CHANGELOG.md) and [release-notes](release-notes).
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 [Release Plan](docs/RELEASE_PLAN.md) for the stable support policy.
@@ -212,9 +212,9 @@ The SDK tracks compatibility evidence across this supported range:
 | `1.91.0` | `cargo check --all-features`. |
 | `1.90.0` | Locked MSRV compatibility check with all targets and all features on every CI run. |
 
-## OpenBao Test Version Support
+## OpenBao Server Version Support
 
-The `2.0.0` line carries immutable compatibility profiles for OpenBao `2.0.0`
+The `2.0.x` line carries immutable compatibility profiles for OpenBao `2.0.0`
 through `2.5.5`. Historical wire compatibility and security endorsement are
 separate claims:
 
@@ -222,7 +222,7 @@ separate claims:
 | --- | --- | --- |
 | `0.1.0` through `1.0.2` | Release-tested with OpenBao `2.5.4`. | Historical result only; not a current security endorsement. |
 | `1.1.0` through `1.1.2` | Release-tested with OpenBao `2.5.5`. | OpenBao `2.5.5` remains the newest reviewed server profile. |
-| `2.0.0` release candidate | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Exact profiles `2.0.0` through `2.5.4` are security-deprecated compatibility targets and do not include all fixes present in `2.5.5`. |
+| `2.0.0` through `2.0.1` | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Exact profiles `2.0.0` through `2.5.4` are security-deprecated compatibility targets and do not include all fixes present in `2.5.5`. |
 
 The immutable source and OCI artifact inventory for those historical releases
 is committed under [`compat/`](compat/README.md), together with deterministic
@@ -280,17 +280,60 @@ if report.status() != OpenBaoCompatibilityStatus::Verified {
 # }
 ```
 
+### Using An Older OpenBao Release
+
+Use the `2.0.x` crate even when the server is older. Pin the server's real,
+exact release in `OpenBaoCompatibilityPolicy::exact`; do not install an older
+SDK merely to match an older OpenBao server:
+
+```rust
+use openbao::{
+    Client, OpenBaoCompatibilityPolicy, OpenBaoConfig, OpenBaoVersion,
+    SecretString,
+};
+
+# fn build(token: SecretString) -> openbao::Result<Client<openbao::Authenticated>> {
+let server = OpenBaoVersion::new(2, 2, 0);
+let policy = OpenBaoCompatibilityPolicy::exact(server)?;
+let config = OpenBaoConfig::new("https://bao.example.com:8200")?
+    .compatibility_policy(policy);
+let client = Client::from_config(config)?.try_with_token(token)?;
+# Ok(client)
+# }
+```
+
+Before the first typed operation, the client reads the public `/sys/health`
+endpoint and requires the server to report exactly `2.2.0`. It then uses the
+immutable `2.2.0` method, route, query, request-field, and response profile.
+An operation unavailable in `2.2.0` fails locally before its request body is
+serialized or transmitted. Operations retained only by an older profile stay
+available when connected to that actual older server.
+
+The version selector is not an endpoint-emulation switch. Configuring the
+`2.2.0` profile against a newer server fails the exact-version check; it cannot
+restore an endpoint removed from that newer server. Conversely, a future
+OpenBao profile is appended without rewriting the locked `2.2.0` profile, so
+later API removals do not erase support for deployments that still truly run
+`2.2.0`.
+
+Use `automatic_strict()` when the application may connect to any one of the 21
+locked releases and should automatically select the detected exact profile.
+Use an inclusive range only during a controlled rolling upgrade, with backend
+affinity or an application restricted to the capability intersection. If a
+trusted proxy blocks `/sys/health`, `assume` can select an exact profile, but
+the report is deliberately `Assumed` rather than `Verified`.
+
 Strict, exact, and range policies perform one public, token-free and
 namespace-free `/sys/health` preflight before the first SDK request, then cache
 the selected profile inside that client instance. `assume` is available for
 proxies that block health probing, but its report is always visibly `Assumed`.
 Unknown newer servers fail closed unless the caller constructs the separately
 acknowledged policy. Existing constructors remain unverified unless a policy is
-selected during the `2.0.0` migration. See the
+selected. See the
 [server version selection guide](docs/OPENBAO_VERSION_SELECTION.md) for exact,
 range, mixed-cluster, assumed, and unknown-newer behavior.
 
-The `2.0.0` typed dispatcher selects one immutable operation variant before
+The `2.0.x` typed dispatcher selects one immutable operation variant before
 body serialization, derives its HTTP method from the registry, and validates
 the concrete path and required query selectors against the reviewed route
 template. It never probes an alternate route after a 404, 405, transport, or
@@ -2062,7 +2105,7 @@ scripts/checks.sh
 Run the current release gate:
 
 ```bash
-scripts/release_0_9_gate.sh
+scripts/release_2_0_gate.sh
 ```
 
 Set `OPENBAO_SKIP_INTEGRATION=1` only when Podman is unavailable; release
