@@ -346,6 +346,10 @@ creation. The release notes must record:
 
 ## OpenBao Compatibility
 
+The detailed attacker model, trust boundaries, enforced invariants, and
+residual-risk register are maintained in
+[`docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md`](docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md).
+
 This crate tracks the official OpenBao API documentation. The API is currently
 documented as `/v1`, and OpenBao warns that compatibility is not yet guaranteed
 for every auth method and secrets engine. Live core-flow evidence for exact

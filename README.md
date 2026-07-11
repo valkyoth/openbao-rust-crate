@@ -1993,7 +1993,8 @@ python3 -B scripts/openbao_ci_matrix.py self-test
 
 The crate includes optional Kani proof harnesses for a small set of
 allocation-light validation helpers. The current harnesses cover byte-level
-OpenBao path rejection policy and duration component parsing. They are bounded
+OpenBao path rejection policy, duration component parsing, closed version
+intervals, and capability-range selection. They are bounded
 proofs that complement the normal unit, integration, fuzz, Miri, audit, and
 deny checks; they are not a whole-crate formal verification claim.
 
@@ -2019,6 +2020,35 @@ the compatible Rust toolchain or `cargo-kani` is not installed, the Kani script
 prints a skip message instead of failing local development checks. See
 [kani/README.md](kani/README.md) for the exact proof scope and current
 limitations.
+
+## Compatibility Fuzzing
+
+Compatibility-specific cargo-fuzz targets cover strict version and range
+parsing, generated profile/capability selection, and the five representative
+versioned response families. Committed seeds include historical releases,
+rolling ranges, removed historical operations, and malformed versions. Run
+them with a nightly toolchain and `cargo-fuzz`:
+
+```bash
+cargo +nightly fuzz run version_parsing fuzz/corpus-seeds/version_parsing
+cargo +nightly fuzz run compatibility_profile fuzz/corpus-seeds/compatibility_profile
+cargo +nightly fuzz run versioned_response_envelope fuzz/corpus-seeds/versioned_response_envelope
+```
+
+The snapshot and version-contract validators also execute bounded,
+deterministic mutation corpora during their normal self-tests. The standard
+gate compiles every fuzz target without requiring nightly or `cargo-fuzz`:
+
+```bash
+cargo check --manifest-path fuzz/Cargo.toml --locked --bins
+python3 -B scripts/openbao_api_snapshots.py --self-test
+python3 -B scripts/generate_openbao_version_contracts.py --self-test
+```
+
+These tests and the focused interval-selection Kani proofs are complementary;
+neither is a whole-crate proof. See the
+[compatibility threat model](docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md) for
+the exact residual-risk register.
 
 ## Release Discipline
 

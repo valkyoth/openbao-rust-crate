@@ -308,8 +308,16 @@ impl OpenBaoVersionRequirement {
 
     /// Returns whether `version` is inside the permitted closed range.
     pub fn contains(self, version: OpenBaoVersion) -> bool {
-        version >= self.minimum() && version <= self.maximum()
+        version_in_closed_interval(version, self.minimum(), self.maximum())
     }
+}
+
+pub(crate) fn version_in_closed_interval(
+    version: OpenBaoVersion,
+    minimum: OpenBaoVersion,
+    maximum: OpenBaoVersion,
+) -> bool {
+    version >= minimum && version <= maximum
 }
 
 impl fmt::Display for OpenBaoVersionRequirement {
@@ -598,7 +606,7 @@ pub struct OpenBaoCapabilityRange {
 }
 
 impl OpenBaoCapabilityRange {
-    const fn generated(
+    pub(crate) const fn generated(
         minimum: OpenBaoVersion,
         maximum: OpenBaoVersion,
         evidence: OpenBaoCapabilityEvidence,
@@ -626,7 +634,7 @@ impl OpenBaoCapabilityRange {
     }
 
     fn contains(self, version: OpenBaoVersion) -> bool {
-        version >= self.minimum && version <= self.maximum
+        version_in_closed_interval(version, self.minimum, self.maximum)
     }
 }
 
@@ -695,11 +703,7 @@ impl OpenBaoOperation {
         if !is_generated_profile(version) {
             return None;
         }
-        let range = self
-            .ranges
-            .iter()
-            .copied()
-            .find(|range| range.contains(version))?;
+        let range = select_capability_range(self.ranges, version)?;
         if range.evidence == OpenBaoCapabilityEvidence::None {
             return Some(OpenBaoCapabilityAvailability::NotDocumented);
         }
@@ -714,12 +718,15 @@ impl OpenBaoOperation {
         if !is_generated_profile(version) {
             return None;
         }
-        self.ranges
-            .iter()
-            .copied()
-            .find(|range| range.contains(version))
-            .map(OpenBaoCapabilityRange::evidence)
+        select_capability_range(self.ranges, version).map(OpenBaoCapabilityRange::evidence)
     }
+}
+
+pub(crate) fn select_capability_range(
+    ranges: &[OpenBaoCapabilityRange],
+    version: OpenBaoVersion,
+) -> Option<OpenBaoCapabilityRange> {
+    ranges.iter().copied().find(|range| range.contains(version))
 }
 
 /// Read-only operation status in one exact OpenBao profile.

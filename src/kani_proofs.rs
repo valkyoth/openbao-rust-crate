@@ -1,7 +1,49 @@
 use crate::{
+    compatibility::{
+        OpenBaoCapabilityEvidence, OpenBaoCapabilityRange, OpenBaoVersion, select_capability_range,
+        version_in_closed_interval,
+    },
     path::path_byte_is_forbidden,
     validation::{parse_duration_component, validate_duration_string},
 };
+
+#[kani::proof]
+fn closed_version_interval_matches_ordering() {
+    let version = OpenBaoVersion::new(kani::any(), kani::any(), kani::any());
+    let minimum = OpenBaoVersion::new(kani::any(), kani::any(), kani::any());
+    let maximum = OpenBaoVersion::new(kani::any(), kani::any(), kani::any());
+
+    assert!(
+        version_in_closed_interval(version, minimum, maximum)
+            == (version >= minimum && version <= maximum)
+    );
+}
+
+#[kani::proof]
+fn capability_selection_never_escapes_selected_interval() {
+    let version = OpenBaoVersion::new(kani::any(), kani::any(), kani::any());
+    let first_minimum = OpenBaoVersion::new(2, 0, 0);
+    let first_maximum = OpenBaoVersion::new(2, 2, 2);
+    let second_minimum = OpenBaoVersion::new(2, 3, 1);
+    let second_maximum = OpenBaoVersion::new(2, 5, 5);
+    let ranges = [
+        OpenBaoCapabilityRange::generated(
+            first_minimum,
+            first_maximum,
+            OpenBaoCapabilityEvidence::TaggedDocumentation,
+        ),
+        OpenBaoCapabilityRange::generated(
+            second_minimum,
+            second_maximum,
+            OpenBaoCapabilityEvidence::LockedOpenApi,
+        ),
+    ];
+
+    if let Some(selected) = select_capability_range(&ranges, version) {
+        assert!(version >= selected.minimum());
+        assert!(version <= selected.maximum());
+    }
+}
 
 #[kani::proof]
 fn path_forbidden_byte_helper_matches_documented_policy() {

@@ -19,7 +19,12 @@ from generate_openbao_capability_registry import (
     verify_outputs as verify_capability_registry,
 )
 from generate_openbao_response_fixtures import generate as generate_response_fixtures
-from openbao_api_snapshots import SnapshotError, parse_json, read_regular_file
+from openbao_api_snapshots import (
+    SnapshotError,
+    deterministic_byte_mutations,
+    parse_json,
+    read_regular_file,
+)
 from openbao_core_matrix import load_results, verify as verify_core_results
 from openbao_test_harness import CORE_OPERATION_IDS
 
@@ -473,6 +478,33 @@ def self_test() -> None:
     overstated_scope = copy.deepcopy(generated)
     overstated_scope["scope"]["external_services_proven"] = ["database"]
     rejected("an overstated external-service claim", overstated_scope)
+
+    encoded = canonical_json(generated)
+    parsed_mutations = 0
+    rejected_mutations = 0
+    # The full matrix is multi-megabyte. Sixteen evenly distributed mutations
+    # exercise bounded decoding without turning every release gate into an
+    # unbounded parser benchmark.
+    for mutation in deterministic_byte_mutations(encoded, 16):
+        try:
+            candidate = parse_json(mutation, MAX_OUTPUT_BYTES)
+        except SnapshotError:
+            rejected_mutations += 1
+            continue
+        parsed_mutations += 1
+        try:
+            validate_matrix(candidate, versions)
+        except (ContractError, KeyError, TypeError, ValueError):
+            rejected_mutations += 1
+            continue
+        if candidate != generated:
+            # A structurally valid mutation still fails the externally anchored
+            # byte-for-byte verification performed by verify_outputs().
+            if sha256(mutation) == EXPECTED_MATRIX_SHA256:
+                raise ContractError("mutated version contract matched the anchored digest")
+            rejected_mutations += 1
+    if parsed_mutations == 0 or rejected_mutations == 0:
+        raise ContractError("version contract mutation corpus was ineffective")
 
 
 def main() -> int:

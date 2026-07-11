@@ -843,6 +843,9 @@ Pentest focus:
 
 Suggested commit title: `Harden OpenBao compatibility boundary`
 
+Status: implemented. Pentest this commit from
+`99062e2f9a6f1eb62747c959bf9901c87a67bbaf` to the resulting Commit 19 hash.
+
 Goal:
 
 - fuzz version parsing, profile decoding, snapshot normalization, capability

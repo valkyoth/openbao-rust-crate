@@ -596,6 +596,22 @@ def contract_only(value: Any) -> Any:
     return value
 
 
+def deterministic_byte_mutations(seed: bytes, limit: int = 512) -> list[bytes]:
+    """Return a bounded, deterministic parser corpus derived from one artifact."""
+    if not seed or limit <= 0:
+        return []
+    mutations = [b"", seed[:1], seed[:-1], seed + b"\x00", seed + b"{}"]
+    stride = max(1, len(seed) // max(1, limit // 4))
+    for offset in range(0, len(seed), stride):
+        for replacement in (0, ord('"'), ord('{'), 0xFF):
+            changed = bytearray(seed)
+            changed[offset] = replacement
+            mutations.append(bytes(changed))
+            if len(mutations) >= limit:
+                return mutations
+    return mutations[:limit]
+
+
 def podman_environment(token: str) -> dict[str, str]:
     environment = os.environ.copy()
     environment.update(
@@ -1648,6 +1664,31 @@ def self_test() -> None:
         "long JSON string",
         lambda: parse_json(b'{"a":"' + (b"x" * (MAX_JSON_STRING_BYTES + 1)) + b'"}', MAX_OPENAPI_BYTES),
     )
+    normalization_seed = canonical_json(
+        {
+            "components": {"schemas": {"Example": {"type": "object"}}},
+            "info": {"description": "removed annotation", "version": "2.5.5"},
+            "openapi": "3.0.2",
+            "paths": {"/sys/health": {"get": {"responses": {"200": {"description": "ok"}}}}},
+        }
+    )
+    accepted_mutations = 0
+    rejected_mutations = 0
+    for mutation in deterministic_byte_mutations(normalization_seed):
+        try:
+            parsed = parse_json(mutation, len(normalization_seed) + 16)
+        except SnapshotError:
+            rejected_mutations += 1
+            continue
+        normalized = contract_only(parsed)
+        validate_json_tree(normalized)
+        canonical = canonical_json(normalized)
+        reparsed = parse_json(canonical, len(canonical))
+        if canonical_json(reparsed) != canonical:
+            raise SnapshotError("snapshot normalization mutation was not deterministic")
+        accepted_mutations += 1
+    if accepted_mutations == 0 or rejected_mutations == 0:
+        raise SnapshotError("snapshot normalization mutation corpus was ineffective")
     with tempfile.TemporaryDirectory(prefix="openbao-api-snapshot-") as directory:
         root = Path(directory)
         target = root / "target"

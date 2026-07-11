@@ -20,7 +20,10 @@ Current proof harnesses cover bounded or fixed regression properties for:
 - byte-level OpenBao path rejection policy;
 - duration component parsing for symbolic one- and two-digit inputs;
 - duration component rejection for symbolic non-digit input;
-- documented duration parser examples.
+- documented duration parser examples;
+- closed OpenBao version interval membership;
+- capability-range selection cannot return a range that excludes the selected
+  version.
 
 These are intentionally small bounded proofs. They complement unit tests,
 integration tests, fuzzing, Miri, and dependency policy checks. They are not a

@@ -47,6 +47,9 @@ python3 scripts/openbao_core_matrix.py --self-test
 echo "checks: OpenBao compatibility CI controller"
 python3 -B scripts/openbao_ci_matrix.py self-test
 
+echo "checks: compatibility fuzz targets"
+cargo check --manifest-path fuzz/Cargo.toml --locked --bins
+
 echo "checks: clippy default"
 cargo clippy --all-targets -- -D warnings
 
@@ -75,6 +78,7 @@ echo "checks: dependency policy"
 cargo deny check
 cargo deny --manifest-path tests/fixtures/reqwest-native-unification/Cargo.toml \
   --config deny.toml check
+cargo deny --manifest-path fuzz/Cargo.toml --config deny.toml check
 
 echo "checks: RustSec advisories"
 rustsec_db="${OPENBAO_RUSTSEC_DB:-}"
@@ -96,6 +100,7 @@ fi
 cargo audit --db "$rustsec_db"
 cargo audit --db "$rustsec_db" \
   --file tests/fixtures/reqwest-native-unification/Cargo.lock
+cargo audit --db "$rustsec_db" --file fuzz/Cargo.lock
 
 echo "checks: Kani"
 scripts/check_kani.sh
