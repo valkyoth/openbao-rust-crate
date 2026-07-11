@@ -479,8 +479,9 @@ fn postgres_uri_query_sslmode(dsn: &str) -> PostgresTlsPosture {
     let mut posture = PostgresTlsPosture::MissingOrInsecure;
     let mut found = false;
     for parameter in query.split('&') {
-        let Some((key, value)) = parameter.split_once('=') else {
-            continue;
+        let (key, value) = match parameter.split_once('=') {
+            Some((key, value)) => (key, value),
+            None => (parameter, ""),
         };
         if percent_decoded_ascii_eq(key, b"sslmode") {
             if found {
@@ -1956,6 +1957,10 @@ mod tests {
             "postgresql://db.example/openbao?sslmode=verify-full&sslmode=require",
             "postgresql://db.example/openbao?sslmode=require&sslmode=verify-full",
             "postgresql://db.example/openbao?sslmode=verify-full&%73slmode=verify-full",
+            "postgresql://db.example/openbao?sslmode&sslmode=verify-full",
+            "postgresql://db.example/openbao?sslmode=verify-full&sslmode",
+            "postgresql://db.example/openbao?%73slmode&sslmode=verify-full",
+            "postgresql://db.example/openbao?sslmode",
             "postgresql://db.example/openbao?service=production",
             "POSTGRESQL://db.example/openbao?sslmode=verify-full",
             "mysql://db.example/openbao?sslmode=verify-full",
