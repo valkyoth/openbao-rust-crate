@@ -204,6 +204,35 @@ zero-test, or all-skipped operation evidence fails validation. Reports permit
 only fixed classifications and reason codes and reject control characters so
 tokens or raw server errors cannot enter committed evidence.
 
+## Capability Registry
+
+`capability-registry.json` and
+`src/generated/openbao_capabilities.rs` are deterministic outputs of
+`scripts/generate_openbao_capability_registry.py`. The registry assigns 664
+stable operation identifiers across the union of exact tagged documentation
+and the corrected 2.5.5 contract. Every operation has a contiguous,
+non-overlapping range partition covering all 21 locked releases.
+
+Availability means only that an exact tagged route is documented. It is not a
+live-behavior result or a typed-SDK support claim. The pre-2.0 matrix's typed
+and typed-gated labels are retained as explicitly named legacy claims until
+later migration commits link concrete helpers, fields, transports, and tests.
+Security-blocked operations are maintained in generator code and cannot be
+made available by changing generated documentation input alone.
+
+Public Rust reporting exposes stable identifiers, methods, and route templates
+only. Templates never contain concrete mount names, secret paths, lease IDs,
+token accessors, namespaces, or query values. Unknown and unpublished version
+numbers do not select a profile merely because they sort between two releases.
+
+Verify the anchored JSON and Rust outputs plus adversarial range, duplicate,
+policy-downgrade, injection, and determinism checks:
+
+```sh
+python3 -B scripts/generate_openbao_capability_registry.py --verify
+python3 -B scripts/generate_openbao_capability_registry.py --self-test
+```
+
 ## Compatibility CI Matrix
 
 `.github/workflows/openbao-compatibility.yml` obtains every matrix value from

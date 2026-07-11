@@ -4,11 +4,12 @@
 //! prerelease and build metadata so a compatibility profile always selects an
 //! exact reviewed server release.
 //!
-//! This module currently provides value types only. Constructing a requirement
-//! does not query `/sys/health`, cache a connected server version, or gate an
-//! HTTP request. Runtime enforcement lands with the planned client
-//! compatibility-policy and version-aware-dispatch checkpoints; until then,
-//! callers must not treat these values as proof that a connection was checked.
+//! This module also exposes a generated read-only registry of secret-free route
+//! templates across the 21 locked OpenBao releases. Registry evidence reports
+//! what exact tagged documentation contains; it does not query `/sys/health`,
+//! prove that a connected server was checked, or dispatch an HTTP request.
+//! Runtime enforcement lands with the planned client compatibility-policy and
+//! version-aware-dispatch checkpoints.
 
 use core::{fmt, str::FromStr};
 
@@ -193,6 +194,329 @@ impl FromStr for OpenBaoVersionRequirement {
     }
 }
 
+/// HTTP or protocol method recorded for a documented OpenBao operation.
+///
+/// `Acme` and `Scan` are documentation-level protocol operations rather than
+/// methods accepted by `reqwest::Method`. This registry reports evidence only;
+/// it does not transmit requests.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum OpenBaoHttpMethod {
+    /// ACME protocol flow rooted at an OpenBao directory URL.
+    Acme,
+    /// HTTP `DELETE`.
+    Delete,
+    /// HTTP `GET`.
+    Get,
+    /// HTTP `HEAD`.
+    Head,
+    /// OpenBao `LIST` method.
+    List,
+    /// HTTP `PATCH`.
+    Patch,
+    /// HTTP `POST`.
+    Post,
+    /// HTTP `PUT`.
+    Put,
+    /// OpenBao `SCAN` method.
+    Scan,
+}
+
+impl OpenBaoHttpMethod {
+    /// Returns the documented method spelling.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Acme => "ACME",
+            Self::Delete => "DELETE",
+            Self::Get => "GET",
+            Self::Head => "HEAD",
+            Self::List => "LIST",
+            Self::Patch => "PATCH",
+            Self::Post => "POST",
+            Self::Put => "PUT",
+            Self::Scan => "SCAN",
+        }
+    }
+}
+
+/// Current crate review disposition attached to a stable operation identity.
+///
+/// Legacy claims are retained only as migration input. They are not exact
+/// compatibility claims; later endpoint migration commits replace them with
+/// helper, field, transport, and test evidence.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum OpenBaoOperationDisposition {
+    /// The pre-2.0 matrix claimed an ungated typed helper.
+    LegacyTypedClaim,
+    /// The pre-2.0 matrix claimed a feature-gated typed helper.
+    LegacyTypedGatedClaim,
+    /// The operation was assigned to an external protocol/tool boundary.
+    ExternalBoundary,
+    /// The legacy implementation covered a different method or only part of the operation.
+    PartialLegacyClaim,
+    /// The legacy matrix omitted the operation.
+    OmittedLegacyClaim,
+    /// Crate security policy blocks this operation regardless of server documentation.
+    SecurityBlocked,
+    /// A historical operation is absent from the current 2.5.5 contract.
+    UnlinkedHistorical,
+}
+
+/// Immutable evidence supporting one exact-release capability range.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum OpenBaoCapabilityEvidence {
+    /// The route is not documented in this exact-release range.
+    None,
+    /// The route appears in exact tagged OpenBao API documentation.
+    TaggedDocumentation,
+    /// The route is present in the corrected exact 2.5.5 contract extraction.
+    CorrectedCurrentContract,
+}
+
+/// SDK reporting result for one operation on one exact compatibility profile.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum OpenBaoCapabilityAvailability {
+    /// Exact tagged evidence documents the route. This does not by itself prove SDK support.
+    DocumentedRoute,
+    /// The route is not documented for this exact locked release.
+    NotDocumented,
+    /// The server documents the route, but crate security policy blocks its use.
+    SecurityBlocked,
+}
+
+/// One complete, non-overlapping exact-release range for an operation.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct OpenBaoCapabilityRange {
+    minimum: OpenBaoVersion,
+    maximum: OpenBaoVersion,
+    evidence: OpenBaoCapabilityEvidence,
+}
+
+impl OpenBaoCapabilityRange {
+    const fn generated(
+        minimum: OpenBaoVersion,
+        maximum: OpenBaoVersion,
+        evidence: OpenBaoCapabilityEvidence,
+    ) -> Self {
+        Self {
+            minimum,
+            maximum,
+            evidence,
+        }
+    }
+
+    /// Oldest exact release covered by this range.
+    pub const fn minimum(self) -> OpenBaoVersion {
+        self.minimum
+    }
+
+    /// Newest exact release covered by this range.
+    pub const fn maximum(self) -> OpenBaoVersion {
+        self.maximum
+    }
+
+    /// Evidence attached to this range.
+    pub const fn evidence(self) -> OpenBaoCapabilityEvidence {
+        self.evidence
+    }
+
+    fn contains(self, version: OpenBaoVersion) -> bool {
+        version >= self.minimum && version <= self.maximum
+    }
+}
+
+/// Stable, secret-free identity and route template for one OpenBao operation.
+///
+/// Path values are documentation templates such as `/sys/health` or
+/// `/:secret-mount-path/data/:path`. They never contain a caller's concrete
+/// mount, secret path, lease identifier, token accessor, or query value.
+#[derive(Clone, Copy, Debug)]
+pub struct OpenBaoOperation {
+    id: &'static str,
+    method: OpenBaoHttpMethod,
+    path_template: &'static str,
+    disposition: OpenBaoOperationDisposition,
+    ranges: &'static [OpenBaoCapabilityRange],
+}
+
+impl OpenBaoOperation {
+    const fn generated(
+        id: &'static str,
+        method: OpenBaoHttpMethod,
+        path_template: &'static str,
+        disposition: OpenBaoOperationDisposition,
+        ranges: &'static [OpenBaoCapabilityRange],
+    ) -> Self {
+        Self {
+            id,
+            method,
+            path_template,
+            disposition,
+            ranges,
+        }
+    }
+
+    /// Stable generated operation identifier.
+    pub const fn id(self) -> &'static str {
+        self.id
+    }
+
+    /// Documented method for this route identity.
+    pub const fn method(self) -> OpenBaoHttpMethod {
+        self.method
+    }
+
+    /// Secret-free documented route template.
+    pub const fn path_template(self) -> &'static str {
+        self.path_template
+    }
+
+    /// Current crate review disposition.
+    pub const fn disposition(self) -> OpenBaoOperationDisposition {
+        self.disposition
+    }
+
+    /// Complete exact-release range partition for this operation.
+    pub const fn ranges(self) -> &'static [OpenBaoCapabilityRange] {
+        self.ranges
+    }
+
+    /// Reports availability for one locked exact-release profile.
+    ///
+    /// Returns `None` for versions outside the immutable profile inventory,
+    /// including unpublished patch numbers that happen to fall numerically
+    /// between two locked releases.
+    pub fn availability(self, version: OpenBaoVersion) -> Option<OpenBaoCapabilityAvailability> {
+        if !is_generated_profile(version) {
+            return None;
+        }
+        let range = self
+            .ranges
+            .iter()
+            .copied()
+            .find(|range| range.contains(version))?;
+        if range.evidence == OpenBaoCapabilityEvidence::None {
+            return Some(OpenBaoCapabilityAvailability::NotDocumented);
+        }
+        if self.disposition == OpenBaoOperationDisposition::SecurityBlocked {
+            return Some(OpenBaoCapabilityAvailability::SecurityBlocked);
+        }
+        Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+    }
+
+    /// Returns the evidence for one locked exact-release profile.
+    pub fn evidence(self, version: OpenBaoVersion) -> Option<OpenBaoCapabilityEvidence> {
+        if !is_generated_profile(version) {
+            return None;
+        }
+        self.ranges
+            .iter()
+            .copied()
+            .find(|range| range.contains(version))
+            .map(OpenBaoCapabilityRange::evidence)
+    }
+}
+
+/// Read-only operation status in one exact OpenBao profile.
+#[derive(Clone, Copy, Debug)]
+pub struct OpenBaoCapabilityStatus {
+    operation: OpenBaoOperation,
+    availability: OpenBaoCapabilityAvailability,
+    evidence: OpenBaoCapabilityEvidence,
+}
+
+impl OpenBaoCapabilityStatus {
+    /// Operation identity and route template.
+    pub const fn operation(self) -> OpenBaoOperation {
+        self.operation
+    }
+
+    /// Server-route availability after crate security policy is applied.
+    pub const fn availability(self) -> OpenBaoCapabilityAvailability {
+        self.availability
+    }
+
+    /// Immutable evidence for this exact profile cell.
+    pub const fn evidence(self) -> OpenBaoCapabilityEvidence {
+        self.evidence
+    }
+}
+
+/// Read-only capability report for one exact locked OpenBao release.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct OpenBaoCapabilityProfile {
+    version: OpenBaoVersion,
+}
+
+impl OpenBaoCapabilityProfile {
+    /// Selects an exact profile from the immutable release inventory.
+    pub fn for_version(version: OpenBaoVersion) -> Option<Self> {
+        is_generated_profile(version).then_some(Self { version })
+    }
+
+    /// Exact OpenBao release represented by this profile.
+    pub const fn version(self) -> OpenBaoVersion {
+        self.version
+    }
+
+    /// Reports one operation by stable identifier.
+    pub fn operation(self, id: &str) -> Option<OpenBaoCapabilityStatus> {
+        let operation = openbao_operation(id)?;
+        capability_status(operation, self.version)
+    }
+
+    /// Iterates every operation and its status for this profile.
+    pub fn operations(self) -> impl Iterator<Item = OpenBaoCapabilityStatus> {
+        generated::GENERATED_OPERATIONS
+            .iter()
+            .copied()
+            .filter_map(move |operation| capability_status(operation, self.version))
+    }
+}
+
+/// Returns every stable generated operation in identifier order.
+pub fn openbao_operations() -> &'static [OpenBaoOperation] {
+    generated::GENERATED_OPERATIONS
+}
+
+/// Looks up a stable operation identifier.
+pub fn openbao_operation(id: &str) -> Option<OpenBaoOperation> {
+    generated::GENERATED_OPERATIONS
+        .binary_search_by_key(&id, |operation| operation.id())
+        .ok()
+        .map(|index| generated::GENERATED_OPERATIONS[index])
+}
+
+/// Returns all exact OpenBao releases represented by generated profiles.
+pub fn openbao_profile_versions() -> &'static [OpenBaoVersion] {
+    generated::GENERATED_PROFILE_VERSIONS
+}
+
+fn is_generated_profile(version: OpenBaoVersion) -> bool {
+    generated::GENERATED_PROFILE_VERSIONS
+        .binary_search(&version)
+        .is_ok()
+}
+
+fn capability_status(
+    operation: OpenBaoOperation,
+    version: OpenBaoVersion,
+) -> Option<OpenBaoCapabilityStatus> {
+    Some(OpenBaoCapabilityStatus {
+        availability: operation.availability(version)?,
+        evidence: operation.evidence(version)?,
+        operation,
+    })
+}
+
+mod generated {
+    use super::{
+        OpenBaoCapabilityEvidence, OpenBaoCapabilityRange, OpenBaoHttpMethod, OpenBaoOperation,
+        OpenBaoOperationDisposition, OpenBaoVersion,
+    };
+
+    include!("generated/openbao_capabilities.rs");
+}
+
 fn parse_component(component: &str) -> Result<u32> {
     if component.is_empty() {
         return Err(invalid_version("version components must not be empty"));
@@ -228,9 +552,15 @@ const fn invalid_requirement(reason: &'static str) -> Error {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::panic)]
+
     use core::str::FromStr;
 
-    use super::{OpenBaoVersion, OpenBaoVersionRequirement};
+    use super::{
+        OpenBaoCapabilityAvailability, OpenBaoCapabilityEvidence, OpenBaoCapabilityProfile,
+        OpenBaoHttpMethod, OpenBaoOperationDisposition, OpenBaoVersion, OpenBaoVersionRequirement,
+        openbao_operation, openbao_operations, openbao_profile_versions,
+    };
     use crate::{Error, Result};
 
     #[test]
@@ -370,5 +700,93 @@ mod tests {
                 "requirement exceeds the input limit"
             ))
         ));
+    }
+
+    #[test]
+    fn generated_capability_registry_is_complete_and_lookup_is_stable() {
+        let operations = openbao_operations();
+        let versions = openbao_profile_versions();
+
+        assert_eq!(operations.len(), 664);
+        assert_eq!(versions.len(), 21);
+        assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
+        assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
+        assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 4, 2)).is_none());
+
+        let mut previous = None;
+        for operation in operations {
+            assert!(operation.path_template().starts_with('/'));
+            assert!(!operation.path_template().chars().any(char::is_control));
+            if let Some(previous) = previous {
+                assert!(previous < operation.id());
+            }
+            previous = Some(operation.id());
+            assert_eq!(
+                openbao_operation(operation.id()).map(|value| value.id()),
+                Some(operation.id())
+            );
+            for version in versions {
+                assert!(operation.availability(*version).is_some());
+                assert!(operation.evidence(*version).is_some());
+            }
+        }
+    }
+
+    #[test]
+    fn generated_profiles_preserve_removed_routes_and_security_blocks() {
+        let historical = openbao_operations()
+            .iter()
+            .copied()
+            .find(|operation| operation.path_template() == "/sys/internal/ui/feature-flags")
+            .unwrap_or_else(|| panic!("missing historical feature-flags operation"));
+        assert_eq!(historical.method(), OpenBaoHttpMethod::Get);
+        assert_eq!(
+            historical.availability(OpenBaoVersion::new(2, 4, 4)),
+            Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+        );
+        assert_eq!(
+            historical.evidence(OpenBaoVersion::new(2, 4, 4)),
+            Some(OpenBaoCapabilityEvidence::TaggedDocumentation)
+        );
+        assert_eq!(
+            historical.availability(OpenBaoVersion::new(2, 5, 5)),
+            Some(OpenBaoCapabilityAvailability::NotDocumented)
+        );
+        assert_eq!(
+            historical.disposition(),
+            OpenBaoOperationDisposition::UnlinkedHistorical
+        );
+
+        let monitor = openbao_operations()
+            .iter()
+            .copied()
+            .find(|operation| {
+                operation.method() == OpenBaoHttpMethod::Get
+                    && operation.path_template() == "/sys/monitor"
+            })
+            .unwrap_or_else(|| panic!("missing monitor operation"));
+        assert_eq!(
+            monitor.availability(OpenBaoVersion::new(2, 5, 5)),
+            Some(OpenBaoCapabilityAvailability::SecurityBlocked)
+        );
+        assert_eq!(
+            monitor.disposition(),
+            OpenBaoOperationDisposition::SecurityBlocked
+        );
+    }
+
+    #[test]
+    fn profile_reporting_contains_every_operation_without_support_inference() {
+        let profile = OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 5, 5))
+            .unwrap_or_else(|| panic!("missing current capability profile"));
+        let statuses = profile.operations().collect::<Vec<_>>();
+
+        assert_eq!(statuses.len(), openbao_operations().len());
+        assert_eq!(profile.version(), OpenBaoVersion::new(2, 5, 5));
+        assert!(statuses.iter().any(|status| {
+            status.operation().disposition() == OpenBaoOperationDisposition::LegacyTypedClaim
+                && status.availability() == OpenBaoCapabilityAvailability::DocumentedRoute
+                && status.evidence() != OpenBaoCapabilityEvidence::None
+        }));
     }
 }

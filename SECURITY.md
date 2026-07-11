@@ -60,6 +60,11 @@ Please include:
   snapshot validator. Tagged documentation remains primary, rendered pages are
   secondary observations, and normalized OpenAPI remains supporting evidence;
   none of these replace version-locked live behavior tests.
+- Generated capability profiles expose only stable identifiers and route
+  templates from anchored evidence. A documented route is not a typed-helper
+  or live-compatibility claim. Security-blocked operation identities are
+  maintained in reviewed generator code, and generated documentation cannot
+  re-enable them.
 - Public raw JSON, byte, retry, and response-wrapping transports are disabled
   unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
   bypass typed request validation and operation-specific feature gates; keep

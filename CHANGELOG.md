@@ -41,6 +41,14 @@ All notable changes to this project are documented here.
 - Added sanitized per-release CI artifacts and a bounded aggregate report that
   distinguishes compatibility failures from infrastructure failures and
   rejects missing, extra, malformed, or contradictory matrix evidence.
+- Added an anchored generated capability registry with 664 stable operation
+  identities and complete non-overlapping ranges across all 21 exact OpenBao
+  profiles. Public reporting exposes only documentation route templates, never
+  caller mount names, secret paths, accessors, or query values.
+- Added read-only capability profile, operation, disposition, evidence, and
+  availability APIs. Legacy typed labels remain explicitly named as claims and
+  do not become verified compatibility support without later helper and test
+  linkage.
 
 ### Changed
 
@@ -99,6 +107,10 @@ All notable changes to this project are documented here.
   test executable before OpenBao initialization, then exposes the ephemeral
   root-token and result descriptors only to that executable, not Cargo,
   compiler, or build-script processes.
+- Capability generation hard-codes the reviewed security-blocked operation
+  set, rejects range gaps and overlaps, duplicate route identities, policy
+  downgrades, control-character injection, and stale or non-deterministic Rust
+  output.
 
 ## 1.1.2 - 2026-07-04
 

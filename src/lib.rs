@@ -163,7 +163,12 @@ pub use client::{
     Authenticated, Client, ClientBuilder, HeaderMode, HttpPolicy, OpenBao, OpenBaoConfig,
     RetryPolicy, RetryableMethod, RootCertificateMode, SharedClient, TlsBackend, Unauthenticated,
 };
-pub use compatibility::{OpenBaoVersion, OpenBaoVersionRequirement};
+pub use compatibility::{
+    OpenBaoCapabilityAvailability, OpenBaoCapabilityEvidence, OpenBaoCapabilityProfile,
+    OpenBaoCapabilityRange, OpenBaoCapabilityStatus, OpenBaoHttpMethod, OpenBaoOperation,
+    OpenBaoOperationDisposition, OpenBaoVersion, OpenBaoVersionRequirement, openbao_operation,
+    openbao_operations, openbao_profile_versions,
+};
 pub use duration::{RenewalHint, duration_to_bao_string};
 pub use error::{Error, Result};
 pub use path::{validate_endpoint_path, validate_mount_path};
@@ -197,10 +202,12 @@ pub mod prelude {
     pub use crate::{
         AclCapability, AclPolicyBuilder, Authenticated, BoundedStringList, Certificate, Client,
         ClientBuilder, Empty, Error, ExposeSecret, HeaderMode, Identity, JsonValue, ListEntries,
-        ListPageOptions, MAX_RESPONSE_STRINGS, Method, OpenBao, OpenBaoConfig, OpenBaoVersion,
-        OpenBaoVersionRequirement, PluginMount, RenewalHint, ResponseEnvelope, Result,
-        SecretString, SecretVec, SecureSanitize, SharedClient, StatusCode, TlsBackend,
-        Unauthenticated, deserialize_bounded_string_vec, duration_to_bao_string,
+        ListPageOptions, MAX_RESPONSE_STRINGS, Method, OpenBao, OpenBaoCapabilityAvailability,
+        OpenBaoCapabilityEvidence, OpenBaoCapabilityProfile, OpenBaoConfig, OpenBaoHttpMethod,
+        OpenBaoOperationDisposition, OpenBaoVersion, OpenBaoVersionRequirement, PluginMount,
+        RenewalHint, ResponseEnvelope, Result, SecretString, SecretVec, SecureSanitize,
+        SharedClient, StatusCode, TlsBackend, Unauthenticated, deserialize_bounded_string_vec,
+        duration_to_bao_string, openbao_operation, openbao_operations, openbao_profile_versions,
         validate_endpoint_path, validate_mount_path,
     };
     #[cfg(feature = "transit")]

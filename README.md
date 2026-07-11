@@ -152,6 +152,8 @@ Implemented now:
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Version-locked real OpenBao integration harness plus a committed core-flow
   baseline covering all 21 exact releases from `2.0.0` through `2.5.5`.
+- Generated read-only capability profiles with 664 stable, secret-free
+  operation identities and complete exact-release range coverage.
 
 `1.1.2` remains the latest published stable release while `main` develops
 `2.0.0`. Feature history and release details live in [CHANGELOG.md](CHANGELOG.md)
@@ -221,11 +223,27 @@ the newest OpenBao patch release available for that SDK line:
 The immutable source and OCI artifact inventory for those historical releases
 is committed under [`compat/`](compat/README.md), together with deterministic
 tagged-documentation snapshots, normalized server-generated OpenAPI snapshots,
-adjacent-release contract diffs, and machine-readable live core-flow results.
+adjacent-release contract diffs, a generated capability registry, and
+machine-readable live core-flow results.
 The live result is explicitly a tested subset of health, mount, KV, policy,
 token, capability, and response-wrapping behavior. It is not yet a claim that
-every typed helper works on every historical release; operation-level
-capability profiles remain later checkpoints.
+every typed helper works on every historical release. Capability profiles
+report exact documented route presence and crate security blocks; legacy typed
+labels remain non-verifying claims until later migration commits attach helper,
+field, transport, and test evidence.
+
+Inspect a profile without exposing concrete secret paths:
+
+```rust
+use openbao::{OpenBaoCapabilityProfile, OpenBaoVersion};
+
+let profile = OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 2, 0))
+    .expect("2.2.0 is a locked compatibility profile");
+for status in profile.operations() {
+    let operation = status.operation();
+    println!("{} {}: {:?}", operation.method().as_str(), operation.path_template(), status.availability());
+}
+```
 
 Pull requests run that core subset against `2.0.0` and the latest patch in each
 minor line. Nightly, manual release-gate, and version-tag workflows run every
