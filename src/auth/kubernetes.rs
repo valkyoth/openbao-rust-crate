@@ -32,6 +32,12 @@ pub struct KubernetesAuthAdmin<'a> {
 /// Kubernetes auth method configuration.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct KubernetesConfig {
+    /// Disables issuer validation for legacy service-account tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disable_iss_validation: Option<bool>,
+    /// Expected service-account token issuer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub issuer: Option<String>,
     /// Kubernetes API host, host:port pair, or URL.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kubernetes_host: Option<String>,
@@ -61,6 +67,9 @@ pub struct KubernetesRole {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub bound_service_account_namespaces: Vec<String>,
+    /// JSON namespace-label selector used in addition to explicit namespaces.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bound_service_account_namespace_selector: Option<String>,
     /// Optional JWT audience to verify.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub audience: Option<String>,
@@ -71,18 +80,70 @@ pub struct KubernetesRole {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub policies: Vec<String>,
+    /// Policies attached to generated tokens.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub token_policies: Vec<String>,
     /// Token TTL such as `30m`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_ttl: Option<String>,
     /// Token max TTL such as `2h`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_max_ttl: Option<String>,
+    /// Explicit maximum TTL for generated tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_explicit_max_ttl: Option<String>,
     /// Periodic token period.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_period: Option<String>,
+    /// CIDR restrictions for generated tokens.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub token_bound_cidrs: Vec<String>,
+    /// Strictly binds generated tokens to the login source IP.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_strictly_bind_ip: Option<bool>,
+    /// Omits the default policy from generated tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_no_default_policy: Option<bool>,
+    /// Maximum uses for generated tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_num_uses: Option<u64>,
     /// Generated token type.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_type: Option<String>,
+}
+
+impl KubernetesRole {
+    fn validate(&self) -> Result<()> {
+        for (value, field) in [
+            (self.token_ttl.as_deref(), "kubernetes auth token_ttl"),
+            (
+                self.token_max_ttl.as_deref(),
+                "kubernetes auth token_max_ttl",
+            ),
+            (
+                self.token_explicit_max_ttl.as_deref(),
+                "kubernetes auth token_explicit_max_ttl",
+            ),
+            (self.token_period.as_deref(), "kubernetes auth token_period"),
+        ] {
+            if let Some(value) = value {
+                crate::validation::validate_duration_parameter(value, field)?;
+            }
+        }
+        crate::validation::validate_cidr_list(
+            &self.token_bound_cidrs,
+            "kubernetes auth token_bound_cidrs",
+        )?;
+        if let Some(selector) = &self.bound_service_account_namespace_selector {
+            crate::validation::validate_json_object_string(
+                selector,
+                "kubernetes auth namespace selector",
+            )?;
+        }
+        Ok(())
+    }
 }
 
 /// Kubernetes auth role list.
@@ -130,6 +191,10 @@ struct KubernetesLoginRequest<'a> {
 
 #[derive(Serialize)]
 struct KubernetesConfigPayload<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    disable_iss_validation: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    issuer: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     kubernetes_host: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -228,7 +293,9 @@ impl KubernetesAuth<'_> {
         };
         let response: KubernetesLoginResponse = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kubernetes",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
                 Some(&request),
@@ -242,6 +309,8 @@ impl KubernetesAuthAdmin<'_> {
     /// Configures the Kubernetes auth method.
     pub async fn configure(&self, config: &KubernetesConfig) -> Result<Empty> {
         let payload = KubernetesConfigPayload {
+            disable_iss_validation: config.disable_iss_validation,
+            issuer: config.issuer.as_deref(),
             kubernetes_host: config.kubernetes_host.as_deref(),
             kubernetes_ca_cert: config.kubernetes_ca_cert.as_deref(),
             token_reviewer_jwt: config
@@ -252,7 +321,9 @@ impl KubernetesAuthAdmin<'_> {
             disable_local_ca_jwt: config.disable_local_ca_jwt,
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kubernetes",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -264,7 +335,9 @@ impl KubernetesAuthAdmin<'_> {
     pub async fn read_config(&self) -> Result<KubernetesConfig> {
         let envelope: ResponseEnvelope<KubernetesConfig> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kubernetes",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/config", self.mount),
                 Option::<&Empty>::None,
@@ -275,9 +348,12 @@ impl KubernetesAuthAdmin<'_> {
 
     /// Creates or updates a Kubernetes auth role.
     pub async fn write_role(&self, name: &str, role: &KubernetesRole) -> Result<Empty> {
+        role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kubernetes",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/role/{name}", self.mount),
                 Some(role),
@@ -290,7 +366,9 @@ impl KubernetesAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<KubernetesRole> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kubernetes",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/role/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -305,7 +383,9 @@ impl KubernetesAuthAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<KubernetesRoleList> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kubernetes",
+                &self.mount,
                 method,
                 &format!("auth/{}/role", self.mount),
                 Option::<&Empty>::None,
@@ -318,7 +398,9 @@ impl KubernetesAuthAdmin<'_> {
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "kubernetes",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/role/{name}", self.mount),
                 Option::<&Empty>::None,

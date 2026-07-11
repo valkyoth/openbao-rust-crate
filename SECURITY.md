@@ -117,14 +117,15 @@ or the operating system.
 Token and namespace header values are also copied into HTTP-stack header
 structures that are marked sensitive for logging but are not sanitized on drop by
 the underlying `http`/`hyper`/`reqwest` types.
-OpenBao's OIDC browser callback endpoint carries an authorization code or ID
-token in a GET query string. The optional `oidc-get-callback-acknowledged`
-helper avoids an additional crate-owned plaintext `String`, but the resulting
-URL and transport buffers cannot be sanitized by this crate. Do not enable the
-feature until OpenBao, reverse proxies, service meshes, and observability
-systems are configured to log the path only and omit the complete query
-string. Prefer direct/device polling where browser callback compatibility is
-not required.
+OpenBao's JWT/OIDC browser callback and direct/device poll endpoints carry
+credentials or correlation values in GET query strings. The Identity OIDC
+provider also exposes a GET authorize variant. The optional
+`oidc-get-callback-acknowledged` helpers avoid additional crate-owned secret
+copies where practical, but the resulting URL and transport buffers cannot be
+sanitized by this crate. Do not enable the feature until OpenBao, reverse
+proxies, service meshes, and observability systems are configured to log the
+path only and omit the complete query string. Prefer the Identity provider's
+typed POST authorize operation when protocol compatibility allows it.
 Tokens loaded from environment variables are moved directly into
 `SecretString` without an intermediate trimmed copy, but the operating system's
 process environment remains outside the crate's sanitization control. Prefer a

@@ -18,7 +18,7 @@ fn main() {
     }
     if std::env::var_os("CARGO_FEATURE_OIDC_GET_CALLBACK_ACKNOWLEDGED").is_some() {
         println!(
-            "cargo:warning=OIDC GET callback support is enabled. Authorization codes or ID tokens enter URL and HTTP-stack buffers; enforce query-free access logging."
+            "cargo:warning=OIDC GET protocol support is enabled. Credentials or correlation values enter URL and HTTP-stack buffers; enforce query-free access logging."
         );
     }
 }

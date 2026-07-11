@@ -330,7 +330,9 @@ impl CertAuth<'_> {
         };
         let response: CertLoginResponse = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "cert",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
                 Some(&request),
@@ -344,7 +346,9 @@ impl CertAuthAdmin<'_> {
     /// Configures the TLS certificate auth method.
     pub async fn configure(&self, config: &CertAuthConfig) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "cert",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(config),
@@ -357,7 +361,9 @@ impl CertAuthAdmin<'_> {
         role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "cert",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/certs/{name}", self.mount),
                 Some(role),
@@ -370,7 +376,9 @@ impl CertAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<CertRole> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "cert",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/certs/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -390,7 +398,9 @@ impl CertAuthAdmin<'_> {
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<CertRoleList> = self
             .client
-            .request_json_query_accepting(
+            .request_auth_json_query_accepting(
+                "cert",
+                &self.mount,
                 method,
                 &format!("auth/{}/certs", self.mount),
                 &query,
@@ -405,7 +415,9 @@ impl CertAuthAdmin<'_> {
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "cert",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/certs/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -418,7 +430,9 @@ impl CertAuthAdmin<'_> {
     pub async fn write_crl(&self, name: &str, crl: &CertCrl) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "cert",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/crls/{name}", self.mount),
                 Some(crl),
@@ -431,7 +445,9 @@ impl CertAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<CertCrlInfo> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "cert",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/crls/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -447,7 +463,9 @@ impl CertAuthAdmin<'_> {
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<CertCrlList> = self
             .client
-            .request_json_query_accepting(
+            .request_auth_json_query_accepting(
+                "cert",
+                &self.mount,
                 method,
                 &format!("auth/{}/crls", self.mount),
                 &query,
@@ -462,7 +480,9 @@ impl CertAuthAdmin<'_> {
     pub async fn delete_crl(&self, name: &str) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "cert",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/crls/{name}", self.mount),
                 Option::<&Empty>::None,

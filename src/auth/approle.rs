@@ -75,6 +75,10 @@ pub struct AppRoleRoleRequest {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub token_policies: Vec<String>,
+    /// Deprecated policy field retained for older OpenBao 2.x compatibility.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub policies: Vec<String>,
     /// CIDRs allowed to use generated tokens.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -154,6 +158,7 @@ impl AppRoleRoleRequest {
 
     fn validate(&self) -> Result<()> {
         validate_string_list_len(&self.token_policies, "approle token_policies")?;
+        validate_string_list_len(&self.policies, "approle policies")?;
         validate_string_list_len(&self.secret_id_bound_cidrs, "approle secret_id_bound_cidrs")?;
         validate_string_list_len(&self.token_bound_cidrs, "approle token_bound_cidrs")?;
         crate::validation::validate_cidr_list(
@@ -735,7 +740,9 @@ impl AppRole<'_> {
             secret_id: secret_id.expose_secret(),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 reqwest::Method::POST,
                 &format!("auth/{}/login", self.mount),
                 Some(&request),
@@ -751,7 +758,9 @@ impl AppRoleAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<AppRoleRoleList> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 method,
                 &format!("auth/{}/role", self.mount),
                 Option::<&Empty>::None,
@@ -765,7 +774,9 @@ impl AppRoleAdmin<'_> {
         role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/role/{name}", self.mount),
                 Some(role),
@@ -778,7 +789,9 @@ impl AppRoleAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<AppRoleRoleRequest> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/role/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -1031,7 +1044,9 @@ impl AppRoleAdmin<'_> {
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "approle",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/role/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -1047,7 +1062,13 @@ impl AppRoleAdmin<'_> {
         let path = self.role_property_path(role_name, segment)?;
         let envelope: ResponseEnvelope<T> = self
             .client
-            .request_json_internal(Method::GET, &path, Option::<&Empty>::None)
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
+                Method::GET,
+                &path,
+                Option::<&Empty>::None,
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -1063,14 +1084,16 @@ impl AppRoleAdmin<'_> {
     {
         let path = self.role_property_path(role_name, segment)?;
         self.client
-            .request_json_internal(Method::POST, &path, Some(payload))
+            .request_auth_json_internal("approle", &self.mount, Method::POST, &path, Some(payload))
             .await
     }
 
     async fn delete_role_property(&self, role_name: &str, segment: &str) -> Result<Empty> {
         let path = self.role_property_path(role_name, segment)?;
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "approle",
+                &self.mount,
                 Method::DELETE,
                 &path,
                 Option::<&Empty>::None,
@@ -1089,7 +1112,9 @@ impl AppRoleAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<AppRoleRoleId> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/role/{name}/role-id", self.mount),
                 Option::<&Empty>::None,
@@ -1106,7 +1131,9 @@ impl AppRoleAdmin<'_> {
         };
         let envelope: ResponseEnvelope<AppRoleRoleId> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/role/{name}/role-id", self.mount),
                 Some(&request),
@@ -1125,7 +1152,9 @@ impl AppRoleAdmin<'_> {
         let role_name = validate_mount_path(role_name)?.join("/");
         let envelope: ResponseEnvelope<AppRoleSecretId> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/role/{role_name}/secret-id", self.mount),
                 Some(request),
@@ -1144,7 +1173,9 @@ impl AppRoleAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<AppRoleSecretIdAccessorList> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 method,
                 &format!("auth/{}/role/{role_name}/secret-id", self.mount),
                 Option::<&Empty>::None,
@@ -1165,7 +1196,9 @@ impl AppRoleAdmin<'_> {
         };
         let envelope: ResponseEnvelope<AppRoleSecretIdInfo> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/role/{role_name}/secret-id/lookup", self.mount),
                 Some(&request),
@@ -1185,7 +1218,9 @@ impl AppRoleAdmin<'_> {
             secret_id: secret_id.expose_secret(),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/role/{role_name}/secret-id/destroy", self.mount),
                 Some(&request),
@@ -1205,7 +1240,9 @@ impl AppRoleAdmin<'_> {
         };
         let envelope: ResponseEnvelope<AppRoleSecretIdInfo> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!(
                     "auth/{}/role/{role_name}/secret-id-accessor/lookup",
@@ -1228,7 +1265,9 @@ impl AppRoleAdmin<'_> {
             secret_id_accessor: accessor.expose_secret(),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!(
                     "auth/{}/role/{role_name}/secret-id-accessor/destroy",
@@ -1261,7 +1300,9 @@ impl AppRoleAdmin<'_> {
         };
         let envelope: ResponseEnvelope<AppRoleSecretId> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/role/{role_name}/custom-secret-id", self.mount),
                 Some(&payload),
@@ -1273,7 +1314,9 @@ impl AppRoleAdmin<'_> {
     /// Starts AppRole SecretID tidy maintenance.
     pub async fn tidy_secret_ids(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "approle",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/tidy/secret-id", self.mount),
                 Option::<&Empty>::None,

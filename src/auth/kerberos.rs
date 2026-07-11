@@ -175,6 +175,9 @@ pub struct KerberosLdapConfig {
     /// Policies attached to generated tokens.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub token_policies: Vec<String>,
+    /// Deprecated policy field retained for older OpenBao 2.x compatibility.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub policies: Vec<String>,
     /// Generated token CIDR restrictions.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub token_bound_cidrs: Vec<String>,
@@ -242,6 +245,8 @@ struct KerberosLdapConfigPayload<'a> {
     groupattr: Option<&'a str>,
     #[serde(skip_serializing_if = "is_empty_string_slice")]
     token_policies: &'a [String],
+    #[serde(skip_serializing_if = "is_empty_string_slice")]
+    policies: &'a [String],
     #[serde(skip_serializing_if = "is_empty_string_slice")]
     token_bound_cidrs: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -519,7 +524,9 @@ impl KerberosAuth<'_> {
         let header = negotiate_header(spnego_token)?;
         let response: KerberosLoginResponse = self
             .client
-            .request_json_headers_accepting(
+            .request_auth_json_headers_accepting(
+                "kerberos",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
                 &[(AUTHORIZATION, header)],
@@ -547,7 +554,9 @@ impl KerberosAuthAdmin<'_> {
             add_group_aliases: config.add_group_aliases,
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kerberos",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -559,7 +568,9 @@ impl KerberosAuthAdmin<'_> {
     pub async fn read_config(&self) -> Result<KerberosConfig> {
         let envelope: ResponseEnvelope<KerberosConfig> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kerberos",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/config", self.mount),
                 Option::<&Empty>::None,
@@ -590,6 +601,7 @@ impl KerberosAuthAdmin<'_> {
             groupdn: config.groupdn.as_deref(),
             groupattr: config.groupattr.as_deref(),
             token_policies: &config.token_policies,
+            policies: &config.policies,
             token_bound_cidrs: &config.token_bound_cidrs,
             token_strictly_bind_ip: config.token_strictly_bind_ip,
             token_ttl: config.token_ttl.as_deref(),
@@ -601,7 +613,9 @@ impl KerberosAuthAdmin<'_> {
             token_type: config.token_type.as_deref(),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kerberos",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/config/ldap", self.mount),
                 Some(&payload),
@@ -613,7 +627,9 @@ impl KerberosAuthAdmin<'_> {
     pub async fn read_ldap_config(&self) -> Result<KerberosLdapConfig> {
         let envelope: ResponseEnvelope<KerberosLdapConfig> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kerberos",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/config/ldap", self.mount),
                 Option::<&Empty>::None,
@@ -629,7 +645,9 @@ impl KerberosAuthAdmin<'_> {
             policies: group.policies.join(","),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kerberos",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/groups/{name}", self.mount),
                 Some(&payload),
@@ -642,7 +660,9 @@ impl KerberosAuthAdmin<'_> {
         let name = validate_kerberos_group_name(name)?;
         let envelope: ResponseEnvelope<KerberosGroupInfo> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "kerberos",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/groups/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -655,7 +675,9 @@ impl KerberosAuthAdmin<'_> {
     pub async fn delete_group(&self, name: &str) -> Result<Empty> {
         let name = validate_kerberos_group_name(name)?;
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "kerberos",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/groups/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -683,7 +705,9 @@ impl KerberosAuthAdmin<'_> {
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<KerberosGroupList> = self
             .client
-            .request_json_query_accepting(
+            .request_auth_json_query_accepting(
+                "kerberos",
+                &self.mount,
                 method,
                 &format!("auth/{}/groups", self.mount),
                 &query,

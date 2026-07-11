@@ -23517,8 +23517,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Typed helper exists, but uses OpenBao-compatible POST while this row documents GET.",
-        "status": "partial"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -23809,7 +23809,7 @@
       ],
       "operation_key": "GET /auth/token/lookup-self",
       "path": "/auth/token/lookup-self",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -46506,8 +46506,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET",
@@ -46669,7 +46669,7 @@
       ],
       "operation_key": "GET/POST /identity/oidc/provider/:name/authorize",
       "path": "/identity/oidc/provider/:name/authorize",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -46865,8 +46865,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "POST"
@@ -46978,7 +46978,7 @@
       ],
       "operation_key": "POST /identity/oidc/provider/:name/token",
       "path": "/identity/oidc/provider/:name/token",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -47083,8 +47083,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "OIDC browser protocol flow; use a dedicated OIDC library with the crate's discovery/JWKS helpers.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "POST"
@@ -47121,7 +47121,7 @@
       ],
       "operation_key": "POST /identity/oidc/provider/:name/userinfo",
       "path": "/identity/oidc/provider/:name/userinfo",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -184709,7 +184709,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -184811,7 +184811,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -184939,7 +184939,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -185076,7 +185076,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -186968,7 +186968,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed"
       },
       "methods": [
@@ -187692,7 +187692,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -187859,7 +187859,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -187947,7 +187947,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -188005,7 +188005,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -188189,7 +188189,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -188373,7 +188373,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -188543,7 +188543,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "typed-gated"
       },
       "methods": [
@@ -192109,7 +192109,7 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Reviewed during version-aware system endpoint migration.",
+        "note": "Reviewed during version-aware endpoint migration.",
         "status": "omitted"
       },
       "methods": [

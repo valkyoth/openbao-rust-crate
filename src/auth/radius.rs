@@ -56,6 +56,8 @@ pub struct RadiusConfig {
     pub nas_port: Option<u64>,
     /// Policies attached to generated tokens.
     pub token_policies: Vec<String>,
+    /// Deprecated policy field retained for older OpenBao 2.x compatibility.
+    pub policies: Vec<String>,
     /// Generated token CIDR restrictions.
     pub token_bound_cidrs: Vec<String>,
     /// Whether generated tokens are bound to the login source IP.
@@ -90,6 +92,8 @@ struct RadiusConfigPayload<'a> {
     nas_port: Option<u64>,
     #[serde(skip_serializing_if = "is_empty_string_slice")]
     token_policies: &'a [String],
+    #[serde(skip_serializing_if = "is_empty_string_slice")]
+    policies: &'a [String],
     #[serde(skip_serializing_if = "is_empty_string_slice")]
     token_bound_cidrs: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -398,7 +402,9 @@ impl RadiusAuth<'_> {
         };
         let response: RadiusLoginResponse = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "radius",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/login/{username}", self.mount),
                 Some(&request),
@@ -420,6 +426,7 @@ impl RadiusAuthAdmin<'_> {
             dial_timeout: config.dial_timeout,
             nas_port: config.nas_port,
             token_policies: &config.token_policies,
+            policies: &config.policies,
             token_bound_cidrs: &config.token_bound_cidrs,
             token_strictly_bind_ip: config.token_strictly_bind_ip,
             token_ttl: config.token_ttl.as_deref(),
@@ -431,7 +438,9 @@ impl RadiusAuthAdmin<'_> {
             token_type: config.token_type.as_deref(),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "radius",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -447,7 +456,9 @@ impl RadiusAuthAdmin<'_> {
             policies: user.policies.join(","),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "radius",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/users/{username}", self.mount),
                 Some(&payload),
@@ -460,7 +471,9 @@ impl RadiusAuthAdmin<'_> {
         let username = validate_radius_username(username)?;
         let envelope: ResponseEnvelope<RadiusUserInfo> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "radius",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/users/{username}", self.mount),
                 Option::<&Empty>::None,
@@ -473,7 +486,9 @@ impl RadiusAuthAdmin<'_> {
     pub async fn delete_user(&self, username: &str) -> Result<Empty> {
         let username = validate_radius_username(username)?;
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "radius",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/users/{username}", self.mount),
                 Option::<&Empty>::None,
@@ -501,7 +516,9 @@ impl RadiusAuthAdmin<'_> {
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<RadiusUserList> = self
             .client
-            .request_json_query_accepting(
+            .request_auth_json_query_accepting(
+                "radius",
+                &self.mount,
                 method,
                 &format!("auth/{}/users", self.mount),
                 &query,

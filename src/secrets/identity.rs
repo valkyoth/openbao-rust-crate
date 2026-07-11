@@ -7,14 +7,18 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use reqwest::{Method, StatusCode};
+use reqwest::{
+    Method, StatusCode,
+    header::{AUTHORIZATION, HeaderName, HeaderValue},
+};
+use sanitization::{SecretVec, SecureSanitize};
 use secrecy::{ExposeSecret, SecretString};
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value as JsonValue;
 
 use crate::{
-    Authenticated, Client, Error, Result,
+    Authenticated, Client, Error, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
@@ -29,6 +33,16 @@ const IDENTITY_LIST_LIMIT: usize = crate::response::MAX_RESPONSE_STRINGS;
 #[derive(Debug)]
 pub struct Identity<'a> {
     client: &'a Client<Authenticated>,
+    mount: Vec<String>,
+}
+
+/// Unauthenticated OIDC protocol handle for a named Identity provider mount.
+///
+/// This handle deliberately cannot carry an OpenBao token. Provider token and
+/// userinfo operations use OAuth client or bearer credentials instead.
+#[derive(Debug)]
+pub struct IdentityOidcProvider<'a> {
+    client: &'a Client<Unauthenticated>,
     mount: Vec<String>,
 }
 
@@ -987,6 +1001,356 @@ impl fmt::Debug for IdentityOidcToken {
             .field("ttl", &self.ttl)
             .finish()
     }
+}
+
+/// Identity OIDC provider authorization request.
+#[derive(Clone)]
+pub struct IdentityOidcAuthorizeRequest {
+    /// Space-delimited scopes. The `openid` scope is required by OpenBao.
+    pub scope: String,
+    /// OIDC client identifier.
+    pub client_id: String,
+    /// Registered redirect URI.
+    pub redirect_uri: String,
+    /// Opaque caller state returned with the authorization code.
+    pub state: Option<SecretString>,
+    /// Replay-resistant nonce included in the resulting ID token.
+    pub nonce: Option<SecretString>,
+    /// Maximum elapsed seconds since active authentication.
+    pub max_age: Option<u64>,
+    /// PKCE code challenge.
+    pub code_challenge: Option<String>,
+    /// PKCE challenge method (`S256` or `plain`).
+    pub code_challenge_method: Option<String>,
+}
+
+impl IdentityOidcAuthorizeRequest {
+    /// Creates an authorization-code request.
+    pub fn new(
+        client_id: impl Into<String>,
+        redirect_uri: impl Into<String>,
+        scope: impl Into<String>,
+    ) -> Self {
+        Self {
+            scope: scope.into(),
+            client_id: client_id.into(),
+            redirect_uri: redirect_uri.into(),
+            state: None,
+            nonce: None,
+            max_age: None,
+            code_challenge: None,
+            code_challenge_method: None,
+        }
+    }
+
+    /// Sets opaque request state.
+    #[must_use]
+    pub fn with_state(mut self, state: impl Into<SecretString>) -> Self {
+        self.state = Some(state.into());
+        self
+    }
+
+    /// Sets the ID-token nonce.
+    #[must_use]
+    pub fn with_nonce(mut self, nonce: impl Into<SecretString>) -> Self {
+        self.nonce = Some(nonce.into());
+        self
+    }
+
+    /// Sets the maximum authentication age in seconds.
+    #[must_use]
+    pub const fn with_max_age(mut self, max_age: u64) -> Self {
+        self.max_age = Some(max_age);
+        self
+    }
+
+    /// Enables PKCE with the supplied challenge and method.
+    #[must_use]
+    pub fn with_pkce(mut self, challenge: impl Into<String>, method: impl Into<String>) -> Self {
+        self.code_challenge = Some(challenge.into());
+        self.code_challenge_method = Some(method.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.client_id.trim().is_empty()
+            || self.redirect_uri.trim().is_empty()
+            || !self
+                .scope
+                .split_ascii_whitespace()
+                .any(|scope| scope == "openid")
+        {
+            return Err(Error::InvalidParameter(
+                "identity OIDC authorization requires client_id, redirect_uri, and openid scope"
+                    .into(),
+            ));
+        }
+        if self.code_challenge.is_some() != self.code_challenge_method.is_some() {
+            return Err(Error::InvalidParameter(
+                "identity OIDC PKCE challenge and method must be supplied together".into(),
+            ));
+        }
+        if let Some(method) = &self.code_challenge_method
+            && !matches!(method.as_str(), "S256" | "plain")
+        {
+            return Err(Error::InvalidParameter(
+                "identity OIDC PKCE method must be S256 or plain".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for IdentityOidcAuthorizeRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityOidcAuthorizeRequest")
+            .field("scope", &self.scope)
+            .field("client_id", &self.client_id)
+            .field("redirect_uri", &self.redirect_uri)
+            .field("has_state", &self.state.is_some())
+            .field("has_nonce", &self.nonce.is_some())
+            .field("max_age", &self.max_age)
+            .field("code_challenge", &self.code_challenge)
+            .field("code_challenge_method", &self.code_challenge_method)
+            .finish()
+    }
+}
+
+impl Serialize for IdentityOidcAuthorizeRequest {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("response_type", "code")?;
+        map.serialize_entry("client_id", &self.client_id)?;
+        map.serialize_entry("redirect_uri", &self.redirect_uri)?;
+        map.serialize_entry("scope", &self.scope)?;
+        serialize_optional_entry(
+            &mut map,
+            "state",
+            self.state.as_ref().map(ExposeSecret::expose_secret),
+        )?;
+        serialize_optional_entry(
+            &mut map,
+            "nonce",
+            self.nonce.as_ref().map(ExposeSecret::expose_secret),
+        )?;
+        if let Some(max_age) = self.max_age {
+            map.serialize_entry("max_age", &max_age)?;
+        }
+        serialize_optional_entry(&mut map, "code_challenge", self.code_challenge.as_deref())?;
+        serialize_optional_entry(
+            &mut map,
+            "code_challenge_method",
+            self.code_challenge_method.as_deref(),
+        )?;
+        map.end()
+    }
+}
+
+/// Authorization code and caller state returned by an Identity OIDC provider.
+#[derive(Clone, Deserialize)]
+pub struct IdentityOidcAuthorizeResponse {
+    /// Single-use authorization code.
+    pub code: SecretString,
+    /// Opaque caller state, when supplied in the request.
+    #[serde(default)]
+    pub state: Option<SecretString>,
+}
+
+impl fmt::Debug for IdentityOidcAuthorizeResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityOidcAuthorizeResponse")
+            .field("code", &"<redacted>")
+            .field("state", &self.state.as_ref().map(|_| "<redacted>"))
+            .finish()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum IdentityOidcGrantType {
+    AuthorizationCode,
+    ClientCredentials,
+}
+
+/// Identity OIDC provider token request.
+#[derive(Clone)]
+pub struct IdentityOidcProviderTokenRequest {
+    grant_type: IdentityOidcGrantType,
+    code: Option<SecretString>,
+    redirect_uri: Option<String>,
+    client_id: Option<String>,
+    client_secret: Option<SecretString>,
+    code_verifier: Option<SecretString>,
+    scope: Option<String>,
+    basic_auth: bool,
+}
+
+impl IdentityOidcProviderTokenRequest {
+    /// Creates an authorization-code exchange request.
+    pub fn authorization_code(code: SecretString, redirect_uri: impl Into<String>) -> Self {
+        Self {
+            grant_type: IdentityOidcGrantType::AuthorizationCode,
+            code: Some(code),
+            redirect_uri: Some(redirect_uri.into()),
+            client_id: None,
+            client_secret: None,
+            code_verifier: None,
+            scope: None,
+            basic_auth: false,
+        }
+    }
+
+    /// Creates a client-credentials request for a space-delimited scope list.
+    pub fn client_credentials(scope: impl Into<String>) -> Self {
+        Self {
+            grant_type: IdentityOidcGrantType::ClientCredentials,
+            code: None,
+            redirect_uri: None,
+            client_id: None,
+            client_secret: None,
+            code_verifier: None,
+            scope: Some(scope.into()),
+            basic_auth: false,
+        }
+    }
+
+    /// Supplies public-client or `client_secret_post` credentials.
+    #[must_use]
+    pub fn with_post_credentials(
+        mut self,
+        client_id: impl Into<String>,
+        client_secret: Option<SecretString>,
+    ) -> Self {
+        self.client_id = Some(client_id.into());
+        self.client_secret = client_secret;
+        self.basic_auth = false;
+        self
+    }
+
+    /// Supplies confidential-client `client_secret_basic` credentials.
+    #[must_use]
+    pub fn with_basic_credentials(
+        mut self,
+        client_id: impl Into<String>,
+        client_secret: SecretString,
+    ) -> Self {
+        self.client_id = Some(client_id.into());
+        self.client_secret = Some(client_secret);
+        self.basic_auth = true;
+        self
+    }
+
+    /// Supplies a PKCE verifier for an authorization-code exchange.
+    #[must_use]
+    pub fn with_code_verifier(mut self, verifier: SecretString) -> Self {
+        self.code_verifier = Some(verifier);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        match self.grant_type {
+            IdentityOidcGrantType::AuthorizationCode
+                if self
+                    .code
+                    .as_ref()
+                    .is_none_or(|value| value.expose_secret().is_empty())
+                    || self.redirect_uri.as_deref().is_none_or(str::is_empty) =>
+            {
+                return Err(Error::InvalidParameter(
+                    "identity OIDC authorization_code requires code and redirect_uri".into(),
+                ));
+            }
+            IdentityOidcGrantType::ClientCredentials
+                if self.scope.as_deref().is_none_or(|scope| {
+                    !scope
+                        .split_ascii_whitespace()
+                        .any(|value| value == "openid")
+                }) =>
+            {
+                return Err(Error::InvalidParameter(
+                    "identity OIDC client_credentials requires openid scope".into(),
+                ));
+            }
+            _ => {}
+        }
+        if self.basic_auth
+            && (self.client_id.as_deref().is_none_or(str::is_empty)
+                || self
+                    .client_secret
+                    .as_ref()
+                    .is_none_or(|secret| secret.expose_secret().is_empty()))
+        {
+            return Err(Error::InvalidParameter(
+                "identity OIDC Basic authentication requires client ID and secret".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for IdentityOidcProviderTokenRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityOidcProviderTokenRequest")
+            .field("grant_type", &self.grant_type)
+            .field("has_code", &self.code.is_some())
+            .field("redirect_uri", &self.redirect_uri)
+            .field("client_id", &self.client_id)
+            .field("has_client_secret", &self.client_secret.is_some())
+            .field("has_code_verifier", &self.code_verifier.is_some())
+            .field("scope", &self.scope)
+            .field("basic_auth", &self.basic_auth)
+            .finish()
+    }
+}
+
+/// Tokens returned by an Identity OIDC provider token exchange.
+#[derive(Clone, Deserialize)]
+pub struct IdentityOidcProviderTokenResponse {
+    /// OAuth access token for the provider's userinfo endpoint.
+    pub access_token: SecretString,
+    /// Signed OIDC ID token.
+    pub id_token: SecretString,
+    /// Access-token lifetime in seconds.
+    pub expires_in: u64,
+    /// Token type, normally `Bearer`.
+    pub token_type: String,
+}
+
+impl fmt::Debug for IdentityOidcProviderTokenResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("IdentityOidcProviderTokenResponse")
+            .field("access_token", &"<redacted>")
+            .field("id_token", &"<redacted>")
+            .field("expires_in", &self.expires_in)
+            .field("token_type", &self.token_type)
+            .finish()
+    }
+}
+
+/// Claims returned by an Identity OIDC provider userinfo operation.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct IdentityOidcUserInfo {
+    /// Stable subject identifier.
+    #[serde(default)]
+    pub sub: Option<String>,
+    /// Entity username claim.
+    #[serde(default)]
+    pub username: Option<String>,
+    /// Entity group names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub groups: Vec<String>,
+    /// Contact claims, such as email and phone number.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_string_map_or_default"
+    )]
+    pub contact: BTreeMap<String, String>,
 }
 
 /// Request to introspect a signed Identity OIDC token.
@@ -2227,6 +2591,185 @@ impl ListEntries for IdentityMfaLoginEnforcementList {
     }
 }
 
+impl Client<Unauthenticated> {
+    /// Uses the unauthenticated OIDC protocol endpoints at `identity`.
+    pub fn identity_oidc_provider(&self) -> Result<IdentityOidcProvider<'_>> {
+        self.identity_oidc_provider_at("identity")
+    }
+
+    /// Uses the unauthenticated OIDC protocol endpoints at `mount`.
+    pub fn identity_oidc_provider_at(
+        &self,
+        mount: impl Into<String>,
+    ) -> Result<IdentityOidcProvider<'_>> {
+        Ok(IdentityOidcProvider {
+            client: self,
+            mount: validate_mount_path(&mount.into())?,
+        })
+    }
+}
+
+impl IdentityOidcProvider<'_> {
+    /// Requests an authorization code using a JSON `POST` body.
+    pub async fn authorize(
+        &self,
+        provider: &str,
+        request: &IdentityOidcAuthorizeRequest,
+    ) -> Result<IdentityOidcAuthorizeResponse> {
+        request.validate()?;
+        let path = self.path(provider, "authorize")?;
+        let registry_path = self.registry_path(provider, "authorize")?;
+        self.client
+            .request_registered_json_query_headers_accepting(
+                "/identity/",
+                Method::POST,
+                &registry_path,
+                &path,
+                &[] as &[(&str, String)],
+                &[],
+                Some(request),
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
+    /// Requests an authorization code through OpenBao's `GET` query variant.
+    ///
+    /// State and nonce values enter URL buffers and may be recorded by
+    /// query-aware intermediaries. This variant therefore requires
+    /// `oidc-get-callback-acknowledged`; prefer [`Self::authorize`] otherwise.
+    #[cfg(feature = "oidc-get-callback-acknowledged")]
+    pub async fn authorize_get(
+        &self,
+        provider: &str,
+        request: &IdentityOidcAuthorizeRequest,
+    ) -> Result<IdentityOidcAuthorizeResponse> {
+        request.validate()?;
+        let max_age = request.max_age.map(|value| value.to_string());
+        let mut query = vec![
+            ("response_type", "code"),
+            ("client_id", request.client_id.as_str()),
+            ("redirect_uri", request.redirect_uri.as_str()),
+            ("scope", request.scope.as_str()),
+        ];
+        if let Some(state) = &request.state {
+            query.push(("state", state.expose_secret()));
+        }
+        if let Some(nonce) = &request.nonce {
+            query.push(("nonce", nonce.expose_secret()));
+        }
+        if let Some(value) = max_age.as_deref() {
+            query.push(("max_age", value));
+        }
+        if let Some(challenge) = &request.code_challenge {
+            query.push(("code_challenge", challenge));
+        }
+        if let Some(method) = &request.code_challenge_method {
+            query.push(("code_challenge_method", method));
+        }
+        let path = self.path(provider, "authorize")?;
+        let registry_path = self.registry_path(provider, "authorize")?;
+        self.client
+            .request_registered_json_query_headers_accepting(
+                "/identity/",
+                Method::GET,
+                &registry_path,
+                &path,
+                &query,
+                &[],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
+    /// Exchanges an authorization code or client credentials for OIDC tokens.
+    pub async fn token(
+        &self,
+        provider: &str,
+        request: &IdentityOidcProviderTokenRequest,
+    ) -> Result<IdentityOidcProviderTokenResponse> {
+        request.validate()?;
+        let mut fields = vec![(
+            "grant_type",
+            match request.grant_type {
+                IdentityOidcGrantType::AuthorizationCode => "authorization_code",
+                IdentityOidcGrantType::ClientCredentials => "client_credentials",
+            },
+        )];
+        if let Some(code) = &request.code {
+            fields.push(("code", code.expose_secret()));
+        }
+        if let Some(redirect_uri) = &request.redirect_uri {
+            fields.push(("redirect_uri", redirect_uri));
+        }
+        if let Some(verifier) = &request.code_verifier {
+            fields.push(("code_verifier", verifier.expose_secret()));
+        }
+        if let Some(scope) = &request.scope {
+            fields.push(("scope", scope));
+        }
+
+        let mut headers: Vec<(HeaderName, HeaderValue)> = Vec::new();
+        if request.basic_auth {
+            headers.push((AUTHORIZATION, oidc_basic_header(request)?));
+        } else {
+            if let Some(client_id) = &request.client_id {
+                fields.push(("client_id", client_id));
+            }
+            if let Some(client_secret) = &request.client_secret {
+                fields.push(("client_secret", client_secret.expose_secret()));
+            }
+        }
+        self.client
+            .request_registered_form_json_headers_accepting(
+                "/identity/",
+                Method::POST,
+                &self.registry_path(provider, "token")?,
+                &self.path(provider, "token")?,
+                &headers,
+                &fields,
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
+    /// Reads userinfo claims with an OIDC access token.
+    pub async fn userinfo(
+        &self,
+        provider: &str,
+        access_token: &SecretString,
+    ) -> Result<IdentityOidcUserInfo> {
+        let header = oidc_bearer_header(access_token)?;
+        self.client
+            .request_registered_json_query_headers_accepting(
+                "/identity/",
+                Method::POST,
+                &self.registry_path(provider, "userinfo")?,
+                &self.path(provider, "userinfo")?,
+                &[] as &[(&str, String)],
+                &[(AUTHORIZATION, header)],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await
+    }
+
+    fn path(&self, provider: &str, operation: &str) -> Result<String> {
+        let mut segments = self.mount.clone();
+        segments.extend(["oidc".to_owned(), "provider".to_owned()]);
+        segments.extend(validate_mount_path(provider)?);
+        segments.extend(validate_endpoint_path(operation)?);
+        Ok(segments.join("/"))
+    }
+
+    fn registry_path(&self, provider: &str, operation: &str) -> Result<String> {
+        let provider = validate_mount_path(provider)?.join("/");
+        let operation = validate_endpoint_path(operation)?.join("/");
+        Ok(format!("identity/oidc/provider/{provider}/{operation}"))
+    }
+}
+
 impl Client<Authenticated> {
     /// Uses the identity engine mounted at `identity`.
     pub fn identity(&self) -> Result<Identity<'_>> {
@@ -3242,6 +3785,64 @@ fn validate_string_count(count: usize, field: &'static str) -> Result<()> {
     Err(Error::InvalidParameter(format!(
         "{field} exceeds maximum item count"
     )))
+}
+
+fn oidc_basic_header(request: &IdentityOidcProviderTokenRequest) -> Result<HeaderValue> {
+    let client_id = request.client_id.as_deref().ok_or(Error::Internal(
+        "validated OIDC Basic request has no client ID",
+    ))?;
+    let client_secret = request.client_secret.as_ref().ok_or(Error::Internal(
+        "validated OIDC Basic request has no client secret",
+    ))?;
+    let mut credentials = SecretVec::empty();
+    append_oidc_form_component(&mut credentials, client_id);
+    credentials.extend_from_slice(b":");
+    append_oidc_form_component(&mut credentials, client_secret.expose_secret());
+    let encoded = credentials
+        .with_secret(|bytes| base64_ng::STANDARD.encode_secret(bytes))
+        .map_err(|_| Error::InvalidParameter("OIDC Basic credentials are too large".into()))?;
+    let exposed = encoded
+        .try_into_exposed_string()
+        .map_err(|_| Error::Internal("base64-ng produced invalid Basic authentication text"))?;
+    let mut encoded = exposed.into_exposed_unprotected_string_caller_must_zeroize();
+    let mut value = String::with_capacity("Basic ".len().saturating_add(encoded.len()));
+    value.push_str("Basic ");
+    value.push_str(&encoded);
+    encoded.secure_sanitize();
+    let result = sensitive_oidc_header(&value);
+    value.secure_sanitize();
+    result
+}
+
+fn oidc_bearer_header(access_token: &SecretString) -> Result<HeaderValue> {
+    if access_token.expose_secret().is_empty() {
+        return Err(Error::InvalidParameter(
+            "identity OIDC access token must not be empty".into(),
+        ));
+    }
+    let mut value = String::with_capacity(
+        "Bearer "
+            .len()
+            .saturating_add(access_token.expose_secret().len()),
+    );
+    value.push_str("Bearer ");
+    value.push_str(access_token.expose_secret());
+    let result = sensitive_oidc_header(&value);
+    value.secure_sanitize();
+    result
+}
+
+fn sensitive_oidc_header(value: &str) -> Result<HeaderValue> {
+    let mut header =
+        HeaderValue::from_str(value).map_err(|error| Error::InvalidHeader(error.to_string()))?;
+    header.set_sensitive(true);
+    Ok(header)
+}
+
+fn append_oidc_form_component(output: &mut SecretVec, value: &str) {
+    for character in url::form_urlencoded::byte_serialize(value.as_bytes()) {
+        output.extend_from_slice(character.as_bytes());
+    }
 }
 
 fn validate_required(value: &str, field: &'static str) -> Result<()> {

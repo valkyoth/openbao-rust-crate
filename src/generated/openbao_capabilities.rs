@@ -1645,7 +1645,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.auth.token.lookup.self.c7ca80c47bca3526",
         OpenBaoHttpMethod::Get,
         "/auth/token/lookup-self",
-        OpenBaoOperationDisposition::PartialLegacyClaim,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2035,7 +2035,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.identity.oidc.provider.name.authorize.a6be990ec2ea55c3",
         OpenBaoHttpMethod::Get,
         "/identity/oidc/provider/:name/authorize",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -6459,7 +6459,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.post.identity.oidc.provider.name.authorize.1ed06888e73d93e2",
         OpenBaoHttpMethod::Post,
         "/identity/oidc/provider/:name/authorize",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -6472,7 +6472,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.post.identity.oidc.provider.name.token.7fae5936b4220745",
         OpenBaoHttpMethod::Post,
         "/identity/oidc/provider/:name/token",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -6485,7 +6485,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.post.identity.oidc.provider.name.userinfo.172af4159b56cdfe",
         OpenBaoHttpMethod::Post,
         "/identity/oidc/provider/:name/userinfo",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),

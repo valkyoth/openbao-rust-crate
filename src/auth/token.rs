@@ -23,6 +23,18 @@ pub struct Token<'a> {
 /// Options for creating a child token.
 #[derive(Clone, Default, Serialize)]
 pub struct TokenCreateRequest {
+    /// Explicit token ID. This is root/sudo-only secret material.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "serialize_optional_secret"
+    )]
+    pub id: Option<SecretString>,
+    /// Entity alias associated through a token role.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entity_alias: Option<String>,
+    /// Token role name used for entity-alias validation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role_name: Option<String>,
     /// Policies attached to the token.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub policies: Vec<String>,
@@ -35,6 +47,9 @@ pub struct TokenCreateRequest {
     /// Requested TTL such as `30m`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ttl: Option<String>,
+    /// Deprecated alias for `ttl`, retained for exact OpenBao compatibility.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lease: Option<String>,
     /// Explicit max TTL such as `2h`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub explicit_max_ttl: Option<String>,
@@ -55,6 +70,7 @@ pub struct TokenCreateRequest {
     pub no_default_policy: Option<bool>,
     /// OpenBao token type, such as `service` or `batch`.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "type")]
     pub token_type: Option<String>,
 }
 
@@ -134,6 +150,18 @@ impl TokenCreateRequest {
     fn validate(&self) -> Result<()> {
         if let Some(ttl) = &self.ttl {
             crate::validation::validate_duration_parameter(ttl, "token ttl")?;
+        }
+        if let Some(lease) = &self.lease {
+            crate::validation::validate_duration_parameter(lease, "token lease")?;
+        }
+        if self
+            .id
+            .as_ref()
+            .is_some_and(|id| id.expose_secret().is_empty())
+        {
+            return Err(Error::InvalidParameter(
+                "explicit token ID must not be empty".into(),
+            ));
         }
         if let Some(explicit_max_ttl) = &self.explicit_max_ttl {
             crate::validation::validate_duration_parameter(
@@ -258,10 +286,18 @@ pub struct TokenRole {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub allowed_policies: Vec<String>,
+    /// Policy globs allowed when creating tokens through the role.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub allowed_policies_glob: Vec<String>,
     /// Policies that cannot be requested through the role.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub disallowed_policies: Vec<String>,
+    /// Policy globs denied when creating tokens through the role.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub disallowed_policies_glob: Vec<String>,
     /// Additional policies always attached to generated tokens.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -297,6 +333,12 @@ pub struct TokenRole {
     /// Number of uses for generated tokens.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_num_uses: Option<u64>,
+    /// Omits the default policy from generated tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_no_default_policy: Option<bool>,
+    /// Strictly binds generated tokens to the source IP.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_strictly_bind_ip: Option<bool>,
     /// Bound CIDRs for generated tokens.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -416,7 +458,13 @@ impl Token<'_> {
         request.validate()?;
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json_internal(Method::POST, "auth/token/create-orphan", Some(request))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/create-orphan",
+                Some(request),
+            )
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -437,7 +485,7 @@ impl Token<'_> {
         };
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json_internal(Method::POST, &path, Some(request))
+            .request_auth_json_internal("token", "token", Method::POST, &path, Some(request))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -446,8 +494,10 @@ impl Token<'_> {
     pub async fn lookup_self(&self) -> Result<TokenInfo> {
         let envelope: ResponseEnvelope<TokenInfo> = self
             .client
-            .request_json_internal(
-                Method::POST,
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::GET,
                 "auth/token/lookup-self",
                 Option::<&Empty>::None,
             )
@@ -462,7 +512,13 @@ impl Token<'_> {
         };
         let envelope: ResponseEnvelope<TokenInfo> = self
             .client
-            .request_json_internal(Method::POST, "auth/token/lookup", Some(&payload))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/lookup",
+                Some(&payload),
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -474,7 +530,13 @@ impl Token<'_> {
         };
         let envelope: ResponseEnvelope<TokenInfo> = self
             .client
-            .request_json_internal(Method::POST, "auth/token/lookup-accessor", Some(&payload))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/lookup-accessor",
+                Some(&payload),
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -485,7 +547,13 @@ impl Token<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<TokenAccessorList> = self
             .client
-            .request_json_internal(method, "auth/token/accessors", Option::<&Empty>::None)
+            .request_auth_json_internal(
+                "token",
+                "token",
+                method,
+                "auth/token/accessors",
+                Option::<&Empty>::None,
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -499,7 +567,13 @@ impl Token<'_> {
         };
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json_internal(Method::POST, "auth/token/renew-self", Some(&payload))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/renew-self",
+                Some(&payload),
+            )
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -513,7 +587,13 @@ impl Token<'_> {
         };
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json_internal(Method::POST, "auth/token/renew", Some(&payload))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/renew",
+                Some(&payload),
+            )
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -531,7 +611,13 @@ impl Token<'_> {
         };
         let envelope: TokenAuthEnvelope = self
             .client
-            .request_json_internal(Method::POST, "auth/token/renew-accessor", Some(&payload))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/renew-accessor",
+                Some(&payload),
+            )
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -542,7 +628,13 @@ impl Token<'_> {
             token: token.expose_secret(),
         };
         self.client
-            .request_json_internal(Method::POST, "auth/token/revoke", Some(&payload))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/revoke",
+                Some(&payload),
+            )
             .await
     }
 
@@ -552,14 +644,22 @@ impl Token<'_> {
             token: token.expose_secret(),
         };
         self.client
-            .request_json_internal(Method::POST, "auth/token/revoke-orphan", Some(&payload))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/revoke-orphan",
+                Some(&payload),
+            )
             .await
     }
 
     /// Revokes the caller's token and its child tokens.
     pub async fn revoke_self(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "token",
+                "token",
                 Method::POST,
                 "auth/token/revoke-self",
                 Option::<&Empty>::None,
@@ -573,7 +673,13 @@ impl Token<'_> {
             accessor: accessor.expose_secret(),
         };
         self.client
-            .request_json_internal(Method::POST, "auth/token/revoke-accessor", Some(&payload))
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/revoke-accessor",
+                Some(&payload),
+            )
             .await
     }
 
@@ -582,7 +688,9 @@ impl Token<'_> {
         role.validate()?;
         let role_name = crate::path::validate_mount_path(role_name)?.join("/");
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "token",
+                "token",
                 Method::POST,
                 &format!("auth/token/roles/{role_name}"),
                 Some(role),
@@ -595,7 +703,9 @@ impl Token<'_> {
         let role_name = crate::path::validate_mount_path(role_name)?.join("/");
         let envelope: ResponseEnvelope<TokenRole> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "token",
+                "token",
                 Method::GET,
                 &format!("auth/token/roles/{role_name}"),
                 Option::<&Empty>::None,
@@ -610,7 +720,13 @@ impl Token<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<TokenRoleList> = self
             .client
-            .request_json_internal(method, "auth/token/roles", Option::<&Empty>::None)
+            .request_auth_json_internal(
+                "token",
+                "token",
+                method,
+                "auth/token/roles",
+                Option::<&Empty>::None,
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -619,7 +735,9 @@ impl Token<'_> {
     pub async fn delete_role(&self, role_name: &str) -> Result<Empty> {
         let role_name = crate::path::validate_mount_path(role_name)?.join("/");
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "token",
+                "token",
                 Method::DELETE,
                 &format!("auth/token/roles/{role_name}"),
                 Option::<&Empty>::None,
@@ -634,7 +752,13 @@ impl Token<'_> {
     /// stores; callers should run it deliberately, not on hot request paths.
     pub async fn tidy(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(Method::POST, "auth/token/tidy", Option::<&Empty>::None)
+            .request_auth_json_internal(
+                "token",
+                "token",
+                Method::POST,
+                "auth/token/tidy",
+                Option::<&Empty>::None,
+            )
             .await
     }
 }
@@ -646,13 +770,28 @@ fn validate_renew_increment(increment: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+fn serialize_optional_secret<S>(
+    value: &Option<SecretString>,
+    serializer: S,
+) -> core::result::Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    value
+        .as_ref()
+        .map(ExposeSecret::expose_secret)
+        .serialize(serializer)
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
 
     use crate::response::ResponseEnvelope;
 
-    use super::{TokenAccessorList, TokenCreateRequest, TokenInfo, validate_renew_increment};
+    use super::{
+        TokenAccessorList, TokenCreateRequest, TokenInfo, TokenRole, validate_renew_increment,
+    };
 
     #[test]
     fn token_ttl_rejects_negative_values() {
@@ -684,6 +823,22 @@ mod tests {
         assert!(TokenCreateRequest::default().with_period("60s").is_ok());
         assert!(validate_renew_increment(Some("30m")).is_ok());
         assert!(validate_renew_increment(Some("1 hour")).is_err());
+    }
+
+    #[test]
+    fn token_role_serializes_documented_glob_and_binding_controls() {
+        let role = TokenRole {
+            allowed_policies_glob: vec!["team-*".to_owned()],
+            disallowed_policies_glob: vec!["team-admin-*".to_owned()],
+            token_no_default_policy: Some(true),
+            token_strictly_bind_ip: Some(true),
+            ..TokenRole::default()
+        };
+        let value = serde_json::to_value(role).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["allowed_policies_glob"][0], "team-*");
+        assert_eq!(value["disallowed_policies_glob"][0], "team-admin-*");
+        assert_eq!(value["token_no_default_policy"], true);
+        assert_eq!(value["token_strictly_bind_ip"], true);
     }
 
     #[test]

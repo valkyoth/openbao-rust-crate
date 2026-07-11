@@ -1,6 +1,6 @@
 {
   "api_snapshot_lock_sha256": "440fbaef87506b3b463689892abb9c0c741e2382676e3c92c4e21fa8cd2a3af6",
-  "contract_matrix_sha256": "241105fd01c0675d42e00d9bf8227a173bc3442fb8b2c8badbc541ff70f7619e",
+  "contract_matrix_sha256": "ba8f14feb91cf743e9f97ecedeef5b5684db4d2beba6855d04d663942263f32a",
   "generator_version": 1,
   "operations": [
     {
@@ -1748,7 +1748,7 @@
       ]
     },
     {
-      "disposition": "partial",
+      "disposition": "typed",
       "id": "openbao.get.auth.token.lookup.self.c7ca80c47bca3526",
       "method": "GET",
       "path_template": "/auth/token/lookup-self",
@@ -2168,7 +2168,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.identity.oidc.provider.name.authorize.a6be990ec2ea55c3",
       "method": "GET",
       "path_template": "/identity/oidc/provider/:name/authorize",
@@ -6944,7 +6944,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.post.identity.oidc.provider.name.authorize.1ed06888e73d93e2",
       "method": "POST",
       "path_template": "/identity/oidc/provider/:name/authorize",
@@ -6958,7 +6958,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.post.identity.oidc.provider.name.token.7fae5936b4220745",
       "method": "POST",
       "path_template": "/identity/oidc/provider/:name/token",
@@ -6972,7 +6972,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.post.identity.oidc.provider.name.userinfo.172af4159b56cdfe",
       "method": "POST",
       "path_template": "/identity/oidc/provider/:name/userinfo",
@@ -9562,10 +9562,9 @@
   "schema": "openbao-capability-registry/v1",
   "summary": {
     "dispositions": {
-      "external": 34,
+      "external": 30,
       "omitted": 1,
-      "partial": 1,
-      "typed": 547,
+      "typed": 552,
       "typed-gated": 80,
       "unlinked": 1
     },

@@ -585,6 +585,8 @@ Pentest focus:
 
 ### Commit 11: Migrate Authentication Operations
 
+Status: implemented. Pentest this commit from `d0b6db651b58133b4dd538c8a1b553348eb128e0` to the resulting Commit 11 hash.
+
 Suggested commit title: `Version OpenBao authentication endpoint routing`
 
 Goal:

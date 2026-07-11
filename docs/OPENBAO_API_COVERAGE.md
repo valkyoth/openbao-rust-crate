@@ -81,8 +81,8 @@ operation contract backlog:
 - exact OpenAPI-pattern matches: `611`;
 - ambiguous OpenAPI matches retained for review: `11`;
 - documented operations absent from the OpenAPI snapshot: `41`;
-- `confirmed-gap` rows: `79`;
-- `unverified` rows: `565`;
+- `confirmed-gap` rows: `38`;
+- `unverified` rows: `606`;
 - typed claims in the baseline: `0`.
 
 The earlier `597/643` percentage is withdrawn. A row becomes `typed` or
@@ -149,8 +149,9 @@ Support plan:
   plus JWT/OIDC config and role administration helpers are implemented.
 - `0.8.0`: JWT/OIDC browser flow helpers for authorization URL, callback, and
   direct/device polling are implemented. On the `2.0.0` development line, GET
-  callback redemption requires `oidc-get-callback-acknowledged` because the
-  provider credential necessarily enters the URL query string.
+  callback redemption and direct/device polling require
+  `oidc-get-callback-acknowledged` because credentials and correlation values
+  necessarily enter URL query strings.
 - `0.7.0`: AppRole role and SecretID administration is implemented. Admin
   bootstrap orchestration for auth method enablement, AppRole role
   convergence, and explicit SecretID issuance is implemented.
@@ -251,10 +252,12 @@ into this SDK.
   CRUD/list, signed token generation, token introspection, discovery metadata,
   and default JWKS reads are implemented in `0.10.0`. Identity OIDC provider,
   scope, client, assignment, named-provider discovery, and named-provider JWKS
-  helpers are implemented in `0.10.0`. MFA method management, MFA TOTP
+  helpers are implemented in `0.10.0`. Typed named-provider authorize, token,
+  and userinfo protocol helpers are implemented on the `2.0.0` development
+  line, using an unauthenticated handle, secret-aware OAuth values, form token
+  exchange, and explicit Basic/Bearer header separation. MFA method management, MFA TOTP
   generation/admin actions, and MFA login enforcement helpers are implemented
-  in `0.10.0`;
-  named-provider OIDC browser protocol flows remain external. LDAP config,
+  in `0.10.0`. LDAP config,
   root rotation, static roles/credentials, dynamic roles/credentials, and
   library check-out/check-in helpers are implemented.
 

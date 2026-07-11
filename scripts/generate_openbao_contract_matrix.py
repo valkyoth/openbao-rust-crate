@@ -41,9 +41,9 @@ EXPECTED_TAGGED_SNAPSHOT_SHA256 = "511d18f9bf894cba50c857c247cf3a22b8fd352914403
 EXPECTED_OPENAPI_SNAPSHOT_SHA256 = "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4"
 EXPECTED_EVIDENCE_SHA256 = "1813d10fb9fdc0df7231035d391d5af288f0ba443ed105cb3816e7269557eab4"
 EXPECTED_OUTPUT_SHA256 = {
-    "docs/openbao-2.5-contract-matrix.json": "241105fd01c0675d42e00d9bf8227a173bc3442fb8b2c8badbc541ff70f7619e",
-    "docs/openbao-2.5-endpoint-matrix.csv": "cd788b788a97dcc4464e84d7e8fc6b289d3d7953984a3932466d9e1c0ab83ecf",
-    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "07d4c6cff078289e4d7a81d1f03a54daf6aeeb638c1ea14a30d4878b374e8387",
+    "docs/openbao-2.5-contract-matrix.json": "ba8f14feb91cf743e9f97ecedeef5b5684db4d2beba6855d04d663942263f32a",
+    "docs/openbao-2.5-endpoint-matrix.csv": "2b29fad7cc98742d4f59286ac2ae62713f6c34ad0379eb4a7396464376f11573",
+    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "814f0b9e51caea7a88fe2b2abd637245065833947b1f82f70e39b2e50c72499d",
 }
 MAX_INPUT_BYTES = 16 * 1024 * 1024
 MAX_OUTPUT_BYTES = 32 * 1024 * 1024
@@ -92,6 +92,13 @@ SYSTEM_DISPOSITION_OVERRIDES = {
     "GET /sys/internal/inspect/router/storage": "typed-gated",
     "GET /sys/internal/inspect/router/uuid": "typed-gated",
     "GET /sys/monitor": "omitted",
+}
+
+AUTH_DISPOSITION_OVERRIDES = {
+    "GET /auth/token/lookup-self": "typed",
+    "GET/POST /identity/oidc/provider/:name/authorize": "typed",
+    "POST /identity/oidc/provider/:name/token": "typed",
+    "POST /identity/oidc/provider/:name/userinfo": "typed",
 }
 
 
@@ -715,11 +722,14 @@ def build_matrix(evidence: dict[str, Any], openapi: dict[str, Any]) -> dict[str,
             response_review.update(variant["sample_response_review"])
         expanded = {f"{method} {path}" for method in methods}
         prior = dict(source_row["legacy_matrix"])
-        override = SYSTEM_DISPOSITION_OVERRIDES.get(operation_key(methods, path))
+        key = operation_key(methods, path)
+        override = SYSTEM_DISPOSITION_OVERRIDES.get(key)
+        if override is None:
+            override = AUTH_DISPOSITION_OVERRIDES.get(key)
         if override is not None:
             prior = {
                 "status": override,
-                "note": "Reviewed during version-aware system endpoint migration.",
+                "note": "Reviewed during version-aware endpoint migration.",
             }
         confirmed = (
             prior["status"] in {"partial", "raw", "external", "rejected", "planned", "decision", "omitted"}

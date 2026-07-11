@@ -118,6 +118,9 @@ pub struct LdapAuthConfig {
     /// Policies attached to generated tokens.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub token_policies: Vec<String>,
+    /// Deprecated policy field retained for older OpenBao 2.x compatibility.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub policies: Vec<String>,
     /// Generated token CIDR restrictions.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub token_bound_cidrs: Vec<String>,
@@ -205,6 +208,8 @@ struct LdapAuthConfigPayload<'a> {
     use_token_groups: Option<bool>,
     #[serde(skip_serializing_if = "is_empty_string_slice")]
     token_policies: &'a [String],
+    #[serde(skip_serializing_if = "is_empty_string_slice")]
+    policies: &'a [String],
     #[serde(skip_serializing_if = "is_empty_string_slice")]
     token_bound_cidrs: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -542,7 +547,9 @@ impl LdapAuth<'_> {
         };
         let response: LdapAuthLoginResponse = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "ldap",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/login/{username}", self.mount),
                 Some(&request),
@@ -588,6 +595,7 @@ impl LdapAuthAdmin<'_> {
             max_page_size: config.max_page_size,
             use_token_groups: config.use_token_groups,
             token_policies: &config.token_policies,
+            policies: &config.policies,
             token_bound_cidrs: &config.token_bound_cidrs,
             token_strictly_bind_ip: config.token_strictly_bind_ip,
             token_ttl: config.token_ttl.as_deref(),
@@ -599,7 +607,9 @@ impl LdapAuthAdmin<'_> {
             token_type: config.token_type.as_deref(),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "ldap",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -611,7 +621,9 @@ impl LdapAuthAdmin<'_> {
     pub async fn read_config(&self) -> Result<LdapAuthConfig> {
         let envelope: ResponseEnvelope<LdapAuthConfig> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "ldap",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/config", self.mount),
                 Option::<&Empty>::None,
@@ -672,7 +684,9 @@ impl LdapAuthAdmin<'_> {
             groups: mapping.groups.join(","),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "ldap",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/{kind}/{name}", self.mount),
                 Some(&payload),
@@ -684,7 +698,9 @@ impl LdapAuthAdmin<'_> {
         let name = validate_ldap_path_name(name)?;
         let envelope: ResponseEnvelope<LdapAuthMappingInfo> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "ldap",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/{kind}/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -696,7 +712,9 @@ impl LdapAuthAdmin<'_> {
     async fn delete_mapping(&self, kind: &str, name: &str) -> Result<Empty> {
         let name = validate_ldap_path_name(name)?;
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "ldap",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/{kind}/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -710,7 +728,9 @@ impl LdapAuthAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<LdapAuthList> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "ldap",
+                &self.mount,
                 method,
                 &format!("auth/{}/{kind}", self.mount),
                 Option::<&Empty>::None,

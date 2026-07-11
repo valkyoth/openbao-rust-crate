@@ -71,11 +71,11 @@ approle = []
 cert-auth = []
 cubbyhole = []
 database = []
-identity = []
+identity = ["dep:base64-ng"]
 jwt-auth = []
-# OpenBao's browser callback endpoint places an authorization code or ID token
-# in a GET query string. Keep this transport residual out of default builds.
-oidc-get-callback-acknowledged = ["jwt-auth"]
+# OpenBao's JWT/OIDC callback and poll endpoints, plus Identity provider GET
+# authorize, place credentials or correlation values in query strings.
+oidc-get-callback-acknowledged = []
 kerberos-auth = []
 kubernetes-auth = []
 ldap-auth = []
@@ -157,6 +157,7 @@ subtle = "2.6.1"
 time = { version = "0.3.53", default-features = false, features = ["parsing"], optional = true }
 tokio = { version = "1.52.3", default-features = false, features = ["time"], optional = true }
 tracing = { version = "0.1.44", default-features = false, features = ["std"], optional = true }
+url = { version = "2.5.8", default-features = false }
 sanitization = { version = "1.2.4", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]

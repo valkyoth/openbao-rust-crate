@@ -1379,14 +1379,14 @@ impl<State> Client<State> {
         &self,
         scope_prefix: &'static str,
         requested_method: &Method,
-        path: &str,
+        registry_path: &str,
         query: &[(K, Q)],
     ) -> Result<ResolvedOpenBaoEndpoint>
     where
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        let path_segments = validate_endpoint_path(path)?;
+        let path_segments = validate_endpoint_path(registry_path)?;
         let report = self.ensure_compatibility().await?;
         let version = report.profile_version().or_else(|| {
             (report.status() == crate::compatibility::OpenBaoCompatibilityStatus::Unverified)
@@ -1455,6 +1455,311 @@ impl<State> Client<State> {
             operation,
             method: reqwest_method(operation.method())?,
         })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_registered_json_query_headers_accepting<T, B, Q, K>(
+        &self,
+        scope_prefix: &'static str,
+        method: Method,
+        registry_path: &str,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let resolved = self
+            .resolve_registered_openbao_endpoint(scope_prefix, &method, registry_path, query)
+            .await?;
+        let normalized_query = query
+            .iter()
+            .map(|(key, value)| (key.as_ref(), value.as_ref()))
+            .collect::<Vec<_>>();
+        self.request_json_query_headers_accepting(
+            resolved.method(),
+            path,
+            &normalized_query,
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_registered_form_json_headers_accepting<T>(
+        &self,
+        scope_prefix: &'static str,
+        method: Method,
+        registry_path: &str,
+        path: &str,
+        headers: &[(HeaderName, HeaderValue)],
+        fields: &[(&str, &str)],
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        let resolved = self
+            .resolve_registered_openbao_endpoint(
+                scope_prefix,
+                &method,
+                registry_path,
+                &[] as &[(&str, &str)],
+            )
+            .await?;
+        let mut encoded = SecretVec::empty();
+        for (index, (name, value)) in fields.iter().enumerate() {
+            if index != 0 {
+                encoded.extend_from_slice(b"&");
+            }
+            append_form_component(&mut encoded, name);
+            encoded.extend_from_slice(b"=");
+            append_form_component(&mut encoded, value);
+        }
+
+        let mut request_headers = Vec::with_capacity(headers.len() + 2);
+        request_headers.extend(headers.iter().cloned());
+        request_headers.push((ACCEPT, HeaderValue::from_static("application/json")));
+        request_headers.push((
+            CONTENT_TYPE,
+            HeaderValue::from_static("application/x-www-form-urlencoded"),
+        ));
+        let url = self.url_for_path(path)?;
+        self.require_encrypted_transport_for_sensitive_request(&url)?;
+        // SECURITY: this is the single unavoidable non-sanitizing copy. It is
+        // moved directly into reqwest::Body before the await; no ordinary
+        // crate-owned buffer remains for cancellation to bypass cleaning.
+        let body = encoded.with_secret(|bytes| reqwest::Body::from(Vec::from(bytes)));
+        let response = self
+            .send_sensitive_prevalidated_body_request(
+                resolved.method(),
+                url,
+                &request_headers,
+                body,
+            )
+            .await?;
+        let status = response.status();
+        if !accepted_statuses.contains(&status) {
+            let errors =
+                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
+                    .await
+                    .map(|envelope| envelope.errors)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|error| crate::error::sanitize_api_error(&error))
+                    .collect();
+            return Err(Error::Api { status, errors });
+        }
+        read_json_response(response, self.config.max_response_bytes).await
+    }
+
+    fn auth_registry_path(
+        documented_mount: &'static str,
+        actual_mount: &str,
+        path: &str,
+    ) -> Result<String> {
+        let documented_mount = validate_mount_path(documented_mount)?;
+        if documented_mount.len() != 1 {
+            return Err(Error::Internal(
+                "documented auth mount must contain exactly one path segment",
+            ));
+        }
+        let actual_mount = validate_mount_path(actual_mount)?;
+        let path = validate_endpoint_path(path)?;
+        let prefix_length = 1usize.saturating_add(actual_mount.len());
+        if path.first().map(String::as_str) != Some("auth")
+            || path.get(1..prefix_length) != Some(actual_mount.as_slice())
+        {
+            return Err(Error::Internal(
+                "typed auth request path does not match its validated mount",
+            ));
+        }
+
+        let mut normalized = Vec::with_capacity(path.len() - actual_mount.len() + 1);
+        normalized.push("auth".to_owned());
+        normalized.push(documented_mount[0].clone());
+        normalized.extend(path[prefix_length..].iter().cloned());
+        Ok(normalized.join("/"))
+    }
+
+    pub(crate) async fn request_auth_json_internal<T, B>(
+        &self,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_auth_json_accepting(
+            documented_mount,
+            actual_mount,
+            method,
+            path,
+            body,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
+    }
+
+    pub(crate) async fn request_auth_json_accepting<T, B>(
+        &self,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_auth_json_query_headers_accepting(
+            documented_mount,
+            actual_mount,
+            method,
+            path,
+            &[] as &[(&str, String)],
+            &[],
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_auth_json_headers_accepting<T, B>(
+        &self,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_auth_json_query_headers_accepting(
+            documented_mount,
+            actual_mount,
+            method,
+            path,
+            &[] as &[(&str, String)],
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_auth_json_query_accepting<T, B>(
+        &self,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_auth_json_query_headers_accepting(
+            documented_mount,
+            actual_mount,
+            method,
+            path,
+            query,
+            &[],
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn request_auth_json_query_headers_accepting<T, B, Q, K>(
+        &self,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let registry_path = Self::auth_registry_path(documented_mount, actual_mount, path)?;
+        let resolved = self
+            .resolve_registered_openbao_endpoint("/auth/", &method, &registry_path, query)
+            .await?;
+        let normalized_query = query
+            .iter()
+            .map(|(key, value)| (key.as_ref(), value.as_ref()))
+            .collect::<Vec<_>>();
+        self.request_json_query_headers_accepting(
+            resolved.method(),
+            path,
+            &normalized_query,
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    #[cfg(feature = "oidc-get-callback-acknowledged")]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_auth_json_secret_query_accepting<T, B>(
+        &self,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        query: &[(&str, &str)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let registry_path = Self::auth_registry_path(documented_mount, actual_mount, path)?;
+        let resolved = self
+            .resolve_registered_openbao_endpoint("/auth/", &method, &registry_path, query)
+            .await?;
+        self.request_json_secret_query_accepting(
+            resolved.method(),
+            path,
+            query,
+            body,
+            accepted_statuses,
+        )
+        .await
     }
 
     pub(crate) async fn request_sys_json_internal<T, B>(
@@ -2051,6 +2356,35 @@ impl<State> Client<State> {
         }
 
         execute_openbao_http_request(http, request).await
+    }
+
+    async fn send_sensitive_prevalidated_body_request(
+        &self,
+        method: Method,
+        url: Url,
+        headers: &[(HeaderName, HeaderValue)],
+        body: reqwest::Body,
+    ) -> Result<reqwest::Response> {
+        let mut request = reqwest::Request::new(method, url);
+        for (name, value) in headers {
+            request.headers_mut().insert(name.clone(), value.clone());
+        }
+        request.headers_mut().insert(
+            HeaderName::from_static("x-vault-request"),
+            HeaderValue::from_static("true"),
+        );
+        if let Some(namespace) = self.config.namespace.as_deref() {
+            request.headers_mut().insert(
+                HeaderName::from_static("x-vault-namespace"),
+                sensitive_header_value(namespace)?,
+            );
+        }
+        if let Some(token) = self.token.as_ref() {
+            let (name, value) = token_header_for(token, self.config.header_mode)?;
+            request.headers_mut().insert(name, value);
+        }
+        *request.body_mut() = Some(body);
+        execute_openbao_http_request(self.http_for_sensitive_request(), request).await
     }
 
     pub(crate) fn url_for_path(&self, path: &str) -> Result<Url> {
@@ -2711,6 +3045,12 @@ fn sensitive_header_value(value: &str) -> Result<HeaderValue> {
         HeaderValue::from_str(value).map_err(|error| Error::InvalidHeader(error.to_string()))?;
     header.set_sensitive(true);
     Ok(header)
+}
+
+fn append_form_component(output: &mut SecretVec, value: &str) {
+    for character in url::form_urlencoded::byte_serialize(value.as_bytes()) {
+        output.extend_from_slice(character.as_bytes());
+    }
 }
 
 #[cfg(test)]

@@ -363,9 +363,9 @@ openbao = { version = "1", features = ["time"] }
 | `cert-auth` | yes | TLS certificate auth login/config/role/CRL helpers. |
 | `cubbyhole` | yes | Token-scoped Cubbyhole read/write/delete/list helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
-| `identity` | yes | Identity entity, group, entity-alias, and group-alias helpers. |
+| `identity` | yes | Identity entity/group administration plus OIDC provider administration and typed authorize/token/userinfo protocol helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, and direct/device poll helpers. |
-| `oidc-get-callback-acknowledged` | no | Enables OIDC browser callback redemption over OpenBao's documented GET endpoint. Authorization codes or ID tokens necessarily enter URL and HTTP-stack buffers; enforce query-free access logging on OpenBao and every intermediary. |
+| `oidc-get-callback-acknowledged` | no | Enables JWT/OIDC callback and poll GET operations plus the Identity provider GET authorize variant. Credentials, state, and nonce values necessarily enter URL and HTTP-stack buffers; enforce query-free access logging on OpenBao and every intermediary. |
 | `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, and group mapping helpers. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
@@ -453,7 +453,7 @@ evidence is linked. It is an implementation backlog, not a support percentage.
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, create/create-orphan, renew/renew-accessor, revoke, revoke-self, and revoke-accessor helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
-| JWT/OIDC | Gated callback | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL, and direct/device poll helpers. GET callback redemption requires `oidc-get-callback-acknowledged` because credentials enter the URL query string. |
+| JWT/OIDC | Gated GET flows | JWT login plus JWT/OIDC auth method config, role administration, and browser auth URL helpers. GET callback redemption and direct/device polling require `oidc-get-callback-acknowledged` because credentials or correlation values enter URL query strings. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
 | RADIUS auth | Gated | Login, method config, user create/read/list/delete, paginated user list helpers. Available only with `radius-auth` plus `radius-auth-acknowledged` because legacy RADIUS uses MD5-based authenticators. |
 | Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group create/read/list/delete mapping helpers. |
@@ -472,7 +472,7 @@ evidence is linked. It is an implementation backlog, not a support percentage.
 | Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
-| Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, JWKS, OIDC provider/scope/client/assignment admin, named-provider discovery/JWKS, MFA method management, TOTP MFA generation/admin actions, and MFA login-enforcement helpers are implemented. Named-provider OIDC browser protocol flows stay external. |
+| Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, JWKS, OIDC provider/scope/client/assignment admin, named-provider discovery/JWKS, typed named-provider authorize/token/userinfo protocol operations, MFA method management, TOTP MFA generation/admin actions, and MFA login-enforcement helpers are implemented. Protocol helpers use an unauthenticated client handle so an OpenBao token cannot be confused with OAuth Basic/Bearer credentials. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Partial | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. Unknown request and response plugin extension values fail closed as `SecretString` and are excluded from `Debug`; request extensions cannot shadow typed connection fields. Complete typed builders for every built-in plugin remain planned for the `2.0.0` compatibility work. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional raw-byte helpers, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR generation, and certificate-chain install helpers. Import wrappers accept externally wrapped `SecretString` ciphertext or public-key-only import material; raw private or symmetric key bytes stay outside the default endpoint wrappers. The non-default `transit-import` plus `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP wrapping helper for audited development and automation use. |
@@ -703,7 +703,7 @@ async fn main() -> Result<()> {
 ```
 
 Start an OIDC browser login and handle the callback without logging returned
-token material. Callback redemption requires the non-default
+token material. Callback redemption and direct/device polling require the non-default
 `oidc-get-callback-acknowledged` feature. Before enabling it, configure OpenBao,
 reverse proxies, service meshes, and observability systems to log only the URL
 path and never the query string:
@@ -738,6 +738,53 @@ async fn main() -> Result<()> {
 
     let _token_accessor = login.accessor;
     println!("openbao version: {}", health.version);
+    Ok(())
+}
+```
+
+Use OpenBao as an Identity OIDC provider without attaching an OpenBao token to
+the protocol requests. The token exchange is form-encoded as required by the
+OIDC endpoint, and returned tokens remain `SecretString` values:
+
+```rust,no_run
+use openbao::secrets::identity::{
+    IdentityOidcAuthorizeRequest, IdentityOidcProviderTokenRequest,
+};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let client = Client::new("https://bao.example.com:8200")?;
+    let provider = client.identity_oidc_provider()?;
+    let authorization = provider
+        .authorize(
+            "applications",
+            &IdentityOidcAuthorizeRequest::new(
+                "client-id",
+                "https://app.example.com/callback",
+                "openid profile",
+            )
+            .with_state("state-from-session")
+            .with_nonce("nonce-from-session")
+            .with_pkce("S256-code-challenge", "S256"),
+        )
+        .await?;
+    let tokens = provider
+        .token(
+            "applications",
+            &IdentityOidcProviderTokenRequest::authorization_code(
+                authorization.code,
+                "https://app.example.com/callback",
+            )
+            .with_code_verifier(SecretString::from("secret-PKCE-verifier"))
+            .with_basic_credentials(
+                "client-id",
+                SecretString::from("client-secret"),
+            ),
+        )
+        .await?;
+    let claims = provider.userinfo("applications", &tokens.access_token).await?;
+    println!("subject: {}", claims.sub.as_deref().unwrap_or("unknown"));
     Ok(())
 }
 ```

@@ -36,6 +36,8 @@ pub struct UserpassUserRequest {
     pub password: SecretString,
     /// Policies attached to generated tokens.
     pub token_policies: Vec<String>,
+    /// Deprecated policy field retained for older OpenBao 2.x compatibility.
+    pub policies: Vec<String>,
     /// Token TTL such as `30m`.
     pub token_ttl: Option<String>,
     /// Token max TTL such as `2h`.
@@ -59,6 +61,8 @@ struct UserpassUserPayload<'a> {
     password: &'a str,
     #[serde(skip_serializing_if = "is_empty_string_slice")]
     token_policies: &'a [String],
+    #[serde(skip_serializing_if = "is_empty_string_slice")]
+    policies: &'a [String],
     #[serde(skip_serializing_if = "Option::is_none")]
     token_ttl: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -297,7 +301,9 @@ impl UserpassAuth<'_> {
         };
         let response: UserpassLoginResponse = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "userpass",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/login/{username}", self.mount),
                 Some(&request),
@@ -315,6 +321,7 @@ impl UserpassAuthAdmin<'_> {
         let payload = UserpassUserPayload {
             password: user.password.expose_secret(),
             token_policies: &user.token_policies,
+            policies: &user.policies,
             token_ttl: user.token_ttl.as_deref(),
             token_max_ttl: user.token_max_ttl.as_deref(),
             token_period: user.token_period.as_deref(),
@@ -325,7 +332,9 @@ impl UserpassAuthAdmin<'_> {
             token_no_default_policy: user.token_no_default_policy,
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "userpass",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/users/{username}", self.mount),
                 Some(&payload),
@@ -338,7 +347,9 @@ impl UserpassAuthAdmin<'_> {
         let username = validate_username(username)?;
         let envelope: ResponseEnvelope<UserpassUserInfo> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "userpass",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/users/{username}", self.mount),
                 Option::<&Empty>::None,
@@ -351,7 +362,9 @@ impl UserpassAuthAdmin<'_> {
     pub async fn delete_user(&self, username: &str) -> Result<Empty> {
         let username = validate_username(username)?;
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "userpass",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/users/{username}", self.mount),
                 Option::<&Empty>::None,
@@ -367,7 +380,9 @@ impl UserpassAuthAdmin<'_> {
             password: password.expose_secret(),
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "userpass",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/users/{username}/password", self.mount),
                 Some(&request),
@@ -382,7 +397,9 @@ impl UserpassAuthAdmin<'_> {
             token_policies: policies,
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "userpass",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/users/{username}/policies", self.mount),
                 Some(&request),
@@ -396,7 +413,9 @@ impl UserpassAuthAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<UserpassUserList> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "userpass",
+                &self.mount,
                 method,
                 &format!("auth/{}/users", self.mount),
                 Option::<&Empty>::None,

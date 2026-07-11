@@ -598,6 +598,79 @@ async fn compatibility_mismatch_fails_before_the_requested_operation() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "oidc-get-callback-acknowledged")]
+#[tokio::test]
+async fn strict_auth_routing_rejects_oidc_poll_before_openbao_2_1() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.0.3"}"#,
+        );
+    });
+    let policy = OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 0, 3))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"));
+    let result = client
+        .jwt()
+        .unwrap_or_else(|error| panic!("{error}"))
+        .oidc_poll(&openbao::auth::jwt::OidcPollRequest::new("state"))
+        .await;
+    assert!(matches!(
+        result,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn auth_registry_routing_preserves_validated_custom_mounts() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("POST /v1/auth/team/service-approle/login HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"auth":{"client_token":"custom-token","accessor":"custom-accessor","policies":[],"token_policies":[],"lease_duration":60,"renewable":true}}"#,
+        );
+    });
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"));
+    let (_, metadata) = client
+        .approle_at("team/service-approle")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .login(
+            SecretString::from("role-id"),
+            SecretString::from("secret-id"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(metadata.lease_duration, 60);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[tokio::test]
 async fn assumed_compatibility_never_probes_and_remains_visibly_unverified() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
@@ -1667,7 +1740,7 @@ async fn token_lookup_self_sends_documented_path() {
             .read(&mut buffer)
             .unwrap_or_else(|error| panic!("{error}"));
         let request = String::from_utf8_lossy(&buffer[..bytes]);
-        assert!(request.starts_with("POST /v1/auth/token/lookup-self HTTP/1.1"));
+        assert!(request.starts_with("GET /v1/auth/token/lookup-self HTTP/1.1"));
         assert!(request.contains("x-vault-token: test-token"));
         let body = r#"{"data":{"accessor":"accessor-value","display_name":"token","policies":["default"],"renewable":true,"ttl":3600}}"#;
         let response = format!(
@@ -2327,6 +2400,10 @@ async fn token_orphan_and_accessor_renew_use_documented_paths() {
                     assert!(request.starts_with("POST /v1/auth/token/create-orphan HTTP/1.1"));
                     assert!(request.contains(r#""policies":["app-read"]"#));
                     assert!(request.contains(r#""renewable":true"#));
+                    assert!(request.contains(r#""id":"custom-token-id""#));
+                    assert!(request.contains(r#""entity_alias":"service-alias""#));
+                    assert!(request.contains(r#""type":"service""#));
+                    assert!(!request.contains(r#""token_type""#));
                     format!(
                         r#"{{"auth":{{"client_token":"{}{}","accessor":"{}{}","policies":["app-read"],"token_policies":["app-read"],"lease_duration":1800,"renewable":true}}}}"#,
                         "orphan-", "token", "accessor-", "value"
@@ -2368,6 +2445,9 @@ async fn token_orphan_and_accessor_renew_use_documented_paths() {
         .create_orphan(
             &openbao::auth::token::TokenCreateRequest {
                 renewable: Some(true),
+                id: Some(SecretString::from("custom-token-id")),
+                entity_alias: Some("service-alias".to_owned()),
+                token_type: Some("service".to_owned()),
                 ..Default::default()
             }
             .with_policies(["app-read"]),
@@ -6156,6 +6236,149 @@ async fn identity_oidc_provider_helpers_use_documented_paths() {
 }
 
 #[tokio::test]
+async fn identity_oidc_protocol_uses_secret_aware_oauth_transport() {
+    use openbao::secrets::identity::{
+        IdentityOidcAuthorizeRequest, IdentityOidcProviderTokenRequest,
+    };
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        for step in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/identity/oidc/provider/app/authorize HTTP/1.1")
+                    );
+                    assert!(request.contains(r#""response_type":"code""#));
+                    assert!(request.contains(r#""state":"opaque-state""#));
+                    r#"{"code":"authorization-code","state":"opaque-state"}"#
+                }
+                1 => {
+                    assert!(
+                        request.starts_with("POST /v1/identity/oidc/provider/app/token HTTP/1.1")
+                    );
+                    assert!(request.contains("content-type: application/x-www-form-urlencoded"));
+                    assert!(request.contains("authorization: Basic Y2xpZW50OnNlY3JldA=="));
+                    assert!(request.contains("grant_type=authorization_code"));
+                    assert!(request.contains("code=authorization-code"));
+                    assert!(request.contains("code_verifier=pkce-verifier"));
+                    assert!(!request.contains("client_secret="));
+                    r#"{"access_token":"access-token","id_token":"id-token","expires_in":3600,"token_type":"Bearer"}"#
+                }
+                _ => {
+                    assert!(
+                        request
+                            .starts_with("POST /v1/identity/oidc/provider/app/userinfo HTTP/1.1")
+                    );
+                    assert!(request.contains("authorization: Bearer access-token"));
+                    assert!(!request.contains("x-vault-token"));
+                    r#"{"sub":"entity-id","username":"app-user","groups":["engineering"],"contact":{"email":"user@example.com"}}"#
+                }
+            };
+            write_json_response(&mut stream, "200 OK", body);
+        }
+    });
+
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"));
+    let provider = client
+        .identity_oidc_provider()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let authorization = provider
+        .authorize(
+            "app",
+            &IdentityOidcAuthorizeRequest::new(
+                "client",
+                "https://app.example.com/callback",
+                "openid profile",
+            )
+            .with_state("opaque-state")
+            .with_nonce("request-nonce")
+            .with_pkce("pkce-challenge", "S256"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(authorization.code.expose_secret(), "authorization-code");
+    assert!(!format!("{authorization:?}").contains("authorization-code"));
+
+    let tokens = provider
+        .token(
+            "app",
+            &IdentityOidcProviderTokenRequest::authorization_code(
+                authorization.code,
+                "https://app.example.com/callback",
+            )
+            .with_code_verifier(SecretString::from("pkce-verifier"))
+            .with_basic_credentials("client", SecretString::from("secret")),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(!format!("{tokens:?}").contains("access-token"));
+    let userinfo = provider
+        .userinfo("app", &tokens.access_token)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(userinfo.sub.as_deref(), Some("entity-id"));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[cfg(feature = "oidc-get-callback-acknowledged")]
+#[tokio::test]
+async fn identity_oidc_authorize_get_requires_acknowledged_query_transport() {
+    use openbao::secrets::identity::IdentityOidcAuthorizeRequest;
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with(
+            "GET /v1/identity/oidc/provider/app/authorize?response_type=code&client_id=client&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=openid+profile&state=opaque-state&nonce=request-nonce HTTP/1.1"
+        ));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"code":"authorization-code","state":"opaque-state"}"#,
+        );
+    });
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"));
+    let response = client
+        .identity_oidc_provider()
+        .unwrap_or_else(|error| panic!("{error}"))
+        .authorize_get(
+            "app",
+            &IdentityOidcAuthorizeRequest::new(
+                "client",
+                "https://app.example.com/callback",
+                "openid profile",
+            )
+            .with_state("opaque-state")
+            .with_nonce("request-nonce"),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(response.code.expose_secret(), "authorization-code");
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn identity_mfa_helpers_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -6933,12 +7156,15 @@ async fn kubernetes_admin_config_and_role_use_documented_paths() {
                     assert!(request.starts_with("POST /v1/auth/kubernetes/config HTTP/1.1"));
                     assert!(request.contains("x-vault-token: root-token"));
                     assert!(request.contains(r#""token_reviewer_jwt":"reviewer-jwt""#));
+                    assert!(request.contains(r#""disable_iss_validation":true"#));
+                    assert!(request.contains(r#""issuer":"kubernetes/serviceaccount""#));
                     "{}"
                 }
                 1 => {
                     assert!(request.starts_with("POST /v1/auth/kubernetes/role/web HTTP/1.1"));
                     assert!(request.contains(r#""bound_service_account_names":["web"]"#));
                     assert!(request.contains(r#""bound_service_account_namespaces":["prod"]"#));
+                    assert!(request.contains(r#""token_policies":["web"]"#));
                     "{}"
                 }
                 2 => {
@@ -6972,6 +7198,8 @@ async fn kubernetes_admin_config_and_role_use_documented_paths() {
         .configure(&openbao::auth::kubernetes::KubernetesConfig {
             kubernetes_host: Some("https://kubernetes.default.svc".to_owned()),
             token_reviewer_jwt: Some(SecretString::from("reviewer-jwt")),
+            disable_iss_validation: Some(true),
+            issuer: Some("kubernetes/serviceaccount".to_owned()),
             ..Default::default()
         })
         .await
@@ -6983,6 +7211,7 @@ async fn kubernetes_admin_config_and_role_use_documented_paths() {
                 bound_service_account_names: vec!["web".to_owned()],
                 bound_service_account_namespaces: vec!["prod".to_owned()],
                 policies: vec!["web".to_owned()],
+                token_policies: vec!["web".to_owned()],
                 ..Default::default()
             },
         )
@@ -7267,6 +7496,10 @@ async fn jwt_admin_config_and_role_use_documented_paths() {
                     assert!(request.contains("x-vault-token: root-token"));
                     assert!(request.contains(r#""jwks_url":"https://issuer.example/jwks.json""#));
                     assert!(request.contains(r#""oidc_client_secret":"client-secret""#));
+                    assert!(
+                        request.contains(r#""override_allowed_server_names":["issuer.example"]"#)
+                    );
+                    assert!(request.contains(r#""skip_jwks_validation":true"#));
                     "{}"
                 }
                 1 => {
@@ -7279,6 +7512,10 @@ async fn jwt_admin_config_and_role_use_documented_paths() {
                     assert!(request.contains(r#""bound_audiences":["openbao"]"#));
                     assert!(request.contains(r#""user_claim":"sub""#));
                     assert!(request.contains(r#""token_policies":["web"]"#));
+                    assert!(request.contains(r#""callback_mode":"direct""#));
+                    assert!(request.contains(r#""poll_interval":7"#));
+                    assert!(request.contains(r#""max_age":"5m""#));
+                    assert!(request.contains(r#""token_policies_template_claims":true"#));
                     "{}"
                 }
                 3 => {
@@ -7315,6 +7552,8 @@ async fn jwt_admin_config_and_role_use_documented_paths() {
             jwks_url: Some("https://issuer.example/jwks.json".to_owned()),
             bound_issuer: Some("https://issuer.example".to_owned()),
             oidc_client_secret: Some(SecretString::from("client-secret")),
+            override_allowed_server_names: vec!["issuer.example".to_owned()],
+            skip_jwks_validation: Some(true),
             ..Default::default()
         })
         .await
@@ -7334,6 +7573,10 @@ async fn jwt_admin_config_and_role_use_documented_paths() {
                 role_type: Some("jwt".to_owned()),
                 bound_audiences: vec!["openbao".to_owned()],
                 token_policies: vec!["web".to_owned()],
+                callback_mode: Some("direct".to_owned()),
+                poll_interval: Some(7),
+                max_age: Some("5m".to_owned()),
+                token_policies_template_claims: Some(true),
                 ..openbao::auth::jwt::JwtRole::new("sub")
             },
         )

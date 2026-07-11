@@ -79,6 +79,12 @@ pub struct JwtConfig {
         deserialize_with = "deserialize_bounded_string_map_or_default"
     )]
     pub provider_config: BTreeMap<String, String>,
+    /// TLS server names accepted instead of the URL hostname for OIDC/JWKS.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub override_allowed_server_names: Vec<String>,
+    /// Save configuration even when initial JWKS validation fails.
+    #[serde(default)]
+    pub skip_jwks_validation: Option<bool>,
     /// Whether namespaces are encoded in OIDC state.
     #[serde(default)]
     pub namespace_in_state: Option<bool>,
@@ -104,6 +110,11 @@ impl core::fmt::Debug for JwtConfig {
             .field("oidc_response_mode", &self.oidc_response_mode)
             .field("oidc_response_types", &self.oidc_response_types)
             .field("provider_config", &self.provider_config)
+            .field(
+                "override_allowed_server_names",
+                &self.override_allowed_server_names,
+            )
+            .field("skip_jwks_validation", &self.skip_jwks_validation)
             .field("namespace_in_state", &self.namespace_in_state)
             .finish()
     }
@@ -255,10 +266,35 @@ pub struct JwtRole {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub oidc_scopes: Vec<String>,
+    /// OIDC callback mode: `client`, `direct`, or `device`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub callback_mode: Option<String>,
+    /// Poll interval in seconds for direct and device callback modes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub poll_interval: Option<u64>,
+    /// Disables OpenBao's direct-flow confirmation page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub oidc_disable_confirmation: Option<bool>,
+    /// Emits received OIDC tokens and claims to debug logs.
+    ///
+    /// Enabling this can disclose credentials and claims. Keep it disabled in
+    /// production and in any environment with centralized debug logging.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verbose_oidc_logging: Option<bool>,
+    /// Maximum age accepted since the user's active authentication.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_age: Option<String>,
+    /// Allows token policy templates to reference JWT/OIDC claims.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_policies_template_claims: Option<bool>,
     /// Policies attached to generated tokens.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub token_policies: Vec<String>,
+    /// Deprecated policy field retained for older OpenBao 2.x compatibility.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub policies: Vec<String>,
     /// Token TTL such as `30m`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_ttl: Option<String>,
@@ -296,6 +332,16 @@ impl JwtRole {
     }
 
     fn validate(&self) -> Result<()> {
+        if let Some(max_age) = &self.max_age {
+            crate::validation::validate_duration_parameter(max_age, "jwt auth max_age")?;
+        }
+        if let Some(callback_mode) = &self.callback_mode
+            && !matches!(callback_mode.as_str(), "client" | "direct" | "device")
+        {
+            return Err(Error::InvalidParameter(
+                "jwt auth callback_mode must be client, direct, or device".into(),
+            ));
+        }
         crate::validation::validate_cidr_list(&self.token_bound_cidrs, "jwt auth token_bound_cidrs")
     }
 }
@@ -314,6 +360,7 @@ impl ListEntries for JwtRoleList {
     }
 }
 
+#[cfg(any(feature = "oidc-get-callback-acknowledged", test))]
 const MAX_OIDC_STATE_BYTES: usize = 4 * 1024;
 #[cfg(any(feature = "oidc-get-callback-acknowledged", test))]
 const MAX_OIDC_CREDENTIAL_BYTES: usize = 64 * 1024;
@@ -440,6 +487,12 @@ pub struct OidcCallbackRequest {
     pub id_token: Option<SecretString>,
     /// Client nonce supplied to `oidc_auth_url`, when used.
     pub client_nonce: Option<SecretString>,
+    /// Provider error code, when the provider returned no credential.
+    pub error: Option<SecretString>,
+    /// Provider error description.
+    pub error_description: Option<SecretString>,
+    /// Provider error documentation URI.
+    pub error_uri: Option<SecretString>,
 }
 
 impl fmt::Debug for OidcCallbackRequest {
@@ -450,6 +503,9 @@ impl fmt::Debug for OidcCallbackRequest {
             .field("has_code", &self.code.is_some())
             .field("has_id_token", &self.id_token.is_some())
             .field("has_client_nonce", &self.client_nonce.is_some())
+            .field("has_error", &self.error.is_some())
+            .field("has_error_description", &self.error_description.is_some())
+            .field("has_error_uri", &self.error_uri.is_some())
             .finish()
     }
 }
@@ -462,6 +518,9 @@ impl OidcCallbackRequest {
             code: Some(code),
             id_token: None,
             client_nonce: None,
+            error: None,
+            error_description: None,
+            error_uri: None,
         }
     }
 
@@ -472,7 +531,38 @@ impl OidcCallbackRequest {
             code: None,
             id_token: Some(id_token),
             client_nonce: None,
+            error: None,
+            error_description: None,
+            error_uri: None,
         }
+    }
+
+    /// Creates a callback carrying an OIDC provider error response.
+    pub fn with_provider_error(
+        state: impl Into<SecretString>,
+        error: impl Into<SecretString>,
+    ) -> Self {
+        Self {
+            state: state.into(),
+            code: None,
+            id_token: None,
+            client_nonce: None,
+            error: Some(error.into()),
+            error_description: None,
+            error_uri: None,
+        }
+    }
+
+    /// Adds provider error details to an error callback.
+    #[must_use]
+    pub fn with_provider_error_details(
+        mut self,
+        description: Option<SecretString>,
+        uri: Option<SecretString>,
+    ) -> Self {
+        self.error_description = description;
+        self.error_uri = uri;
+        self
     }
 
     /// Sets the client nonce that must match the authorization URL request.
@@ -490,12 +580,13 @@ impl OidcCallbackRequest {
             "OIDC state must not be empty",
             "OIDC state exceeds the maximum length",
         )?;
-        match (&self.code, &self.id_token) {
-            (Some(code), None) => validate_oidc_credential(code)?,
-            (None, Some(id_token)) => validate_oidc_credential(id_token)?,
-            (Some(_), Some(_)) => {
+        match (&self.code, &self.id_token, &self.error) {
+            (Some(code), None, None) => validate_oidc_credential(code)?,
+            (None, Some(id_token), None) => validate_oidc_credential(id_token)?,
+            (None, None, Some(error)) => validate_oidc_credential(error)?,
+            (Some(_), Some(_), _) | (Some(_), _, Some(_)) | (_, Some(_), Some(_)) => {
                 return Err(Error::InvalidParameter(
-                    "OIDC callback accepts code or id_token, not both".into(),
+                    "OIDC callback accepts exactly one of code, id_token, or error".into(),
                 ));
             }
             _ => {
@@ -511,6 +602,17 @@ impl OidcCallbackRequest {
                 "OIDC client_nonce must not be empty",
                 "OIDC client_nonce exceeds the maximum length",
             )?;
+        }
+        for value in [&self.error_description, &self.error_uri]
+            .into_iter()
+            .flatten()
+        {
+            validate_oidc_credential(value)?;
+        }
+        if self.error.is_none() && (self.error_description.is_some() || self.error_uri.is_some()) {
+            return Err(Error::InvalidParameter(
+                "OIDC callback error details require an error value".into(),
+            ));
         }
         Ok(())
     }
@@ -566,6 +668,7 @@ impl OidcPollRequest {
         self
     }
 
+    #[cfg(any(feature = "oidc-get-callback-acknowledged", test))]
     fn validate(&self) -> Result<()> {
         validate_oidc_secret_value(
             &self.state,
@@ -689,6 +792,10 @@ struct JwtConfigPayload<'a> {
     oidc_response_types: Vec<&'a str>,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     provider_config: &'a BTreeMap<String, String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    override_allowed_server_names: Vec<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    skip_jwks_validation: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     namespace_in_state: Option<bool>,
 }
@@ -806,7 +913,9 @@ impl JwtAuth<'_> {
         request.validate()?;
         let envelope: ResponseEnvelope<OidcAuthUrlResponse> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/oidc/auth_url", self.mount),
                 Some(request),
@@ -837,6 +946,11 @@ impl JwtAuth<'_> {
     }
 
     /// Polls a direct or device OIDC flow and returns an authenticated client on success.
+    ///
+    /// OpenBao documents this as a `GET` query operation. It therefore shares
+    /// the `oidc-get-callback-acknowledged` gate with [`Self::oidc_callback`]:
+    /// state and nonce values necessarily enter non-sanitizing URL buffers.
+    #[cfg(feature = "oidc-get-callback-acknowledged")]
     pub async fn oidc_poll(
         self,
         request: &OidcPollRequest,
@@ -873,7 +987,9 @@ impl JwtAuth<'_> {
         };
         let response: JwtLoginResponse = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
                 Some(&request),
@@ -901,9 +1017,20 @@ impl JwtAuth<'_> {
         if let Some(client_nonce) = &request.client_nonce {
             query.push(("client_nonce", client_nonce.expose_secret()));
         }
+        if let Some(error) = &request.error {
+            query.push(("error", error.expose_secret()));
+        }
+        if let Some(description) = &request.error_description {
+            query.push(("error_description", description.expose_secret()));
+        }
+        if let Some(uri) = &request.error_uri {
+            query.push(("error_uri", uri.expose_secret()));
+        }
         let response: JwtLoginResponse = self
             .client
-            .request_json_secret_query_accepting(
+            .request_auth_json_secret_query_accepting(
+                "jwt",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/oidc/callback", self.mount),
                 &query,
@@ -914,14 +1041,23 @@ impl JwtAuth<'_> {
         response.auth.ok_or(Error::MissingField("auth"))
     }
 
+    #[cfg(feature = "oidc-get-callback-acknowledged")]
     async fn oidc_poll_response(&self, request: &OidcPollRequest) -> Result<JwtLoginAuth> {
         request.validate()?;
+        let mut query = vec![("state", request.state.expose_secret())];
+        if let Some(client_nonce) = &request.client_nonce {
+            query.push(("client_nonce", client_nonce.expose_secret()));
+        }
         let response: JwtLoginResponse = self
             .client
-            .request_json_internal(
-                Method::POST,
+            .request_auth_json_secret_query_accepting(
+                "jwt",
+                &self.mount,
+                Method::GET,
                 &format!("auth/{}/oidc/poll", self.mount),
-                Some(request),
+                &query,
+                Option::<&Empty>::None,
+                &[reqwest::StatusCode::OK],
             )
             .await?;
         response.auth.ok_or(Error::MissingField("auth"))
@@ -960,10 +1096,18 @@ impl JwtAuthAdmin<'_> {
                 .map(String::as_str)
                 .collect(),
             provider_config: &config.provider_config,
+            override_allowed_server_names: config
+                .override_allowed_server_names
+                .iter()
+                .map(String::as_str)
+                .collect(),
+            skip_jwks_validation: config.skip_jwks_validation,
             namespace_in_state: config.namespace_in_state,
         };
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/config", self.mount),
                 Some(&payload),
@@ -975,7 +1119,9 @@ impl JwtAuthAdmin<'_> {
     pub async fn read_config(&self) -> Result<JwtConfig> {
         let envelope: ResponseEnvelope<JwtConfig> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/config", self.mount),
                 Option::<&Empty>::None,
@@ -989,7 +1135,9 @@ impl JwtAuthAdmin<'_> {
         role.validate()?;
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
                 Method::POST,
                 &format!("auth/{}/role/{name}", self.mount),
                 Some(role),
@@ -1002,7 +1150,9 @@ impl JwtAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<JwtRole> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
                 Method::GET,
                 &format!("auth/{}/role/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -1017,7 +1167,9 @@ impl JwtAuthAdmin<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<JwtRoleList> = self
             .client
-            .request_json_internal(
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
                 method,
                 &format!("auth/{}/role", self.mount),
                 Option::<&Empty>::None,
@@ -1030,7 +1182,9 @@ impl JwtAuthAdmin<'_> {
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
         let name = validate_mount_path(name)?.join("/");
         self.client
-            .request_json_accepting(
+            .request_auth_json_accepting(
+                "jwt",
+                &self.mount,
                 Method::DELETE,
                 &format!("auth/{}/role/{name}", self.mount),
                 Option::<&Empty>::None,
@@ -1115,6 +1269,9 @@ mod tests {
             code: Some(SecretString::from("code")),
             id_token: Some(SecretString::from("id-token")),
             client_nonce: None,
+            error: None,
+            error_description: None,
+            error_uri: None,
         };
         assert!(both.validate().is_err());
 
@@ -1128,6 +1285,11 @@ mod tests {
 
         assert!(
             super::OidcCallbackRequest::with_code("state", SecretString::from("code"))
+                .validate()
+                .is_ok()
+        );
+        assert!(
+            super::OidcCallbackRequest::with_provider_error("state", "access_denied")
                 .validate()
                 .is_ok()
         );
