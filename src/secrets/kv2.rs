@@ -935,7 +935,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, String>()? else {
                 return Ok(values);
             };
-            values.insert(key, SecretString::from(value));
+            if values.insert(key, SecretString::from(value)).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao service config map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(serde::de::Error::custom(
@@ -964,7 +968,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionMetadataMapVisitor<MA
             let Some((key, value)) = map.next_entry::<String, Kv2VersionMetadata>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao KV v2 version map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(serde::de::Error::custom(

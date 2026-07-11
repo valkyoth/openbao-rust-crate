@@ -855,7 +855,11 @@ impl<'de> Visitor<'de> for BoundedSecretMetadataVisitor {
                 return Ok(values);
             };
             entry_count += 1;
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "JWT/OIDC metadata contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(serde::de::Error::custom(

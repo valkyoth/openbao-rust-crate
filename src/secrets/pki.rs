@@ -201,13 +201,25 @@ pub struct PkiRole {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key_bits: Option<u64>,
     /// Certificate TTL such as `24h`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub ttl: Option<String>,
     /// Maximum certificate TTL such as `720h`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_ttl: Option<String>,
     /// Not-before skew duration.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_string_or_u64",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub not_before_duration: Option<String>,
     /// Not-before request bound mode (OpenBao 2.3.1+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1249,6 +1261,9 @@ pub struct PkiCertificateBundle {
     /// Certificate expiration as Unix seconds.
     #[serde(default)]
     pub expiration: Option<u64>,
+    /// Certificate not-before time as Unix seconds (OpenBao 2.1+).
+    #[serde(default)]
+    pub not_before: Option<u64>,
 }
 
 impl fmt::Debug for PkiCertificateBundle {
@@ -1265,6 +1280,7 @@ impl fmt::Debug for PkiCertificateBundle {
             .field("private_key_type", &self.private_key_type)
             .field("serial_number", &self.serial_number)
             .field("expiration", &self.expiration)
+            .field("not_before", &self.not_before)
             .finish()
     }
 }
@@ -3366,7 +3382,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedEabInfoMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, PkiAcmeEabInfo>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao ACME EAB metadata contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(serde::de::Error::custom(
@@ -3415,7 +3435,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedJsonMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao JSON metadata map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(serde::de::Error::custom(
@@ -3452,7 +3476,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedPrimitiveJsonMapVisitor<MAX>
                     "OpenBao JSON metadata values must be primitive",
                 ));
             }
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao JSON metadata map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(serde::de::Error::custom(

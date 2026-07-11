@@ -4112,7 +4112,11 @@ where
                 let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
                     return Ok(values);
                 };
-                values.insert(key, value);
+                if values.insert(key, value).is_some() {
+                    return Err(serde::de::Error::custom(
+                        "identity OIDC JSON object contains a duplicate key",
+                    ));
+                }
             }
             if map
                 .next_entry::<serde::de::IgnoredAny, serde::de::IgnoredAny>()?
@@ -4175,7 +4179,11 @@ where
                 else {
                     return Ok(values);
                 };
-                values.insert(key, value);
+                if values.insert(key, value).is_some() {
+                    return Err(serde::de::Error::custom(
+                        "identity OIDC provider info map contains a duplicate key",
+                    ));
+                }
             }
             if map
                 .next_entry::<serde::de::IgnoredAny, serde::de::IgnoredAny>()?
@@ -4237,7 +4245,11 @@ where
                 let Some((key, value)) = map.next_entry::<String, IdentityOidcClientInfo>()? else {
                     return Ok(values);
                 };
-                values.insert(key, value);
+                if values.insert(key, value).is_some() {
+                    return Err(serde::de::Error::custom(
+                        "identity OIDC client info map contains a duplicate key",
+                    ));
+                }
             }
             if map
                 .next_entry::<serde::de::IgnoredAny, serde::de::IgnoredAny>()?

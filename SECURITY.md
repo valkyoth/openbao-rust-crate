@@ -101,6 +101,11 @@ Please include:
   the newest reviewed profile, so it does not reject fields merely because the
   actual server may be older. Raw and external-plugin JSON remain outside this
   guarantee.
+- Versioned response fixtures are generated only from checksum-locked OpenAPI
+  snapshots. Historical aliases use reviewed deterministic precedence, bounded
+  maps reject duplicate keys rather than overwriting values, additive unknown
+  fields remain tolerated, and unknown server enum values fail decoding rather
+  than selecting a default capability.
 
 ## Admin Bootstrap Concurrency
 

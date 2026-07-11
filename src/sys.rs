@@ -1656,6 +1656,9 @@ pub struct RateLimitQuotaInfo {
     /// Quota type returned by OpenBao.
     #[serde(default, rename = "type")]
     pub quota_type: Option<String>,
+    /// Whether the quota applies to child namespaces (OpenBao 2.3.1+).
+    #[serde(default)]
+    pub inheritable: Option<bool>,
 }
 
 /// Request body for creating or updating a rate-limit quota.
@@ -3787,7 +3790,11 @@ where
             let Some((key, value)) = map.next_entry::<String, T>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom(self.message));
@@ -4090,6 +4097,12 @@ pub struct PluginInfo {
     /// OpenBao deprecation status.
     #[serde(default)]
     pub deprecation_status: Option<String>,
+    /// Whether this is a declarative plugin (OpenBao 2.5+).
+    #[serde(default)]
+    pub declarative: Option<bool>,
+    /// Whether this plugin is backed by an OCI image (OpenBao 2.5+).
+    #[serde(default)]
+    pub oci: Option<bool>,
 }
 
 impl fmt::Debug for PluginInfo {
@@ -4104,6 +4117,8 @@ impl fmt::Debug for PluginInfo {
             .field("args", &format_args!("<{} redacted>", self.args.len()))
             .field("env", &format_args!("<{} redacted>", self.env.len()))
             .field("deprecation_status", &self.deprecation_status)
+            .field("declarative", &self.declarative)
+            .field("oci", &self.oci)
             .finish()
     }
 }
@@ -8052,7 +8067,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedMountInfoMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, MountInfo>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao mount map exceeds item limit"));
@@ -8089,7 +8108,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedAuditDeviceMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, AuditDevice>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom(
@@ -8129,7 +8152,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedAuditedHeaderMapVisitor<MAX>
             let Some((key, value)) = map.next_entry::<String, AuditedRequestHeaderConfig>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom(
@@ -8169,7 +8196,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedUiMountSummaryMapVisitor<MAX
             let Some((key, value)) = map.next_entry::<String, UiMountSummary>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom(
@@ -8198,7 +8229,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedNamespaceInfoMapVisitor<MAX>
             let Some((key, value)) = map.next_entry::<String, NamespaceInfo>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao namespace map exceeds item limit"));
@@ -8225,7 +8260,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedRateLimitQuotaMapVisitor<MAX
             let Some((key, value)) = map.next_entry::<String, RateLimitQuotaInfo>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom(
@@ -8254,7 +8293,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, u64>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao integer map exceeds item limit"));
@@ -8398,7 +8441,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionHistoryMapVisitor<MAX
             let Some((key, value)) = map.next_entry::<String, VersionHistoryEntry>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom(

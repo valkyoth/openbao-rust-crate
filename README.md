@@ -226,6 +226,11 @@ is committed under [`compat/`](compat/README.md), together with deterministic
 tagged-documentation snapshots, normalized server-generated OpenAPI snapshots,
 adjacent-release contract diffs, a generated capability registry, and
 machine-readable live core-flow results.
+Reviewed response-shape transitions are additionally compiled into
+[`tests/fixtures/openbao_response_profiles.json`](tests/fixtures/openbao_response_profiles.json)
+and deserialized by the public Rust response types for every locked release.
+See [the response compatibility policy](docs/OPENBAO_RESPONSE_COMPATIBILITY.md)
+for alias, unknown-field, enum, bounds, and secret-handling rules.
 The live result is explicitly a tested subset of health, mount, KV, policy,
 token, capability, and response-wrapping behavior. It is not yet a claim that
 every typed helper works on every historical release. Capability profiles

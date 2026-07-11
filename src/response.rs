@@ -432,7 +432,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedStringMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, String>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(A::Error::custom(
+                    "OpenBao string map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao string map exceeds item limit"));

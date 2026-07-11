@@ -3260,7 +3260,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedU64MapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, u64>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(A::Error::custom(
+                    "OpenBao integer map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao integer map exceeds item limit"));
@@ -3287,7 +3291,11 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedSecretMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, SecretString>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(A::Error::custom(
+                    "OpenBao secret map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom("OpenBao secret map exceeds item limit"));

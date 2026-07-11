@@ -1421,7 +1421,11 @@ impl<'de, const MAX: usize> Visitor<'de> for SshIssuerInfoMapVisitor<MAX> {
             let Some((key, value)) = map.next_entry::<String, SshIssuerInfo>()? else {
                 return Ok(values);
             };
-            values.insert(key, value);
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
         }
         if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
             return Err(A::Error::custom(

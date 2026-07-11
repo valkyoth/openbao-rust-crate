@@ -2,6 +2,7 @@
     feature = "identity",
     feature = "kv2",
     feature = "pki",
+    feature = "ssh",
     feature = "sys",
     feature = "token"
 ))]
@@ -15,7 +16,11 @@ use openbao::auth::token::TokenAuth;
 use openbao::secrets::identity::IdentityEntityInfo;
 use openbao::secrets::kv2::Kv2Secret;
 use openbao::secrets::pki::PkiCertificateBundle;
-use openbao::sys::Health;
+use openbao::secrets::pki::PkiRole;
+use openbao::secrets::ssh::SshRoleKeyType;
+use openbao::sys::{
+    Health, PluginInfo, PolicyInfo, PolicyList, RateLimitQuotaInfo, RateLimitQuotaList,
+};
 use openbao::{ExposeSecret, ResponseEnvelope, SecretString};
 use serde::Deserialize;
 
@@ -28,6 +33,24 @@ struct FixtureSecret {
 #[derive(Debug, Deserialize)]
 struct TokenAuthFixture {
     auth: Option<TokenAuth>,
+}
+
+#[derive(Debug, Deserialize)]
+struct VersionedResponseFixtures {
+    schema: String,
+    snapshot_lock_sha256: String,
+    profiles: Vec<VersionedResponseProfile>,
+}
+
+#[derive(Debug, Deserialize)]
+struct VersionedResponseProfile {
+    version: String,
+    openapi_sha256: String,
+    pki_certificate: serde_json::Value,
+    pki_role: serde_json::Value,
+    plugin: serde_json::Value,
+    policy: serde_json::Value,
+    quota: serde_json::Value,
 }
 
 #[test]
@@ -76,5 +99,65 @@ fn public_response_fixtures_deserialize() -> Result<(), Box<dyn Error>> {
         BTreeMap::from([("role".to_owned(), "fixture".to_owned())])
     );
     assert!(auth.renewable);
+    Ok(())
+}
+
+#[test]
+fn locked_openbao_response_profiles_deserialize() -> Result<(), Box<dyn Error>> {
+    let fixtures: VersionedResponseFixtures =
+        serde_json::from_str(include_str!("fixtures/openbao_response_profiles.json"))?;
+    assert_eq!(fixtures.schema, "openbao-versioned-response-fixtures/v1");
+    assert_eq!(fixtures.snapshot_lock_sha256.len(), 64);
+    assert_eq!(fixtures.profiles.len(), 21);
+
+    for (index, fixture) in fixtures.profiles.into_iter().enumerate() {
+        assert_eq!(fixture.openapi_sha256.len(), 64);
+
+        let certificate: PkiCertificateBundle = serde_json::from_value(fixture.pki_certificate)?;
+        assert_eq!(certificate.not_before.is_some(), index >= 4);
+        let certificate_debug = format!("{certificate:?}");
+        assert!(!certificate_debug.contains("fixture-private-key"));
+
+        let role: PkiRole = serde_json::from_value(fixture.pki_role)?;
+        assert_eq!(role.ttl.as_deref(), Some("3600"));
+        assert_eq!(role.max_ttl.as_deref(), Some("7200"));
+        assert_eq!(role.not_before_duration.as_deref(), Some("30"));
+        assert_eq!(!role.allowed_ip_sans_cidr.is_empty(), index >= 15);
+
+        let policy: PolicyInfo = serde_json::from_value(fixture.policy)?;
+        assert!(!policy.rules.is_empty());
+        assert_eq!(policy.version.is_some(), index >= 9);
+
+        let quota: RateLimitQuotaInfo = serde_json::from_value(fixture.quota)?;
+        assert_eq!(quota.inheritable, (index >= 9).then_some(true));
+
+        let plugin: PluginInfo = serde_json::from_value(fixture.plugin)?;
+        assert_eq!(plugin.declarative, (index >= 15).then_some(true));
+        assert_eq!(plugin.oci, (index >= 15).then_some(true));
+        let plugin_debug = format!("{plugin:?}");
+        assert!(!plugin_debug.contains("fixture-secret-argument"));
+        assert!(!plugin_debug.contains("FIXTURE_SECRET=value"));
+
+        assert!(fixture.version.starts_with("2."));
+    }
+    Ok(())
+}
+
+#[test]
+fn response_aliases_have_reviewed_precedence_and_maps_reject_duplicates()
+-> Result<(), Box<dyn Error>> {
+    let policy: PolicyInfo =
+        serde_json::from_str(r#"{"name":"fixture","rules":"current","policy":"legacy"}"#)?;
+    assert_eq!(policy.rules, "current");
+    let policies: PolicyList =
+        serde_json::from_str(r#"{"policies":["current"],"keys":["legacy"]}"#)?;
+    assert_eq!(policies.policies, ["current"]);
+    assert!(
+        serde_json::from_str::<RateLimitQuotaList>(
+            r#"{"key_info":{"duplicate":{},"duplicate":{}}}"#
+        )
+        .is_err()
+    );
+    assert!(serde_json::from_str::<SshRoleKeyType>(r#""future-role-type""#).is_err());
     Ok(())
 }

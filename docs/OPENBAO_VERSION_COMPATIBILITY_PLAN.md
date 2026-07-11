@@ -756,6 +756,9 @@ Pentest focus:
 
 Suggested commit title: `Harden OpenBao response compatibility`
 
+Status: implemented. Pentest this commit from
+`17de4adf3bbb92d2b0a5cfa7d9071cf73286843d` to the resulting Commit 16 hash.
+
 Goal:
 
 - add reviewed aliases and optional/default handling for historical responses;

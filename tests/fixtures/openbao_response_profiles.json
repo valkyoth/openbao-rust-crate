@@ -1,0 +1,932 @@
+{
+  "profiles": [
+    {
+      "openapi_sha256": "6251b7f9e971bd5d791ccab4e43775228c27461883a1ed6587af22aa9a56dd95",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.0.0"
+    },
+    {
+      "openapi_sha256": "4b32092b3a8a9bcdcc25ff1e9182d9cd7fdaba91a7b781e575420e32b1a91e95",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.0.1"
+    },
+    {
+      "openapi_sha256": "25daf16211faf30fa767c367d8b971033d3892c665fd4b5accfcd5b02ac5c8dc",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.0.2"
+    },
+    {
+      "openapi_sha256": "4cedeed73f67712a82c7cd9e2d9eae4a1ec5e90a77dda6b297a69c2caa6b8aa6",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.0.3"
+    },
+    {
+      "openapi_sha256": "b118f93b1ef34778c0f2b3a2ad0d8ac404d01ab66493ab6f719f7593be71c92c",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.1.0"
+    },
+    {
+      "openapi_sha256": "19cfcf3e4a25c123a96287a6fce8046ecc40e2c548cb60f1f66ed3bc2b9a5538",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.1.1"
+    },
+    {
+      "openapi_sha256": "08b6a56346777e7b3162545acbc8b8c9b706711af3aec35e1bde70806d5f3952",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.2.0"
+    },
+    {
+      "openapi_sha256": "a5ab87bfd593ab817cb5d39de11790b35072cd10d01c910b80f20c61497167e6",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.2.1"
+    },
+    {
+      "openapi_sha256": "245e06bf67e0b23fdb1d28dc38604f7e7ab5e8cf534fb777c2453189f84910d0",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }"
+      },
+      "quota": {
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.2.2"
+    },
+    {
+      "openapi_sha256": "0a35090685e93da18f4f70ce6ebf993260a2821c66c0d4a013220a13140b4f9d",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.3.1"
+    },
+    {
+      "openapi_sha256": "39f03229ada6bb90a4d99714e6d8d671167b19b6ca32551e73ce1ccc36e4dd46",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.3.2"
+    },
+    {
+      "openapi_sha256": "d06098ab4f303591b3c92178092b6ea5fb3859c96c47b863f8ed7625039d77b2",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.4.0"
+    },
+    {
+      "openapi_sha256": "2f55860da4e4a6e19b70b6aa8e567a6baa53230251b168a1d642b80099e12939",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.4.1"
+    },
+    {
+      "openapi_sha256": "29ae28ded7eebc923206c5870d3a9ac0a827b1c08b3b88a049bf96a44ed92888",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.4.3"
+    },
+    {
+      "openapi_sha256": "42533c03c0f6e3226259210a7c21ef7e5ef87056f1058b58a62c152557d11786",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin"
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.4.4"
+    },
+    {
+      "openapi_sha256": "6bbbbe3a3f4b6e0bcb47ea4d8e485eabaae559ef5f4e8e62a49196819708208f",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "allowed_ip_sans_cidr": [
+          "192.0.2.0/24"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "declarative": true,
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin",
+        "oci": true
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.5.0"
+    },
+    {
+      "openapi_sha256": "b71f9fec0e35509b6980624f3d4e28b2636451a85c12a1ff1440a9f533cfa956",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "allowed_ip_sans_cidr": [
+          "192.0.2.0/24"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "declarative": true,
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin",
+        "oci": true
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.5.1"
+    },
+    {
+      "openapi_sha256": "7f8d875b8f8d44483024e758c75ceea32ab59182f3d7bb6176b67239220832b1",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "allowed_ip_sans_cidr": [
+          "192.0.2.0/24"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "declarative": true,
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin",
+        "oci": true
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.5.2"
+    },
+    {
+      "openapi_sha256": "9ea04ce4b2f2c2ae3cdd15bcd705e664e0957f5789d1a0b7e80a4edf0547b886",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "allowed_ip_sans_cidr": [
+          "192.0.2.0/24"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "declarative": true,
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin",
+        "oci": true
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.5.3"
+    },
+    {
+      "openapi_sha256": "d8e2dcc85f8bf50076abe9fa7635aa5bfa7750f3dc27dc9baa4c0b4bc43c9430",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "allowed_ip_sans_cidr": [
+          "192.0.2.0/24"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "declarative": true,
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin",
+        "oci": true
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.5.4"
+    },
+    {
+      "openapi_sha256": "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "allowed_ip_sans_cidr": [
+          "192.0.2.0/24"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "declarative": true,
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin",
+        "oci": true
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.5.5"
+    }
+  ],
+  "schema": "openbao-versioned-response-fixtures/v1",
+  "snapshot_lock_sha256": "440fbaef87506b3b463689892abb9c0c741e2382676e3c92c4e21fa8cd2a3af6"
+}

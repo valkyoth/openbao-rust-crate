@@ -59,6 +59,8 @@ python3 scripts/validate_openbao_release_lock.py
 python3 scripts/validate_openbao_release_lock.py --self-test
 python3 scripts/openbao_api_snapshots.py --verify
 python3 scripts/openbao_api_snapshots.py --self-test
+python3 -B scripts/generate_openbao_response_fixtures.py --verify
+python3 -B scripts/generate_openbao_response_fixtures.py --self-test
 python3 scripts/openbao_test_harness.py --self-test
 python3 scripts/openbao_core_matrix.py --verify
 python3 scripts/openbao_core_matrix.py --self-test
@@ -114,6 +116,11 @@ scanning, duplicate-key rejection, exact artifact paths, bounded descriptor
 reads, and no-follow/non-blocking file opens. It verifies every source commit,
 OCI digest, artifact size/hash, internal version, count, predecessor diff, and
 rendered-observation identity against the release inventory.
+
+`tests/fixtures/openbao_response_profiles.json` is generated from these locked
+OpenAPI documents. It carries the exact source digest for each release and
+provides serde fixtures for reviewed response-shape transitions. CI regenerates
+the file in memory and rejects any stale or manually detached fixture.
 
 To reproduce all online evidence from an exact OpenBao source clone:
 
