@@ -79,7 +79,8 @@ wherever operationally possible.
   rootless containers, read-only filesystems, dropped capabilities, isolated
   networks, loopback-only exposure, and memory-backed credential descriptors.
 - Database TLS DSNs reject ambiguous, duplicate, weaker, or non-TCP TLS
-  configurations before secret request construction.
+  configurations before secret request construction. URI validation borrows
+  from secret DSNs instead of creating a non-sanitizing URL copy.
 - OIDC credential-bearing GET operations require explicit acknowledgement and
   avoid unnecessary crate-owned plaintext copies.
 - Database extension values and OIDC introspection claims remain redacted from

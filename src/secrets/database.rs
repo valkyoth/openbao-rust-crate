@@ -3,7 +3,7 @@
 use core::fmt;
 use std::collections::BTreeMap;
 
-use reqwest::{Method, StatusCode, Url};
+use reqwest::{Method, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
@@ -466,13 +466,24 @@ fn postgres_dsn_has_unsupported_uri_like_prefix(dsn: &str) -> bool {
 }
 
 fn postgres_uri_uses_hardened_tcp_tls(dsn: &str) -> bool {
-    let Ok(url) = Url::parse(dsn) else {
+    let Some(uri) = dsn
+        .strip_prefix("postgresql://")
+        .or_else(|| dsn.strip_prefix("postgres://"))
+    else {
         return false;
     };
-    if !matches!(url.scheme(), "postgres" | "postgresql") || url.fragment().is_some() {
+    if dsn
+        .bytes()
+        .any(|byte| byte.is_ascii_whitespace() || byte.is_ascii_control())
+        || uri.contains('#')
+    {
         return false;
     }
-    let Some(query) = url.query() else {
+    let Some((location, query)) = uri.split_once('?') else {
+        return false;
+    };
+    let authority_end = location.find('/').unwrap_or(location.len());
+    let Some(authority_host) = postgres_uri_authority_host(&location[..authority_end]) else {
         return false;
     };
     let mut verify_full = false;
@@ -517,10 +528,56 @@ fn postgres_uri_uses_hardened_tcp_tls(dsn: &str) -> bool {
     }
     match host_override {
         Some(host) => postgres_hosts_are_explicit_tcp(&host),
-        None => url
-            .host_str()
-            .is_some_and(|host| postgres_hosts_are_explicit_tcp(host.as_bytes())),
+        None => {
+            !authority_host.is_empty() && postgres_hosts_are_explicit_tcp(authority_host.as_bytes())
+        }
     }
+}
+
+// This parser borrows from the exposed DSN so credentials in URI userinfo are
+// never copied into a non-sanitizing URL allocation during validation.
+fn postgres_uri_authority_host(authority: &str) -> Option<&str> {
+    let host_and_port = match authority.rsplit_once('@') {
+        Some((userinfo, host_and_port)) => {
+            if userinfo.contains('@') || userinfo.is_empty() {
+                return None;
+            }
+            host_and_port
+        }
+        None => authority,
+    };
+    if host_and_port.is_empty() {
+        return Some("");
+    }
+    if let Some(bracketed) = host_and_port.strip_prefix('[') {
+        let (host, remainder) = bracketed.split_once(']')?;
+        if host.is_empty()
+            || host.contains(['[', ']'])
+            || (!remainder.is_empty() && !postgres_uri_port_is_valid(remainder.strip_prefix(':')?))
+        {
+            return None;
+        }
+        return Some(host);
+    }
+    if host_and_port.contains(['[', ']', '%']) {
+        return None;
+    }
+    match host_and_port.rsplit_once(':') {
+        Some((host, port)) => {
+            if host.is_empty() || host.contains(':') || !postgres_uri_port_is_valid(port) {
+                None
+            } else {
+                Some(host)
+            }
+        }
+        None => Some(host_and_port),
+    }
+}
+
+fn postgres_uri_port_is_valid(port: &str) -> bool {
+    !port.is_empty()
+        && port.bytes().all(|byte| byte.is_ascii_digit())
+        && port.parse::<u16>().is_ok_and(|port| port != 0)
 }
 
 fn postgres_keyword_dsn_uses_hardened_tcp_tls(dsn: &str) -> bool {
@@ -683,17 +740,17 @@ fn postgres_hosts_are_explicit_tcp(hosts: &[u8]) -> bool {
             && host
                 .bytes()
                 .all(|byte| !byte.is_ascii_whitespace() && !byte.is_ascii_control())
-            && !matches!(host.as_bytes().first(), Some(b'/' | b'\\'))
+            && !host.contains(['/', '\\'])
             && !postgres_host_is_windows_absolute_path(host)
     })
 }
 
 fn postgres_host_is_windows_absolute_path(host: &str) -> bool {
     let bytes = host.as_bytes();
-    bytes.len() >= 3
+    bytes.len() >= 2
         && bytes[0].is_ascii_alphabetic()
         && bytes[1] == b':'
-        && matches!(bytes[2], b'/' | b'\\')
+        && bytes.get(2) != Some(&b':')
 }
 
 const fn hex_value(byte: u8) -> Option<u8> {
@@ -2029,7 +2086,13 @@ mod tests {
             "postgresql://db.example/openbao?sslmode=verify-full&host=db+example",
             "postgresql:///openbao?sslmode=verify-full&host=%2Ftmp",
             "postgresql://db.example/openbao?sslmode=verify-full&host=C%3A%5Cpg",
+            "postgresql://db.example/openbao?sslmode=verify-full&host=C%3Apg",
+            "postgresql://db.example/openbao?sslmode=verify-full&host=db%2Fsocket",
             "postgresql://db.example/openbao?sslmode=verify-full&service=production",
+            "postgresql://user@@db.example/openbao?sslmode=verify-full",
+            "postgresql://db.example:0/openbao?sslmode=verify-full",
+            "postgresql://db.example:65536/openbao?sslmode=verify-full",
+            "postgresql://db.example:not-a-port/openbao?sslmode=verify-full",
             "postgres://db.example/openbao?SSLMode=VERIFY-FULL",
             "postgres://db.example/openbao?sslmode=VERIFY-FULL",
             "POSTGRESQL://db.example/openbao?sslmode=verify-full",
@@ -2040,6 +2103,8 @@ mod tests {
             "host=db.example sslmode=prefer sslmode=verify-full",
             "host=/tmp sslmode=verify-full dbname=openbao",
             r"host='C:\\pg' sslmode=verify-full dbname=openbao",
+            "host=C:pg sslmode=verify-full dbname=openbao",
+            r"host=db\\socket sslmode=verify-full dbname=openbao",
             "host=db.example SSLMODE=verify-full dbname=openbao",
             "host=db.example sslmode=VERIFY-FULL dbname=openbao",
             "host=db.example sslmode='verify-full dbname=openbao",
@@ -2055,12 +2120,15 @@ mod tests {
         for dsn in [
             "postgresql://db.example/openbao?sslmode=verify-full",
             "postgresql://{{username}}:{{password}}@db.example/openbao?sslmode=verify-full",
+            "postgresql://user:secret@db.example:5432/openbao?sslmode=verify-full",
+            "postgresql://[2001:db8::1]:5432/openbao?sslmode=verify-full",
             "postgresql://db.example/openbao?%73slmode=verify%2Dfull",
             "postgresql:///openbao?sslmode=verify-full&host=db.example",
             "postgresql://db.example/openbao?sslmode=verify-full&host=db.internal%2Cdb.backup",
             "host=db.example sslmode=verify-full dbname=openbao",
             r"host=db.example sslmode='verify\-full' dbname=openbao",
             "host=db.example,db.backup sslmode=verify-full",
+            "host=a::1 sslmode=verify-full",
         ] {
             assert!(
                 postgres_dsn_uses_hardened_tcp_tls(dsn),

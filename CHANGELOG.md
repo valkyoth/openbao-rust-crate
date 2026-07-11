@@ -92,6 +92,9 @@ All notable changes to this project are documented here.
 - Database plugin response-extension maps reject duplicate keys and count
   parsed entries, rather than only unique map keys, against their response
   limit.
+- PostgreSQL TLS validation parses secret-bearing URI DSNs through borrowed
+  slices, avoiding a non-sanitizing owned URL copy, and rejects drive-relative
+  or slash-bearing local socket host forms.
 - OIDC GET callback redemption now requires the non-default
   `oidc-get-callback-acknowledged` feature and avoids the previous additional
   plaintext query-value copies before constructing the unavoidable URL.
