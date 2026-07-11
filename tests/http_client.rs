@@ -54,7 +54,7 @@ async fn unstable_internal_system_helpers_are_gated_and_typed() {
                 5 => r#"{"data":{"counters":{"service_tokens":{"total":4}}}}"#,
                 6 => r#"{"data":{"path":"sys/health"}}"#,
                 7 => {
-                    r#"{"data":{"root":[{"accessor":"mount-accessor","mount_path":"secret/","mount_type":"kv"}]}}"#
+                    r#"{"data":{"root":[{"accessor":"mount-accessor","mount_namespace":"team-namespace","mount_path":"secret-path/","mount_type":"kv-mount-type","storage_prefix":"logical-storage-prefix","tainted":false,"uuid":"mount-uuid"}]}}"#
                 }
                 _ => "{}",
             };
@@ -115,7 +115,24 @@ async fn unstable_internal_system_helpers_are_gated_and_typed() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(router.root.len(), 1);
-    assert!(!format!("{router:?}").contains("mount-accessor"));
+    assert_eq!(
+        router.root[0]
+            .mount_path
+            .as_ref()
+            .map(SecretString::expose_secret),
+        Some("secret-path/")
+    );
+    let debug = format!("{router:?}");
+    for sensitive in [
+        "mount-accessor",
+        "team-namespace",
+        "secret-path/",
+        "kv-mount-type",
+        "logical-storage-prefix",
+        "mount-uuid",
+    ] {
+        assert!(!debug.contains(sensitive));
+    }
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 

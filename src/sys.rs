@@ -2013,29 +2013,45 @@ pub struct InternalCounterTotal {
 
 /// One mount entry returned by internal router inspection.
 #[cfg(feature = "unstable-internal-ops")]
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Default, Deserialize)]
 pub struct InternalRouterMount {
     /// Mount accessor. Treat as sensitive operational metadata.
     #[serde(default)]
     pub accessor: Option<SecretString>,
     /// Mount namespace.
     #[serde(default)]
-    pub mount_namespace: Option<String>,
+    pub mount_namespace: Option<SecretString>,
     /// Mount path.
     #[serde(default)]
-    pub mount_path: Option<String>,
+    pub mount_path: Option<SecretString>,
     /// Mount type.
     #[serde(default)]
-    pub mount_type: Option<String>,
+    pub mount_type: Option<SecretString>,
     /// Storage prefix, when returned.
     #[serde(default)]
-    pub storage_prefix: Option<String>,
+    pub storage_prefix: Option<SecretString>,
     /// Whether the mount is tainted.
     #[serde(default)]
     pub tainted: Option<bool>,
     /// Mount UUID.
     #[serde(default)]
-    pub uuid: Option<String>,
+    pub uuid: Option<SecretString>,
+}
+
+#[cfg(feature = "unstable-internal-ops")]
+impl fmt::Debug for InternalRouterMount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InternalRouterMount")
+            .field("accessor", &"<redacted>")
+            .field("mount_namespace", &"<redacted>")
+            .field("mount_path", &"<redacted>")
+            .field("mount_type", &"<redacted>")
+            .field("storage_prefix", &"<redacted>")
+            .field("tainted", &self.tainted)
+            .field("uuid", &"<redacted>")
+            .finish()
+    }
 }
 
 /// Internal router inspection response.
