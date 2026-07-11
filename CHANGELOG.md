@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ## 2.0.0 - 2026-07-11
 
+The crates.io package remains `2.0.0` and uses the replacement signed source
+tag `v2.0.0-release`. The original GitHub-only `v2.0.0` candidate failed the
+all-release compatibility workflow and was not published to crates.io.
+
 ### Added
 
 - Started the `2.0.0` multi-version OpenBao compatibility implementation.

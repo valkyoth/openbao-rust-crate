@@ -691,4 +691,5 @@ Stop criteria:
 - the README and security documentation distinguish tested wire compatibility
   from security endorsement of an old server;
 - all standard release gates, the all-release integration gate, GitHub checks,
-  and the final exact-commit pentest pass before tagging `v2.0.0`.
+  and the final exact-commit pentest pass before tagging the replacement source
+  release as `v2.0.0-release` (Cargo package version `2.0.0`).

@@ -4,9 +4,13 @@
 
 - Version: 2.0.0
 - Release date: 2026-07-11
-- Git tag: `v2.0.0`
-- Git commit: see the signed `v2.0.0` tag object
+- Git tag: `v2.0.0-release`
+- Git commit: see the signed `v2.0.0-release` tag object
 - License: MIT OR Apache-2.0
+
+The original GitHub-only `v2.0.0` candidate failed the all-release
+compatibility workflow and was not published to crates.io. This replacement
+source tag retains the stable Cargo package version `2.0.0`.
 
 ## Summary
 
@@ -133,5 +137,5 @@ The complete trust boundaries and mitigations are documented in
 
 ## Release Rule
 
-Do not create `v2.0.0` until GitHub CI, CodeQL, the full 21-release
+Do not create `v2.0.0-release` until GitHub CI, CodeQL, the full 21-release
 compatibility workflow, and the independent exact-commit pentest are green.
