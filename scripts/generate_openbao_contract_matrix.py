@@ -41,9 +41,9 @@ EXPECTED_TAGGED_SNAPSHOT_SHA256 = "511d18f9bf894cba50c857c247cf3a22b8fd352914403
 EXPECTED_OPENAPI_SNAPSHOT_SHA256 = "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4"
 EXPECTED_EVIDENCE_SHA256 = "1813d10fb9fdc0df7231035d391d5af288f0ba443ed105cb3816e7269557eab4"
 EXPECTED_OUTPUT_SHA256 = {
-    "docs/openbao-2.5-contract-matrix.json": "509f2ebf505bdeb5248f4d296d8042a368df1dfe505133e4c63fc3f233b4cd73",
-    "docs/openbao-2.5-endpoint-matrix.csv": "b3a65df8c678d7a9e304345d93328da7d65f8dcac7dd7f04a9f10ec20fd0cce5",
-    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "2c7cbaa63758c718fbd2bf29631278ceb7557a333999214dd86885143a5b3a0b",
+    "docs/openbao-2.5-contract-matrix.json": "241105fd01c0675d42e00d9bf8227a173bc3442fb8b2c8badbc541ff70f7619e",
+    "docs/openbao-2.5-endpoint-matrix.csv": "cd788b788a97dcc4464e84d7e8fc6b289d3d7953984a3932466d9e1c0ab83ecf",
+    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "07d4c6cff078289e4d7a81d1f03a54daf6aeeb638c1ea14a30d4878b374e8387",
 }
 MAX_INPUT_BYTES = 16 * 1024 * 1024
 MAX_OUTPUT_BYTES = 32 * 1024 * 1024
@@ -72,38 +72,27 @@ GET /:secret-mount-path/subkeys/:path
 SCAN /:secret-mount-path/metadata/:path
 LIST /:secret-mount-path/detailed-metadata/:path
 SCAN /:secret-mount-path/detailed-metadata/:path
-LIST /sys/policies/acl
-LIST /sys/policies/acl/:prefix
-LIST /sys/policies/detailed/acl
-LIST /sys/policies/detailed/acl/:prefix
-GET /sys/policies/acl/:name
-POST /sys/policies/acl/:name
-DELETE /sys/policies/acl/:name
-GET /sys/rekey/backup
-DELETE /sys/rekey/backup
-GET /sys/rekey/verify
-DELETE /sys/rekey/verify
-POST /sys/rekey/verify
-GET /sys/auth/:path
-LIST /sys/leases/lookup/:prefix
-GET /sys/leases
-POST /sys/rotate
-POST /sys/rotate/keyring/config
-POST /sys/rotate/config
-GET /sys/rotate/keyring/config
-GET /sys/rotate/config
-POST /sys/rotate/root
-GET /sys/rotate/(root|recovery)/verify
-DELETE /sys/rotate/(root|recovery)/verify
-POST /sys/rotate/(root|recovery)/verify
-GET /sys/rotate/(root|recovery)/backup
-DELETE /sys/rotate/(root|recovery)/backup
 GET /pki/crl/rotate
 GET /pki/crl/rotate-delta
-HEAD /sys/health
 """.splitlines()
     if line.strip()
 )
+
+SYSTEM_DISPOSITION_OVERRIDES = {
+    "HEAD /sys/health": "typed",
+    "LIST /sys/config/ui/headers": "typed-gated",
+    "DELETE /sys/config/ui/headers/:name": "typed-gated",
+    "GET /sys/config/ui/headers/:name": "typed-gated",
+    "POST /sys/config/ui/headers/:name": "typed-gated",
+    "GET /sys/internal/counters/entities": "typed-gated",
+    "GET /sys/internal/counters/tokens": "typed-gated",
+    "GET /sys/internal/inspect/request/root": "typed-gated",
+    "GET /sys/internal/inspect/router/accessor": "typed-gated",
+    "GET /sys/internal/inspect/router/root": "typed-gated",
+    "GET /sys/internal/inspect/router/storage": "typed-gated",
+    "GET /sys/internal/inspect/router/uuid": "typed-gated",
+    "GET /sys/monitor": "omitted",
+}
 
 
 class ContractError(RuntimeError):
@@ -725,7 +714,13 @@ def build_matrix(evidence: dict[str, Any], openapi: dict[str, Any]) -> dict[str,
             response_fields.update(variant["sample_response_fields"])
             response_review.update(variant["sample_response_review"])
         expanded = {f"{method} {path}" for method in methods}
-        prior = source_row["legacy_matrix"]
+        prior = dict(source_row["legacy_matrix"])
+        override = SYSTEM_DISPOSITION_OVERRIDES.get(operation_key(methods, path))
+        if override is not None:
+            prior = {
+                "status": override,
+                "note": "Reviewed during version-aware system endpoint migration.",
+            }
         confirmed = (
             prior["status"] in {"partial", "raw", "external", "rejected", "planned", "decision", "omitted"}
             or bool(expanded & CONFIRMED_FALSE_TYPED)

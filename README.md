@@ -128,7 +128,7 @@ Implemented now:
 - Plugin catalog list, type-list, register, read, delete, and backend reload
   helpers.
 - Explicitly gated production init, unseal, seal, rekey, key-share rotation,
-  keyring rotation, root/recovery-token generation, decode-token, legacy
+  keyring rotation, root/recovery-token generation, local token decoding, legacy
   recovery-key rekey, and in-flight request inspection operator APIs.
 - Environment-based client construction from common OpenBao/Vault variables.
 - Shared authenticated client and Rust `Duration` to OpenBao duration string
@@ -405,6 +405,8 @@ openbao = { version = "1", features = ["time"] }
 | `sensitive-http-test-only-acknowledged` | no | Explicit acknowledgment for this crate's audited loopback HTTP test harness. |
 | `operator-ops` | no | Production init, unseal, seal, rekey, key-share rotate, keyring rotate, raw storage, and destructive PKI root deletion APIs. Requires `operator-ops-acknowledged`. |
 | `operator-ops-acknowledged` | no | Explicit acknowledgment for audited operator-operation builds. |
+| `unstable-internal-ops` | no | Typed UI-header, internal-counter, request-inspection, and router-inspection helpers for OpenBao internal APIs without compatibility guarantees. Implies `operator-ops` and requires both acknowledgment features. |
+| `unstable-internal-ops-acknowledged` | no | Explicit acknowledgment that unstable internal OpenBao response shapes may change between server releases. |
 
 ## Support Matrix
 
@@ -518,7 +520,7 @@ evidence is linked. It is an implementation backlog, not a support percentage.
 | Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, count, tidy, and `RenewalHint` timing helpers for caller-owned renewal loops. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate, token ceremonies, in-flight diagnostics, PKI root deletion | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. PKI root deletion also requires `PkiRootDeletion::confirm()` at the call site. |
-| System backend closure | Yes | Password policies, root/recovery token ceremonies, decode-token, resultant ACL, legacy recovery-key rekey, and in-flight request inspection are implemented; config-ui, monitor streaming, internal router/request inspection, and internal counters are rejected for stable scope. |
+| System backend closure | Yes | Modern ACL, auth-mount reads, lease listings, barrier/key-share rotation, password policies, root/recovery token ceremonies, local token decoding, resultant ACL, legacy recovery-key rekey, and in-flight inspection are typed. UI headers and internal counter/request/router inspection require `unstable-internal-ops`; monitor streaming remains intentionally omitted. |
 
 ## Examples
 

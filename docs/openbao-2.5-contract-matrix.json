@@ -182093,7 +182093,7 @@
       ],
       "operation_key": "GET /sys/auth/:path",
       "path": "/sys/auth/:path",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -184709,8 +184709,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected for stable scope: OpenBao removed the embedded UI and the remaining header configuration use case is narrow server administration.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "LIST"
@@ -184765,7 +184765,7 @@
       ],
       "operation_key": "LIST /sys/config/ui/headers",
       "path": "/sys/config/ui/headers",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -184811,8 +184811,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected for stable scope: OpenBao removed the embedded UI and the remaining header configuration use case is narrow server administration.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "DELETE"
@@ -184849,7 +184849,7 @@
       ],
       "operation_key": "DELETE /sys/config/ui/headers/:name",
       "path": "/sys/config/ui/headers/:name",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -184939,8 +184939,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected for stable scope: OpenBao removed the embedded UI and the remaining header configuration use case is narrow server administration.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -185002,7 +185002,7 @@
       ],
       "operation_key": "GET /sys/config/ui/headers/:name",
       "path": "/sys/config/ui/headers/:name",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -185076,8 +185076,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected for stable scope: OpenBao removed the embedded UI and the remaining header configuration use case is narrow server administration.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "POST"
@@ -185139,7 +185139,7 @@
       ],
       "operation_key": "POST /sys/config/ui/headers/:name",
       "path": "/sys/config/ui/headers/:name",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -186968,8 +186968,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "The legacy matrix omitted this tagged row.",
-        "status": "omitted"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "HEAD"
@@ -186982,7 +186982,7 @@
       ],
       "operation_key": "HEAD /sys/health",
       "path": "/sys/health",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -187692,8 +187692,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected: internal counter endpoints have no stability guarantee and sys/metrics covers the observability use case.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -187734,7 +187734,7 @@
       ],
       "operation_key": "GET /sys/internal/counters/entities",
       "path": "/sys/internal/counters/entities",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": true,
@@ -187859,8 +187859,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected: internal counter endpoints have no stability guarantee and sys/metrics covers the observability use case.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -187901,7 +187901,7 @@
       ],
       "operation_key": "GET /sys/internal/counters/tokens",
       "path": "/sys/internal/counters/tokens",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": true,
@@ -187947,8 +187947,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected: request inspection is underdocumented and either overlaps capability/resultant-ACL helpers or belongs to internal OpenBao debugging.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -187961,7 +187961,7 @@
       ],
       "operation_key": "GET /sys/internal/inspect/request/root",
       "path": "/sys/internal/inspect/request/root",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": true,
@@ -188005,8 +188005,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected: router inspection is an internal OpenBao implementation/debug endpoint with no backwards-compatibility guarantee.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -188043,7 +188043,7 @@
       ],
       "operation_key": "GET /sys/internal/inspect/router/accessor",
       "path": "/sys/internal/inspect/router/accessor",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": true,
@@ -188189,8 +188189,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected: router inspection is an internal OpenBao implementation/debug endpoint with no backwards-compatibility guarantee.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -188227,7 +188227,7 @@
       ],
       "operation_key": "GET /sys/internal/inspect/router/root",
       "path": "/sys/internal/inspect/router/root",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": true,
@@ -188373,8 +188373,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected: router inspection is an internal OpenBao implementation/debug endpoint with no backwards-compatibility guarantee.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -188411,7 +188411,7 @@
       ],
       "operation_key": "GET /sys/internal/inspect/router/storage",
       "path": "/sys/internal/inspect/router/storage",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": true,
@@ -188543,8 +188543,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected: router inspection is an internal OpenBao implementation/debug endpoint with no backwards-compatibility guarantee.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "typed-gated"
       },
       "methods": [
         "GET"
@@ -188581,7 +188581,7 @@
       ],
       "operation_key": "GET /sys/internal/inspect/router/uuid",
       "path": "/sys/internal/inspect/router/uuid",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": true,
@@ -189817,7 +189817,7 @@
       ],
       "operation_key": "GET /sys/leases",
       "path": "/sys/leases",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -190279,7 +190279,7 @@
       ],
       "operation_key": "LIST /sys/leases/lookup/:prefix",
       "path": "/sys/leases/lookup/:prefix",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -192109,8 +192109,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Rejected for current stable scope: sys/monitor is a streaming log endpoint and needs a deliberate streaming API design outside the crate's single-response model.",
-        "status": "rejected"
+        "note": "Reviewed during version-aware system endpoint migration.",
+        "status": "omitted"
       },
       "methods": [
         "GET"
@@ -196510,7 +196510,7 @@
       ],
       "operation_key": "LIST /sys/policies/acl",
       "path": "/sys/policies/acl",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -196609,7 +196609,7 @@
       ],
       "operation_key": "DELETE /sys/policies/acl/:name",
       "path": "/sys/policies/acl/:name",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -196833,7 +196833,7 @@
       ],
       "operation_key": "GET /sys/policies/acl/:name",
       "path": "/sys/policies/acl/:name",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -197054,7 +197054,7 @@
       ],
       "operation_key": "POST /sys/policies/acl/:name",
       "path": "/sys/policies/acl/:name",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -197235,7 +197235,7 @@
       ],
       "operation_key": "LIST /sys/policies/acl/:prefix",
       "path": "/sys/policies/acl/:prefix",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -197342,7 +197342,7 @@
       ],
       "operation_key": "LIST /sys/policies/detailed/acl",
       "path": "/sys/policies/detailed/acl",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -197460,7 +197460,7 @@
       ],
       "operation_key": "LIST /sys/policies/detailed/acl/:prefix",
       "path": "/sys/policies/detailed/acl/:prefix",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -202547,7 +202547,7 @@
       ],
       "operation_key": "DELETE /sys/rekey/backup",
       "path": "/sys/rekey/backup",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -202679,7 +202679,7 @@
       ],
       "operation_key": "GET /sys/rekey/backup",
       "path": "/sys/rekey/backup",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -203971,7 +203971,7 @@
       ],
       "operation_key": "DELETE /sys/rekey/verify",
       "path": "/sys/rekey/verify",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -204128,7 +204128,7 @@
       ],
       "operation_key": "GET /sys/rekey/verify",
       "path": "/sys/rekey/verify",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -204294,7 +204294,7 @@
       ],
       "operation_key": "POST /sys/rekey/verify",
       "path": "/sys/rekey/verify",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -204644,7 +204644,7 @@
       ],
       "operation_key": "POST /sys/rotate",
       "path": "/sys/rotate",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -204707,7 +204707,7 @@
       ],
       "operation_key": "DELETE /sys/rotate/(root|recovery)/backup",
       "path": "/sys/rotate/(root|recovery)/backup",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -204847,7 +204847,7 @@
       ],
       "operation_key": "GET /sys/rotate/(root|recovery)/backup",
       "path": "/sys/rotate/(root|recovery)/backup",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -205568,7 +205568,7 @@
       ],
       "operation_key": "GET /sys/rotate/(root|recovery)/verify",
       "path": "/sys/rotate/(root|recovery)/verify",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -205673,7 +205673,7 @@
       ],
       "operation_key": "POST /sys/rotate/(root|recovery)/verify",
       "path": "/sys/rotate/(root|recovery)/verify",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -205845,7 +205845,7 @@
       ],
       "operation_key": "GET /sys/rotate/config",
       "path": "/sys/rotate/config",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -205995,7 +205995,7 @@
       ],
       "operation_key": "POST /sys/rotate/config",
       "path": "/sys/rotate/config",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -206241,7 +206241,7 @@
       ],
       "operation_key": "GET /sys/rotate/keyring/config",
       "path": "/sys/rotate/keyring/config",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -206391,7 +206391,7 @@
       ],
       "operation_key": "POST /sys/rotate/keyring/config",
       "path": "/sys/rotate/keyring/config",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -206463,7 +206463,7 @@
       ],
       "operation_key": "POST /sys/rotate/root",
       "path": "/sys/rotate/root",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,

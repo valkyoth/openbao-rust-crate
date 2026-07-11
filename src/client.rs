@@ -1351,6 +1351,235 @@ impl<State> Client<State> {
         .await
     }
 
+    async fn resolve_registered_openbao_endpoint<Q, K>(
+        &self,
+        scope_prefix: &'static str,
+        requested_method: &Method,
+        path: &str,
+        query: &[(K, Q)],
+    ) -> Result<ResolvedOpenBaoEndpoint>
+    where
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let path_segments = validate_endpoint_path(path)?;
+        let report = self.ensure_compatibility().await?;
+        let version = report.profile_version().or_else(|| {
+            (report.status() == crate::compatibility::OpenBaoCompatibilityStatus::Unverified)
+                .then(latest_generated_profile)
+                .flatten()
+        });
+        let version = version.ok_or(Error::Internal(
+            "OpenBao compatibility report has no routing profile",
+        ))?;
+        if !is_generated_profile(version) {
+            return Err(Error::UnsupportedOpenBaoVersion(version));
+        }
+
+        let mut matches = Vec::new();
+        for operation in crate::compatibility::openbao_operations()
+            .iter()
+            .copied()
+            .filter(|operation| operation.path_template().starts_with(scope_prefix))
+        {
+            let method = match reqwest_method(operation.method()) {
+                Ok(method) => method,
+                Err(_) => continue,
+            };
+            if method != *requested_method
+                || !route_template_matches(operation.path_template(), &path_segments, query)?
+            {
+                continue;
+            }
+            matches.push((
+                route_template_specificity(operation.path_template()),
+                operation,
+            ));
+        }
+        let Some(maximum_specificity) = matches.iter().map(|(score, _)| *score).max() else {
+            return Err(Error::Internal(
+                "typed OpenBao request has no matching registry operation",
+            ));
+        };
+        let mut selected = matches
+            .into_iter()
+            .filter(|(score, _)| *score == maximum_specificity)
+            .map(|(_, operation)| operation);
+        let operation = selected.next().ok_or(Error::Internal(
+            "typed OpenBao request has no matching registry operation",
+        ))?;
+        if selected.next().is_some() {
+            return Err(Error::Internal(
+                "typed OpenBao request matches multiple registry operations",
+            ));
+        }
+        if !matches!(
+            operation.availability(version),
+            Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+        ) || !matches!(
+            operation.disposition(),
+            OpenBaoOperationDisposition::LegacyTypedClaim
+                | OpenBaoOperationDisposition::LegacyTypedGatedClaim
+        ) {
+            return Err(Error::UnsupportedOpenBaoCapability {
+                endpoint: operation.id(),
+                version,
+            });
+        }
+        Ok(ResolvedOpenBaoEndpoint {
+            endpoint: operation.id(),
+            operation,
+            method: reqwest_method(operation.method())?,
+        })
+    }
+
+    pub(crate) async fn request_sys_json_internal<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_sys_json_accepting(
+            method,
+            path,
+            body,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
+    }
+
+    pub(crate) async fn request_sys_json_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_sys_json_query_headers_accepting(
+            method,
+            path,
+            &[] as &[(&str, String)],
+            &[],
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    pub(crate) async fn request_sys_json_headers_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_sys_json_query_headers_accepting(
+            method,
+            path,
+            &[] as &[(&str, String)],
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    pub(crate) async fn request_sys_json_query_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_sys_json_query_headers_accepting(
+            method,
+            path,
+            query,
+            &[],
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    async fn request_sys_json_query_headers_accepting<T, B, Q, K>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(K, Q)],
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let resolved = self
+            .resolve_registered_openbao_endpoint("/sys/", &method, path, query)
+            .await?;
+        let normalized_query = query
+            .iter()
+            .map(|(key, value)| (key.as_ref(), value.as_ref()))
+            .collect::<Vec<_>>();
+        self.request_json_query_headers_accepting(
+            resolved.method(),
+            path,
+            &normalized_query,
+            headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    pub(crate) async fn request_sys_bytes_accepting_internal(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        accept: Option<HeaderValue>,
+        body: Option<&[u8]>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<SecretVec> {
+        let mut headers = Vec::new();
+        if let Some(accept) = accept {
+            headers.push((ACCEPT, accept));
+        }
+        let resolved = self
+            .resolve_registered_openbao_endpoint("/sys/", &method, path, query)
+            .await?;
+        self.request_bytes_headers_accepting_internal(
+            resolved.method(),
+            path,
+            query,
+            &headers,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
     /// Sends a raw authenticated or unauthenticated JSON request.
     ///
     /// `path` is relative to `/v1`. It is validated and joined as URL path
@@ -2004,6 +2233,25 @@ where
         }
     }
     Ok(true)
+}
+
+fn route_template_specificity(template: &str) -> usize {
+    let (path, query) = template
+        .split_once('?')
+        .map_or((template, None), |(path, query)| (path, Some(query)));
+    let static_segments = path
+        .split('/')
+        .filter(|segment| {
+            !segment.is_empty() && !segment.starts_with(':') && !segment.starts_with("(/:")
+        })
+        .count();
+    let total_segments = path
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .count();
+    query.map_or(0, |value| value.split('&').count() * 10_000)
+        + static_segments * 100
+        + total_segments
 }
 
 fn expand_optional_route_templates(template: &str) -> Result<Vec<String>> {

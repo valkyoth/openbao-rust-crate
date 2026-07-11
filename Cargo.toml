@@ -116,8 +116,12 @@ raw-api-acknowledged = []
 # These endpoints can expose, mutate, or destroy root, unseal, recovery,
 # certificate-authority, and encryption-key material. They are disabled by
 # default and require operator-ops-acknowledged.
-operator-ops = []
+operator-ops = ["dep:base64-ng"]
 operator-ops-acknowledged = []
+# Unstable OpenBao internal inspection/configuration endpoints. These have no
+# compatibility guarantee and also require the operator-operation gates.
+unstable-internal-ops = ["operator-ops"]
+unstable-internal-ops-acknowledged = []
 # Legacy Transit SHA-1 support. Disabled by default so new builds cannot select
 # SHA-1 without an explicit Cargo feature review.
 allow-sha1-acknowledged = []

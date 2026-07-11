@@ -1189,7 +1189,7 @@ mod tests {
     }
 
     #[test]
-    fn generated_profiles_preserve_removed_routes_and_security_blocks() {
+    fn generated_profiles_preserve_removed_and_intentionally_omitted_routes() {
         let historical = openbao_operations()
             .iter()
             .copied()
@@ -1223,11 +1223,11 @@ mod tests {
             .unwrap_or_else(|| panic!("missing monitor operation"));
         assert_eq!(
             monitor.availability(OpenBaoVersion::new(2, 5, 5)),
-            Some(OpenBaoCapabilityAvailability::SecurityBlocked)
+            Some(OpenBaoCapabilityAvailability::DocumentedRoute)
         );
         assert_eq!(
             monitor.disposition(),
-            OpenBaoOperationDisposition::SecurityBlocked
+            OpenBaoOperationDisposition::OmittedLegacyClaim
         );
     }
 

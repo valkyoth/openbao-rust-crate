@@ -949,7 +949,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.delete.sys.config.ui.headers.name.d8366841754ee330",
         OpenBaoHttpMethod::Delete,
         "/sys/config/ui/headers/:name",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3082,7 +3082,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.config.ui.headers.name.ea54cd23695fecbb",
         OpenBaoHttpMethod::Get,
         "/sys/config/ui/headers/:name",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3186,7 +3186,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.internal.counters.entities.ddc77495893511d2",
         OpenBaoHttpMethod::Get,
         "/sys/internal/counters/entities",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3199,7 +3199,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.internal.counters.tokens.354824ed6ef5b3b5",
         OpenBaoHttpMethod::Get,
         "/sys/internal/counters/tokens",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3212,7 +3212,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.internal.inspect.request.root.885b10e9019aa2b4",
         OpenBaoHttpMethod::Get,
         "/sys/internal/inspect/request/root",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3230,7 +3230,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.internal.inspect.router.accessor.67474f5cd6245561",
         OpenBaoHttpMethod::Get,
         "/sys/internal/inspect/router/accessor",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3243,7 +3243,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.internal.inspect.router.root.627831521c564da5",
         OpenBaoHttpMethod::Get,
         "/sys/internal/inspect/router/root",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3256,7 +3256,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.internal.inspect.router.storage.8ab92aa54c51018d",
         OpenBaoHttpMethod::Get,
         "/sys/internal/inspect/router/storage",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3269,7 +3269,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.internal.inspect.router.uuid.f3565c8d432267d1",
         OpenBaoHttpMethod::Get,
         "/sys/internal/inspect/router/uuid",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -3469,7 +3469,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.sys.monitor.31691ac3a18a5972",
         OpenBaoHttpMethod::Get,
         "/sys/monitor",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::OmittedLegacyClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -4191,7 +4191,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.head.sys.health.c7792a3ced1d40c4",
         OpenBaoHttpMethod::Head,
         "/sys/health",
-        OpenBaoOperationDisposition::OmittedLegacyClaim,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -4887,7 +4887,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.list.sys.config.ui.headers.2206e096fb7eeb93",
         OpenBaoHttpMethod::List,
         "/sys/config/ui/headers",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -7693,7 +7693,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.post.sys.config.ui.headers.name.d2aee5a64c02116c",
         OpenBaoHttpMethod::Post,
         "/sys/config/ui/headers/:name",
-        OpenBaoOperationDisposition::SecurityBlocked,
+        OpenBaoOperationDisposition::LegacyTypedGatedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),

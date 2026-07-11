@@ -554,6 +554,8 @@ Pentest focus:
 
 ### Commit 10: Migrate System Operations
 
+Status: implemented. Pentest this commit from `e2f93e8b4c17415607ae3fb56f6f12eb637694af` to the resulting Commit 10 hash.
+
 Suggested commit title: `Version OpenBao system endpoint routing`
 
 Goal:

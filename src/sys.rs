@@ -1850,7 +1850,7 @@ impl fmt::Debug for OperatorTokenGenerationStart {
     }
 }
 
-/// Request for `/sys/decode-token`.
+/// Request for locally decoding a generated root or recovery token.
 ///
 /// Both fields are sensitive operator ceremony material.
 #[cfg(feature = "operator-ops")]
@@ -1884,26 +1884,7 @@ impl fmt::Debug for DecodeTokenRequest {
 }
 
 #[cfg(feature = "operator-ops")]
-impl Serialize for DecodeTokenRequest {
-    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        #[derive(Serialize)]
-        struct Payload<'a> {
-            encoded_token: &'a str,
-            otp: &'a str,
-        }
-
-        Payload {
-            encoded_token: self.encoded_token.expose_secret(),
-            otp: self.otp.expose_secret(),
-        }
-        .serialize(serializer)
-    }
-}
-
-/// Decoded root or recovery token returned by `/sys/decode-token`.
+/// Locally decoded root or recovery token.
 #[cfg(feature = "operator-ops")]
 #[derive(Clone, Deserialize)]
 pub struct DecodeTokenResponse {
@@ -1933,6 +1914,9 @@ pub struct OperatorRecoveryKeyBackup {
     /// PGP key fingerprint to encrypted share material.
     #[serde(default, deserialize_with = "deserialize_bounded_secret_string_map")]
     pub keys: BTreeMap<String, SecretString>,
+    /// Base64-formatted encrypted shares, when returned by barrier rekey.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_map")]
+    pub keys_base64: BTreeMap<String, SecretString>,
 }
 
 #[cfg(feature = "operator-ops")]
@@ -1942,6 +1926,7 @@ impl fmt::Debug for OperatorRecoveryKeyBackup {
             .debug_struct("OperatorRecoveryKeyBackup")
             .field("nonce", &self.nonce)
             .field("keys_count", &self.keys.len())
+            .field("keys_base64_count", &self.keys_base64.len())
             .finish()
     }
 }
@@ -1962,6 +1947,137 @@ impl OperatorRotateTarget {
         match self {
             Self::Root => "root",
             Self::Recovery => "recovery",
+        }
+    }
+}
+
+/// Automatic barrier or keyring rotation configuration.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct OperatorRotationConfig {
+    /// Whether automatic rotation is enabled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    /// Maximum time between rotations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval: Option<LeaseDuration>,
+    /// Maximum cryptographic operations between rotations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_operations: Option<u64>,
+}
+
+/// UI response-header configuration.
+#[cfg(feature = "unstable-internal-ops")]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct UiHeaderConfig {
+    /// Header values.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub values: Vec<String>,
+    /// Whether OpenBao emits multiple header fields instead of one joined field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multivalue: Option<bool>,
+    /// Legacy single-value response field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+}
+
+/// Internal entity or token counter response.
+#[cfg(feature = "unstable-internal-ops")]
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct InternalCounters {
+    /// Counter groups returned by OpenBao.
+    #[serde(default)]
+    pub counters: InternalCounterGroups,
+}
+
+/// Known internal counter groups.
+#[cfg(feature = "unstable-internal-ops")]
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct InternalCounterGroups {
+    /// Entity count, when requested.
+    #[serde(default)]
+    pub entities: Option<InternalCounterTotal>,
+    /// Service-token count, when requested.
+    #[serde(default)]
+    pub service_tokens: Option<InternalCounterTotal>,
+}
+
+/// Total for one internal counter group.
+#[cfg(feature = "unstable-internal-ops")]
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct InternalCounterTotal {
+    /// Current total.
+    #[serde(default)]
+    pub total: u64,
+}
+
+/// One mount entry returned by internal router inspection.
+#[cfg(feature = "unstable-internal-ops")]
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct InternalRouterMount {
+    /// Mount accessor. Treat as sensitive operational metadata.
+    #[serde(default)]
+    pub accessor: Option<SecretString>,
+    /// Mount namespace.
+    #[serde(default)]
+    pub mount_namespace: Option<String>,
+    /// Mount path.
+    #[serde(default)]
+    pub mount_path: Option<String>,
+    /// Mount type.
+    #[serde(default)]
+    pub mount_type: Option<String>,
+    /// Storage prefix, when returned.
+    #[serde(default)]
+    pub storage_prefix: Option<String>,
+    /// Whether the mount is tainted.
+    #[serde(default)]
+    pub tainted: Option<bool>,
+    /// Mount UUID.
+    #[serde(default)]
+    pub uuid: Option<String>,
+}
+
+/// Internal router inspection response.
+#[cfg(feature = "unstable-internal-ops")]
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct InternalRouterInspection {
+    /// Router entries. Only one field is normally populated for a request.
+    #[serde(default, deserialize_with = "deserialize_bounded_router_mount_vec")]
+    pub root: Vec<InternalRouterMount>,
+    /// Storage-prefix router entries.
+    #[serde(default, deserialize_with = "deserialize_bounded_router_mount_vec")]
+    pub storage: Vec<InternalRouterMount>,
+    /// Accessor router entries.
+    #[serde(default, deserialize_with = "deserialize_bounded_router_mount_vec")]
+    pub accessor: Vec<InternalRouterMount>,
+    /// UUID router entries.
+    #[serde(default, deserialize_with = "deserialize_bounded_router_mount_vec")]
+    pub uuid: Vec<InternalRouterMount>,
+}
+
+/// Internal router index selected for inspection.
+#[cfg(feature = "unstable-internal-ops")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InternalRouterTarget {
+    /// Root mount table.
+    Root,
+    /// Storage-prefix index.
+    Storage,
+    /// Mount-accessor index.
+    Accessor,
+    /// Mount-UUID index.
+    Uuid,
+}
+
+#[cfg(feature = "unstable-internal-ops")]
+impl InternalRouterTarget {
+    fn path_segment(self) -> &'static str {
+        match self {
+            Self::Root => "root",
+            Self::Storage => "storage",
+            Self::Accessor => "accessor",
+            Self::Uuid => "uuid",
         }
     }
 }
@@ -2518,11 +2634,34 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
 }
 
 /// ACL policy list response.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct PolicyList {
     /// Policy names.
-    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub policies: Vec<String>,
+}
+
+impl<'de> Deserialize<'de> for PolicyList {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawPolicyList {
+            #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+            policies: Vec<String>,
+            #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+            keys: Vec<String>,
+        }
+
+        let raw = RawPolicyList::deserialize(deserializer)?;
+        Ok(Self {
+            policies: if raw.policies.is_empty() {
+                raw.keys
+            } else {
+                raw.policies
+            },
+        })
+    }
 }
 
 impl ListEntries for PolicyList {
@@ -2532,12 +2671,15 @@ impl ListEntries for PolicyList {
 }
 
 /// ACL policy read response.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct PolicyInfo {
     /// Policy name.
     pub name: String,
     /// Policy document.
     pub rules: String,
+    /// Policy expiration timestamp, when configured.
+    #[serde(default)]
+    pub expiration: Option<String>,
     /// Last modification timestamp, when returned by OpenBao.
     #[serde(default)]
     pub modified: Option<String>,
@@ -2547,6 +2689,41 @@ pub struct PolicyInfo {
     /// Whether check-and-set is required for future updates.
     #[serde(default)]
     pub cas_required: bool,
+}
+
+impl<'de> Deserialize<'de> for PolicyInfo {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawPolicyInfo {
+            #[serde(default)]
+            name: String,
+            #[serde(default)]
+            rules: Option<String>,
+            #[serde(default)]
+            policy: Option<String>,
+            #[serde(default)]
+            expiration: Option<String>,
+            #[serde(default)]
+            modified: Option<String>,
+            #[serde(default)]
+            version: Option<u64>,
+            #[serde(default)]
+            cas_required: bool,
+        }
+
+        let raw = RawPolicyInfo::deserialize(deserializer)?;
+        Ok(Self {
+            name: raw.name,
+            rules: raw.rules.or(raw.policy).unwrap_or_default(),
+            expiration: raw.expiration,
+            modified: raw.modified,
+            version: raw.version,
+            cas_required: raw.cas_required,
+        })
+    }
 }
 
 /// ACL policy create/update request.
@@ -3419,6 +3596,24 @@ pub struct LeaseCount {
     pub counts: BTreeMap<String, u64>,
 }
 
+/// Lease identifiers returned by a prefix listing.
+#[derive(Clone, Default, Deserialize)]
+pub struct LeaseIdList {
+    /// Lease identifiers. Each value can be used to revoke a credential and is
+    /// therefore treated as secret material.
+    #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
+    pub keys: Vec<SecretString>,
+}
+
+impl fmt::Debug for LeaseIdList {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("LeaseIdList")
+            .field("keys_count", &self.keys.len())
+            .finish()
+    }
+}
+
 impl fmt::Debug for LeaseRenewal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
@@ -3775,7 +3970,7 @@ impl<State> Sys<'_, State> {
     /// Reads `/sys/init` initialization status.
     pub async fn init_status(&self) -> Result<InitStatus> {
         self.client
-            .request_json_internal(Method::GET, "sys/init", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/init", Option::<&Empty>::None)
             .await
     }
 
@@ -3785,7 +3980,7 @@ impl<State> Sys<'_, State> {
     /// sealed, or uninitialized nodes. Those statuses are accepted and decoded.
     pub async fn health(&self) -> Result<Health> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::GET,
                 "sys/health",
                 Option::<&Empty>::None,
@@ -3802,10 +3997,33 @@ impl<State> Sys<'_, State> {
             .await
     }
 
+    /// Performs a bodyless `/sys/health` probe.
+    pub async fn health_head(&self) -> Result<()> {
+        self.client
+            .request_sys_bytes_accepting_internal(
+                Method::HEAD,
+                "sys/health",
+                &[],
+                None,
+                None,
+                &[
+                    StatusCode::OK,
+                    StatusCode::NO_CONTENT,
+                    StatusCode::TOO_MANY_REQUESTS,
+                    StatusCode::NOT_IMPLEMENTED,
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    openbao_status(472)?,
+                    openbao_status(473)?,
+                ],
+            )
+            .await?;
+        Ok(())
+    }
+
     /// Reads `/sys/seal-status`.
     pub async fn seal_status(&self) -> Result<SealStatus> {
         self.client
-            .request_json_internal(Method::GET, "sys/seal-status", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/seal-status", Option::<&Empty>::None)
             .await
     }
 
@@ -3971,21 +4189,21 @@ impl<State> Sys<'_, State> {
     /// Reads `/sys/leader`.
     pub async fn leader_status(&self) -> Result<LeaderStatus> {
         self.client
-            .request_json_internal(Method::GET, "sys/leader", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/leader", Option::<&Empty>::None)
             .await
     }
 
     /// Reads `/sys/ha-status`.
     pub async fn ha_status(&self) -> Result<HaStatus> {
         self.client
-            .request_json_internal(Method::GET, "sys/ha-status", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/ha-status", Option::<&Empty>::None)
             .await
     }
 
     /// Reads `/sys/key-status`.
     pub async fn key_status(&self) -> Result<KeyStatus> {
         self.client
-            .request_json_internal(Method::GET, "sys/key-status", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/key-status", Option::<&Empty>::None)
             .await
     }
 
@@ -3995,7 +4213,7 @@ impl<State> Sys<'_, State> {
     /// dynamic `{mountPath}` parameter when OpenBao supports it.
     pub async fn openapi_document(&self, generic_mount_paths: bool) -> Result<JsonValue> {
         self.client
-            .request_json_query_accepting(
+            .request_sys_json_query_accepting(
                 Method::GET,
                 "sys/internal/specs/openapi",
                 &[("generic_mount_paths", generic_mount_paths.to_string())],
@@ -4011,7 +4229,7 @@ impl<State> Sys<'_, State> {
     /// backwards compatibility guarantees.
     pub async fn ui_namespaces(&self) -> Result<UiNamespaces> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/internal/ui/namespaces",
                 Option::<&Empty>::None,
@@ -4025,7 +4243,7 @@ impl<State> Sys<'_, State> {
     /// support without backwards compatibility guarantees.
     pub async fn ui_mounts(&self) -> Result<UiMounts> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/internal/ui/mounts",
                 Option::<&Empty>::None,
@@ -4039,7 +4257,7 @@ impl<State> Sys<'_, State> {
     /// required.
     pub async fn metrics_json(&self) -> Result<JsonValue> {
         self.client
-            .request_json_query_accepting(
+            .request_sys_json_query_accepting(
                 Method::GET,
                 "sys/metrics",
                 &[("format", "json".to_owned())],
@@ -4057,7 +4275,7 @@ impl<State> Sys<'_, State> {
     pub async fn metrics_prometheus(&self) -> Result<String> {
         let body = self
             .client
-            .request_bytes_accepting_internal(
+            .request_sys_bytes_accepting_internal(
                 Method::GET,
                 "sys/metrics",
                 &[("format", "prometheus".to_owned())],
@@ -4080,7 +4298,7 @@ impl<State> Sys<'_, State> {
     pub async fn host_info_json(&self) -> Result<JsonValue> {
         let envelope: ResponseEnvelope<JsonValue> = self
             .client
-            .request_json_internal(Method::GET, "sys/host-info", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/host-info", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -4093,7 +4311,7 @@ impl<State> Sys<'_, State> {
     /// and content-type protections.
     pub async fn sanitized_config_state_json(&self) -> Result<JsonValue> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/config/state/sanitized",
                 Option::<&Empty>::None,
@@ -4104,14 +4322,14 @@ impl<State> Sys<'_, State> {
     /// Reads runtime logger levels from `/sys/loggers`.
     pub async fn logger_levels(&self) -> Result<LoggerLevels> {
         self.client
-            .request_json_internal(Method::GET, "sys/loggers", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/loggers", Option::<&Empty>::None)
             .await
     }
 
     /// Reads one runtime logger level from `/sys/loggers/:name`.
     pub async fn logger_level(&self, name: &str) -> Result<LoggerLevels> {
         self.client
-            .request_json_internal(Method::GET, &sys_logger_path(name)?, Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, &sys_logger_path(name)?, Option::<&Empty>::None)
             .await
     }
 }
@@ -4136,7 +4354,7 @@ impl Sys<'_, Unauthenticated> {
             validate_key_share_options(shares, threshold)?;
         }
         self.client
-            .request_json_internal(Method::POST, "sys/init", Some(request))
+            .request_sys_json_internal(Method::POST, "sys/init", Some(request))
             .await
     }
 
@@ -4146,7 +4364,7 @@ impl Sys<'_, Unauthenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_unseal(&self, request: &OperatorUnsealRequest) -> Result<UnsealStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/unseal",
                 Some(&OperatorUnsealPayload {
@@ -4184,7 +4402,7 @@ impl Sys<'_, Unauthenticated> {
 
         let init_response: InitResponse = self
             .client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/init",
                 Some(&InitPayload {
@@ -4238,7 +4456,7 @@ impl Sys<'_, Unauthenticated> {
 
     async fn unseal_once(&self, key: &SecretString) -> Result<UnsealStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/unseal",
                 Some(&UnsealPayload {
@@ -4261,7 +4479,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<SysRandomResponse> = self
             .client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_random_path(None, request.bytes),
                 Some(&payload),
@@ -4282,7 +4500,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<SysRandomResponse> = self
             .client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_random_path(Some(source), request.bytes),
                 Some(&payload),
@@ -4303,7 +4521,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<SysHashResponse> = self
             .client
-            .request_json_internal(Method::POST, &sys_hash_path(algorithm), Some(&payload))
+            .request_sys_json_internal(Method::POST, &sys_hash_path(algorithm), Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -4314,7 +4532,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_seal(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(Method::PUT, "sys/seal", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::POST, "sys/seal", Option::<&Empty>::None)
             .await
     }
 
@@ -4324,7 +4542,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rotate_keyring(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(Method::POST, "sys/rotate/keyring", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::POST, "sys/rotate/keyring", Option::<&Empty>::None)
             .await
     }
 
@@ -4336,7 +4554,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn step_down_leader(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(Method::POST, "sys/step-down", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::POST, "sys/step-down", Option::<&Empty>::None)
             .await
     }
 
@@ -4346,7 +4564,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_status(&self) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json_internal(Method::GET, "sys/rekey/init", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/rekey/init", Option::<&Empty>::None)
             .await
     }
 
@@ -4360,7 +4578,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
         self.client
-            .request_json_internal(Method::POST, "sys/rekey/init", Some(request))
+            .request_sys_json_internal(Method::POST, "sys/rekey/init", Some(request))
             .await
     }
 
@@ -4370,7 +4588,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_cancel(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(Method::DELETE, "sys/rekey/init", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::DELETE, "sys/rekey/init", Option::<&Empty>::None)
             .await
     }
 
@@ -4383,9 +4601,59 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/rekey/update",
+                Some(&OperatorKeyShareUpdatePayload {
+                    key: request.key.expose_secret(),
+                    nonce: &request.nonce,
+                }),
+            )
+            .await
+    }
+
+    /// Reads the PGP-encrypted backup from barrier rekey.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_backup(&self) -> Result<OperatorRecoveryKeyBackup> {
+        self.client
+            .request_sys_json_internal(Method::GET, "sys/rekey/backup", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Deletes the PGP-encrypted backup from barrier rekey.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_delete_backup(&self) -> Result<Empty> {
+        self.client
+            .request_sys_json_internal(Method::DELETE, "sys/rekey/backup", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads barrier-rekey verification status.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_verify_status(&self) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_sys_json_internal(Method::GET, "sys/rekey/verify", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Cancels barrier-rekey verification.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_verify_cancel(&self) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_sys_json_internal(Method::DELETE, "sys/rekey/verify", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Submits one new share to barrier-rekey verification.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rekey_verify_update(
+        &self,
+        request: &OperatorKeyShareUpdateRequest,
+    ) -> Result<OperatorKeyShareUpdateResponse> {
+        self.client
+            .request_sys_json_internal(
+                Method::POST,
+                "sys/rekey/verify",
                 Some(&OperatorKeyShareUpdatePayload {
                     key: request.key.expose_secret(),
                     nonce: &request.nonce,
@@ -4403,7 +4671,7 @@ impl Sys<'_, Authenticated> {
         target: OperatorRotateTarget,
     ) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &rotate_init_path(target),
                 Option::<&Empty>::None,
@@ -4422,7 +4690,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
         self.client
-            .request_json_internal(Method::POST, &rotate_init_path(target), Some(request))
+            .request_sys_json_internal(Method::POST, &rotate_init_path(target), Some(request))
             .await
     }
 
@@ -4432,7 +4700,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rotate_cancel(&self, target: OperatorRotateTarget) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::DELETE,
                 &rotate_init_path(target),
                 Option::<&Empty>::None,
@@ -4450,7 +4718,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &rotate_update_path(target),
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4461,13 +4729,157 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Rotates the barrier encryption key through the legacy all-version path.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_barrier(&self) -> Result<Empty> {
+        self.client
+            .request_sys_json_internal(Method::POST, "sys/rotate", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Rotates the root key through OpenBao's v2.5.5+ dedicated path.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_root_key(&self) -> Result<Empty> {
+        self.client
+            .request_sys_json_internal(Method::POST, "sys/rotate/root", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads key-share rotation verification status.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_verify_status(
+        &self,
+        target: OperatorRotateTarget,
+    ) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_sys_json_internal(
+                Method::GET,
+                &rotate_verify_path(target),
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Submits one new share to key-share rotation verification.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_verify_update(
+        &self,
+        target: OperatorRotateTarget,
+        request: &OperatorKeyShareUpdateRequest,
+    ) -> Result<OperatorKeyShareUpdateResponse> {
+        self.client
+            .request_sys_json_internal(
+                Method::POST,
+                &rotate_verify_path(target),
+                Some(&OperatorKeyShareUpdatePayload {
+                    key: request.key.expose_secret(),
+                    nonce: &request.nonce,
+                }),
+            )
+            .await
+    }
+
+    /// Cancels key-share rotation verification.
+    ///
+    /// OpenBao uses the historical `/sys/rotation/.../verify` spelling only
+    /// for this DELETE operation.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_verify_cancel(
+        &self,
+        target: OperatorRotateTarget,
+    ) -> Result<OperatorKeySharesStatus> {
+        self.client
+            .request_sys_json_internal(
+                Method::DELETE,
+                &rotation_verify_cancel_path(target),
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads a PGP-encrypted key-share rotation backup.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_backup(
+        &self,
+        target: OperatorRotateTarget,
+    ) -> Result<OperatorRecoveryKeyBackup> {
+        self.client
+            .request_sys_json_internal(
+                Method::GET,
+                &rotate_backup_path(target),
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Deletes a PGP-encrypted key-share rotation backup.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_delete_backup(
+        &self,
+        target: OperatorRotateTarget,
+    ) -> Result<Empty> {
+        self.client
+            .request_sys_json_internal(
+                Method::DELETE,
+                &rotate_backup_path(target),
+                Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads automatic barrier rotation configuration.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotation_config(&self) -> Result<OperatorRotationConfig> {
+        let envelope: ResponseEnvelope<OperatorRotationConfig> = self
+            .client
+            .request_sys_json_internal(Method::GET, "sys/rotate/config", Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Writes automatic barrier rotation configuration.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_write_rotation_config(
+        &self,
+        config: &OperatorRotationConfig,
+    ) -> Result<Empty> {
+        self.client
+            .request_sys_json_internal(Method::POST, "sys/rotate/config", Some(config))
+            .await
+    }
+
+    /// Reads automatic keyring rotation configuration (OpenBao v2.4+).
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_keyring_rotation_config(&self) -> Result<OperatorRotationConfig> {
+        let envelope: ResponseEnvelope<OperatorRotationConfig> = self
+            .client
+            .request_sys_json_internal(
+                Method::GET,
+                "sys/rotate/keyring/config",
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Writes automatic keyring rotation configuration (OpenBao v2.4+).
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_write_keyring_rotation_config(
+        &self,
+        config: &OperatorRotationConfig,
+    ) -> Result<Empty> {
+        self.client
+            .request_sys_json_internal(Method::POST, "sys/rotate/keyring/config", Some(config))
+            .await
+    }
+
     /// Reads generate-root progress from `/sys/generate-root/attempt`.
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
     #[cfg(feature = "operator-ops")]
     pub async fn operator_generate_root_status(&self) -> Result<OperatorTokenGenerationStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/generate-root/attempt",
                 Option::<&Empty>::None,
@@ -4486,7 +4898,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorTokenGenerationStartRequest,
     ) -> Result<OperatorTokenGenerationStart> {
         self.client
-            .request_json_internal(Method::POST, "sys/generate-root/attempt", Some(request))
+            .request_sys_json_internal(Method::POST, "sys/generate-root/attempt", Some(request))
             .await
     }
 
@@ -4496,7 +4908,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_generate_root_cancel(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::DELETE,
                 "sys/generate-root/attempt",
                 Option::<&Empty>::None,
@@ -4516,7 +4928,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorTokenGenerationStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/generate-root/update",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4536,7 +4948,7 @@ impl Sys<'_, Authenticated> {
         &self,
     ) -> Result<OperatorTokenGenerationStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/generate-recovery-token/attempt",
                 Option::<&Empty>::None,
@@ -4556,7 +4968,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorTokenGenerationStartRequest,
     ) -> Result<OperatorTokenGenerationStart> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/generate-recovery-token/attempt",
                 Some(request),
@@ -4571,7 +4983,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_generate_recovery_token_cancel(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::DELETE,
                 "sys/generate-recovery-token/attempt",
                 Option::<&Empty>::None,
@@ -4588,7 +5000,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorTokenGenerationStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/generate-recovery-token/update",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4599,20 +5011,18 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
-    /// Decodes an encoded root or recovery token through `/sys/decode-token`.
+    /// Decodes an encoded root or recovery token locally.
     ///
-    /// The returned token is root- or recovery-level credential material.
+    /// OpenBao documents token decoding as a client-side XOR operation; there
+    /// is no `/sys/decode-token` HTTP endpoint. The returned token is root- or
+    /// recovery-level credential material.
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
     #[cfg(feature = "operator-ops")]
     pub async fn operator_decode_token(
         &self,
         request: &DecodeTokenRequest,
     ) -> Result<DecodeTokenResponse> {
-        let envelope: ResponseEnvelope<DecodeTokenResponse> = self
-            .client
-            .request_json_internal(Method::POST, "sys/decode-token", Some(request))
-            .await?;
-        Ok(envelope.data)
+        decode_operator_token(request)
     }
 
     /// Reads legacy recovery-key rekey status from
@@ -4625,7 +5035,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_recovery_key_status(&self) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/rekey-recovery-key/init",
                 Option::<&Empty>::None,
@@ -4643,7 +5053,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
         self.client
-            .request_json_internal(Method::POST, "sys/rekey-recovery-key/init", Some(request))
+            .request_sys_json_internal(Method::POST, "sys/rekey-recovery-key/init", Some(request))
             .await
     }
 
@@ -4653,7 +5063,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_recovery_key_cancel(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::DELETE,
                 "sys/rekey-recovery-key/init",
                 Option::<&Empty>::None,
@@ -4670,7 +5080,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/rekey-recovery-key/update",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4689,7 +5099,7 @@ impl Sys<'_, Authenticated> {
         &self,
     ) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/rekey-recovery-key/verify",
                 Option::<&Empty>::None,
@@ -4705,7 +5115,7 @@ impl Sys<'_, Authenticated> {
         &self,
     ) -> Result<OperatorKeySharesStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::DELETE,
                 "sys/rekey-recovery-key/verify",
                 Option::<&Empty>::None,
@@ -4722,7 +5132,7 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/rekey-recovery-key/verify",
                 Some(&OperatorKeyShareUpdatePayload {
@@ -4739,7 +5149,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_recovery_key_backup(&self) -> Result<OperatorRecoveryKeyBackup> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/rekey/recovery-key-backup",
                 Option::<&Empty>::None,
@@ -4753,7 +5163,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rekey_recovery_key_delete_backup(&self) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::DELETE,
                 "sys/rekey/recovery-key-backup",
                 Option::<&Empty>::None,
@@ -4774,7 +5184,7 @@ impl Sys<'_, Authenticated> {
             query.push(("encoding", encoding));
         }
         self.client
-            .request_json_query_accepting(
+            .request_sys_json_query_accepting(
                 Method::GET,
                 &raw_storage_path(path)?,
                 &query,
@@ -4797,7 +5207,7 @@ impl Sys<'_, Authenticated> {
             encoding: request.encoding,
         };
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 &raw_storage_path(path)?,
                 Some(&payload),
@@ -4814,7 +5224,7 @@ impl Sys<'_, Authenticated> {
     pub async fn raw_list(&self, prefix: &str) -> Result<RawList> {
         let envelope: ResponseEnvelope<RawList> = self
             .client
-            .request_json_query_accepting(
+            .request_sys_json_query_accepting(
                 Method::GET,
                 &raw_storage_path(prefix)?,
                 &[("list", "true".to_owned())],
@@ -4833,7 +5243,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn raw_delete(&self, path: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &raw_storage_path(path)?,
                 Option::<&Empty>::None,
@@ -4859,7 +5269,7 @@ impl Sys<'_, Authenticated> {
             query.push(("debug", debug.to_string()));
         }
         self.client
-            .request_bytes_accepting_internal(
+            .request_sys_bytes_accepting_internal(
                 Method::GET,
                 &pprof_path(profile),
                 &query,
@@ -4874,7 +5284,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_mounts(&self) -> Result<BTreeMap<String, MountInfo>> {
         let envelope: ResponseEnvelope<MountInfoMap> = self
             .client
-            .request_json_internal(Method::GET, "sys/mounts", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/mounts", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data.0)
     }
@@ -4883,7 +5293,7 @@ impl Sys<'_, Authenticated> {
     pub async fn read_mount(&self, mount_path: &str) -> Result<MountInfo> {
         let envelope: ResponseEnvelope<MountInfo> = self
             .client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &sys_path("sys/mounts", mount_path, None)?,
                 Option::<&Empty>::None,
@@ -4899,7 +5309,7 @@ impl Sys<'_, Authenticated> {
         request: &MountEnableRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_path("sys/mounts", mount_path, None)?,
                 Some(request),
@@ -4919,7 +5329,7 @@ impl Sys<'_, Authenticated> {
     /// Disables a mounted secrets engine.
     pub async fn disable_mount(&self, mount_path: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &sys_path("sys/mounts", mount_path, None)?,
                 Option::<&Empty>::None,
@@ -4931,7 +5341,7 @@ impl Sys<'_, Authenticated> {
     /// Reads tune data for a secrets engine.
     pub async fn read_mount_tune(&self, mount_path: &str) -> Result<MountConfig> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &sys_path("sys/mounts", mount_path, Some("tune"))?,
                 Option::<&Empty>::None,
@@ -4942,7 +5352,7 @@ impl Sys<'_, Authenticated> {
     /// Tunes a secrets engine.
     pub async fn tune_mount(&self, mount_path: &str, config: &MountConfig) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_path("sys/mounts", mount_path, Some("tune"))?,
                 Some(config),
@@ -4954,9 +5364,22 @@ impl Sys<'_, Authenticated> {
     pub async fn list_auth_methods(&self) -> Result<BTreeMap<String, MountInfo>> {
         let envelope: ResponseEnvelope<MountInfoMap> = self
             .client
-            .request_json_internal(Method::GET, "sys/auth", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/auth", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data.0)
+    }
+
+    /// Reads one enabled auth method configuration.
+    pub async fn read_auth_method(&self, mount_path: &str) -> Result<MountInfo> {
+        let envelope: ResponseEnvelope<MountInfo> = self
+            .client
+            .request_sys_json_internal(
+                Method::GET,
+                &sys_path("sys/auth", mount_path, None)?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Enables an auth method at `mount_path`.
@@ -4966,7 +5389,7 @@ impl Sys<'_, Authenticated> {
         request: &AuthEnableRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_path("sys/auth", mount_path, None)?,
                 Some(request),
@@ -4977,7 +5400,7 @@ impl Sys<'_, Authenticated> {
     /// Disables an auth method.
     pub async fn disable_auth_method(&self, mount_path: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &sys_path("sys/auth", mount_path, None)?,
                 Option::<&Empty>::None,
@@ -4989,7 +5412,7 @@ impl Sys<'_, Authenticated> {
     /// Reads tune data for an auth method.
     pub async fn read_auth_tune(&self, mount_path: &str) -> Result<MountConfig> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &sys_path("sys/auth", mount_path, Some("tune"))?,
                 Option::<&Empty>::None,
@@ -5000,7 +5423,7 @@ impl Sys<'_, Authenticated> {
     /// Tunes an auth method.
     pub async fn tune_auth_method(&self, mount_path: &str, config: &MountConfig) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_path("sys/auth", mount_path, Some("tune"))?,
                 Some(config),
@@ -5015,7 +5438,7 @@ impl Sys<'_, Authenticated> {
     /// path or a path hosted by a mount.
     pub async fn ui_mount_details(&self, path: &str) -> Result<UiMountDetails> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &internal_ui_mount_path(path)?,
                 Option::<&Empty>::None,
@@ -5023,10 +5446,117 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Lists configured UI response headers through an unstable internal API.
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn list_ui_headers(&self) -> Result<PolicyList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.client
+            .request_sys_json_internal(method, "sys/config/ui/headers", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Reads one configured UI response header.
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn read_ui_header(&self, name: &str) -> Result<UiHeaderConfig> {
+        let envelope: ResponseEnvelope<UiHeaderConfig> = self
+            .client
+            .request_sys_json_internal(Method::GET, &ui_header_path(name)?, Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Writes one UI response header.
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn write_ui_header(&self, name: &str, config: &UiHeaderConfig) -> Result<Empty> {
+        if config.values.len() > crate::response::MAX_RESPONSE_STRINGS {
+            return Err(Error::InvalidParameter(
+                "UI header value list exceeds item limit".into(),
+            ));
+        }
+        self.client
+            .request_sys_json_internal(Method::POST, &ui_header_path(name)?, Some(config))
+            .await
+    }
+
+    /// Deletes one configured UI response header.
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn delete_ui_header(&self, name: &str) -> Result<Empty> {
+        self.client
+            .request_sys_json_accepting(
+                Method::DELETE,
+                &ui_header_path(name)?,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Reads unstable internal entity counters.
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn internal_entity_counters(&self) -> Result<InternalCounters> {
+        let envelope: ResponseEnvelope<InternalCounters> = self
+            .client
+            .request_sys_json_internal(
+                Method::GET,
+                "sys/internal/counters/entities",
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads unstable internal token counters.
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn internal_token_counters(&self) -> Result<InternalCounters> {
+        let envelope: ResponseEnvelope<InternalCounters> = self
+            .client
+            .request_sys_json_internal(
+                Method::GET,
+                "sys/internal/counters/tokens",
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Inspects the unstable internal request root (OpenBao 2.5.5+).
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn internal_request_inspection(&self) -> Result<JsonValue> {
+        let envelope: ResponseEnvelope<JsonValue> = self
+            .client
+            .request_sys_json_internal(
+                Method::GET,
+                "sys/internal/inspect/request/root",
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Inspects one unstable internal router index.
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn internal_router_inspection(
+        &self,
+        target: InternalRouterTarget,
+    ) -> Result<InternalRouterInspection> {
+        let envelope: ResponseEnvelope<InternalRouterInspection> = self
+            .client
+            .request_sys_json_internal(
+                Method::GET,
+                &format!("sys/internal/inspect/router/{}", target.path_segment()),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Lists ACL policies.
     pub async fn list_policies(&self) -> Result<PolicyList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         self.client
-            .request_json_internal(Method::GET, "sys/policy", Option::<&Empty>::None)
+            .request_sys_json_internal(method, "sys/policies/acl", Option::<&Empty>::None)
             .await
     }
 
@@ -5035,9 +5565,9 @@ impl Sys<'_, Authenticated> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 method,
-                &sys_path("sys/policy", prefix, None)?,
+                &sys_path("sys/policies/acl", prefix, None)?,
                 Option::<&Empty>::None,
             )
             .await
@@ -5046,9 +5576,9 @@ impl Sys<'_, Authenticated> {
     /// Reads one ACL policy.
     pub async fn read_policy(&self, name: &str) -> Result<PolicyInfo> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
-                &sys_path("sys/policy", name, None)?,
+                &sys_path("sys/policies/acl", name, None)?,
                 Option::<&Empty>::None,
             )
             .await
@@ -5057,9 +5587,9 @@ impl Sys<'_, Authenticated> {
     /// Creates or updates an ACL policy.
     pub async fn write_policy(&self, name: &str, request: &PolicyWriteRequest) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
-                &sys_path("sys/policy", name, None)?,
+                &sys_path("sys/policies/acl", name, None)?,
                 Some(request),
             )
             .await
@@ -5068,11 +5598,37 @@ impl Sys<'_, Authenticated> {
     /// Deletes an ACL policy.
     pub async fn delete_policy(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
-                &sys_path("sys/policy", name, None)?,
+                &sys_path("sys/policies/acl", name, None)?,
                 Option::<&Empty>::None,
                 &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Lists ACL policies with OpenBao's detailed policy-list representation.
+    ///
+    /// This endpoint is available in OpenBao 2.5 and later.
+    pub async fn list_policies_detailed(&self) -> Result<PolicyList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.client
+            .request_sys_json_internal(method, "sys/policies/detailed/acl", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Lists detailed ACL policies below a prefix.
+    ///
+    /// This endpoint is available in OpenBao 2.5 and later.
+    pub async fn list_policies_detailed_with_prefix(&self, prefix: &str) -> Result<PolicyList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.client
+            .request_sys_json_internal(
+                method,
+                &sys_path("sys/policies/detailed/acl", prefix, None)?,
+                Option::<&Empty>::None,
             )
             .await
     }
@@ -5082,14 +5638,14 @@ impl Sys<'_, Authenticated> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         self.client
-            .request_json_internal(method, "sys/policies/password", Option::<&Empty>::None)
+            .request_sys_json_internal(method, "sys/policies/password", Option::<&Empty>::None)
             .await
     }
 
     /// Reads one password policy.
     pub async fn read_password_policy(&self, name: &str) -> Result<PasswordPolicy> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &sys_path("sys/policies/password", name, None)?,
                 Option::<&Empty>::None,
@@ -5107,7 +5663,7 @@ impl Sys<'_, Authenticated> {
         request: &PasswordPolicyWriteRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_path("sys/policies/password", name, None)?,
                 Some(request),
@@ -5118,7 +5674,7 @@ impl Sys<'_, Authenticated> {
     /// Deletes one password policy.
     pub async fn delete_password_policy(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &sys_path("sys/policies/password", name, None)?,
                 Option::<&Empty>::None,
@@ -5130,7 +5686,7 @@ impl Sys<'_, Authenticated> {
     /// Generates a password from an existing password policy.
     pub async fn generate_password(&self, name: &str) -> Result<GeneratedPassword> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &sys_path("sys/policies/password", name, Some("generate"))?,
                 Option::<&Empty>::None,
@@ -5152,7 +5708,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Capabilities> = self
             .client
-            .request_json_internal(Method::POST, "sys/capabilities-self", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/capabilities-self", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5171,7 +5727,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Capabilities> = self
             .client
-            .request_json_internal(Method::POST, "sys/capabilities", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/capabilities", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5194,7 +5750,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Capabilities> = self
             .client
-            .request_json_internal(Method::POST, "sys/capabilities-accessor", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/capabilities-accessor", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5207,7 +5763,7 @@ impl Sys<'_, Authenticated> {
     /// future fields.
     pub async fn resultant_acl(&self) -> Result<ResultantAcl> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/internal/ui/resultant-acl",
                 Option::<&Empty>::None,
@@ -5224,7 +5780,7 @@ impl Sys<'_, Authenticated> {
     #[cfg(feature = "operator-ops")]
     pub async fn in_flight_requests(&self) -> Result<InFlightRequests> {
         self.client
-            .request_json_internal(Method::GET, "sys/in-flight-req", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/in-flight-req", Option::<&Empty>::None)
             .await
     }
 
@@ -5237,7 +5793,7 @@ impl Sys<'_, Authenticated> {
         request.validate()?;
         let envelope: MfaValidateEnvelope = self
             .client
-            .request_json_internal(Method::POST, "sys/mfa/validate", Some(request))
+            .request_sys_json_internal(Method::POST, "sys/mfa/validate", Some(request))
             .await?;
         envelope.auth.ok_or(Error::MissingField("auth"))
     }
@@ -5246,7 +5802,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_audit_devices(&self) -> Result<BTreeMap<String, AuditDevice>> {
         let devices: AuditDeviceMap = self
             .client
-            .request_json_internal(Method::GET, "sys/audit", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/audit", Option::<&Empty>::None)
             .await?;
         Ok(devices.0)
     }
@@ -5258,7 +5814,7 @@ impl Sys<'_, Authenticated> {
         request: &AuditEnableRequest,
     ) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_path("sys/audit", path, None)?,
                 Some(request),
@@ -5272,7 +5828,7 @@ impl Sys<'_, Authenticated> {
     /// stored audit HMACs from the disabled device cannot be recomputed.
     pub async fn disable_audit_device(&self, path: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &sys_path("sys/audit", path, None)?,
                 Option::<&Empty>::None,
@@ -5287,7 +5843,7 @@ impl Sys<'_, Authenticated> {
             input: input.expose_secret(),
         };
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_path("sys/audit-hash", path, None)?,
                 Some(&payload),
@@ -5300,7 +5856,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao requires `sudo` capability for this endpoint.
     pub async fn list_audited_request_headers(&self) -> Result<AuditedRequestHeaders> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/config/auditing/request-headers",
                 Option::<&Empty>::None,
@@ -5317,7 +5873,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<AuditedRequestHeaderConfig> {
         let headers: BTreeMap<String, AuditedRequestHeaderConfig> = self
             .client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &audited_request_header_path(name)?,
                 Option::<&Empty>::None,
@@ -5338,7 +5894,7 @@ impl Sys<'_, Authenticated> {
         config: AuditedRequestHeaderConfig,
     ) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 &audited_request_header_path(name)?,
                 Some(&config),
@@ -5352,7 +5908,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao requires `sudo` capability for this endpoint.
     pub async fn delete_audited_request_header(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &audited_request_header_path(name)?,
                 Option::<&Empty>::None,
@@ -5368,7 +5924,39 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<LeaseLookup> = self
             .client
-            .request_json_internal(Method::POST, "sys/leases/lookup", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/leases/lookup", Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists lease counts, optionally filtered by lease type.
+    pub async fn list_leases(&self, lease_type: &str) -> Result<LeaseCount> {
+        validate_query_string_value(lease_type, "lease type")?;
+        let envelope: ResponseEnvelope<LeaseCount> = self
+            .client
+            .request_sys_json_query_accepting(
+                Method::GET,
+                "sys/leases",
+                &[("type", lease_type.to_owned())],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists lease identifiers below a validated lease prefix.
+    pub async fn list_lease_ids(&self, prefix: &str) -> Result<LeaseIdList> {
+        let prefix = validate_lease_prefix(prefix)?;
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let envelope: ResponseEnvelope<LeaseIdList> = self
+            .client
+            .request_sys_json_internal(
+                method,
+                &format!("sys/leases/lookup/{prefix}"),
+                Option::<&Empty>::None,
+            )
             .await?;
         Ok(envelope.data)
     }
@@ -5387,7 +5975,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Option<Empty>> = self
             .client
-            .request_json_internal(Method::POST, "sys/leases/renew", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/leases/renew", Some(&payload))
             .await?;
         Ok(LeaseRenewal {
             lease_id: envelope.lease_id,
@@ -5402,7 +5990,7 @@ impl Sys<'_, Authenticated> {
             lease_id: validate_lease_id(lease_id)?,
         };
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 "sys/leases/revoke",
                 Some(&payload),
@@ -5421,7 +6009,7 @@ impl Sys<'_, Authenticated> {
             .map(|sync| vec![("sync", sync.to_string())])
             .unwrap_or_default();
         self.client
-            .request_json_query_accepting(
+            .request_sys_json_query_accepting(
                 Method::POST,
                 &format!("sys/leases/revoke-prefix/{prefix}"),
                 &query,
@@ -5438,7 +6026,7 @@ impl Sys<'_, Authenticated> {
     pub async fn force_revoke_lease_prefix(&self, prefix: &str) -> Result<Empty> {
         let prefix = validate_lease_prefix(prefix)?;
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 &format!("sys/leases/revoke-force/{prefix}"),
                 Option::<&Empty>::None,
@@ -5454,7 +6042,7 @@ impl Sys<'_, Authenticated> {
     /// their own active dynamic credential lease lifecycle explicitly.
     pub async fn tidy_leases(&self) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 "sys/leases/tidy",
                 Option::<&Empty>::None,
@@ -5474,7 +6062,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<LeaseCount> = self
             .client
-            .request_json_query_accepting(
+            .request_sys_json_query_accepting(
                 Method::GET,
                 "sys/leases/count",
                 &query,
@@ -5489,7 +6077,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_plugins(&self) -> Result<PluginCatalog> {
         let envelope: ResponseEnvelope<PluginCatalog> = self
             .client
-            .request_json_internal(Method::GET, "sys/plugins/catalog", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/plugins/catalog", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5500,7 +6088,7 @@ impl Sys<'_, Authenticated> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<PluginList> = self
             .client
-            .request_json_internal(
+            .request_sys_json_internal(
                 method,
                 &plugin_catalog_type_path(plugin_type)?,
                 Option::<&Empty>::None,
@@ -5538,7 +6126,7 @@ impl Sys<'_, Authenticated> {
             oci: request.oci,
         };
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &plugin_catalog_entry_path(plugin_type, name)?,
                 Some(&payload),
@@ -5556,7 +6144,7 @@ impl Sys<'_, Authenticated> {
         let query = plugin_version_query(version)?;
         let envelope: ResponseEnvelope<PluginInfo> = self
             .client
-            .request_json_query_accepting(
+            .request_sys_json_query_accepting(
                 Method::GET,
                 &plugin_catalog_entry_path(plugin_type, name)?,
                 &query,
@@ -5578,7 +6166,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<Empty> {
         let query = plugin_version_query(version)?;
         self.client
-            .request_json_query_accepting(
+            .request_sys_json_query_accepting(
                 Method::DELETE,
                 &plugin_catalog_entry_path(plugin_type, name)?,
                 &query,
@@ -5594,7 +6182,7 @@ impl Sys<'_, Authenticated> {
     pub async fn reload_plugin_backend(&self, request: &PluginReloadRequest) -> Result<Empty> {
         let payload = validate_plugin_reload_request(request)?;
         self.client
-            .request_json_internal(Method::POST, "sys/plugins/reload/backend", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/plugins/reload/backend", Some(&payload))
             .await
     }
 
@@ -5603,7 +6191,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao does not persist this change across reload or restart.
     pub async fn set_logger_levels(&self, level: LoggerLevel) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/loggers",
                 Some(&LoggerLevelPayload {
@@ -5618,7 +6206,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao does not persist this change across reload or restart.
     pub async fn set_logger_level(&self, name: &str, level: LoggerLevel) -> Result<Empty> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 &sys_logger_path(name)?,
                 Some(&LoggerLevelPayload {
@@ -5631,7 +6219,7 @@ impl Sys<'_, Authenticated> {
     /// Reverts all runtime logger levels to the configured level.
     pub async fn reset_logger_levels(&self) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 "sys/loggers",
                 Option::<&Empty>::None,
@@ -5643,7 +6231,7 @@ impl Sys<'_, Authenticated> {
     /// Reverts one runtime logger level to the configured level.
     pub async fn reset_logger_level(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &sys_logger_path(name)?,
                 Option::<&Empty>::None,
@@ -5657,7 +6245,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao requires `sudo` capability for this endpoint.
     pub async fn cors_config(&self) -> Result<CorsConfig> {
         self.client
-            .request_json_internal(Method::GET, "sys/config/cors", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/config/cors", Option::<&Empty>::None)
             .await
     }
 
@@ -5668,7 +6256,7 @@ impl Sys<'_, Authenticated> {
     pub async fn write_cors_config(&self, request: &CorsConfigRequest) -> Result<Empty> {
         request.validate()?;
         self.client
-            .request_json_internal(Method::POST, "sys/config/cors", Some(request))
+            .request_sys_json_internal(Method::POST, "sys/config/cors", Some(request))
             .await
     }
 
@@ -5677,7 +6265,7 @@ impl Sys<'_, Authenticated> {
     /// OpenBao requires `sudo` capability for this endpoint.
     pub async fn delete_cors_config(&self) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 "sys/config/cors",
                 Option::<&Empty>::None,
@@ -5691,7 +6279,7 @@ impl Sys<'_, Authenticated> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         self.client
-            .request_json_internal(method, "sys/version-history", Option::<&Empty>::None)
+            .request_sys_json_internal(method, "sys/version-history", Option::<&Empty>::None)
             .await
     }
 
@@ -5701,7 +6289,7 @@ impl Sys<'_, Authenticated> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<NamespaceList> = self
             .client
-            .request_json_internal(method, "sys/namespaces", Option::<&Empty>::None)
+            .request_sys_json_internal(method, "sys/namespaces", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5710,7 +6298,7 @@ impl Sys<'_, Authenticated> {
     pub async fn create_namespace(&self, path: &str, request: &NamespaceRequest) -> Result<Empty> {
         validate_namespace_request(request)?;
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 &namespace_path(path)?,
                 Some(request),
@@ -5722,7 +6310,7 @@ impl Sys<'_, Authenticated> {
     /// Reads namespace information through `/sys/namespaces/:path`.
     pub async fn read_namespace(&self, path: &str) -> Result<NamespaceInfo> {
         self.client
-            .request_json_internal(Method::GET, &namespace_path(path)?, Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, &namespace_path(path)?, Option::<&Empty>::None)
             .await
     }
 
@@ -5730,7 +6318,7 @@ impl Sys<'_, Authenticated> {
     pub async fn patch_namespace(&self, path: &str, request: &NamespaceRequest) -> Result<Empty> {
         validate_namespace_request(request)?;
         self.client
-            .request_json_headers_accepting(
+            .request_sys_json_headers_accepting(
                 Method::PATCH,
                 &namespace_path(path)?,
                 &[(
@@ -5752,7 +6340,7 @@ impl Sys<'_, Authenticated> {
             custom_metadata: None,
         };
         self.client
-            .request_json_headers_accepting(
+            .request_sys_json_headers_accepting(
                 Method::PATCH,
                 &namespace_path(path)?,
                 &[(
@@ -5768,7 +6356,7 @@ impl Sys<'_, Authenticated> {
     /// Deletes a namespace through `/sys/namespaces/:path`.
     pub async fn delete_namespace(&self, path: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &namespace_path(path)?,
                 Option::<&Empty>::None,
@@ -5781,7 +6369,7 @@ impl Sys<'_, Authenticated> {
     pub async fn read_rate_limit_quota_config(&self) -> Result<RateLimitQuotaConfig> {
         let envelope: ResponseEnvelope<RateLimitQuotaConfig> = self
             .client
-            .request_json_internal(Method::GET, "sys/quotas/config", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/quotas/config", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5793,19 +6381,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<Empty> {
         validate_rate_limit_quota_config(request)?;
         self.client
-            .request_json_internal(Method::POST, "sys/quotas/config", Some(request))
-            .await
-    }
-
-    /// Deletes global rate-limit quota configuration from `/sys/quotas/config`.
-    pub async fn delete_rate_limit_quota_config(&self) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                "sys/quotas/config",
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
+            .request_sys_json_internal(Method::POST, "sys/quotas/config", Some(request))
             .await
     }
 
@@ -5815,7 +6391,7 @@ impl Sys<'_, Authenticated> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<RateLimitQuotaList> = self
             .client
-            .request_json_internal(method, "sys/quotas/rate-limit", Option::<&Empty>::None)
+            .request_sys_json_internal(method, "sys/quotas/rate-limit", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5828,7 +6404,7 @@ impl Sys<'_, Authenticated> {
     ) -> Result<Empty> {
         validate_rate_limit_quota_request(request)?;
         self.client
-            .request_json_internal(Method::POST, &rate_limit_quota_path(name)?, Some(request))
+            .request_sys_json_internal(Method::POST, &rate_limit_quota_path(name)?, Some(request))
             .await
     }
 
@@ -5836,7 +6412,7 @@ impl Sys<'_, Authenticated> {
     pub async fn read_rate_limit_quota(&self, name: &str) -> Result<RateLimitQuotaInfo> {
         let envelope: ResponseEnvelope<RateLimitQuotaInfo> = self
             .client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &rate_limit_quota_path(name)?,
                 Option::<&Empty>::None,
@@ -5848,7 +6424,7 @@ impl Sys<'_, Authenticated> {
     /// Deletes a named rate-limit quota.
     pub async fn delete_rate_limit_quota(&self, name: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::DELETE,
                 &rate_limit_quota_path(name)?,
                 Option::<&Empty>::None,
@@ -5861,7 +6437,7 @@ impl Sys<'_, Authenticated> {
     pub async fn list_locked_users(&self) -> Result<LockedUsers> {
         let envelope: ResponseEnvelope<LockedUsers> = self
             .client
-            .request_json_internal(Method::GET, "sys/locked-users", Option::<&Empty>::None)
+            .request_sys_json_internal(Method::GET, "sys/locked-users", Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -5877,7 +6453,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<LockedUsers> = self
             .client
-            .request_json_internal(Method::GET, "sys/locked-users", Some(&payload))
+            .request_sys_json_internal(Method::GET, "sys/locked-users", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -5888,7 +6464,7 @@ impl Sys<'_, Authenticated> {
     /// not currently locked.
     pub async fn unlock_user(&self, mount_accessor: &str, alias_identifier: &str) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 &locked_user_unlock_path(mount_accessor, alias_identifier)?,
                 Option::<&Empty>::None,
@@ -5920,7 +6496,7 @@ impl Sys<'_, Authenticated> {
             non_voter: request.non_voter,
         };
         self.client
-            .request_json_internal(Method::POST, "sys/storage/raft/join", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/storage/raft/join", Some(&payload))
             .await
     }
 
@@ -5928,7 +6504,7 @@ impl Sys<'_, Authenticated> {
     pub async fn raft_configuration(&self) -> Result<RaftConfiguration> {
         let envelope: ResponseEnvelope<RaftConfiguration> = self
             .client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/storage/raft/configuration",
                 Option::<&Empty>::None,
@@ -5958,7 +6534,7 @@ impl Sys<'_, Authenticated> {
     /// Bootstraps Raft when it is used exclusively for HA storage.
     pub async fn raft_bootstrap(&self) -> Result<Empty> {
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 "sys/storage/raft/bootstrap",
                 Option::<&Empty>::None,
@@ -5975,7 +6551,7 @@ impl Sys<'_, Authenticated> {
     /// production snapshots may require a future streaming API.
     pub async fn raft_snapshot(&self) -> Result<SecretVec> {
         self.client
-            .request_bytes_accepting_internal(
+            .request_sys_bytes_accepting_internal(
                 Method::GET,
                 "sys/storage/raft/snapshot",
                 &[],
@@ -5993,7 +6569,7 @@ impl Sys<'_, Authenticated> {
     pub async fn raft_restore_snapshot(&self, snapshot: &[u8]) -> Result<Empty> {
         validate_raft_snapshot(snapshot)?;
         self.client
-            .request_bytes_accepting_internal(
+            .request_sys_bytes_accepting_internal(
                 Method::POST,
                 "sys/storage/raft/snapshot",
                 &[],
@@ -6012,7 +6588,7 @@ impl Sys<'_, Authenticated> {
     pub async fn raft_force_restore_snapshot(&self, snapshot: &[u8]) -> Result<Empty> {
         validate_raft_snapshot(snapshot)?;
         self.client
-            .request_bytes_accepting_internal(
+            .request_sys_bytes_accepting_internal(
                 Method::POST,
                 "sys/storage/raft/snapshot-force",
                 &[],
@@ -6030,7 +6606,7 @@ impl Sys<'_, Authenticated> {
     /// helper returns JSON under the normal response-size protections.
     pub async fn raft_autopilot_state_json(&self) -> Result<JsonValue> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/storage/raft/autopilot/state",
                 Option::<&Empty>::None,
@@ -6041,7 +6617,7 @@ impl Sys<'_, Authenticated> {
     /// Reads Raft Autopilot configuration.
     pub async fn raft_autopilot_config(&self) -> Result<RaftAutopilotConfig> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 "sys/storage/raft/autopilot/configuration",
                 Option::<&Empty>::None,
@@ -6053,7 +6629,7 @@ impl Sys<'_, Authenticated> {
     pub async fn write_raft_autopilot_config(&self, config: &RaftAutopilotConfig) -> Result<Empty> {
         config.validate()?;
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::POST,
                 "sys/storage/raft/autopilot/configuration",
                 Some(config),
@@ -6069,14 +6645,14 @@ impl Sys<'_, Authenticated> {
     pub async fn remount(&self, request: &RemountRequest) -> Result<RemountResponse> {
         request.validate()?;
         self.client
-            .request_json_internal(Method::POST, "sys/remount", Some(request))
+            .request_sys_json_internal(Method::POST, "sys/remount", Some(request))
             .await
     }
 
     /// Reads the status of a mount migration.
     pub async fn remount_status(&self, migration_id: &str) -> Result<RemountStatus> {
         self.client
-            .request_json_internal(
+            .request_sys_json_internal(
                 Method::GET,
                 &remount_status_path(migration_id)?,
                 Option::<&Empty>::None,
@@ -6098,7 +6674,7 @@ impl Sys<'_, Authenticated> {
                 .map(SecretString::expose_secret),
         };
         self.client
-            .request_json_accepting(
+            .request_sys_json_accepting(
                 Method::POST,
                 &format!("sys/storage/raft/{}", operation.as_path_segment()),
                 Some(&payload),
@@ -6114,7 +6690,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<WrappingLookup> = self
             .client
-            .request_json_internal(Method::POST, "sys/wrapping/lookup", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/wrapping/lookup", Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -6129,7 +6705,7 @@ impl Sys<'_, Authenticated> {
             HeaderValue::from_str(ttl).map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<Option<Empty>> = self
             .client
-            .request_json_headers_accepting(
+            .request_sys_json_headers_accepting(
                 Method::POST,
                 "sys/wrapping/wrap",
                 &[(HeaderName::from_static("x-vault-wrap-ttl"), ttl)],
@@ -6152,14 +6728,14 @@ impl Sys<'_, Authenticated> {
                 };
                 let envelope: ResponseEnvelope<T> = self
                     .client
-                    .request_json_internal(Method::POST, "sys/wrapping/unwrap", Some(&payload))
+                    .request_sys_json_internal(Method::POST, "sys/wrapping/unwrap", Some(&payload))
                     .await?;
                 Ok(envelope.data)
             }
             None => {
                 let envelope: ResponseEnvelope<T> = self
                     .client
-                    .request_json_internal(
+                    .request_sys_json_internal(
                         Method::POST,
                         "sys/wrapping/unwrap",
                         Option::<&Empty>::None,
@@ -6177,7 +6753,7 @@ impl Sys<'_, Authenticated> {
         };
         let envelope: ResponseEnvelope<Option<Empty>> = self
             .client
-            .request_json_internal(Method::POST, "sys/wrapping/rewrap", Some(&payload))
+            .request_sys_json_internal(Method::POST, "sys/wrapping/rewrap", Some(&payload))
             .await?;
         envelope.wrap_info.ok_or(Error::MissingField("wrap_info"))
     }
@@ -6230,6 +6806,21 @@ fn rotate_init_path(target: OperatorRotateTarget) -> String {
 #[cfg(feature = "operator-ops")]
 fn rotate_update_path(target: OperatorRotateTarget) -> String {
     format!("sys/rotate/{}/update", target.path_segment())
+}
+
+#[cfg(feature = "operator-ops")]
+fn rotate_verify_path(target: OperatorRotateTarget) -> String {
+    format!("sys/rotate/{}/verify", target.path_segment())
+}
+
+#[cfg(feature = "operator-ops")]
+fn rotation_verify_cancel_path(target: OperatorRotateTarget) -> String {
+    format!("sys/rotation/{}/verify", target.path_segment())
+}
+
+#[cfg(feature = "operator-ops")]
+fn rotate_backup_path(target: OperatorRotateTarget) -> String {
+    format!("sys/rotate/{}/backup", target.path_segment())
 }
 
 fn require_loopback_dev_target<State>(client: &Client<State>) -> Result<()> {
@@ -6349,6 +6940,87 @@ fn validate_sys_random_bytes(bytes: u64) -> Result<()> {
         )));
     }
     Ok(())
+}
+
+#[cfg(feature = "unstable-internal-ops")]
+fn deserialize_bounded_router_mount_vec<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<InternalRouterMount>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct RouterMountVisitor;
+
+    impl<'de> Visitor<'de> for RouterMountVisitor {
+        type Value = Vec<InternalRouterMount>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a bounded internal router mount list")
+        }
+
+        fn visit_seq<A>(self, mut sequence: A) -> core::result::Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut values = Vec::new();
+            while values.len() < crate::response::MAX_RESPONSE_STRINGS {
+                let Some(value) = sequence.next_element::<InternalRouterMount>()? else {
+                    return Ok(values);
+                };
+                values.push(value);
+            }
+            if sequence.next_element::<IgnoredAny>()?.is_some() {
+                return Err(A::Error::custom(
+                    "OpenBao internal router list exceeds item limit",
+                ));
+            }
+            Ok(values)
+        }
+    }
+
+    deserializer.deserialize_seq(RouterMountVisitor)
+}
+
+#[cfg(feature = "operator-ops")]
+fn decode_operator_token(request: &DecodeTokenRequest) -> Result<DecodeTokenResponse> {
+    const MAX_GENERATED_TOKEN_BYTES: usize = 16 * 1024;
+
+    let encoded = request.encoded_token.expose_secret();
+    let otp = request.otp.expose_secret().as_bytes();
+    if encoded.is_empty() || encoded.len() > MAX_GENERATED_TOKEN_BYTES * 2 {
+        return Err(Error::InvalidParameter(
+            "encoded operator token is empty or exceeds the supported limit".into(),
+        ));
+    }
+    if otp.is_empty() || otp.len() > MAX_GENERATED_TOKEN_BYTES {
+        return Err(Error::InvalidParameter(
+            "operator token OTP is empty or exceeds the supported limit".into(),
+        ));
+    }
+
+    let decoded = base64_ng::STANDARD_NO_PAD
+        .decode_secret(encoded.as_bytes())
+        .map_err(|_| Error::Decode("encoded operator token is not valid unpadded base64".into()))?;
+    let exposed = decoded.into_exposed_vec();
+    let mut token = SecretVec::from_vec(exposed.into_exposed_unprotected_vec_caller_must_zeroize());
+    if token.len() != otp.len() {
+        return Err(Error::InvalidParameter(
+            "decoded operator token and OTP lengths differ".into(),
+        ));
+    }
+    token.with_secret_mut(|bytes| {
+        for (byte, otp_byte) in bytes.iter_mut().zip(otp) {
+            *byte ^= otp_byte;
+        }
+    });
+    let decoded_token = token.with_secret(|bytes| {
+        core::str::from_utf8(bytes)
+            .map(str::to_owned)
+            .map_err(|_| Error::Decode("decoded operator token is not valid UTF-8".into()))
+    })?;
+    Ok(DecodeTokenResponse {
+        token: SecretString::from(decoded_token),
+    })
 }
 
 #[cfg(feature = "transit-bytes")]
@@ -6519,6 +7191,14 @@ fn audited_request_header_path(name: &str) -> Result<String> {
         )
     })?;
     Ok(["sys/config/auditing/request-headers", name.as_str()].join("/"))
+}
+
+#[cfg(feature = "unstable-internal-ops")]
+fn ui_header_path(name: &str) -> Result<String> {
+    let name = HeaderName::from_bytes(name.as_bytes()).map_err(|_| {
+        Error::InvalidParameter("UI header name must be a valid HTTP header name".into())
+    })?;
+    Ok(["sys/config/ui/headers", name.as_str()].join("/"))
 }
 
 fn internal_ui_mount_path(path: &str) -> Result<String> {

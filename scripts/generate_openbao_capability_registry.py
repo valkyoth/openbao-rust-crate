@@ -40,8 +40,8 @@ MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_OPERATIONS = 2048
 MAX_PATH_BYTES = 4096
 EXPECTED_OPERATION_COUNT = 664
-EXPECTED_REGISTRY_SHA256 = "498aebc502b5540d2555e9560d6b1daf3b931ee572d627e30e0c924243f8d722"
-EXPECTED_RUST_SHA256 = "cf410aea3db25c6c93a3c55fb022c803616f88597a87b8d99b0d656776050d82"
+EXPECTED_REGISTRY_SHA256 = "e6670a40565a8e231935ade1985bacbe1595abc40c88c98f7730b648ca4d6880"
+EXPECTED_RUST_SHA256 = "11bfb52ab54302cc145cc8fd15501c24073827fd29296b55edf9ce4ddf4d11ce"
 EXPECTED_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -56,24 +56,7 @@ DISPOSITIONS = {
     "omitted": "omitted",
     "rejected": "security-blocked",
 }
-SECURITY_BLOCKED = frozenset(
-    line.strip()
-    for line in """
-LIST /sys/config/ui/headers
-DELETE /sys/config/ui/headers/:name
-GET /sys/config/ui/headers/:name
-POST /sys/config/ui/headers/:name
-GET /sys/internal/counters/entities
-GET /sys/internal/counters/tokens
-GET /sys/internal/inspect/request/root
-GET /sys/internal/inspect/router/accessor
-GET /sys/internal/inspect/router/root
-GET /sys/internal/inspect/router/storage
-GET /sys/internal/inspect/router/uuid
-GET /sys/monitor
-""".splitlines()
-    if line.strip()
-)
+SECURITY_BLOCKED = frozenset()
 SAFE_ID = re.compile(r"openbao\.[a-z0-9._-]{1,112}\.[0-9a-f]{16}", re.ASCII)
 
 
@@ -480,12 +463,13 @@ def self_test() -> None:
     duplicate["operations"].sort(key=lambda value: value["id"])
     expect_rejected("a duplicate operation identifier", duplicate)
 
-    blocked = copy.deepcopy(registry)
-    blocked_operation = next(
-        item for item in blocked["operations"] if item["disposition"] == "security-blocked"
-    )
-    blocked_operation["disposition"] = "typed"
-    expect_rejected("a security-policy downgrade", blocked)
+    if SECURITY_BLOCKED:
+        blocked = copy.deepcopy(registry)
+        blocked_operation = next(
+            item for item in blocked["operations"] if item["disposition"] == "security-blocked"
+        )
+        blocked_operation["disposition"] = "typed"
+        expect_rejected("a security-policy downgrade", blocked)
 
     gap = copy.deepcopy(registry)
     ranged = next(item for item in gap["operations"] if len(item["ranges"]) > 1)

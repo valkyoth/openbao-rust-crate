@@ -497,27 +497,22 @@ Publishable value:
 
 Stop condition:
 
-- sys/config/ui header rows are rejected for stable scope because OpenBao no
-  longer ships the embedded UI and the residual header use case is narrow
-  server administration;
-- generate-root, generate-recovery-token, decode-token, and legacy
+- sys/config/ui header rows are implemented behind `unstable-internal-ops`
+  plus its acknowledgment and the operator-operation gates;
+- generate-root, generate-recovery-token, local token decoding, and legacy
   recovery-key rekey helpers are implemented behind `operator-ops` plus
   `operator-ops-acknowledged`;
 - password policy CRUD/list/generate helpers are implemented without a feature
   gate, and generated passwords return `SecretString`;
 - resultant ACL is implemented without a feature gate, with a documented
   internal-endpoint stability caveat and conservative capability maps;
-- sys/monitor streaming and internal router inspection are rejected for stable
-  scope; monitor needs a deliberate streaming API design, and router
-  inspection has no stable OpenBao compatibility contract;
+- sys/monitor remains omitted because it needs a deliberate streaming API;
+  internal router inspection is typed behind the unstable internal gates;
 - in-flight request inspection is implemented as a typed operator-gated
   diagnostic helper with `SecretString` token accessors and bounded response
   maps;
-- internal counters are rejected because `/sys/metrics` covers the observability
-  use case and the internal counter API has no stable compatibility contract;
-- internal request inspection is rejected because it is underdocumented and
-  either overlaps capability/resultant-ACL helpers or belongs to OpenBao
-  internal debugging;
+- internal counters and request inspection are typed behind the unstable
+  internal gates with explicit compatibility caveats;
 - all system endpoint decisions are reflected in the matrix and support table;
 - operator-risk additions preserve the existing `operator-ops` plus
   `operator-ops-acknowledged` pattern.

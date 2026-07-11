@@ -65,6 +65,14 @@ compile_error!(
      Add feature \"operator-ops-acknowledged\" to confirm you have audited this choice."
 );
 
+#[cfg(all(
+    feature = "unstable-internal-ops",
+    not(feature = "unstable-internal-ops-acknowledged")
+))]
+compile_error!(
+    "The unstable-internal-ops feature exposes OpenBao internal endpoints without a backwards-compatibility guarantee. Add feature \"unstable-internal-ops-acknowledged\" after auditing this choice."
+);
+
 #[cfg(all(feature = "radius-auth", not(feature = "radius-auth-acknowledged")))]
 compile_error!(
     "The radius-auth feature enables the legacy RADIUS authentication protocol, which relies on MD5-based RADIUS authenticators. \

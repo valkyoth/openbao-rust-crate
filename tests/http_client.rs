@@ -25,9 +25,362 @@ use openbao::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "unstable-internal-ops")]
+#[tokio::test]
+async fn unstable_internal_system_helpers_are_gated_and_typed() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let paths = [
+            "LIST /v1/sys/config/ui/headers ",
+            "GET /v1/sys/config/ui/headers/x-frame-options ",
+            "POST /v1/sys/config/ui/headers/x-frame-options ",
+            "DELETE /v1/sys/config/ui/headers/x-frame-options ",
+            "GET /v1/sys/internal/counters/entities ",
+            "GET /v1/sys/internal/counters/tokens ",
+            "GET /v1/sys/internal/inspect/request/root ",
+            "GET /v1/sys/internal/inspect/router/root ",
+        ];
+        for (step, path) in paths.into_iter().enumerate() {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with(path));
+            let body = match step {
+                0 => r#"{"keys":["x-frame-options"]}"#,
+                1 => r#"{"data":{"values":["DENY"],"multivalue":false}}"#,
+                4 => r#"{"data":{"counters":{"entities":{"total":7}}}}"#,
+                5 => r#"{"data":{"counters":{"service_tokens":{"total":4}}}}"#,
+                6 => r#"{"data":{"path":"sys/health"}}"#,
+                7 => {
+                    r#"{"data":{"root":[{"accessor":"mount-accessor","mount_path":"secret/","mount_type":"kv"}]}}"#
+                }
+                _ => "{}",
+            };
+            write_json_response(&mut stream, "200 OK", body);
+        }
+    });
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(SecretString::from("test-token"));
+    let sys = client.sys();
+    assert_eq!(
+        sys.list_ui_headers()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .policies,
+        ["x-frame-options"]
+    );
+    let header = sys
+        .read_ui_header("x-frame-options")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.write_ui_header("x-frame-options", &header)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.delete_ui_header("x-frame-options")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        sys.internal_entity_counters()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .counters
+            .entities
+            .map(|value| value.total),
+        Some(7)
+    );
+    assert_eq!(
+        sys.internal_token_counters()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .counters
+            .service_tokens
+            .map(|value| value.total),
+        Some(4)
+    );
+    assert!(
+        sys.internal_request_inspection()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .is_object()
+    );
+    let router = sys
+        .internal_router_inspection(openbao::sys::InternalRouterTarget::Root)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(router.root.len(), 1);
+    assert!(!format!("{router:?}").contains("mount-accessor"));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[derive(Debug, Deserialize)]
 struct SecretData {
     value: String,
+}
+
+#[tokio::test]
+async fn versioned_system_extensions_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        for step in 0..11 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/auth/approle HTTP/1.1"));
+                    r#"{"data":{"type":"approle","accessor":"auth-accessor","config":{}}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("LIST /v1/sys/policies/acl HTTP/1.1"));
+                    r#"{"policies":["legacy"],"keys":["modern"]}"#
+                }
+                2 => {
+                    assert!(request.starts_with("LIST /v1/sys/policies/acl/team HTTP/1.1"));
+                    r#"{"keys":["team/app"]}"#
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/sys/policies/acl/app HTTP/1.1"));
+                    r#"{"name":"app","rules":"path \"secret/data/app\" {}","policy":"legacy","version":2}"#
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/sys/policies/acl/app HTTP/1.1"));
+                    "{}"
+                }
+                5 => {
+                    assert!(request.starts_with("DELETE /v1/sys/policies/acl/app HTTP/1.1"));
+                    "{}"
+                }
+                6 => {
+                    assert!(request.starts_with("LIST /v1/sys/policies/detailed/acl HTTP/1.1"));
+                    r#"{"keys":["app"]}"#
+                }
+                7 => {
+                    assert!(
+                        request.starts_with("LIST /v1/sys/policies/detailed/acl/team HTTP/1.1")
+                    );
+                    r#"{"keys":["team/app"]}"#
+                }
+                8 => {
+                    assert!(request.starts_with("GET /v1/sys/leases?type=irrevocable HTTP/1.1"));
+                    r#"{"data":{"lease_count":3,"counts":{"database/":3}}}"#
+                }
+                9 => {
+                    assert!(request.starts_with("LIST /v1/sys/leases/lookup/database HTTP/1.1"));
+                    r#"{"data":{"keys":["database/creds/app/lease"]}}"#
+                }
+                10 => {
+                    assert!(request.starts_with("HEAD /v1/sys/health HTTP/1.1"));
+                    ""
+                }
+                _ => unreachable!(),
+            };
+            let response = format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(SecretString::from("test-token"));
+    let sys = client.sys();
+    assert_eq!(
+        sys.read_auth_method("approle")
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .backend_type,
+        "approle"
+    );
+    assert_eq!(
+        sys.list_policies()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .policies,
+        ["legacy"]
+    );
+    assert_eq!(
+        sys.list_policies_with_prefix("team")
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .policies,
+        ["team/app"]
+    );
+    assert_eq!(
+        sys.read_policy("app")
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .rules,
+        "path \"secret/data/app\" {}"
+    );
+    sys.write_policy(
+        "app",
+        &openbao::sys::PolicyWriteRequest::new("path \"secret/*\" {}"),
+    )
+    .await
+    .unwrap_or_else(|error| panic!("{error}"));
+    sys.delete_policy("app")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        sys.list_policies_detailed()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .policies,
+        ["app"]
+    );
+    assert_eq!(
+        sys.list_policies_detailed_with_prefix("team")
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .policies,
+        ["team/app"]
+    );
+    assert_eq!(
+        sys.list_leases("irrevocable")
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .lease_count,
+        3
+    );
+    let leases = sys
+        .list_lease_ids("database")
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(leases.keys.len(), 1);
+    assert!(!format!("{leases:?}").contains("database/creds/app/lease"));
+    sys.health_head()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
+async fn versioned_operator_rotation_extensions_use_documented_paths() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let paths = [
+            "GET /v1/sys/rekey/backup ",
+            "DELETE /v1/sys/rekey/backup ",
+            "GET /v1/sys/rekey/verify ",
+            "DELETE /v1/sys/rekey/verify ",
+            "POST /v1/sys/rekey/verify ",
+            "POST /v1/sys/rotate ",
+            "POST /v1/sys/rotate/root ",
+            "GET /v1/sys/rotate/config ",
+            "POST /v1/sys/rotate/config ",
+            "GET /v1/sys/rotate/keyring/config ",
+            "POST /v1/sys/rotate/keyring/config ",
+            "GET /v1/sys/rotate/root/backup ",
+            "DELETE /v1/sys/rotate/root/backup ",
+            "GET /v1/sys/rotate/root/verify ",
+            "POST /v1/sys/rotate/root/verify ",
+            "DELETE /v1/sys/rotation/root/verify ",
+        ];
+        for (step, path) in paths.into_iter().enumerate() {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with(path));
+            let body = match step {
+                0 | 11 => {
+                    r#"{"nonce":"backup","keys":{"fingerprint":"encrypted"},"keys_base64":{"fingerprint":"encoded"}}"#
+                }
+                2 | 3 | 13 | 15 => r#"{"started":true,"nonce":"nonce","progress":0,"required":1}"#,
+                4 | 14 => r#"{"complete":true,"nonce":"nonce"}"#,
+                7 | 9 => r#"{"data":{"enabled":true,"interval":3600,"max_operations":1000}}"#,
+                _ => "{}",
+            };
+            write_json_response(&mut stream, "200 OK", body);
+        }
+    });
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(SecretString::from("test-token"));
+    let sys = client.sys();
+    let update =
+        openbao::sys::OperatorKeyShareUpdateRequest::new(SecretString::from("key-share"), "nonce");
+    assert_eq!(
+        sys.operator_rekey_backup()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .keys_base64
+            .len(),
+        1
+    );
+    sys.operator_rekey_delete_backup()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rekey_verify_status()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rekey_verify_cancel()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rekey_verify_update(&update)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rotate_barrier()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rotate_root_key()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = sys
+        .operator_rotation_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_write_rotation_config(&config)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let keyring = sys
+        .operator_keyring_rotation_config()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_write_keyring_rotation_config(&keyring)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let target = openbao::sys::OperatorRotateTarget::Root;
+    sys.operator_rotate_backup(target)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rotate_delete_backup(target)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rotate_verify_status(target)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rotate_verify_update(target, &update)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    sys.operator_rotate_verify_cancel(target)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
 #[derive(Debug, Deserialize)]
@@ -2358,7 +2711,7 @@ async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for step in 0..7 {
+        for step in 0..6 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match step {
@@ -2483,12 +2836,6 @@ async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
         .delete_rate_limit_quota("global-rate-limiter")
         .await
         .unwrap_or_else(|error| panic!("{error}"));
-    client
-        .sys()
-        .delete_rate_limit_quota_config()
-        .await
-        .unwrap_or_else(|error| panic!("{error}"));
-
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
@@ -2917,7 +3264,7 @@ async fn sys_policy_write_sends_documented_path() {
             .read(&mut buffer)
             .unwrap_or_else(|error| panic!("{error}"));
         let request = String::from_utf8_lossy(&buffer[..bytes]);
-        assert!(request.starts_with("POST /v1/sys/policy/app-read HTTP/1.1"));
+        assert!(request.starts_with("POST /v1/sys/policies/acl/app-read HTTP/1.1"));
         assert!(request.contains(r#""policy":"path \"secret/*\" { capabilities = [\"read\"] }""#));
         let response = "HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n";
         stream
@@ -10490,19 +10837,19 @@ async fn admin_bootstrap_runs_idempotent_steps_before_token_issue() {
                     )
                 }
                 4 => {
-                    assert!(request.starts_with("GET /v1/sys/policy/app-read HTTP/1.1"));
+                    assert!(request.starts_with("GET /v1/sys/policies/acl/app-read HTTP/1.1"));
                     (
                         "404 Not Found",
                         r#"{"errors":["missing policy"]}"#.to_owned(),
                     )
                 }
                 5 => {
-                    assert!(request.starts_with("POST /v1/sys/policy/app-read HTTP/1.1"));
+                    assert!(request.starts_with("POST /v1/sys/policies/acl/app-read HTTP/1.1"));
                     assert!(request.contains("secret/data/app"));
                     ("204 No Content", "{}".to_owned())
                 }
                 6 => {
-                    assert!(request.starts_with("GET /v1/sys/policy/app-read HTTP/1.1"));
+                    assert!(request.starts_with("GET /v1/sys/policies/acl/app-read HTTP/1.1"));
                     let rules = "path \"secret/data/app/*\" {\n  capabilities = [\"read\"]\n}\npath \"secret/metadata/app/*\" {\n  capabilities = [\"list\"]\n}\n";
                     (
                         "200 OK",
@@ -11029,7 +11376,7 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
                     r#"{"sealed":false,"n":1,"t":1,"progress":0,"version":"2.5.5"}"#.to_owned()
                 }
                 2 => {
-                    assert!(request.starts_with("PUT /v1/sys/seal HTTP/1.1"));
+                    assert!(request.starts_with("POST /v1/sys/seal HTTP/1.1"));
                     "{}".to_owned()
                 }
                 3 => {
@@ -11218,7 +11565,7 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
     let server_verify_nonce = verify_nonce.clone();
 
     let server = thread::spawn(move || {
-        for step in 0..18 {
+        for step in 0..17 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match step {
@@ -11229,8 +11576,8 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
                 1 => {
                     assert!(request.starts_with("POST /v1/sys/generate-root/attempt HTTP/1.1"));
                     format!(
-                        r#"{{"started":true,"nonce":"{}","progress":0,"required":1,"otp":"{}{}","otp_length":24,"complete":false}}"#,
-                        server_root_nonce, "root-", "otp"
+                        r#"{{"started":true,"nonce":"{}","progress":0,"required":1,"otp":"abcdefghijklmnopqr","otp_length":18,"complete":false}}"#,
+                        server_root_nonce
                     )
                 }
                 2 => {
@@ -11238,27 +11585,21 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
                     assert!(request.contains(&format!(r#""nonce":"{}""#, server_root_nonce)));
                     assert!(request.contains(r#""key":"root-share""#));
                     format!(
-                        r#"{{"started":true,"nonce":"{}","progress":1,"required":1,"encoded_token":"{}{}","complete":true}}"#,
-                        server_root_nonce, "encoded-", "root"
+                        r#"{{"started":true,"nonce":"{}","progress":1,"required":1,"encoded_token":"BQcACwEDA0UbBQQYQBoAGxQc","complete":true}}"#,
+                        server_root_nonce
                     )
                 }
                 3 => {
-                    assert!(request.starts_with("POST /v1/sys/decode-token HTTP/1.1"));
-                    assert!(request.contains(r#""encoded_token":"encoded-root""#));
-                    assert!(request.contains(r#""otp":"root-otp""#));
-                    r#"{"data":{"token":"decoded-root-token"}}"#.to_owned()
-                }
-                4 => {
                     assert!(request.starts_with("DELETE /v1/sys/generate-root/attempt HTTP/1.1"));
                     "{}".to_owned()
                 }
-                5 => {
+                4 => {
                     assert!(
                         request.starts_with("GET /v1/sys/generate-recovery-token/attempt HTTP/1.1")
                     );
                     r#"{"started":false}"#.to_owned()
                 }
-                6 => {
+                5 => {
                     assert!(
                         request
                             .starts_with("POST /v1/sys/generate-recovery-token/attempt HTTP/1.1")
@@ -11269,7 +11610,7 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
                         server_recovery_nonce, "recovery-", "otp"
                     )
                 }
-                7 => {
+                6 => {
                     assert!(
                         request.starts_with("POST /v1/sys/generate-recovery-token/update HTTP/1.1")
                     );
@@ -11280,18 +11621,18 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
                         server_recovery_nonce, "encoded-", "recovery"
                     )
                 }
-                8 => {
+                7 => {
                     assert!(
                         request
                             .starts_with("DELETE /v1/sys/generate-recovery-token/attempt HTTP/1.1")
                     );
                     "{}".to_owned()
                 }
-                9 => {
+                8 => {
                     assert!(request.starts_with("GET /v1/sys/rekey-recovery-key/init HTTP/1.1"));
                     r#"{"started":false}"#.to_owned()
                 }
-                10 => {
+                9 => {
                     assert!(request.starts_with("POST /v1/sys/rekey-recovery-key/init HTTP/1.1"));
                     assert!(request.contains(r#""secret_shares":1"#));
                     format!(
@@ -11299,7 +11640,7 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
                         server_rekey_nonce
                     )
                 }
-                11 => {
+                10 => {
                     assert!(request.starts_with("POST /v1/sys/rekey-recovery-key/update HTTP/1.1"));
                     assert!(request.contains(&format!(r#""nonce":"{}""#, server_rekey_nonce)));
                     assert!(request.contains(r#""key":"current-recovery-share""#));
@@ -11313,25 +11654,25 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
                         server_verify_nonce
                     )
                 }
-                12 => {
+                11 => {
                     assert!(request.starts_with("GET /v1/sys/rekey/recovery-key-backup HTTP/1.1"));
                     r#"{"nonce":"backup-nonce","keys":{"fingerprint":"encrypted-share"}}"#
                         .to_owned()
                 }
-                13 => {
+                12 => {
                     assert!(
                         request.starts_with("DELETE /v1/sys/rekey/recovery-key-backup HTTP/1.1")
                     );
                     "{}".to_owned()
                 }
-                14 => {
+                13 => {
                     assert!(request.starts_with("GET /v1/sys/rekey-recovery-key/verify HTTP/1.1"));
                     format!(
                         r#"{{"nonce":"{}","t":1,"n":1,"progress":0}}"#,
                         server_verify_nonce
                     )
                 }
-                15 => {
+                14 => {
                     assert!(
                         request.starts_with("DELETE /v1/sys/rekey-recovery-key/verify HTTP/1.1")
                     );
@@ -11340,13 +11681,13 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
                         server_verify_nonce
                     )
                 }
-                16 => {
+                15 => {
                     assert!(request.starts_with("POST /v1/sys/rekey-recovery-key/verify HTTP/1.1"));
                     assert!(request.contains(&format!(r#""nonce":"{}""#, server_verify_nonce)));
                     assert!(request.contains(r#""key":"new-recovery-share""#));
                     format!(r#"{{"nonce":"{}","complete":true}}"#, server_verify_nonce)
                 }
-                17 => {
+                16 => {
                     assert!(request.starts_with("GET /v1/sys/in-flight-req HTTP/1.1"));
                     r#"{"request-id":{"start_time":"2026-06-04T12:00:00Z","client_remote_address":"127.0.0.1:9940","request_path":"/v1/secret/data/app","request_method":"GET","client_token_accessor":"token-accessor"}}"#.to_owned()
                 }
@@ -11383,9 +11724,9 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(
         root_start.otp.as_ref().map(SecretString::expose_secret),
-        Some("root-otp")
+        Some("abcdefghijklmnopqr")
     );
-    assert!(!format!("{root_start:?}").contains("root-otp"));
+    assert!(!format!("{root_start:?}").contains("abcdefghijklmnopqr"));
     let root_update = sys
         .operator_generate_root_update(&openbao::sys::OperatorKeyShareUpdateRequest::new(
             SecretString::from("root-share"),
@@ -11398,16 +11739,16 @@ async fn system_0_14_operator_helpers_use_documented_paths_and_redact_material()
             .encoded_token
             .as_ref()
             .map(SecretString::expose_secret),
-        Some("encoded-root")
+        Some("BQcACwEDA0UbBQQYQBoAGxQc")
     );
-    assert!(!format!("{root_update:?}").contains("encoded-root"));
+    assert!(!format!("{root_update:?}").contains("BQcACwEDA0UbBQQYQBoAGxQc"));
     let decoded = sys
         .operator_decode_token(&openbao::sys::DecodeTokenRequest::new(
             root_update
                 .encoded_token
                 .clone()
                 .unwrap_or_else(|| panic!("missing encoded token")),
-            SecretString::from("root-otp"),
+            SecretString::from("abcdefghijklmnopqr"),
         ))
         .await
         .unwrap_or_else(|error| panic!("{error}"));

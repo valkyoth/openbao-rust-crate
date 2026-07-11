@@ -310,11 +310,11 @@ Support plan:
   operator-operation feature gates. Lease prefix revoke, force prefix revoke,
   lease count, lease tidy, and `RenewalHint` timing helpers are implemented.
   CORS wildcard origins are rejected locally. Password policies, resultant ACL,
-  operator-gated generate-root/recovery-token, decode-token, legacy
+  operator-gated generate-root/recovery-token, local token decoding, legacy
   recovery-key rekey, and typed operator-gated in-flight request inspection are
-  implemented in `0.14.0`. System config UI, streaming monitor, internal router
-  inspection, internal counters, and internal request inspection are rejected
-  for stable scope.
+  implemented in `0.14.0`. System config UI and internal router, counter, and
+  request inspection are now typed behind unstable operator gates. Monitor is
+  omitted for stable scope.
 
 ## Ergonomics And Capability Roadmap
 

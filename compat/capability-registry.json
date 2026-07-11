@@ -1,6 +1,6 @@
 {
   "api_snapshot_lock_sha256": "440fbaef87506b3b463689892abb9c0c741e2382676e3c92c4e21fa8cd2a3af6",
-  "contract_matrix_sha256": "509f2ebf505bdeb5248f4d296d8042a368df1dfe505133e4c63fc3f233b4cd73",
+  "contract_matrix_sha256": "241105fd01c0675d42e00d9bf8227a173bc3442fb8b2c8badbc541ff70f7619e",
   "generator_version": 1,
   "operations": [
     {
@@ -996,7 +996,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.delete.sys.config.ui.headers.name.d8366841754ee330",
       "method": "DELETE",
       "path_template": "/sys/config/ui/headers/:name",
@@ -3298,7 +3298,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.config.ui.headers.name.ea54cd23695fecbb",
       "method": "GET",
       "path_template": "/sys/config/ui/headers/:name",
@@ -3410,7 +3410,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.internal.counters.entities.ddc77495893511d2",
       "method": "GET",
       "path_template": "/sys/internal/counters/entities",
@@ -3424,7 +3424,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.internal.counters.tokens.354824ed6ef5b3b5",
       "method": "GET",
       "path_template": "/sys/internal/counters/tokens",
@@ -3438,7 +3438,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.internal.inspect.request.root.885b10e9019aa2b4",
       "method": "GET",
       "path_template": "/sys/internal/inspect/request/root",
@@ -3458,7 +3458,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.internal.inspect.router.accessor.67474f5cd6245561",
       "method": "GET",
       "path_template": "/sys/internal/inspect/router/accessor",
@@ -3472,7 +3472,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.internal.inspect.router.root.627831521c564da5",
       "method": "GET",
       "path_template": "/sys/internal/inspect/router/root",
@@ -3486,7 +3486,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.internal.inspect.router.storage.8ab92aa54c51018d",
       "method": "GET",
       "path_template": "/sys/internal/inspect/router/storage",
@@ -3500,7 +3500,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.internal.inspect.router.uuid.f3565c8d432267d1",
       "method": "GET",
       "path_template": "/sys/internal/inspect/router/uuid",
@@ -3716,7 +3716,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "omitted",
       "id": "openbao.get.sys.monitor.31691ac3a18a5972",
       "method": "GET",
       "path_template": "/sys/monitor",
@@ -4496,7 +4496,7 @@
       ]
     },
     {
-      "disposition": "omitted",
+      "disposition": "typed",
       "id": "openbao.head.sys.health.c7792a3ced1d40c4",
       "method": "HEAD",
       "path_template": "/sys/health",
@@ -5248,7 +5248,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.list.sys.config.ui.headers.2206e096fb7eeb93",
       "method": "LIST",
       "path_template": "/sys/config/ui/headers",
@@ -8276,7 +8276,7 @@
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed-gated",
       "id": "openbao.post.sys.config.ui.headers.name.d2aee5a64c02116c",
       "method": "POST",
       "path_template": "/sys/config/ui/headers/:name",
@@ -9565,9 +9565,8 @@
       "external": 34,
       "omitted": 1,
       "partial": 1,
-      "security-blocked": 12,
-      "typed": 546,
-      "typed-gated": 69,
+      "typed": 547,
+      "typed-gated": 80,
       "unlinked": 1
     },
     "operation_count": 664,
