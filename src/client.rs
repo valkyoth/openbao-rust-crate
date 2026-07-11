@@ -3434,6 +3434,13 @@ where
         match Pin::new(&mut this.inner).poll_next(context) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(Some(Ok(chunk))) => {
+                if chunk.is_empty() {
+                    this.terminal = true;
+                    return Poll::Ready(Some(Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "OpenBao request stream produced an empty chunk",
+                    ))));
+                }
                 let length = u64::try_from(chunk.len()).unwrap_or(u64::MAX);
                 if length > this.remaining {
                     this.terminal = true;
@@ -3575,6 +3582,15 @@ mod tests {
         );
         assert!(matches!(poll_stream(&mut exact), Poll::Ready(Some(Ok(_)))));
         assert!(matches!(poll_stream(&mut exact), Poll::Ready(None)));
+
+        let mut empty = super::ExactLengthRequestStream::new(
+            TestByteStream {
+                chunks: VecDeque::from([Ok(Bytes::new()), Ok(Bytes::new())]),
+            },
+            5,
+        );
+        assert!(matches!(poll_stream(&mut empty), Poll::Ready(Some(Err(_)))));
+        assert!(matches!(poll_stream(&mut empty), Poll::Ready(None)));
 
         let mut overflow = super::ExactLengthRequestStream::new(
             TestByteStream {

@@ -54,6 +54,8 @@ All notable changes to this project are documented here.
 - Added a configurable 8 MiB default request-body limit with bounded JSON and
   form serialization, plus exact-length `raft-stream` restore helpers for
   snapshots up to 256 MiB without a second complete snapshot allocation.
+  Streaming restore rejects empty no-progress chunks as well as overflow,
+  truncation, and producer errors.
 
 ### Changed
 
