@@ -871,6 +871,9 @@ Pentest focus:
 
 Suggested commit title: `Prepare OpenBao SDK 2.0.0`
 
+Status: implemented. Pentest this commit from
+`4e7be2b9c9a37cca1213721b9024c481ab65caa2` to the resulting Commit 20 hash.
+
 Goal:
 
 - verify package metadata and standalone test-fixture constraints remain

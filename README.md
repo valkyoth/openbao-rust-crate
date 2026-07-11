@@ -39,11 +39,11 @@ The crate name on crates.io is `openbao`; Rust imports are lowercase:
 use openbao::Client;
 ```
 
-The latest published stable release is `1.1.2`. The `main` branch now identifies
-itself as the unreleased `2.0.0` development line because its raw-transport,
-JWT/OIDC metadata, base-URL, and multi-version compatibility work includes
-intentional breaking changes. Rust `1.97.0` is the primary checked toolchain;
-Rust `1.90.0` remains the compatibility floor.
+The latest published stable release is `1.1.2`; `2.0.0` is the current release
+candidate. It adds explicit multi-version compatibility and includes reviewed
+breaking changes to raw transport, JWT/OIDC metadata, and base-URL handling.
+Rust `1.97.0` is the primary checked toolchain; Rust `1.90.0` remains the
+compatibility floor.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -155,11 +155,11 @@ Implemented now:
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Version-locked real OpenBao integration harness plus a committed core-flow
   baseline covering all 21 exact releases from `2.0.0` through `2.5.5`.
-- Generated read-only capability profiles with 664 stable, secret-free
+- Generated read-only capability profiles with 666 stable, secret-free
   operation identities and complete exact-release range coverage.
 
-`1.1.2` remains the latest published stable release while `main` develops
-`2.0.0`. Feature history and release details live in [CHANGELOG.md](CHANGELOG.md)
+`1.1.2` remains the latest published stable release until the signed `v2.0.0`
+tag is created. Feature history and release details live in [CHANGELOG.md](CHANGELOG.md)
 and [release-notes](release-notes).
 
 See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
@@ -222,7 +222,7 @@ separate claims:
 | --- | --- | --- |
 | `0.1.0` through `1.0.2` | Release-tested with OpenBao `2.5.4`. | Historical result only; not a current security endorsement. |
 | `1.1.0` through `1.1.2` | Release-tested with OpenBao `2.5.5`. | OpenBao `2.5.5` remains the newest reviewed server profile. |
-| `2.0.0` development branch | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Older profiles provide compatibility, not assurance that later security fixes are present. |
+| `2.0.0` release candidate | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Exact profiles `2.0.0` through `2.5.4` are security-deprecated compatibility targets and do not include all fixes present in `2.5.5`. |
 
 The immutable source and OCI artifact inventory for those historical releases
 is committed under [`compat/`](compat/README.md), together with deterministic

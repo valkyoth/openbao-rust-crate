@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.0.0 - 2026-07-11
+
 ### Added
 
 - Started the `2.0.0` multi-version OpenBao compatibility implementation.
@@ -41,7 +43,7 @@ All notable changes to this project are documented here.
 - Added sanitized per-release CI artifacts and a bounded aggregate report that
   distinguishes compatibility failures from infrastructure failures and
   rejects missing, extra, malformed, or contradictory matrix evidence.
-- Added an anchored generated capability registry with 664 stable operation
+- Added an anchored generated capability registry with 666 stable operation
   identities and complete non-overlapping ranges across all 21 exact OpenBao
   profiles. Public reporting exposes only documentation route templates, never
   caller mount names, secret paths, accessors, or query values.

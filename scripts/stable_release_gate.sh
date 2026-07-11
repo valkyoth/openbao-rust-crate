@@ -10,4 +10,5 @@ grep -q '1.1.2 - Rust 1.96.1 Toolchain And Dependency Refresh' docs/RELEASE_PLAN
 grep -q 'Version: 1.1.2' release-notes/RELEASE_NOTES_1.1.2.md
 grep -q 'version = "2.0.0"' Cargo.toml
 grep -q '2.0.0 - Multi-Version OpenBao Compatibility' docs/RELEASE_PLAN.md
+grep -q 'Version: 2.0.0' release-notes/RELEASE_NOTES_2.0.0.md
 echo "stable release gate complete"

@@ -157,7 +157,7 @@ Support plan:
 - `0.5.0`: userpass login and user administration are implemented; JWT login
   plus JWT/OIDC config and role administration helpers are implemented.
 - `0.8.0`: JWT/OIDC browser flow helpers for authorization URL, callback, and
-  direct/device polling are implemented. On the `2.0.0` development line, GET
+  direct/device polling are implemented. In `2.0.0`, GET
   callback redemption and direct/device polling require
   `oidc-get-callback-acknowledged` because credentials and correlation values
   necessarily enter URL query strings.
