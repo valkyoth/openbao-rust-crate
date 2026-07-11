@@ -64,6 +64,16 @@ const DATABASE_BUILTIN_CONNECTION_FIELDS: [&str; 26] = [
 
 const DATABASE_CONNECTION_EXTRA_COLLISION_ERROR: &str =
     "database connection extra field collides with a typed field";
+const REVIEWED_BUILTIN_DATABASE_PLUGINS: [&str; 8] = [
+    "postgresql-database-plugin",
+    "mysql-database-plugin",
+    "mysql-aurora-database-plugin",
+    "mysql-rds-database-plugin",
+    "mysql-legacy-database-plugin",
+    "cassandra-database-plugin",
+    "influxdb-database-plugin",
+    "valkey-database-plugin",
+];
 
 /// Handle for a mounted Database secrets engine.
 #[derive(Debug)]
@@ -114,7 +124,10 @@ pub struct DatabaseConnectionConfig {
 }
 
 impl DatabaseConnectionConfig {
-    /// Creates a database connection config request with the required plugin name.
+    /// Creates a database connection request for an external or custom plugin.
+    ///
+    /// Reviewed built-in plugin names are rejected during validation; use
+    /// [`Self::builtin`] so their security-sensitive fields remain typed.
     pub fn new(plugin_name: impl Into<String>) -> Self {
         Self {
             plugin_name: plugin_name.into(),
@@ -137,6 +150,14 @@ impl DatabaseConnectionConfig {
                 "database plugin_name must not be empty".into(),
             ));
         }
+        if self.builtin_options.is_none()
+            && REVIEWED_BUILTIN_DATABASE_PLUGINS.contains(&self.plugin_name.as_str())
+        {
+            return Err(Error::InvalidParameter(
+                "reviewed built-in database plugins require DatabaseConnectionConfig::builtin"
+                    .into(),
+            ));
+        }
         if self.allowed_roles.len() > crate::response::MAX_RESPONSE_STRINGS
             || self.root_rotation_statements.len() > crate::response::MAX_RESPONSE_STRINGS
             || self.extra.len() > crate::response::MAX_RESPONSE_STRINGS
@@ -156,9 +177,7 @@ impl DatabaseConnectionConfig {
         };
         let disables_tls_verification = match self.builtin_options.as_ref() {
             Some(DatabaseBuiltinConnectionConfig::PostgreSql(options)) => {
-                postgres_dsn_explicitly_disables_tls_verification(
-                    options.connection_url.expose_secret(),
-                )
+                !postgres_dsn_uses_verify_full(options.connection_url.expose_secret())
             }
             Some(DatabaseBuiltinConnectionConfig::MySql(options)) => {
                 options.tls_skip_verify == Some(true)
@@ -368,10 +387,10 @@ impl MySqlPlugin {
 pub struct PostgreSqlConnectionOptions {
     /// Templated PostgreSQL DSN.
     ///
-    /// Explicit `sslmode=disable`, `allow`, `prefer`, or `require` settings
-    /// require the `insecure-database-tls-acknowledged` Cargo feature because
-    /// they do not authenticate the database server certificate. Both URI
-    /// query parameters and PostgreSQL keyword/value DSNs are checked.
+    /// The DSN must explicitly select `sslmode=verify-full`. Missing, empty,
+    /// duplicated-with-a-final-weaker-value, service-file-only, or weaker TLS
+    /// modes require the `insecure-database-tls-acknowledged` Cargo feature.
+    /// Both URI query parameters and PostgreSQL keyword/value DSNs are checked.
     pub connection_url: SecretString,
     /// Root username.
     pub username: Option<String>,
@@ -418,29 +437,54 @@ impl fmt::Debug for PostgreSqlConnectionOptions {
     }
 }
 
-fn postgres_dsn_explicitly_disables_tls_verification(dsn: &str) -> bool {
-    postgres_uri_query_has_insecure_sslmode(dsn) || postgres_keyword_dsn_has_insecure_sslmode(dsn)
+fn postgres_dsn_uses_verify_full(dsn: &str) -> bool {
+    if postgres_dsn_uses_uri_syntax(dsn) {
+        postgres_uri_query_sslmode(dsn) == PostgresTlsPosture::VerifyFull
+    } else {
+        postgres_keyword_dsn_sslmode(dsn) == PostgresTlsPosture::VerifyFull
+    }
 }
 
-fn postgres_uri_query_has_insecure_sslmode(dsn: &str) -> bool {
-    let Some((_, query_and_fragment)) = dsn.split_once('?') else {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PostgresTlsPosture {
+    MissingOrInsecure,
+    VerifyFull,
+}
+
+fn postgres_dsn_uses_uri_syntax(dsn: &str) -> bool {
+    let Some((scheme, _)) = dsn.split_once(':') else {
         return false;
+    };
+    scheme.eq_ignore_ascii_case("postgresql") || scheme.eq_ignore_ascii_case("postgres")
+}
+
+fn postgres_uri_query_sslmode(dsn: &str) -> PostgresTlsPosture {
+    let Some((_, query_and_fragment)) = dsn.split_once('?') else {
+        return PostgresTlsPosture::MissingOrInsecure;
     };
     let query = query_and_fragment
         .split_once('#')
         .map_or(query_and_fragment, |(query, _)| query);
-    query.split('&').any(|parameter| {
+    let mut posture = PostgresTlsPosture::MissingOrInsecure;
+    for parameter in query.split('&') {
         let Some((key, value)) = parameter.split_once('=') else {
-            return false;
+            continue;
         };
-        percent_decoded_ascii_eq(key, b"sslmode")
-            && postgres_percent_encoded_sslmode_is_insecure(value)
-    })
+        if percent_decoded_ascii_eq(key, b"sslmode") {
+            posture = if percent_decoded_ascii_eq(value, b"verify-full") {
+                PostgresTlsPosture::VerifyFull
+            } else {
+                PostgresTlsPosture::MissingOrInsecure
+            };
+        }
+    }
+    posture
 }
 
-fn postgres_keyword_dsn_has_insecure_sslmode(dsn: &str) -> bool {
+fn postgres_keyword_dsn_sslmode(dsn: &str) -> PostgresTlsPosture {
     let bytes = dsn.as_bytes();
     let mut offset = 0_usize;
+    let mut posture = PostgresTlsPosture::MissingOrInsecure;
     while offset < bytes.len() {
         while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
             offset += 1;
@@ -494,25 +538,15 @@ fn postgres_keyword_dsn_has_insecure_sslmode(dsn: &str) -> bool {
             offset += 1;
         }
 
-        if ascii_eq_ignore_case(&bytes[key_start..key_end], b"sslmode")
-            && postgres_sslmode_is_insecure_escaped(&bytes[value_start..value_end])
-        {
-            return true;
+        if ascii_eq_ignore_case(&bytes[key_start..key_end], b"sslmode") {
+            posture = if escaped_ascii_eq(&bytes[value_start..value_end], b"verify-full") {
+                PostgresTlsPosture::VerifyFull
+            } else {
+                PostgresTlsPosture::MissingOrInsecure
+            };
         }
     }
-    false
-}
-
-fn postgres_percent_encoded_sslmode_is_insecure(value: &str) -> bool {
-    [b"disable".as_slice(), b"allow", b"prefer", b"require"]
-        .iter()
-        .any(|mode| percent_decoded_ascii_eq(value, mode))
-}
-
-fn postgres_sslmode_is_insecure_escaped(value: &[u8]) -> bool {
-    [b"disable".as_slice(), b"allow", b"prefer", b"require"]
-        .iter()
-        .any(|mode| escaped_ascii_eq(value, mode))
+    posture
 }
 
 fn ascii_eq_ignore_case(value: &[u8], expected: &[u8]) -> bool {
@@ -1743,8 +1777,8 @@ mod tests {
         DatabaseBuiltinConnectionConfig, DatabaseConnectionConfig, DatabaseConnectionInfo,
         DatabaseCredentials, DatabaseList, DatabaseRole, DatabaseStaticCredentials,
         InfluxDbConnectionOptions, MySqlConnectionOptions, MySqlPlugin,
-        PostgreSqlConnectionOptions, ValkeyConnectionOptions,
-        postgres_dsn_explicitly_disables_tls_verification,
+        PostgreSqlConnectionOptions, REVIEWED_BUILTIN_DATABASE_PLUGINS, ValkeyConnectionOptions,
+        postgres_dsn_uses_verify_full,
     };
 
     #[test]
@@ -1893,31 +1927,37 @@ mod tests {
     }
 
     #[test]
-    fn postgres_dsn_tls_bypass_detection_covers_uri_and_keyword_forms() {
+    fn postgres_dsn_requires_effective_verify_full() {
         for dsn in [
+            "postgresql://db.example/openbao",
             "postgresql://db.example/openbao?sslmode=disable",
-            "postgresql://db.example/openbao?SSLMode=ALLOW",
-            "postgresql://db.example/openbao?%73slmode=prefer",
-            "postgresql://db.example/openbao?sslmode=%72equire",
+            "postgresql://db.example/openbao?sslmode=",
+            "postgresql://db.example/openbao?sslmode=verify-full&sslmode=require",
+            "postgresql://db.example/openbao?service=production",
+            "host=db.example dbname=openbao",
             "host=db.example sslmode=disable dbname=openbao",
-            "host=db.example sslmode = 'ALLOW' dbname=openbao",
-            r"host=db.example sslmode='pre\fer' dbname=openbao",
+            "host=db.example sslmode=verify-full sslmode=prefer",
+            "service=production",
         ] {
             assert!(
-                postgres_dsn_explicitly_disables_tls_verification(dsn),
-                "insecure sslmode was not detected"
+                !postgres_dsn_uses_verify_full(dsn),
+                "missing or insecure effective sslmode was accepted"
             );
         }
 
         for dsn in [
             "postgresql://db.example/openbao?sslmode=verify-full",
-            "postgresql://db.example/sslmode=disable?application_name=sslmode%3Ddisable",
-            "host=db.example sslmode=verify-ca password=sslmode=disable",
-            "postgresql://db.example/openbao",
+            "POSTGRESQL://db.example/openbao?SSLMode=VERIFY-FULL",
+            "postgresql://db.example/openbao?%73slmode=verify%2Dfull",
+            "postgresql://db.example/openbao?sslmode=require&sslmode=verify-full",
+            "host=db.example sslmode=verify-full dbname=openbao",
+            "host=db.example sslmode = 'VERIFY-FULL' dbname=openbao",
+            r"host=db.example sslmode='verify\-full' dbname=openbao",
+            "service=production sslmode=verify-full",
         ] {
             assert!(
-                !postgres_dsn_explicitly_disables_tls_verification(dsn),
-                "secure or unrelated DSN was rejected"
+                postgres_dsn_uses_verify_full(dsn),
+                "effective verify-full sslmode was rejected"
             );
         }
     }
@@ -1939,6 +1979,43 @@ mod tests {
         assert!(!error.to_string().contains("username"));
         assert!(!error.to_string().contains("password"));
         assert!(!error.to_string().contains("db.example"));
+    }
+
+    #[test]
+    #[cfg(feature = "insecure-database-tls-acknowledged")]
+    fn acknowledged_postgres_dsn_may_omit_verify_full() {
+        let config = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::PostgreSql(PostgreSqlConnectionOptions::new(
+                SecretString::from("postgresql://db.example/openbao"),
+            )),
+        );
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn reviewed_builtin_plugins_require_typed_configuration() {
+        for plugin_name in REVIEWED_BUILTIN_DATABASE_PLUGINS {
+            let mut config = DatabaseConnectionConfig::new(plugin_name);
+            config.connection_url = Some(SecretString::from(
+                "postgresql://root:password@db/openbao?sslmode=disable",
+            ));
+            config
+                .extra
+                .insert("insecure_tls".to_owned(), SecretString::from("true"));
+            let error = config
+                .validate()
+                .err()
+                .unwrap_or_else(|| panic!("reviewed built-in raw config unexpectedly accepted"));
+            assert!(error.to_string().contains("require"));
+            assert!(!error.to_string().contains(plugin_name));
+            assert!(!error.to_string().contains("password"));
+        }
+
+        assert!(
+            DatabaseConnectionConfig::new("custom-database-plugin")
+                .validate()
+                .is_ok()
+        );
     }
 
     #[test]

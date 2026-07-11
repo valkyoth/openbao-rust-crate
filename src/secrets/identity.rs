@@ -36,7 +36,17 @@ pub struct Identity<'a> {
     mount: Vec<String>,
 }
 
-/// Unauthenticated OIDC protocol handle for a named Identity provider mount.
+/// Authenticated OIDC authorization handle for a named Identity provider mount.
+///
+/// OpenBao resolves the requesting entity and provider assignments from the
+/// attached OpenBao token, so authorization cannot use a token-free client.
+#[derive(Debug)]
+pub struct IdentityOidcAuthorization<'a> {
+    client: &'a Client<Authenticated>,
+    mount: Vec<String>,
+}
+
+/// Unauthenticated OIDC token and userinfo handle for an Identity provider.
 ///
 /// This handle deliberately cannot carry an OpenBao token. Provider token and
 /// userinfo operations use OAuth client or bearer credentials instead.
@@ -2627,12 +2637,12 @@ impl ListEntries for IdentityMfaLoginEnforcementList {
 }
 
 impl Client<Unauthenticated> {
-    /// Uses the unauthenticated OIDC protocol endpoints at `identity`.
+    /// Uses the token-free OIDC token and userinfo endpoints at `identity`.
     pub fn identity_oidc_provider(&self) -> Result<IdentityOidcProvider<'_>> {
         self.identity_oidc_provider_at("identity")
     }
 
-    /// Uses the unauthenticated OIDC protocol endpoints at `mount`.
+    /// Uses the token-free OIDC token and userinfo endpoints at `mount`.
     pub fn identity_oidc_provider_at(
         &self,
         mount: impl Into<String>,
@@ -2644,7 +2654,25 @@ impl Client<Unauthenticated> {
     }
 }
 
-impl IdentityOidcProvider<'_> {
+impl Client<Authenticated> {
+    /// Uses the authenticated OIDC authorization endpoint at `identity`.
+    pub fn identity_oidc_authorization(&self) -> Result<IdentityOidcAuthorization<'_>> {
+        self.identity_oidc_authorization_at("identity")
+    }
+
+    /// Uses the authenticated OIDC authorization endpoint at `mount`.
+    pub fn identity_oidc_authorization_at(
+        &self,
+        mount: impl Into<String>,
+    ) -> Result<IdentityOidcAuthorization<'_>> {
+        Ok(IdentityOidcAuthorization {
+            client: self,
+            mount: validate_mount_path(&mount.into())?,
+        })
+    }
+}
+
+impl IdentityOidcAuthorization<'_> {
     /// Requests an authorization code using a JSON `POST` body.
     pub async fn authorize(
         &self,
@@ -2718,6 +2746,16 @@ impl IdentityOidcProvider<'_> {
             .await
     }
 
+    fn path(&self, provider: &str, operation: &str) -> Result<String> {
+        oidc_provider_path(&self.mount, provider, operation)
+    }
+
+    fn registry_path(&self, provider: &str, operation: &str) -> Result<String> {
+        oidc_provider_registry_path(provider, operation)
+    }
+}
+
+impl IdentityOidcProvider<'_> {
     /// Exchanges an authorization code or client credentials for OIDC tokens.
     pub async fn token(
         &self,
@@ -2797,18 +2835,26 @@ impl IdentityOidcProvider<'_> {
     }
 
     fn path(&self, provider: &str, operation: &str) -> Result<String> {
-        let mut segments = self.mount.clone();
-        segments.extend(["oidc".to_owned(), "provider".to_owned()]);
-        segments.extend(validate_mount_path(provider)?);
-        segments.extend(validate_endpoint_path(operation)?);
-        Ok(segments.join("/"))
+        oidc_provider_path(&self.mount, provider, operation)
     }
 
     fn registry_path(&self, provider: &str, operation: &str) -> Result<String> {
-        let provider = validate_mount_path(provider)?.join("/");
-        let operation = validate_endpoint_path(operation)?.join("/");
-        Ok(format!("identity/oidc/provider/{provider}/{operation}"))
+        oidc_provider_registry_path(provider, operation)
     }
+}
+
+fn oidc_provider_path(mount: &[String], provider: &str, operation: &str) -> Result<String> {
+    let mut segments = mount.to_vec();
+    segments.extend(["oidc".to_owned(), "provider".to_owned()]);
+    segments.extend(validate_mount_path(provider)?);
+    segments.extend(validate_endpoint_path(operation)?);
+    Ok(segments.join("/"))
+}
+
+fn oidc_provider_registry_path(provider: &str, operation: &str) -> Result<String> {
+    let provider = validate_mount_path(provider)?.join("/");
+    let operation = validate_endpoint_path(operation)?.join("/");
+    Ok(format!("identity/oidc/provider/{provider}/{operation}"))
 }
 
 impl Client<Authenticated> {

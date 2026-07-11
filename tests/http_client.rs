@@ -5735,11 +5735,12 @@ async fn database_connection_role_and_credentials_use_documented_paths() {
                     assert!(request.contains(r#""plugin_name":"postgresql-database-plugin""#));
                     assert!(request.contains(r#""password":"root-password""#));
                     assert!(request.contains(r#""allowed_roles":["readonly"]"#));
+                    assert!(request.contains("sslmode=verify-full"));
                     "{}"
                 }
                 1 => {
                     assert!(request.starts_with("GET /v1/database/config/postgres HTTP/1.1"));
-                    r#"{"data":{"allowed_roles":["readonly"],"connection_details":{"connection_url":"postgres://{{username}}:{{password}}@localhost/postgres","username":"openbao"},"plugin_name":"postgresql-database-plugin","plugin_version":"","root_credentials_rotate_statements":[]}}"#
+                    r#"{"data":{"allowed_roles":["readonly"],"connection_details":{"connection_url":"postgres://{{username}}:{{password}}@localhost/postgres?sslmode=verify-full","username":"openbao"},"plugin_name":"postgresql-database-plugin","plugin_version":"","root_credentials_rotate_statements":[]}}"#
                 }
                 2 => {
                     assert!(request.starts_with("LIST /v1/database/config HTTP/1.1"));
@@ -5809,21 +5810,18 @@ async fn database_connection_role_and_credentials_use_documented_paths() {
         .database("database")
         .unwrap_or_else(|error| panic!("{error}"));
 
+    let mut postgres =
+        openbao::secrets::database::PostgreSqlConnectionOptions::new(SecretString::from(
+            "postgres://{{username}}:{{password}}@localhost/postgres?sslmode=verify-full",
+        ));
+    postgres.username = Some("openbao".to_owned());
+    postgres.password = Some(SecretString::from("root-password"));
+    let mut connection_config = openbao::secrets::database::DatabaseConnectionConfig::builtin(
+        openbao::secrets::database::DatabaseBuiltinConnectionConfig::PostgreSql(postgres),
+    );
+    connection_config.allowed_roles.push("readonly".to_owned());
     database
-        .configure_connection(
-            "postgres",
-            &openbao::secrets::database::DatabaseConnectionConfig {
-                allowed_roles: vec!["readonly".to_owned()],
-                connection_url: Some(SecretString::from(
-                    "postgres://{{username}}:{{password}}@localhost/postgres",
-                )),
-                username: Some("openbao".to_owned()),
-                password: Some(SecretString::from("root-password")),
-                ..openbao::secrets::database::DatabaseConnectionConfig::new(
-                    "postgresql-database-plugin",
-                )
-            },
-        )
+        .configure_connection("postgres", &connection_config)
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     let connection = database
@@ -6830,6 +6828,7 @@ async fn identity_oidc_protocol_uses_secret_aware_oauth_transport() {
                     );
                     assert!(request.contains(r#""response_type":"code""#));
                     assert!(request.contains(r#""state":"opaque-state""#));
+                    assert!(request.contains("x-vault-token: openbao-identity-token"));
                     r#"{"code":"authorization-code","state":"opaque-state"}"#
                 }
                 1 => {
@@ -6842,6 +6841,7 @@ async fn identity_oidc_protocol_uses_secret_aware_oauth_transport() {
                     assert!(request.contains("code=authorization-code"));
                     assert!(request.contains("code_verifier=pkce-verifier"));
                     assert!(!request.contains("client_secret="));
+                    assert!(!request.contains("x-vault-token"));
                     r#"{"access_token":"access-token","id_token":"id-token","expires_in":3600,"token_type":"Bearer"}"#
                 }
                 _ => {
@@ -6858,16 +6858,17 @@ async fn identity_oidc_protocol_uses_secret_aware_oauth_transport() {
         }
     });
 
-    let client = Client::from_config(
-        OpenBaoConfig::new(format!("http://{addr}"))
-            .and_then(allow_mock_http)
-            .unwrap_or_else(|error| panic!("{error}")),
-    )
-    .unwrap_or_else(|error| panic!("{error}"));
-    let provider = client
-        .identity_oidc_provider()
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
         .unwrap_or_else(|error| panic!("{error}"));
-    let authorization = provider
+    let authorization_client = Client::from_config(config.clone())
+        .unwrap_or_else(|error| panic!("{error}"))
+        .try_with_token(SecretString::from("openbao-identity-token"))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let protocol_client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+    let authorization = authorization_client
+        .identity_oidc_authorization()
+        .unwrap_or_else(|error| panic!("{error}"))
         .authorize(
             "app",
             &IdentityOidcAuthorizeRequest::new(
@@ -6883,6 +6884,10 @@ async fn identity_oidc_protocol_uses_secret_aware_oauth_transport() {
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(authorization.code.expose_secret(), "authorization-code");
     assert!(!format!("{authorization:?}").contains("authorization-code"));
+
+    let provider = protocol_client
+        .identity_oidc_provider()
+        .unwrap_or_else(|error| panic!("{error}"));
 
     let tokens = provider
         .token(
@@ -6920,6 +6925,7 @@ async fn identity_oidc_authorize_get_requires_acknowledged_query_transport() {
         assert!(request.starts_with(
             "GET /v1/identity/oidc/provider/app/authorize?response_type=code&client_id=client&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=openid+profile&state=opaque-state&nonce=request-nonce HTTP/1.1"
         ));
+        assert!(request.contains("x-vault-token: openbao-identity-token"));
         write_json_response(
             &mut stream,
             "200 OK",
@@ -6931,9 +6937,11 @@ async fn identity_oidc_authorize_get_requires_acknowledged_query_transport() {
             .and_then(allow_mock_http)
             .unwrap_or_else(|error| panic!("{error}")),
     )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .try_with_token(SecretString::from("openbao-identity-token"))
     .unwrap_or_else(|error| panic!("{error}"));
     let response = client
-        .identity_oidc_provider()
+        .identity_oidc_authorization()
         .unwrap_or_else(|error| panic!("{error}"))
         .authorize_get(
             "app",

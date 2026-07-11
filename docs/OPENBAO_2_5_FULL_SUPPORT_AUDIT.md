@@ -246,12 +246,15 @@ Completed in compatibility Commit 14:
 
 - entity merge `conflicting_alias_ids_to_keep` and the documented
   `allowed_client_id` provider-list query;
+- separate authenticated Identity OIDC authorization and token-free OAuth
+  token/userinfo handles, matching the endpoint authentication contracts;
 - reviewed PostgreSQL, MySQL/MariaDB family, Cassandra, InfluxDB, and Valkey
   connection option types with native booleans and integers;
 - `SecretString` treatment and redacted `Debug` for DSNs, passwords, private
   TLS material, and plugin PEM/JSON credential bundles;
-- explicit `insecure-database-tls-acknowledged` gating for built-in options
-  that disable database-server certificate verification;
+- reviewed built-in names require typed options, and PostgreSQL requires an
+  effective explicit `sslmode=verify-full` unless
+  `insecure-database-tls-acknowledged` is enabled;
 - the secret-only extension map remains the explicit boundary for external
   plugin schemas whose version does not follow the OpenBao core release.
 

@@ -392,7 +392,7 @@ openbao = { version = "1", features = ["time"] }
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables strict-deadline Tokio convenience helpers such as `Sys::wait_ready` and `Sys::wait_until_unsealed`. Runtime-neutral retry-budget variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
-| `insecure-database-tls-acknowledged` | no | Allows reviewed built-in database connection options to disable database-server TLS certificate verification. Intended only for audited legacy development environments. |
+| `insecure-database-tls-acknowledged` | no | Allows reviewed built-in database connection options to weaken database-server TLS verification, including PostgreSQL DSNs without an effective explicit `sslmode=verify-full`. Intended only for audited legacy development environments. |
 | `acme-protocol` | no | Enables the typed PKI ACME directory/EAB handoff configuration for established ACME client libraries. The crate does not implement JWS, nonce, order, or challenge state machines. Implies `pki`. |
 | `kani` | no | Inert feature reserved for Kani proof harness builds. Normal users do not need it; `scripts/check_kani.sh` enables it with the Rust `1.90.0` Kani toolchain. |
 | `memory-lock` | no | Enables `sanitization` memory-lock support for secret buffers where the host permits it. Requires `memory-lock-acknowledged`; verify OS mlock/VirtualLock limits and swap policy before enabling. |
@@ -480,7 +480,7 @@ Selected unsupported fields fail locally and are never silently omitted.
 | Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
-| Identity | Yes | Entity, group, alias, merge, OIDC token/provider administration and protocol handoff, MFA method, TOTP MFA, and login-enforcement helpers. Entity merge includes conflicting-alias selection and provider listing uses the documented client filter. Protocol helpers use an unauthenticated client handle so an OpenBao token cannot be confused with OAuth Basic/Bearer credentials. |
+| Identity | Yes | Entity, group, alias, merge, OIDC token/provider administration and protocol handoff, MFA method, TOTP MFA, and login-enforcement helpers. Entity merge includes conflicting-alias selection and provider listing uses the documented client filter. OIDC authorization uses an authenticated handle for entity assignment enforcement; token and userinfo helpers use a separate unauthenticated handle so an OpenBao token cannot be confused with OAuth Basic/Bearer credentials. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
 | Database credentials | Yes for built-ins | Connection lifecycle, dynamic/static roles and credentials, and root/static rotation helpers. Reviewed typed connection options cover PostgreSQL, the MySQL/MariaDB family, Cassandra, InfluxDB, and Valkey with secret-aware DSNs, passwords, and TLS material. External plugin versions remain deployment-specific; unknown extension values fail closed as `SecretString` and cannot shadow typed fields. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional raw-byte helpers, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR generation, and certificate-chain install helpers. Import wrappers accept externally wrapped `SecretString` ciphertext or public-key-only import material; raw private or symmetric key bytes stay outside the default endpoint wrappers. The non-default `transit-import` plus `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP wrapping helper for audited development and automation use. |
@@ -750,9 +750,10 @@ async fn main() -> Result<()> {
 }
 ```
 
-Use OpenBao as an Identity OIDC provider without attaching an OpenBao token to
-the protocol requests. The token exchange is form-encoded as required by the
-OIDC endpoint, and returned tokens remain `SecretString` values:
+Use OpenBao as an Identity OIDC provider. Authorization carries the requesting
+entity's OpenBao token so provider assignments can be enforced. Token exchange
+and userinfo use a separate token-free client. The token exchange is
+form-encoded as required, and returned tokens remain `SecretString` values:
 
 ```rust,no_run
 use openbao::secrets::identity::{
@@ -762,9 +763,11 @@ use openbao::{Client, Result, SecretString};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client = Client::new("https://bao.example.com:8200")?;
-    let provider = client.identity_oidc_provider()?;
-    let authorization = provider
+    let openbao_token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let authorization_client = Client::new("https://bao.example.com:8200")?
+        .try_with_token(openbao_token)?;
+    let authorization = authorization_client
+        .identity_oidc_authorization()?
         .authorize(
             "applications",
             &IdentityOidcAuthorizeRequest::new(
@@ -777,6 +780,9 @@ async fn main() -> Result<()> {
             .with_pkce("S256-code-challenge", "S256"),
         )
         .await?;
+
+    let protocol_client = Client::new("https://bao.example.com:8200")?;
+    let provider = protocol_client.identity_oidc_provider()?;
     let tokens = provider
         .token(
             "applications",
@@ -978,7 +984,7 @@ async fn main() -> Result<()> {
     let database = client.database("database")?;
 
     let mut postgres = PostgreSqlConnectionOptions::new(SecretString::from(
-        "postgresql://{{username}}:{{password}}@db.example.com/app",
+        "postgresql://{{username}}:{{password}}@db.example.com/app?sslmode=verify-full",
     ));
     postgres.username = Some("openbao".to_owned());
     postgres.password = Some(SecretString::from("root-database-password"));
