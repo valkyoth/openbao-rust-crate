@@ -33,6 +33,35 @@ const DATABASE_CONNECTION_CONFIG_FIELDS: [&str; 10] = [
     "disable_escaping",
 ];
 
+const DATABASE_BUILTIN_CONNECTION_FIELDS: [&str; 26] = [
+    "host",
+    "hosts",
+    "port",
+    "tls",
+    "insecure_tls",
+    "tls_server_name",
+    "tls_skip_verify",
+    "tls_ca",
+    "tls_certificate_key",
+    "pem_bundle",
+    "pem_json",
+    "skip_verification",
+    "protocol_version",
+    "connect_timeout",
+    "local_datacenter",
+    "socket_keep_alive",
+    "consistency",
+    "username_template",
+    "max_open_connections",
+    "max_idle_connections",
+    "max_connection_lifetime",
+    "password_authentication",
+    "connection_url",
+    "username",
+    "password",
+    "disable_escaping",
+];
+
 const DATABASE_CONNECTION_EXTRA_COLLISION_ERROR: &str =
     "database connection extra field collides with a typed field";
 
@@ -78,6 +107,10 @@ pub struct DatabaseConnectionConfig {
     /// redacted from [`Debug`](fmt::Debug). Prefer the typed fields above when
     /// the plugin supports them.
     pub extra: BTreeMap<String, SecretString>,
+    /// Reviewed options for an OpenBao built-in database plugin.
+    ///
+    /// Use [`Self::builtin`] so the plugin name and option shape cannot drift.
+    pub builtin_options: Option<DatabaseBuiltinConnectionConfig>,
 }
 
 impl DatabaseConnectionConfig {
@@ -87,6 +120,154 @@ impl DatabaseConnectionConfig {
             plugin_name: plugin_name.into(),
             ..Self::default()
         }
+    }
+
+    /// Creates a connection configuration for a reviewed built-in plugin.
+    pub fn builtin(options: DatabaseBuiltinConnectionConfig) -> Self {
+        Self {
+            plugin_name: options.plugin_name().to_owned(),
+            builtin_options: Some(options),
+            ..Self::default()
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.plugin_name.trim().is_empty() {
+            return Err(Error::InvalidParameter(
+                "database plugin_name must not be empty".into(),
+            ));
+        }
+        if self.allowed_roles.len() > crate::response::MAX_RESPONSE_STRINGS
+            || self.root_rotation_statements.len() > crate::response::MAX_RESPONSE_STRINGS
+            || self.extra.len() > crate::response::MAX_RESPONSE_STRINGS
+        {
+            return Err(Error::InvalidParameter(
+                "database connection configuration exceeds item limit".into(),
+            ));
+        }
+        let required = |value: &str, field: &'static str| {
+            if value.trim().is_empty() {
+                Err(Error::InvalidParameter(format!(
+                    "{field} must not be empty"
+                )))
+            } else {
+                Ok(())
+            }
+        };
+        let disables_tls_verification = match self.builtin_options.as_ref() {
+            Some(DatabaseBuiltinConnectionConfig::MySql(options)) => {
+                options.tls_skip_verify == Some(true)
+            }
+            Some(DatabaseBuiltinConnectionConfig::Cassandra(options)) => {
+                options.insecure_tls == Some(true)
+            }
+            Some(DatabaseBuiltinConnectionConfig::InfluxDb(options)) => {
+                options.insecure_tls == Some(true)
+            }
+            Some(DatabaseBuiltinConnectionConfig::Valkey(options)) => {
+                options.insecure_tls == Some(true)
+            }
+            _ => false,
+        };
+        #[cfg(not(feature = "insecure-database-tls-acknowledged"))]
+        if disables_tls_verification {
+            return Err(Error::InvalidParameter(
+                "database TLS verification bypass requires the insecure-database-tls-acknowledged Cargo feature".into(),
+            ));
+        }
+        #[cfg(feature = "insecure-database-tls-acknowledged")]
+        let _ = disables_tls_verification;
+        match self.builtin_options.as_ref() {
+            Some(DatabaseBuiltinConnectionConfig::PostgreSql(options)) => {
+                required(
+                    options.connection_url.expose_secret(),
+                    "PostgreSQL connection_url",
+                )?;
+                validate_optional_database_duration(
+                    options.max_connection_lifetime.as_deref(),
+                    "PostgreSQL max_connection_lifetime",
+                )?;
+            }
+            Some(DatabaseBuiltinConnectionConfig::MySql(options)) => {
+                required(
+                    options.connection_url.expose_secret(),
+                    "MySQL connection_url",
+                )?;
+                validate_optional_database_duration(
+                    options.max_connection_lifetime.as_deref(),
+                    "MySQL max_connection_lifetime",
+                )?;
+            }
+            Some(DatabaseBuiltinConnectionConfig::Cassandra(options)) => {
+                required(&options.hosts, "Cassandra hosts")?;
+                required(&options.username, "Cassandra username")?;
+                required(options.password.expose_secret(), "Cassandra password")?;
+                if options.port == Some(0) || options.protocol_version == Some(0) {
+                    return Err(Error::InvalidParameter(
+                        "Cassandra port and protocol_version must be non-zero".into(),
+                    ));
+                }
+                if options.pem_bundle.is_some() && options.pem_json.is_some() {
+                    return Err(Error::InvalidParameter(
+                        "Cassandra pem_bundle and pem_json are mutually exclusive".into(),
+                    ));
+                }
+                if options.insecure_tls == Some(true) && options.tls == Some(false) {
+                    return Err(Error::InvalidParameter(
+                        "Cassandra insecure_tls conflicts with tls=false".into(),
+                    ));
+                }
+                validate_optional_database_duration(
+                    options.connect_timeout.as_deref(),
+                    "Cassandra connect_timeout",
+                )?;
+                validate_optional_database_duration(
+                    options.socket_keep_alive.as_deref(),
+                    "Cassandra socket_keep_alive",
+                )?;
+            }
+            Some(DatabaseBuiltinConnectionConfig::InfluxDb(options)) => {
+                required(&options.host, "InfluxDB host")?;
+                required(&options.username, "InfluxDB username")?;
+                required(options.password.expose_secret(), "InfluxDB password")?;
+                if options.port == Some(0) {
+                    return Err(Error::InvalidParameter(
+                        "InfluxDB port must be non-zero".into(),
+                    ));
+                }
+                if options.pem_bundle.is_some() && options.pem_json.is_some() {
+                    return Err(Error::InvalidParameter(
+                        "InfluxDB pem_bundle and pem_json are mutually exclusive".into(),
+                    ));
+                }
+                if options.insecure_tls == Some(true) && options.tls == Some(false) {
+                    return Err(Error::InvalidParameter(
+                        "InfluxDB insecure_tls conflicts with tls=false".into(),
+                    ));
+                }
+                validate_optional_database_duration(
+                    options.connect_timeout.as_deref(),
+                    "InfluxDB connect_timeout",
+                )?;
+            }
+            Some(DatabaseBuiltinConnectionConfig::Valkey(options)) => {
+                required(&options.host, "Valkey host")?;
+                required(&options.username, "Valkey username")?;
+                required(options.password.expose_secret(), "Valkey password")?;
+                if options.port == 0 {
+                    return Err(Error::InvalidParameter(
+                        "Valkey port must be non-zero".into(),
+                    ));
+                }
+                if options.insecure_tls == Some(true) && options.tls == Some(false) {
+                    return Err(Error::InvalidParameter(
+                        "Valkey insecure_tls conflicts with tls=false".into(),
+                    ));
+                }
+            }
+            None => {}
+        }
+        Ok(())
     }
 }
 
@@ -105,6 +286,370 @@ impl fmt::Debug for DatabaseConnectionConfig {
             .field("password", &self.password.as_ref().map(|_| "<redacted>"))
             .field("disable_escaping", &self.disable_escaping)
             .field("extra_field_count", &self.extra.len())
+            .field(
+                "builtin_plugin",
+                &self
+                    .builtin_options
+                    .as_ref()
+                    .map(|options| options.plugin_name()),
+            )
+            .finish()
+    }
+}
+
+/// Reviewed connection options for OpenBao's built-in database plugins.
+#[derive(Clone)]
+#[non_exhaustive]
+pub enum DatabaseBuiltinConnectionConfig {
+    /// PostgreSQL built-in plugin options.
+    PostgreSql(PostgreSqlConnectionOptions),
+    /// MySQL, MariaDB, Aurora, RDS, or legacy MySQL built-in plugin options.
+    MySql(MySqlConnectionOptions),
+    /// Cassandra built-in plugin options.
+    Cassandra(CassandraConnectionOptions),
+    /// InfluxDB built-in plugin options.
+    InfluxDb(InfluxDbConnectionOptions),
+    /// Valkey built-in plugin options.
+    Valkey(ValkeyConnectionOptions),
+}
+
+impl DatabaseBuiltinConnectionConfig {
+    fn plugin_name(&self) -> &'static str {
+        match self {
+            Self::PostgreSql(_) => "postgresql-database-plugin",
+            Self::MySql(options) => options.plugin.plugin_name(),
+            Self::Cassandra(_) => "cassandra-database-plugin",
+            Self::InfluxDb(_) => "influxdb-database-plugin",
+            Self::Valkey(_) => "valkey-database-plugin",
+        }
+    }
+}
+
+impl fmt::Debug for DatabaseBuiltinConnectionConfig {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DatabaseBuiltinConnectionConfig")
+            .field("plugin_name", &self.plugin_name())
+            .finish_non_exhaustive()
+    }
+}
+
+/// MySQL-family built-in plugin selection.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MySqlPlugin {
+    /// Standard MySQL/MariaDB plugin.
+    MySql,
+    /// Amazon Aurora MySQL plugin.
+    Aurora,
+    /// Amazon RDS MySQL plugin.
+    Rds,
+    /// Legacy MySQL plugin.
+    Legacy,
+}
+
+impl MySqlPlugin {
+    fn plugin_name(self) -> &'static str {
+        match self {
+            Self::MySql => "mysql-database-plugin",
+            Self::Aurora => "mysql-aurora-database-plugin",
+            Self::Rds => "mysql-rds-database-plugin",
+            Self::Legacy => "mysql-legacy-database-plugin",
+        }
+    }
+}
+
+/// PostgreSQL built-in plugin connection options.
+#[derive(Clone, Default)]
+pub struct PostgreSqlConnectionOptions {
+    /// Templated PostgreSQL DSN.
+    pub connection_url: SecretString,
+    /// Root username.
+    pub username: Option<String>,
+    /// Root password.
+    pub password: Option<SecretString>,
+    /// Maximum open connections.
+    pub max_open_connections: Option<u32>,
+    /// Maximum idle connections; negative disables idle connections.
+    pub max_idle_connections: Option<i32>,
+    /// Maximum connection lifetime.
+    pub max_connection_lifetime: Option<String>,
+    /// Dynamic username template.
+    pub username_template: Option<String>,
+    /// Disables username/password escaping.
+    pub disable_escaping: Option<bool>,
+    /// PostgreSQL password authentication mode.
+    pub password_authentication: Option<String>,
+}
+
+impl PostgreSqlConnectionOptions {
+    /// Creates PostgreSQL options with the required connection URL.
+    pub fn new(connection_url: SecretString) -> Self {
+        Self {
+            connection_url,
+            ..Self::default()
+        }
+    }
+}
+
+impl fmt::Debug for PostgreSqlConnectionOptions {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PostgreSqlConnectionOptions")
+            .field("connection_url", &"<redacted>")
+            .field("username", &self.username)
+            .field("password", &self.password.as_ref().map(|_| "<redacted>"))
+            .field("max_open_connections", &self.max_open_connections)
+            .field("max_idle_connections", &self.max_idle_connections)
+            .field("max_connection_lifetime", &self.max_connection_lifetime)
+            .field("username_template", &self.username_template)
+            .field("disable_escaping", &self.disable_escaping)
+            .field("password_authentication", &self.password_authentication)
+            .finish()
+    }
+}
+
+/// MySQL-family built-in plugin connection options.
+#[derive(Clone)]
+pub struct MySqlConnectionOptions {
+    /// Built-in MySQL plugin variant.
+    pub plugin: MySqlPlugin,
+    /// Templated MySQL DSN.
+    pub connection_url: SecretString,
+    /// Root username.
+    pub username: Option<String>,
+    /// Root password.
+    pub password: Option<SecretString>,
+    /// Maximum open connections.
+    pub max_open_connections: Option<u32>,
+    /// Maximum idle connections; negative disables idle connections.
+    pub max_idle_connections: Option<i32>,
+    /// Maximum connection lifetime.
+    pub max_connection_lifetime: Option<String>,
+    /// Client certificate and private key PEM.
+    pub tls_certificate_key: Option<SecretString>,
+    /// Server CA PEM.
+    pub tls_ca: Option<String>,
+    /// Expected TLS server name.
+    pub tls_server_name: Option<String>,
+    /// Disables TLS certificate verification.
+    pub tls_skip_verify: Option<bool>,
+    /// Dynamic username template.
+    pub username_template: Option<String>,
+    /// Disables username/password escaping.
+    pub disable_escaping: Option<bool>,
+}
+
+impl MySqlConnectionOptions {
+    /// Creates MySQL-family options with the required DSN.
+    pub fn new(plugin: MySqlPlugin, connection_url: SecretString) -> Self {
+        Self {
+            plugin,
+            connection_url,
+            username: None,
+            password: None,
+            max_open_connections: None,
+            max_idle_connections: None,
+            max_connection_lifetime: None,
+            tls_certificate_key: None,
+            tls_ca: None,
+            tls_server_name: None,
+            tls_skip_verify: None,
+            username_template: None,
+            disable_escaping: None,
+        }
+    }
+}
+
+impl fmt::Debug for MySqlConnectionOptions {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("MySqlConnectionOptions")
+            .field("plugin", &self.plugin)
+            .field("connection_url", &"<redacted>")
+            .field("username", &self.username)
+            .field("password", &self.password.as_ref().map(|_| "<redacted>"))
+            .field(
+                "tls_certificate_key",
+                &self.tls_certificate_key.as_ref().map(|_| "<redacted>"),
+            )
+            .field("tls_ca", &self.tls_ca.as_ref().map(|_| "<configured>"))
+            .field("tls_skip_verify", &self.tls_skip_verify)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Cassandra built-in plugin connection options.
+#[derive(Clone, Default)]
+pub struct CassandraConnectionOptions {
+    /// Comma-separated Cassandra hosts.
+    pub hosts: String,
+    /// Root username.
+    pub username: String,
+    /// Root password.
+    pub password: SecretString,
+    /// Cassandra port.
+    pub port: Option<u16>,
+    /// Enables TLS.
+    pub tls: Option<bool>,
+    /// Disables TLS certificate verification.
+    pub insecure_tls: Option<bool>,
+    /// Expected TLS server name.
+    pub tls_server_name: Option<String>,
+    /// PEM bundle containing TLS material.
+    pub pem_bundle: Option<SecretString>,
+    /// JSON containing TLS material.
+    pub pem_json: Option<SecretString>,
+    /// Skips initial permission verification.
+    pub skip_verification: Option<bool>,
+    /// CQL protocol version.
+    pub protocol_version: Option<u8>,
+    /// Connection timeout.
+    pub connect_timeout: Option<String>,
+    /// Preferred local datacenter.
+    pub local_datacenter: Option<String>,
+    /// Socket keep-alive period.
+    pub socket_keep_alive: Option<String>,
+    /// Cassandra consistency mode.
+    pub consistency: Option<String>,
+    /// Dynamic username template.
+    pub username_template: Option<String>,
+}
+
+impl CassandraConnectionOptions {
+    /// Creates Cassandra options with required connection credentials.
+    pub fn new(
+        hosts: impl Into<String>,
+        username: impl Into<String>,
+        password: SecretString,
+    ) -> Self {
+        Self {
+            hosts: hosts.into(),
+            username: username.into(),
+            password,
+            ..Self::default()
+        }
+    }
+}
+
+impl fmt::Debug for CassandraConnectionOptions {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("CassandraConnectionOptions")
+            .field("hosts", &self.hosts)
+            .field("username", &self.username)
+            .field("password", &"<redacted>")
+            .field(
+                "pem_bundle",
+                &self.pem_bundle.as_ref().map(|_| "<redacted>"),
+            )
+            .field("pem_json", &self.pem_json.as_ref().map(|_| "<redacted>"))
+            .finish_non_exhaustive()
+    }
+}
+
+/// InfluxDB built-in plugin connection options.
+#[derive(Clone, Default)]
+pub struct InfluxDbConnectionOptions {
+    /// InfluxDB host.
+    pub host: String,
+    /// Root username.
+    pub username: String,
+    /// Root password.
+    pub password: SecretString,
+    /// InfluxDB port.
+    pub port: Option<u16>,
+    /// Enables TLS.
+    pub tls: Option<bool>,
+    /// Disables TLS certificate verification.
+    pub insecure_tls: Option<bool>,
+    /// PEM bundle containing TLS material.
+    pub pem_bundle: Option<SecretString>,
+    /// JSON containing TLS material.
+    pub pem_json: Option<SecretString>,
+    /// Connection timeout.
+    pub connect_timeout: Option<String>,
+    /// Dynamic username template.
+    pub username_template: Option<String>,
+}
+
+impl InfluxDbConnectionOptions {
+    /// Creates InfluxDB options with required connection credentials.
+    pub fn new(
+        host: impl Into<String>,
+        username: impl Into<String>,
+        password: SecretString,
+    ) -> Self {
+        Self {
+            host: host.into(),
+            username: username.into(),
+            password,
+            ..Self::default()
+        }
+    }
+}
+
+impl fmt::Debug for InfluxDbConnectionOptions {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InfluxDbConnectionOptions")
+            .field("host", &self.host)
+            .field("username", &self.username)
+            .field("password", &"<redacted>")
+            .field(
+                "pem_bundle",
+                &self.pem_bundle.as_ref().map(|_| "<redacted>"),
+            )
+            .field("pem_json", &self.pem_json.as_ref().map(|_| "<redacted>"))
+            .finish_non_exhaustive()
+    }
+}
+
+/// Valkey built-in plugin connection options.
+#[derive(Clone, Default)]
+pub struct ValkeyConnectionOptions {
+    /// Valkey host.
+    pub host: String,
+    /// Valkey port.
+    pub port: u16,
+    /// Administrative username.
+    pub username: String,
+    /// Administrative password.
+    pub password: SecretString,
+    /// Enables TLS.
+    pub tls: Option<bool>,
+    /// Disables TLS certificate verification.
+    pub insecure_tls: Option<bool>,
+}
+
+impl ValkeyConnectionOptions {
+    /// Creates Valkey options with required connection credentials.
+    pub fn new(
+        host: impl Into<String>,
+        port: u16,
+        username: impl Into<String>,
+        password: SecretString,
+    ) -> Self {
+        Self {
+            host: host.into(),
+            port,
+            username: username.into(),
+            password,
+            tls: None,
+            insecure_tls: None,
+        }
+    }
+}
+
+impl fmt::Debug for ValkeyConnectionOptions {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("ValkeyConnectionOptions")
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("username", &self.username)
+            .field("password", &"<redacted>")
+            .field("tls", &self.tls)
+            .field("insecure_tls", &self.insecure_tls)
             .finish()
     }
 }
@@ -389,16 +934,15 @@ impl Database<'_> {
         name: &str,
         config: &DatabaseConnectionConfig,
     ) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["config", name])?, Some(config))
+        config.validate()?;
+        self.request(Method::POST, &self.path(&["config", name])?, Some(config))
             .await
     }
 
     /// Reads a database connection configuration.
     pub async fn read_connection(&self, name: &str) -> Result<DatabaseConnectionInfo> {
         let envelope: ResponseEnvelope<DatabaseConnectionInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["config", name])?,
                 Option::<&Empty>::None,
@@ -419,34 +963,30 @@ impl Database<'_> {
 
     /// Resets a database connection plugin.
     pub async fn reset_connection(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["reset", name])?, Some(&Empty {}))
+        self.request(Method::POST, &self.path(&["reset", name])?, Some(&Empty {}))
             .await
     }
 
     /// Rotates the root credentials for a database connection.
     pub async fn rotate_root(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["rotate-root", name])?,
-                Some(&Empty {}),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["rotate-root", name])?,
+            Some(&Empty {}),
+        )
+        .await
     }
 
     /// Creates or updates a dynamic database role.
     pub async fn write_role(&self, name: &str, role: &DatabaseRole) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(role))
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
     /// Reads a dynamic database role.
     pub async fn read_role(&self, name: &str) -> Result<DatabaseRole> {
         let envelope: ResponseEnvelope<DatabaseRole> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -477,8 +1017,7 @@ impl Database<'_> {
     /// Generates dynamic database credentials for a role.
     pub async fn credentials(&self, name: &str) -> Result<DatabaseCredentials> {
         let envelope: ResponseEnvelope<DatabaseCredentialData> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["creds", name])?,
                 Option::<&Empty>::None,
@@ -489,20 +1028,18 @@ impl Database<'_> {
 
     /// Creates or updates a static database role.
     pub async fn write_static_role(&self, name: &str, role: &DatabaseStaticRole) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["static-roles", name])?,
-                Some(role),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["static-roles", name])?,
+            Some(role),
+        )
+        .await
     }
 
     /// Reads a static database role.
     pub async fn read_static_role(&self, name: &str) -> Result<DatabaseStaticRole> {
         let envelope: ResponseEnvelope<DatabaseStaticRole> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["static-roles", name])?,
                 Option::<&Empty>::None,
@@ -533,8 +1070,7 @@ impl Database<'_> {
     /// Reads current credentials for a static database role.
     pub async fn static_credentials(&self, name: &str) -> Result<DatabaseStaticCredentials> {
         let envelope: ResponseEnvelope<DatabaseStaticCredentials> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["static-creds", name])?,
                 Option::<&Empty>::None,
@@ -545,13 +1081,12 @@ impl Database<'_> {
 
     /// Rotates credentials for a static database role.
     pub async fn rotate_static_role(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["rotate-role", name])?,
-                Some(&Empty {}),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["rotate-role", name])?,
+            Some(&Empty {}),
+        )
+        .await
     }
 
     async fn list_at(
@@ -564,8 +1099,7 @@ impl Database<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<DatabaseList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(&[segment])?,
                 &query,
@@ -577,12 +1111,79 @@ impl Database<'_> {
     }
 
     async fn delete_at(&self, segment: &'static str, name: &str) -> Result<Empty> {
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&[segment, name])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
         self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&[segment, name])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            .request_secret_json_internal(
+                "/database/",
+                "database",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+            )
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_accepting(
+                "/database/",
+                "database",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/database/",
+                "database",
+                &self.mount.join("/"),
+                method,
+                path,
+                query,
+                &[],
+                body,
+                accepted_statuses,
             )
             .await
     }
@@ -594,6 +1195,13 @@ impl Database<'_> {
         }
         Ok(segments.join("/"))
     }
+}
+
+fn validate_optional_database_duration(value: Option<&str>, field: &'static str) -> Result<()> {
+    if let Some(value) = value {
+        crate::validation::validate_duration_parameter(value, field)?;
+    }
+    Ok(())
 }
 
 fn database_credentials_from_envelope(
@@ -621,24 +1229,34 @@ impl Serialize for DatabaseConnectionConfig {
             DATABASE_CONNECTION_CONFIG_FIELDS
                 .iter()
                 .any(|field| key == field)
+                || (self.builtin_options.is_some()
+                    && DATABASE_BUILTIN_CONNECTION_FIELDS
+                        .iter()
+                        .any(|field| key == field))
         }) {
             return Err(<S::Error as serde::ser::Error>::custom(
                 DATABASE_CONNECTION_EXTRA_COLLISION_ERROR,
             ));
         }
 
-        let mut count = 1 + self.extra.len();
-        count += usize::from(self.plugin_version.is_some());
-        count += usize::from(self.verify_connection.is_some());
-        count += usize::from(!self.allowed_roles.is_empty());
-        count += usize::from(!self.root_rotation_statements.is_empty());
-        count += usize::from(self.password_policy.is_some());
-        count += usize::from(self.connection_url.is_some());
-        count += usize::from(self.username.is_some());
-        count += usize::from(self.password.is_some());
-        count += usize::from(self.disable_escaping.is_some());
+        if let Some(options) = self.builtin_options.as_ref() {
+            if self.plugin_name != options.plugin_name() {
+                return Err(<S::Error as serde::ser::Error>::custom(
+                    "database built-in options do not match plugin_name",
+                ));
+            }
+            if self.connection_url.is_some()
+                || self.username.is_some()
+                || self.password.is_some()
+                || self.disable_escaping.is_some()
+            {
+                return Err(<S::Error as serde::ser::Error>::custom(
+                    "database built-in options conflict with legacy typed fields",
+                ));
+            }
+        }
 
-        let mut map = serializer.serialize_map(Some(count))?;
+        let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("plugin_name", &self.plugin_name)?;
         if let Some(plugin_version) = self.plugin_version.as_ref() {
             map.serialize_entry("plugin_version", plugin_version)?;
@@ -666,6 +1284,87 @@ impl Serialize for DatabaseConnectionConfig {
         }
         if let Some(disable_escaping) = self.disable_escaping {
             map.serialize_entry("disable_escaping", &disable_escaping)?;
+        }
+        if let Some(options) = self.builtin_options.as_ref() {
+            macro_rules! optional_entry {
+                ($name:literal, $value:expr) => {
+                    if let Some(value) = $value.as_ref() {
+                        map.serialize_entry($name, value)?;
+                    }
+                };
+            }
+            macro_rules! optional_secret_entry {
+                ($name:literal, $value:expr) => {
+                    if let Some(value) = $value.as_ref() {
+                        map.serialize_entry($name, value.expose_secret())?;
+                    }
+                };
+            }
+            match options {
+                DatabaseBuiltinConnectionConfig::PostgreSql(options) => {
+                    map.serialize_entry("connection_url", options.connection_url.expose_secret())?;
+                    optional_entry!("username", options.username);
+                    optional_secret_entry!("password", options.password);
+                    optional_entry!("max_open_connections", options.max_open_connections);
+                    optional_entry!("max_idle_connections", options.max_idle_connections);
+                    optional_entry!("max_connection_lifetime", options.max_connection_lifetime);
+                    optional_entry!("username_template", options.username_template);
+                    optional_entry!("disable_escaping", options.disable_escaping);
+                    optional_entry!("password_authentication", options.password_authentication);
+                }
+                DatabaseBuiltinConnectionConfig::MySql(options) => {
+                    map.serialize_entry("connection_url", options.connection_url.expose_secret())?;
+                    optional_entry!("username", options.username);
+                    optional_secret_entry!("password", options.password);
+                    optional_entry!("max_open_connections", options.max_open_connections);
+                    optional_entry!("max_idle_connections", options.max_idle_connections);
+                    optional_entry!("max_connection_lifetime", options.max_connection_lifetime);
+                    optional_secret_entry!("tls_certificate_key", options.tls_certificate_key);
+                    optional_entry!("tls_ca", options.tls_ca);
+                    optional_entry!("tls_server_name", options.tls_server_name);
+                    optional_entry!("tls_skip_verify", options.tls_skip_verify);
+                    optional_entry!("username_template", options.username_template);
+                    optional_entry!("disable_escaping", options.disable_escaping);
+                }
+                DatabaseBuiltinConnectionConfig::Cassandra(options) => {
+                    map.serialize_entry("hosts", &options.hosts)?;
+                    map.serialize_entry("username", &options.username)?;
+                    map.serialize_entry("password", options.password.expose_secret())?;
+                    optional_entry!("port", options.port);
+                    optional_entry!("tls", options.tls);
+                    optional_entry!("insecure_tls", options.insecure_tls);
+                    optional_entry!("tls_server_name", options.tls_server_name);
+                    optional_secret_entry!("pem_bundle", options.pem_bundle);
+                    optional_secret_entry!("pem_json", options.pem_json);
+                    optional_entry!("skip_verification", options.skip_verification);
+                    optional_entry!("protocol_version", options.protocol_version);
+                    optional_entry!("connect_timeout", options.connect_timeout);
+                    optional_entry!("local_datacenter", options.local_datacenter);
+                    optional_entry!("socket_keep_alive", options.socket_keep_alive);
+                    optional_entry!("consistency", options.consistency);
+                    optional_entry!("username_template", options.username_template);
+                }
+                DatabaseBuiltinConnectionConfig::InfluxDb(options) => {
+                    map.serialize_entry("host", &options.host)?;
+                    map.serialize_entry("username", &options.username)?;
+                    map.serialize_entry("password", options.password.expose_secret())?;
+                    optional_entry!("port", options.port);
+                    optional_entry!("tls", options.tls);
+                    optional_entry!("insecure_tls", options.insecure_tls);
+                    optional_secret_entry!("pem_bundle", options.pem_bundle);
+                    optional_secret_entry!("pem_json", options.pem_json);
+                    optional_entry!("connect_timeout", options.connect_timeout);
+                    optional_entry!("username_template", options.username_template);
+                }
+                DatabaseBuiltinConnectionConfig::Valkey(options) => {
+                    map.serialize_entry("host", &options.host)?;
+                    map.serialize_entry("port", &options.port)?;
+                    map.serialize_entry("username", &options.username)?;
+                    map.serialize_entry("password", options.password.expose_secret())?;
+                    optional_entry!("tls", options.tls);
+                    optional_entry!("insecure_tls", options.insecure_tls);
+                }
+            }
         }
         for (key, value) in &self.extra {
             map.serialize_entry(key, value.expose_secret())?;
@@ -861,9 +1560,12 @@ mod tests {
     use secrecy::{ExposeSecret, SecretString};
 
     use super::{
+        CassandraConnectionOptions, DATABASE_BUILTIN_CONNECTION_FIELDS,
         DATABASE_CONNECTION_CONFIG_FIELDS, DATABASE_CONNECTION_EXTRA_COLLISION_ERROR,
-        DatabaseConnectionConfig, DatabaseConnectionInfo, DatabaseCredentials, DatabaseList,
-        DatabaseRole, DatabaseStaticCredentials,
+        DatabaseBuiltinConnectionConfig, DatabaseConnectionConfig, DatabaseConnectionInfo,
+        DatabaseCredentials, DatabaseList, DatabaseRole, DatabaseStaticCredentials,
+        InfluxDbConnectionOptions, MySqlConnectionOptions, MySqlPlugin,
+        PostgreSqlConnectionOptions, ValkeyConnectionOptions,
     };
 
     #[test]
@@ -915,6 +1617,100 @@ mod tests {
             assert!(!error.to_string().contains(field));
             assert!(!error.to_string().contains("shadowed-value"));
         }
+
+        for field in DATABASE_BUILTIN_CONNECTION_FIELDS {
+            let mut config =
+                DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::PostgreSql(
+                    PostgreSqlConnectionOptions::new(SecretString::from("postgres-dsn")),
+                ));
+            config
+                .extra
+                .insert(field.to_owned(), SecretString::from("shadowed-value"));
+            let error = serde_json::to_value(&config).err().unwrap_or_else(|| {
+                panic!("built-in database field collision unexpectedly serialized")
+            });
+            assert_eq!(error.to_string(), DATABASE_CONNECTION_EXTRA_COLLISION_ERROR);
+            assert!(!error.to_string().contains(field));
+            assert!(!error.to_string().contains("shadowed-value"));
+        }
+    }
+
+    #[test]
+    fn built_in_database_connection_options_preserve_types_and_redact_secrets() {
+        let mut postgres = PostgreSqlConnectionOptions::new(SecretString::from("postgres-dsn"));
+        postgres.password = Some(SecretString::from("postgres-password"));
+        postgres.max_open_connections = Some(8);
+        let postgres = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::PostgreSql(postgres),
+        );
+        let value = serde_json::to_value(&postgres).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["plugin_name"], "postgresql-database-plugin");
+        assert_eq!(value["max_open_connections"], 8);
+        assert!(!format!("{postgres:?}").contains("postgres-password"));
+
+        let mysql = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::MySql(
+            MySqlConnectionOptions::new(MySqlPlugin::Aurora, SecretString::from("mysql-dsn")),
+        ));
+        assert_eq!(
+            serde_json::to_value(mysql).unwrap_or_else(|error| panic!("{error}"))["plugin_name"],
+            "mysql-aurora-database-plugin"
+        );
+
+        let cassandra = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::Cassandra(CassandraConnectionOptions::new(
+                "db.example.com",
+                "admin",
+                SecretString::from("cassandra-password"),
+            )),
+        );
+        let value = serde_json::to_value(&cassandra).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["hosts"], "db.example.com");
+        assert!(!format!("{cassandra:?}").contains("cassandra-password"));
+
+        let influx = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::InfluxDb(
+            InfluxDbConnectionOptions::new(
+                "influx.example.com",
+                "admin",
+                SecretString::from("influx-password"),
+            ),
+        ));
+        assert_eq!(
+            serde_json::to_value(influx).unwrap_or_else(|error| panic!("{error}"))["host"],
+            "influx.example.com"
+        );
+
+        let valkey = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::Valkey(
+            ValkeyConnectionOptions::new(
+                "valkey.example.com",
+                6379,
+                "admin",
+                SecretString::from("valkey-password"),
+            ),
+        ));
+        let value = serde_json::to_value(&valkey).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["port"], 6379);
+        assert!(!format!("{valkey:?}").contains("valkey-password"));
+    }
+
+    #[test]
+    #[cfg(not(feature = "insecure-database-tls-acknowledged"))]
+    fn built_in_database_tls_verification_bypass_requires_acknowledgement() {
+        let mut options = ValkeyConnectionOptions::new(
+            "valkey.example.com",
+            6379,
+            "admin",
+            SecretString::from("password"),
+        );
+        options.tls = Some(true);
+        options.insecure_tls = Some(true);
+        let config =
+            DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::Valkey(options));
+        let error = config
+            .validate()
+            .err()
+            .unwrap_or_else(|| panic!("insecure database TLS unexpectedly accepted"));
+        assert!(error.to_string().contains("requires"));
+        assert!(!error.to_string().contains("password"));
     }
 
     #[test]

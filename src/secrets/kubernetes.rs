@@ -337,16 +337,14 @@ impl Client<Authenticated> {
 impl KubernetesSecrets<'_> {
     /// Creates or updates the Kubernetes secrets engine configuration.
     pub async fn write_config(&self, config: &KubernetesSecretsConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["config"])?, Some(config))
+        self.request(Method::POST, &self.path(&["config"])?, Some(config))
             .await
     }
 
     /// Reads the Kubernetes secrets engine configuration.
     pub async fn read_config(&self) -> Result<KubernetesSecretsConfig> {
         let envelope: ResponseEnvelope<KubernetesSecretsConfig> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["config"])?,
                 Option::<&Empty>::None,
@@ -357,29 +355,26 @@ impl KubernetesSecrets<'_> {
 
     /// Deletes the Kubernetes secrets engine configuration.
     pub async fn delete_config(&self) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["config"])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["config"])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Creates or updates a Kubernetes secrets engine role.
     pub async fn write_role(&self, name: &str, role: &KubernetesSecretsRole) -> Result<Empty> {
         role.validate()?;
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(role))
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
     /// Reads a Kubernetes secrets engine role.
     pub async fn read_role(&self, name: &str) -> Result<KubernetesSecretsRole> {
         let envelope: ResponseEnvelope<KubernetesSecretsRole> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -403,8 +398,7 @@ impl KubernetesSecrets<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<KubernetesSecretsRoleList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(&["roles"])?,
                 &query,
@@ -417,14 +411,13 @@ impl KubernetesSecrets<'_> {
 
     /// Deletes a Kubernetes secrets engine role.
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["roles", name])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["roles", name])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Generates Kubernetes service account credentials for a role.
@@ -437,10 +430,77 @@ impl KubernetesSecrets<'_> {
             validate_duration_or_seconds(ttl, "kubernetes secrets credential ttl", false)?;
         }
         let envelope: ResponseEnvelope<KubernetesCredentialData> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["creds", role])?, Some(request))
+            .request(Method::POST, &self.path(&["creds", role])?, Some(request))
             .await?;
         Ok(kubernetes_credentials_from_envelope(envelope))
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_internal(
+                "/kubernetes/",
+                "kubernetes",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+            )
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_accepting(
+                "/kubernetes/",
+                "kubernetes",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/kubernetes/",
+                "kubernetes",
+                &self.mount.join("/"),
+                method,
+                path,
+                query,
+                &[],
+                body,
+                accepted_statuses,
+            )
+            .await
     }
 
     fn path(&self, tail: &[&str]) -> Result<String> {

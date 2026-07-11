@@ -674,6 +674,8 @@ Pentest focus:
 
 ### Commit 14: Migrate Remaining Engines And Identity
 
+Status: implemented. Pentest this commit from `82e9d32998c4f5375878cec2fb0002be371678cd` to the resulting Commit 14 hash.
+
 Suggested commit title: `Version remaining OpenBao engine routing`
 
 Goal:

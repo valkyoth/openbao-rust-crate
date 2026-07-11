@@ -40,14 +40,28 @@ MAX_INPUT_BYTES = 32 * 1024 * 1024
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_OPERATIONS = 2048
 MAX_PATH_BYTES = 4096
-EXPECTED_OPERATION_COUNT = 664
-EXPECTED_REGISTRY_SHA256 = "d47bf51eb299bb0ab851c488ad694678b28374fe54a4731733298176dd7e59fd"
-EXPECTED_RUST_SHA256 = "61faa5e964dffffaf2d4fa70db8c805a0334e35ee89eea590362392a25f55adc"
+EXPECTED_OPERATION_COUNT = 666
+EXPECTED_REGISTRY_SHA256 = "3784276671093282fcda1a031dfee8a5c279e79e44160d50c3a3118d9f664260"
+EXPECTED_RUST_SHA256 = "c32581df04aaaccbe3ac1cb7566aadb4bcb369fdc34a9878cf299ca07e49881e"
 EXPECTED_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
     "2.4.4", "2.5.0", "2.5.1", "2.5.2", "2.5.3", "2.5.4", "2.5.5",
 )
+
+# These routes are present in the locked OpenAPI documents but are absent from
+# the tagged MDX operation extraction because their surrounding documentation
+# combines several methods under one heading.
+OPENAPI_OPERATION_SUPPLEMENTS = {
+    ("GET", "/identity/oidc/.well-known/keys"): (
+        "get",
+        "/identity/oidc/.well-known/keys",
+    ),
+    ("POST", "/ssh/issuer/:issuer_ref"): (
+        "post",
+        "/{ssh_mount_path}/issuer/{issuer_ref}",
+    ),
+}
 METHODS = ("ACME", "DELETE", "GET", "HEAD", "LIST", "PATCH", "POST", "PUT", "SCAN")
 MULTI_SEGMENT_PLACEHOLDERS = frozenset({"path", "prefix"})
 SINGLE_SEGMENT_PLACEHOLDERS = frozenset(
@@ -163,6 +177,24 @@ def documented_operations(document: dict[str, Any], version: str) -> set[tuple[s
     return result
 
 
+def supplemented_openapi_operations(
+    document: dict[str, Any], version: str
+) -> set[tuple[str, str]]:
+    if (
+        document.get("schema") != "openbao-normalized-openapi/v1"
+        or document.get("version") != version
+        or not isinstance(document.get("document", {}).get("paths"), dict)
+    ):
+        raise RegistryError("locked OpenAPI snapshot identity is invalid")
+    paths = document["document"]["paths"]
+    result: set[tuple[str, str]] = set()
+    for key, (openapi_method, openapi_path) in OPENAPI_OPERATION_SUPPLEMENTS.items():
+        operation = paths.get(openapi_path, {}).get(openapi_method)
+        if isinstance(operation, dict):
+            result.add(key)
+    return result
+
+
 def compress_ranges(
     versions: list[str],
     states: list[tuple[str, str]],
@@ -200,16 +232,25 @@ def build_registry() -> dict[str, Any]:
         raise RegistryError("current contract matrix checksum is not anchored")
     matrix = parse_json(matrix_bytes, MAX_INPUT_BYTES)
     current = matrix_operations(matrix)
+    for key in OPENAPI_OPERATION_SUPPLEMENTS:
+        current[key] = "typed"
     versions = [record["version"] for record in releases["records"]]
     if [record["version"] for record in snapshot_lock["records"]] != versions:
         raise RegistryError("snapshot and release inventories are misaligned")
 
     by_version: dict[str, set[tuple[str, str]]] = {}
+    tagged_by_version: dict[str, set[tuple[str, str]]] = {}
+    openapi_by_version: dict[str, set[tuple[str, str]]] = {}
     for record in snapshot_lock["records"]:
         version = record["version"]
-        path = ROOT / record["documentation"]["path"]
-        by_version[version] = documented_operations(load_json(path), version)
-    current_tagged = by_version["2.5.5"].copy()
+        documentation_path = ROOT / record["documentation"]["path"]
+        openapi_path = ROOT / record["openapi"]["path"]
+        tagged = documented_operations(load_json(documentation_path), version)
+        openapi = supplemented_openapi_operations(load_json(openapi_path), version)
+        tagged_by_version[version] = tagged
+        openapi_by_version[version] = openapi
+        by_version[version] = tagged | openapi
+    current_tagged = tagged_by_version["2.5.5"].copy()
     by_version["2.5.5"].update(current)
     all_operations = set().union(*by_version.values())
     if len(all_operations) != EXPECTED_OPERATION_COUNT:
@@ -224,6 +265,11 @@ def build_registry() -> dict[str, Any]:
         for version in versions:
             if (method, path) not in by_version[version]:
                 states.append(("unavailable", "none"))
+            elif (
+                (method, path) in openapi_by_version[version]
+                and (method, path) not in tagged_by_version[version]
+            ):
+                states.append(("documented", "locked-openapi"))
             elif version == "2.5.5" and (method, path) not in current_tagged:
                 states.append(("documented", "corrected-2.5.5-contract"))
             else:
@@ -336,6 +382,7 @@ def validate_registry(registry: dict[str, Any]) -> None:
                 or state not in {
                     ("unavailable", "none"),
                     ("documented", "tagged-documentation"),
+                    ("documented", "locked-openapi"),
                     ("documented", "corrected-2.5.5-contract"),
                 }
                 or state == previous_state
@@ -389,6 +436,7 @@ def rust_output(registry: dict[str, Any]) -> bytes:
     evidence_names = {
         "none": "None",
         "tagged-documentation": "TaggedDocumentation",
+        "locked-openapi": "LockedOpenApi",
         "corrected-2.5.5-contract": "CorrectedCurrentContract",
     }
     lines = [

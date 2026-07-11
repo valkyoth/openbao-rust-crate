@@ -101,7 +101,7 @@ must now have an explicit current decision.
 | `0.4.0` | `Kv2ServiceConfig` accepts flat string maps. | Intentional. Use typed structs for nested JSON. |
 | `0.5.0` | OIDC browser/device flows were not implemented. | Resolved in `0.8.0`. |
 | `0.5.0` | Full JOSE/JWKS construction was out of scope. | Still out of scope; use Transit signing helpers with an application JWT/JWK library. |
-| `0.6.0` | Raw unauthenticated SSH public-key reads were not typed. | Intentional; use an external HTTP client for unauthenticated text/plain public-key endpoints. |
+| `0.6.0` | Raw unauthenticated SSH public-key reads were not typed. | Resolved for `2.0.0` through the token-free, bounded `SshPublic` handle. |
 | `0.6.0` | ACL builder did not cover advanced ACL parameter/wrapping constraints. | Wrapping TTL constraints are resolved in `0.15.0`. Keep direct `PolicyWriteRequest` for parameter constraints because safe generation requires a complete HCL value serializer. |
 | `0.7.0` | AppRole delegated per-property endpoints were not typed. | Resolved in `0.9.0` for every documented OpenBao `2.5.x` delegated property row. |
 | `0.7.0` | Custom plugin APIs were not modeled as a generic trait. | Intentional; plugin schemas are deployment-specific. Keep local typed wrappers. |

@@ -41,9 +41,9 @@ EXPECTED_TAGGED_SNAPSHOT_SHA256 = "511d18f9bf894cba50c857c247cf3a22b8fd352914403
 EXPECTED_OPENAPI_SNAPSHOT_SHA256 = "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4"
 EXPECTED_EVIDENCE_SHA256 = "1813d10fb9fdc0df7231035d391d5af288f0ba443ed105cb3816e7269557eab4"
 EXPECTED_OUTPUT_SHA256 = {
-    "docs/openbao-2.5-contract-matrix.json": "f07a4aab2718d113d89a7052a9fb71ca56830ef083a6613e3bb7446d17bd175e",
-    "docs/openbao-2.5-endpoint-matrix.csv": "5141dcc54fdc6abb876284ff0717b5e8fcbfabc6cc8bd1190ffac9353be38bbe",
-    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "8adab843f4b742b495a4f9c20e029f24044f1b6366a65733dea0267c9ce0ccae",
+    "docs/openbao-2.5-contract-matrix.json": "18b388265de2a834198f979c48d33919adee0d70232d452c659d5e99a269584e",
+    "docs/openbao-2.5-endpoint-matrix.csv": "80706c4ceb7263ad85c8dcf592f2e96b62229efa29e0cc3cb8582c9156188072",
+    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "742238404d61215d46cf8ff90067997d6d1e045cc2afc9067a49cd1636a2bfd7",
 }
 MAX_INPUT_BYTES = 16 * 1024 * 1024
 MAX_OUTPUT_BYTES = 32 * 1024 * 1024
@@ -108,6 +108,8 @@ SECRET_DISPOSITION_OVERRIDES = {
     "SCAN /:secret-mount-path/metadata/:path": "typed",
     "LIST /:secret-mount-path/detailed-metadata/:path": "typed",
     "SCAN /:secret-mount-path/detailed-metadata/:path": "typed",
+    "GET /ssh/public_key": "typed",
+    "GET /ssh/issuer/:issuer_ref/public_key": "typed",
 }
 
 PKI_DISPOSITION_OVERRIDES = {

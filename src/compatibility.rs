@@ -584,6 +584,8 @@ pub enum OpenBaoCapabilityEvidence {
     None,
     /// The route appears in exact tagged OpenBao API documentation.
     TaggedDocumentation,
+    /// The route appears in an immutable exact-release OpenAPI snapshot.
+    LockedOpenApi,
     /// The route is present in the corrected exact 2.5.5 contract extraction.
     CorrectedCurrentContract,
 }
@@ -1163,7 +1165,7 @@ mod tests {
         let operations = openbao_operations();
         let versions = openbao_profile_versions();
 
-        assert_eq!(operations.len(), 664);
+        assert_eq!(operations.len(), 666);
         assert_eq!(versions.len(), 21);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
@@ -1186,6 +1188,15 @@ mod tests {
                 assert!(operation.evidence(*version).is_some());
             }
         }
+
+        let openapi_only = operations
+            .iter()
+            .find(|operation| operation.path_template() == "/identity/oidc/.well-known/keys")
+            .unwrap_or_else(|| panic!("missing locked OpenAPI-only Identity JWKS route"));
+        assert_eq!(
+            openapi_only.evidence(OpenBaoVersion::new(2, 5, 5)),
+            Some(OpenBaoCapabilityEvidence::LockedOpenApi)
+        );
     }
 
     #[test]

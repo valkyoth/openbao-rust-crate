@@ -421,8 +421,7 @@ impl Totp<'_> {
             qr_size: request.qr_size,
         };
         let envelope: OptionalDataEnvelope<TotpKeyCreateResponse> = self
-            .client
-            .request_json_accepting(
+            .request_accepting(
                 Method::POST,
                 &self.path("keys", name)?,
                 Some(&payload),
@@ -435,8 +434,7 @@ impl Totp<'_> {
     /// Reads a TOTP key definition.
     pub async fn read_key(&self, name: &str) -> Result<TotpKeyInfo> {
         let envelope: crate::ResponseEnvelope<TotpKeyInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path("keys", name)?,
                 Option::<&Empty>::None,
@@ -460,8 +458,7 @@ impl Totp<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: crate::ResponseEnvelope<TotpKeyList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path("keys", "")?,
                 &query,
@@ -474,20 +471,18 @@ impl Totp<'_> {
 
     /// Deletes a TOTP key definition.
     pub async fn delete_key(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::DELETE,
-                &self.path("keys", name)?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::DELETE,
+            &self.path("keys", name)?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Generates a TOTP code from a named key.
     pub async fn generate_code(&self, name: &str) -> Result<TotpCode> {
         let envelope: crate::ResponseEnvelope<TotpCode> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path("code", name)?,
                 Option::<&Empty>::None,
@@ -506,10 +501,77 @@ impl Totp<'_> {
             code: request.code.expose_secret(),
         };
         let envelope: crate::ResponseEnvelope<TotpValidateResponse> = self
-            .client
-            .request_json_internal(Method::POST, &self.path("code", name)?, Some(&payload))
+            .request(Method::POST, &self.path("code", name)?, Some(&payload))
             .await?;
         Ok(envelope.data)
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_internal(
+                "/totp/",
+                "totp",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+            )
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_accepting(
+                "/totp/",
+                "totp",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/totp/",
+                "totp",
+                &self.mount.join("/"),
+                method,
+                path,
+                query,
+                &[],
+                body,
+                accepted_statuses,
+            )
+            .await
     }
 
     fn path(&self, operation: &str, name: &str) -> Result<String> {

@@ -321,7 +321,9 @@ pub mod prelude {
     pub use crate::secrets::cubbyhole::{Cubbyhole, CubbyholeList};
     #[cfg(feature = "database")]
     pub use crate::secrets::database::{
-        Database, DatabaseConnectionConfig, DatabaseCredentials, DatabaseRole,
+        CassandraConnectionOptions, Database, DatabaseBuiltinConnectionConfig,
+        DatabaseConnectionConfig, DatabaseCredentials, DatabaseRole, InfluxDbConnectionOptions,
+        MySqlConnectionOptions, MySqlPlugin, PostgreSqlConnectionOptions, ValkeyConnectionOptions,
     };
     #[cfg(feature = "identity")]
     pub use crate::secrets::identity::{
@@ -354,7 +356,7 @@ pub mod prelude {
         RabbitMq, RabbitMqConnectionConfig, RabbitMqCredentials, RabbitMqRole,
     };
     #[cfg(feature = "ssh")]
-    pub use crate::secrets::ssh::{Ssh, SshRoleInfo, SshRoleRequest};
+    pub use crate::secrets::ssh::{Ssh, SshPublic, SshPublicKey, SshRoleInfo, SshRoleRequest};
     #[cfg(feature = "totp")]
     pub use crate::secrets::totp::{Totp, TotpKeyCreateRequest, TotpKeyInfo};
     #[cfg(all(feature = "transit", feature = "transit-import"))]

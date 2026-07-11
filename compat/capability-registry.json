@@ -1,6 +1,6 @@
 {
   "api_snapshot_lock_sha256": "440fbaef87506b3b463689892abb9c0c741e2382676e3c92c4e21fa8cd2a3af6",
-  "contract_matrix_sha256": "f07a4aab2718d113d89a7052a9fb71ca56830ef083a6613e3bb7446d17bd175e",
+  "contract_matrix_sha256": "18b388265de2a834198f979c48d33919adee0d70232d452c659d5e99a269584e",
   "generator_version": 1,
   "operations": [
     {
@@ -2267,6 +2267,20 @@
     },
     {
       "disposition": "typed",
+      "id": "openbao.get.identity.oidc.well.known.keys.b28d9a9a0b724326",
+      "method": "GET",
+      "path_template": "/identity/oidc/.well-known/keys",
+      "ranges": [
+        {
+          "availability": "documented",
+          "evidence": "locked-openapi",
+          "maximum": "2.5.5",
+          "minimum": "2.0.0"
+        }
+      ]
+    },
+    {
+      "disposition": "typed",
       "id": "openbao.get.identity.oidc.well.known.openid.configuration.1599ca6e96c34102",
       "method": "GET",
       "path_template": "/identity/oidc/.well-known/openid-configuration",
@@ -3138,7 +3152,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.ssh.issuer.issuer.ref.public.key.4947d28efdfd67d7",
       "method": "GET",
       "path_template": "/ssh/issuer/:issuer_ref/public_key",
@@ -3158,7 +3172,7 @@
       ]
     },
     {
-      "disposition": "external",
+      "disposition": "typed",
       "id": "openbao.get.ssh.public.key.1ff016a9b5f14574",
       "method": "GET",
       "path_template": "/ssh/public_key",
@@ -8075,6 +8089,26 @@
     },
     {
       "disposition": "typed",
+      "id": "openbao.post.ssh.issuer.issuer.ref.03843bf34ae33548",
+      "method": "POST",
+      "path_template": "/ssh/issuer/:issuer_ref",
+      "ranges": [
+        {
+          "availability": "unavailable",
+          "evidence": "none",
+          "maximum": "2.2.2",
+          "minimum": "2.0.0"
+        },
+        {
+          "availability": "documented",
+          "evidence": "locked-openapi",
+          "maximum": "2.5.5",
+          "minimum": "2.3.1"
+        }
+      ]
+    },
+    {
+      "disposition": "typed",
       "id": "openbao.post.ssh.issuers.import.issuer.name.31ea123177ba3ae7",
       "method": "POST",
       "path_template": "/ssh/issuers/import/:issuer_name",
@@ -9562,13 +9596,12 @@
   "schema": "openbao-capability-registry/v1",
   "summary": {
     "dispositions": {
-      "external": 2,
       "omitted": 1,
-      "typed": 576,
+      "typed": 580,
       "typed-gated": 84,
       "unlinked": 1
     },
-    "operation_count": 664,
+    "operation_count": 666,
     "profile_count": 21
   },
   "versions": [

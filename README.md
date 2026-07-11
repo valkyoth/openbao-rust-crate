@@ -391,6 +391,7 @@ openbao = { version = "1", features = ["time"] }
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables strict-deadline Tokio convenience helpers such as `Sys::wait_ready` and `Sys::wait_until_unsealed`. Runtime-neutral retry-budget variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
+| `insecure-database-tls-acknowledged` | no | Allows reviewed built-in database connection options to disable database-server TLS certificate verification. Intended only for audited legacy development environments. |
 | `acme-protocol` | no | Enables the typed PKI ACME directory/EAB handoff configuration for established ACME client libraries. The crate does not implement JWS, nonce, order, or challenge state machines. Implies `pki`. |
 | `kani` | no | Inert feature reserved for Kani proof harness builds. Normal users do not need it; `scripts/check_kani.sh` enables it with the Rust `1.90.0` Kani toolchain. |
 | `memory-lock` | no | Enables `sanitization` memory-lock support for secret buffers where the host permits it. Requires `memory-lock-acknowledged`; verify OS mlock/VirtualLock limits and swap policy before enabling. |
@@ -474,13 +475,13 @@ evidence is linked. It is an implementation backlog, not a support percentage.
 | Cubbyhole | Yes | Token-scoped read, optional read, write, delete, and list helpers. |
 | Kubernetes secrets | Yes | Config, role create/read/list/delete, and generated service account token helpers. |
 | RabbitMQ secrets | Yes | Connection config, lease config, role create/read/list/delete, and generated credential helpers. |
-| Identity | Partial | Entity, group, entity-alias, and group-alias lifecycle helpers, entity/group lookup, entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD/list, signed ID token generation, token introspection, discovery, JWKS, OIDC provider/scope/client/assignment admin, named-provider discovery/JWKS, typed named-provider authorize/token/userinfo protocol operations, MFA method management, TOTP MFA generation/admin actions, and MFA login-enforcement helpers are implemented. Protocol helpers use an unauthenticated client handle so an OpenBao token cannot be confused with OAuth Basic/Bearer credentials. |
+| Identity | Yes | Entity, group, alias, merge, OIDC token/provider administration and protocol handoff, MFA method, TOTP MFA, and login-enforcement helpers. Entity merge includes conflicting-alias selection and provider listing uses the documented client filter. Protocol helpers use an unauthenticated client handle so an OpenBao token cannot be confused with OAuth Basic/Bearer credentials. |
 | LDAP secrets | Yes | Config, root rotation, static roles/credentials, dynamic roles/credentials, and library check-out/check-in helpers. |
-| Database credentials | Partial | Connection config/list/read/delete, dynamic roles/credentials, static roles/credentials, and root/static rotation helpers. Unknown request and response plugin extension values fail closed as `SecretString` and are excluded from `Debug`; request extensions cannot shadow typed connection fields. Complete typed builders for every built-in plugin remain planned for the `2.0.0` compatibility work. |
+| Database credentials | Yes for built-ins | Connection lifecycle, dynamic/static roles and credentials, and root/static rotation helpers. Reviewed typed connection options cover PostgreSQL, the MySQL/MariaDB family, Cassandra, InfluxDB, and Valkey with secret-aware DSNs, passwords, and TLS material. External plugin versions remain deployment-specific; unknown extension values fail closed as `SecretString` and cannot shadow typed fields. |
 | Transit | Yes | Key create/read/list/delete/config update/rotate/export/backup/restore/trim, encrypt/decrypt/rewrap batch helpers, data key, random, hash, HMAC, sign/verify batch helpers, typed RSA/JWS signing options, optional raw-byte helpers, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR generation, and certificate-chain install helpers. Import wrappers accept externally wrapped `SecretString` ciphertext or public-key-only import material; raw private or symmetric key bytes stay outside the default endpoint wrappers. The non-default `transit-import` plus `transit-import-acknowledged` features add a software AES-KWP/RSA-OAEP wrapping helper for audited development and automation use. |
 | PKI | Yes | Authority, issuer/key, role, issuance, revocation, CRL, tidy, CEL, ACME administration, multi-issuer, and operator-gated destructive/unconstrained workflows are typed. `PkiPublic` provides token-free bounded CA/certificate/CRL and OCSP transport; `acme-protocol` provides reviewed directory/EAB handoff configuration for established ACME clients. |
 | TOTP | Yes | Key create/read/list/delete, code generation, and code validation helpers. |
-| SSH | Partial | Roles, zero-address roles, IP role lookup, OTP credentials, issuer config/list/submit/read/update/delete, authenticated CA public-key metadata, CA sign/issue, and OTP verification are implemented. Raw unauthenticated public-key reads are intentionally not typed. |
+| SSH | Yes | Complete role fields, zero-address roles, IP role lookup, OTP credentials, issuer lifecycle, CA sign/issue, OTP verification, and token-free bounded default/per-issuer public-key distribution through `SshPublic`. |
 | Custom plugin patterns | Gated | Documented wrapper pattern for typed plugin-specific APIs over `Client::request_json`; requires `raw-api` plus `raw-api-acknowledged` after the wrapper is audited. |
 
 ### System Backend And Operations
@@ -955,6 +956,35 @@ fn worker_client(token: SecretString) -> Result<SharedClient> {
     Ok(Client::new("https://bao.example.com:8200")?
         .try_with_token(token)?
         .into_shared())
+}
+```
+
+Configure a reviewed built-in database plugin without flattening numeric or
+secret options into strings:
+
+```rust,no_run
+use openbao::prelude::{DatabaseBuiltinConnectionConfig, PostgreSqlConnectionOptions};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let database = client.database("database")?;
+
+    let mut postgres = PostgreSqlConnectionOptions::new(SecretString::from(
+        "postgresql://{{username}}:{{password}}@db.example.com/app",
+    ));
+    postgres.username = Some("openbao".to_owned());
+    postgres.password = Some(SecretString::from("root-database-password"));
+    postgres.max_open_connections = Some(8);
+
+    let mut config = openbao::prelude::DatabaseConnectionConfig::builtin(
+        DatabaseBuiltinConnectionConfig::PostgreSql(postgres),
+    );
+    config.allowed_roles.push("readonly".to_owned());
+    database.configure_connection("production", &config).await?;
+    Ok(())
 }
 ```
 

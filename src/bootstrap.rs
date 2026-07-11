@@ -2297,6 +2297,7 @@ mod tests {
             ttl: Some("30m".to_owned()),
             max_ttl: None,
             issuer_ref: None,
+            ..SshRoleInfo::default()
         };
         let desired = SshRoleRequest::otp("alice", "127.0.0.1/32");
         assert!(super::ssh_role_matches_desired(&existing, &desired));

@@ -276,6 +276,9 @@ pub struct IdentityEntityMergeRequest {
     /// Whether conflicting aliases are forced into the target entity.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub force: Option<bool>,
+    /// Conflicting alias IDs that should remain attached to the target entity.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub conflicting_alias_ids_to_keep: Vec<String>,
 }
 
 impl IdentityEntityMergeRequest {
@@ -288,6 +291,7 @@ impl IdentityEntityMergeRequest {
             to_entity_id: to_entity_id.into(),
             from_entity_ids: from_entity_ids.into_iter().map(Into::into).collect(),
             force: None,
+            conflicting_alias_ids_to_keep: Vec::new(),
         }
     }
 
@@ -295,6 +299,16 @@ impl IdentityEntityMergeRequest {
     #[must_use]
     pub fn force(mut self) -> Self {
         self.force = Some(true);
+        self
+    }
+
+    /// Selects conflicting aliases that should remain after the merge.
+    #[must_use]
+    pub fn keep_conflicting_aliases(
+        mut self,
+        alias_ids: impl IntoIterator<Item = impl Into<String>>,
+    ) -> Self {
+        self.conflicting_alias_ids_to_keep = alias_ids.into_iter().map(Into::into).collect();
         self
     }
 
@@ -312,7 +326,26 @@ impl IdentityEntityMergeRequest {
         validate_string_count(
             self.from_entity_ids.len(),
             "identity merge source entity IDs",
-        )
+        )?;
+        if self.from_entity_ids.iter().any(|id| id.trim().is_empty()) {
+            return Err(Error::InvalidParameter(
+                "identity merge source entity IDs must not be empty".into(),
+            ));
+        }
+        validate_string_count(
+            self.conflicting_alias_ids_to_keep.len(),
+            "identity merge conflicting alias IDs",
+        )?;
+        if self
+            .conflicting_alias_ids_to_keep
+            .iter()
+            .any(|id| id.trim().is_empty())
+        {
+            return Err(Error::InvalidParameter(
+                "identity merge conflicting alias IDs must not be empty".into(),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -2794,8 +2827,7 @@ impl Identity<'_> {
     ) -> Result<IdentityEntityUpsert> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityEntityUpsert> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["entity"])?, Some(request))
+            .request(Method::POST, &self.path(&["entity"])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -2803,8 +2835,7 @@ impl Identity<'_> {
     /// Reads an entity by ID.
     pub async fn read_entity_by_id(&self, id: &str) -> Result<IdentityEntityInfo> {
         let envelope: ResponseEnvelope<IdentityEntityInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["entity", "id", id])?,
                 Option::<&Empty>::None,
@@ -2821,8 +2852,7 @@ impl Identity<'_> {
     ) -> Result<IdentityEntityUpsert> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityEntityUpsert> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["entity", "id", id])?,
                 Some(request),
@@ -2842,13 +2872,12 @@ impl Identity<'_> {
         request: &IdentityEntityBatchDeleteRequest,
     ) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["entity", "batch-delete"])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["entity", "batch-delete"])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Looks up an entity by ID, name, or alias fields.
@@ -2858,8 +2887,7 @@ impl Identity<'_> {
     ) -> Result<IdentityEntityInfo> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityEntityInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["lookup", "entity"])?,
                 Some(request),
@@ -2871,13 +2899,12 @@ impl Identity<'_> {
     /// Merges one or more source entities into a target entity.
     pub async fn merge_entities(&self, request: &IdentityEntityMergeRequest) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["entity", "merge"])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["entity", "merge"])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Lists entity IDs.
@@ -2893,8 +2920,7 @@ impl Identity<'_> {
     ) -> Result<IdentityEntityUpsert> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityEntityUpsert> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["entity", "name", name])?,
                 Some(request),
@@ -2906,8 +2932,7 @@ impl Identity<'_> {
     /// Reads an entity by name.
     pub async fn read_entity_by_name(&self, name: &str) -> Result<IdentityEntityInfo> {
         let envelope: ResponseEnvelope<IdentityEntityInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["entity", "name", name])?,
                 Option::<&Empty>::None,
@@ -2930,8 +2955,7 @@ impl Identity<'_> {
     pub async fn write_group(&self, request: &IdentityGroupRequest) -> Result<IdentityGroupUpsert> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityGroupUpsert> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["group"])?, Some(request))
+            .request(Method::POST, &self.path(&["group"])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -2939,8 +2963,7 @@ impl Identity<'_> {
     /// Reads a group by ID.
     pub async fn read_group_by_id(&self, id: &str) -> Result<IdentityGroupInfo> {
         let envelope: ResponseEnvelope<IdentityGroupInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["group", "id", id])?,
                 Option::<&Empty>::None,
@@ -2957,8 +2980,7 @@ impl Identity<'_> {
     ) -> Result<IdentityGroupUpsert> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityGroupUpsert> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["group", "id", id])?,
                 Some(request),
@@ -2984,8 +3006,7 @@ impl Identity<'_> {
     ) -> Result<IdentityGroupInfo> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityGroupInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["lookup", "group"])?,
                 Some(request),
@@ -3002,8 +3023,7 @@ impl Identity<'_> {
     ) -> Result<IdentityGroupUpsert> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityGroupUpsert> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["group", "name", name])?,
                 Some(request),
@@ -3015,8 +3035,7 @@ impl Identity<'_> {
     /// Reads a group by name.
     pub async fn read_group_by_name(&self, name: &str) -> Result<IdentityGroupInfo> {
         let envelope: ResponseEnvelope<IdentityGroupInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["group", "name", name])?,
                 Option::<&Empty>::None,
@@ -3042,8 +3061,7 @@ impl Identity<'_> {
     ) -> Result<IdentityAliasUpsert> {
         request.validate()?;
         let envelope: ResponseEnvelope<IdentityAliasUpsert> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["entity-alias"])?, Some(request))
+            .request(Method::POST, &self.path(&["entity-alias"])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -3051,8 +3069,7 @@ impl Identity<'_> {
     /// Reads an entity alias by ID.
     pub async fn read_entity_alias_by_id(&self, id: &str) -> Result<IdentityAliasInfo> {
         let envelope: ResponseEnvelope<IdentityAliasInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["entity-alias", "id", id])?,
                 Option::<&Empty>::None,
@@ -3077,8 +3094,7 @@ impl Identity<'_> {
         request: &IdentityGroupAliasRequest,
     ) -> Result<IdentityAliasUpsert> {
         let envelope: ResponseEnvelope<IdentityAliasUpsert> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["group-alias"])?, Some(request))
+            .request(Method::POST, &self.path(&["group-alias"])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -3086,8 +3102,7 @@ impl Identity<'_> {
     /// Reads a group alias by ID.
     pub async fn read_group_alias_by_id(&self, id: &str) -> Result<IdentityAliasInfo> {
         let envelope: ResponseEnvelope<IdentityAliasInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["group-alias", "id", id])?,
                 Option::<&Empty>::None,
@@ -3108,20 +3123,18 @@ impl Identity<'_> {
 
     /// Writes Identity OIDC token backend configuration.
     pub async fn write_oidc_config(&self, request: &IdentityOidcConfigRequest) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "config"])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "config"])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Reads Identity OIDC token backend configuration.
     pub async fn read_oidc_config(&self) -> Result<IdentityOidcConfig> {
         let envelope: ResponseEnvelope<IdentityOidcConfig> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["oidc", "config"])?,
                 Option::<&Empty>::None,
@@ -3137,20 +3150,18 @@ impl Identity<'_> {
         request: &IdentityOidcKeyRequest,
     ) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "key", name])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "key", name])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Reads an Identity OIDC signing key.
     pub async fn read_oidc_key(&self, name: &str) -> Result<IdentityOidcKeyInfo> {
         let envelope: ResponseEnvelope<IdentityOidcKeyInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["oidc", "key", name])?,
                 Option::<&Empty>::None,
@@ -3176,13 +3187,12 @@ impl Identity<'_> {
         request: &IdentityOidcKeyRotateRequest,
     ) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "key", name, "rotate"])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "key", name, "rotate"])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Creates or updates an Identity OIDC role.
@@ -3192,20 +3202,18 @@ impl Identity<'_> {
         request: &IdentityOidcRoleRequest,
     ) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "role", name])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "role", name])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Reads an Identity OIDC role.
     pub async fn read_oidc_role(&self, name: &str) -> Result<IdentityOidcRoleInfo> {
         let envelope: ResponseEnvelope<IdentityOidcRoleInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["oidc", "role", name])?,
                 Option::<&Empty>::None,
@@ -3227,8 +3235,7 @@ impl Identity<'_> {
     /// Generates a signed Identity OIDC ID token for `name`.
     pub async fn generate_oidc_token(&self, name: &str) -> Result<IdentityOidcToken> {
         let envelope: ResponseEnvelope<IdentityOidcToken> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["oidc", "token", name])?,
                 Option::<&Empty>::None,
@@ -3248,26 +3255,24 @@ impl Identity<'_> {
             token: request.token.expose_secret(),
             client_id: request.client_id.as_deref(),
         };
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "introspect"])?,
-                Some(&payload),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "introspect"])?,
+            Some(&payload),
+        )
+        .await
     }
 
     /// Reads OIDC provider discovery metadata for the identity token backend.
     ///
     /// OpenBao serves this as a plain OIDC response, not a `data` envelope.
     pub async fn read_oidc_discovery(&self) -> Result<IdentityOidcDiscovery> {
-        self.client
-            .request_json_internal(
-                Method::GET,
-                &self.path(&["oidc", ".well-known", "openid-configuration"])?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::GET,
+            &self.path(&["oidc", ".well-known", "openid-configuration"])?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Reads public OIDC JSON Web Keys for the identity token backend.
@@ -3275,13 +3280,12 @@ impl Identity<'_> {
     /// The returned keys are public verification material. The list is still
     /// bounded during deserialization to avoid disproportionate allocations.
     pub async fn read_oidc_jwks(&self) -> Result<IdentityOidcJwks> {
-        self.client
-            .request_json_internal(
-                Method::GET,
-                &self.path(&["oidc", ".well-known", "keys"])?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::GET,
+            &self.path(&["oidc", ".well-known", "keys"])?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Creates or updates an Identity OIDC provider.
@@ -3291,20 +3295,18 @@ impl Identity<'_> {
         request: &IdentityOidcProviderRequest,
     ) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "provider", name])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "provider", name])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Reads an Identity OIDC provider.
     pub async fn read_oidc_provider(&self, name: &str) -> Result<IdentityOidcProviderInfo> {
         let envelope: ResponseEnvelope<IdentityOidcProviderInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["oidc", "provider", name])?,
                 Option::<&Empty>::None,
@@ -3343,20 +3345,18 @@ impl Identity<'_> {
         name: &str,
         request: &IdentityOidcScopeRequest,
     ) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "scope", name])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "scope", name])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Reads an Identity OIDC scope.
     pub async fn read_oidc_scope(&self, name: &str) -> Result<IdentityOidcScopeInfo> {
         let envelope: ResponseEnvelope<IdentityOidcScopeInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["oidc", "scope", name])?,
                 Option::<&Empty>::None,
@@ -3382,20 +3382,18 @@ impl Identity<'_> {
         request: &IdentityOidcClientRequest,
     ) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "client", name])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "client", name])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Reads an Identity OIDC client.
     pub async fn read_oidc_client(&self, name: &str) -> Result<IdentityOidcClientInfo> {
         let envelope: ResponseEnvelope<IdentityOidcClientInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["oidc", "client", name])?,
                 Option::<&Empty>::None,
@@ -3421,20 +3419,18 @@ impl Identity<'_> {
         request: &IdentityOidcAssignmentRequest,
     ) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["oidc", "assignment", name])?,
-                Some(request),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["oidc", "assignment", name])?,
+            Some(request),
+        )
+        .await
     }
 
     /// Reads an Identity OIDC assignment.
     pub async fn read_oidc_assignment(&self, name: &str) -> Result<IdentityOidcAssignmentInfo> {
         let envelope: ResponseEnvelope<IdentityOidcAssignmentInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["oidc", "assignment", name])?,
                 Option::<&Empty>::None,
@@ -3459,30 +3455,28 @@ impl Identity<'_> {
     /// flows are intentionally outside this SDK; pass this metadata to a real
     /// OIDC client library for browser-based flows.
     pub async fn read_oidc_provider_discovery(&self, name: &str) -> Result<IdentityOidcDiscovery> {
-        self.client
-            .request_json_internal(
-                Method::GET,
-                &self.path(&[
-                    "oidc",
-                    "provider",
-                    name,
-                    ".well-known",
-                    "openid-configuration",
-                ])?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::GET,
+            &self.path(&[
+                "oidc",
+                "provider",
+                name,
+                ".well-known",
+                "openid-configuration",
+            ])?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Reads public OIDC JSON Web Keys for a named provider.
     pub async fn read_oidc_provider_jwks(&self, name: &str) -> Result<IdentityOidcJwks> {
-        self.client
-            .request_json_internal(
-                Method::GET,
-                &self.path(&["oidc", "provider", name, ".well-known", "keys"])?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::GET,
+            &self.path(&["oidc", "provider", name, ".well-known", "keys"])?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Creates a Duo MFA method with a generated method ID.
@@ -3689,8 +3683,7 @@ impl Identity<'_> {
         T: serde::de::DeserializeOwned,
     {
         let envelope: ResponseEnvelope<T> = self
-            .client
-            .request_json_internal(Method::GET, &self.path(tail)?, Option::<&Empty>::None)
+            .request(Method::GET, &self.path(tail)?, Option::<&Empty>::None)
             .await?;
         Ok(envelope.data)
     }
@@ -3699,8 +3692,7 @@ impl Identity<'_> {
     where
         T: Serialize + ?Sized,
     {
-        self.client
-            .request_json_internal(Method::POST, &self.path(tail)?, Some(request))
+        self.request(Method::POST, &self.path(tail)?, Some(request))
             .await
     }
 
@@ -3710,8 +3702,7 @@ impl Identity<'_> {
         U: serde::de::DeserializeOwned,
     {
         let envelope: ResponseEnvelope<U> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(tail)?, Some(request))
+            .request(Method::POST, &self.path(tail)?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -3723,8 +3714,7 @@ impl Identity<'_> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let envelope: ResponseEnvelope<T> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(tail)?,
                 &[],
@@ -3743,11 +3733,10 @@ impl Identity<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let mut query = Vec::new();
         if let Some(client_id) = client_id {
-            query.push(("client_id", client_id.to_owned()));
+            query.push(("allowed_client_id", client_id.to_owned()));
         }
         let envelope: ResponseEnvelope<IdentityOidcProviderList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(&["oidc", "provider"])?,
                 &query,
@@ -3759,12 +3748,79 @@ impl Identity<'_> {
     }
 
     async fn delete_at(&self, tail: &[&str]) -> Result<Empty> {
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(tail)?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
         self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(tail)?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            .request_secret_json_internal(
+                "/identity/",
+                "identity",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+            )
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_accepting(
+                "/identity/",
+                "identity",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/identity/",
+                "identity",
+                &self.mount.join("/"),
+                method,
+                path,
+                query,
+                &[],
+                body,
+                accepted_statuses,
             )
             .await
     }
@@ -4155,8 +4211,8 @@ mod tests {
 
     use super::{
         IdentityAliasList, IdentityEntityBatchDeleteRequest, IdentityEntityList,
-        IdentityEntityRequest, IdentityGroupList, IdentityGroupRequest, IdentityMfaDuoMethodInfo,
-        IdentityMfaDuoMethodRequest, IdentityMfaLoginEnforcementList,
+        IdentityEntityMergeRequest, IdentityEntityRequest, IdentityGroupList, IdentityGroupRequest,
+        IdentityMfaDuoMethodInfo, IdentityMfaDuoMethodRequest, IdentityMfaLoginEnforcementList,
         IdentityMfaLoginEnforcementRequest, IdentityMfaMethodList, IdentityMfaOktaMethodInfo,
         IdentityMfaOktaMethodRequest, IdentityMfaPingIdMethodRequest, IdentityMfaTotpSecret,
         IdentityOidcAssignmentList, IdentityOidcClientInfo, IdentityOidcClientList,
@@ -4185,6 +4241,17 @@ mod tests {
         );
         assert!(client.identity_at("../identity").is_err());
         assert!(identity.path(&["entity", "name", "../app"]).is_err());
+    }
+
+    #[test]
+    fn identity_merge_serializes_conflicting_alias_selection() {
+        let request = IdentityEntityMergeRequest::new("target", ["source"])
+            .keep_conflicting_aliases(["alias-a", "alias-b"]);
+        let value = serde_json::to_value(request).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            value["conflicting_alias_ids_to_keep"],
+            serde_json::json!(["alias-a", "alias-b"])
+        );
     }
 
     #[test]

@@ -137,6 +137,9 @@ native-tls-acknowledged = []
 # Must be enabled to allow LDAP configs that disable LDAP TLS certificate
 # verification. This is intended only for audited legacy development setups.
 insecure-ldap-tls-acknowledged = []
+# Must be enabled to allow reviewed built-in database configs that disable
+# database-server TLS certificate verification.
+insecure-database-tls-acknowledged = []
 # Test-only escape hatch for this crate's HTTP mock tests. Do not enable in
 # applications; it permits sensitive requests over numeric loopback HTTP.
 sensitive-http-test-only = []

@@ -237,39 +237,35 @@ impl Client<Authenticated> {
 impl RabbitMq<'_> {
     /// Creates or updates the RabbitMQ connection configuration.
     pub async fn configure_connection(&self, config: &RabbitMqConnectionConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["config", "connection"])?,
-                Some(config),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["config", "connection"])?,
+            Some(config),
+        )
+        .await
     }
 
     /// Creates or updates the RabbitMQ credential lease configuration.
     pub async fn configure_lease(&self, config: &RabbitMqLeaseConfig) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["config", "lease"])?,
-                Some(config),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["config", "lease"])?,
+            Some(config),
+        )
+        .await
     }
 
     /// Creates or updates a RabbitMQ role.
     pub async fn write_role(&self, name: &str, role: &RabbitMqRole) -> Result<Empty> {
         role.validate()?;
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(role))
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
     /// Reads a RabbitMQ role.
     pub async fn read_role(&self, name: &str) -> Result<RabbitMqRole> {
         let envelope: ResponseEnvelope<RabbitMqRole> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -293,8 +289,7 @@ impl RabbitMq<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<RabbitMqRoleList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(&["roles"])?,
                 &query,
@@ -307,27 +302,93 @@ impl RabbitMq<'_> {
 
     /// Deletes a RabbitMQ role.
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["roles", name])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["roles", name])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Generates RabbitMQ credentials for a role.
     pub async fn credentials(&self, name: &str) -> Result<RabbitMqCredentials> {
         let envelope: ResponseEnvelope<RabbitMqCredentialData> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["creds", name])?,
                 Option::<&Empty>::None,
             )
             .await?;
         Ok(rabbitmq_credentials_from_envelope(envelope))
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_internal(
+                "/rabbitmq/",
+                "rabbitmq",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+            )
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_accepting(
+                "/rabbitmq/",
+                "rabbitmq",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/rabbitmq/",
+                "rabbitmq",
+                &self.mount.join("/"),
+                method,
+                path,
+                query,
+                &[],
+                body,
+                accepted_statuses,
+            )
+            .await
     }
 
     fn path(&self, tail: &[&str]) -> Result<String> {

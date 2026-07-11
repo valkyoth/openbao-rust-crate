@@ -763,6 +763,29 @@ async fn strict_pki_routing_rejects_newer_capabilities_locally() {
 }
 
 #[tokio::test]
+async fn strict_remaining_engine_routing_rejects_newer_ssh_issuer_capabilities() {
+    let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 2, 2))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(
+        OpenBaoConfig::new("https://bao.example.com")
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .and_then(|client| client.try_with_token(SecretString::from("token")))
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    let issuers = client
+        .ssh("team/ssh")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .list_issuers()
+        .await;
+    assert!(matches!(
+        issuers,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+}
+
+#[tokio::test]
 async fn secret_registry_routing_preserves_validated_custom_mounts() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -1555,6 +1578,60 @@ async fn pki_public_distribution_and_ocsp_are_unauthenticated_and_bounded() {
         .await
         .unwrap_or_else(|error| panic!("{error}"))
         .with_secret(|value| assert_eq!(value, b"ocsp-get"));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn ssh_public_keys_are_unauthenticated_and_bounded() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        for index in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(!request.to_ascii_lowercase().contains("x-vault-token:"));
+            assert!(request.contains("accept: text/plain"));
+            match index {
+                0 => {
+                    assert!(request.starts_with("GET /v1/team/ssh/public_key HTTP/1.1"));
+                    write_bytes_response(&mut stream, "text/plain", b"ssh-ed25519 AAAA-default");
+                }
+                1 => {
+                    assert!(
+                        request.starts_with("GET /v1/team/ssh/issuer/blue/public_key HTTP/1.1")
+                    );
+                    write_bytes_response(&mut stream, "text/plain", b"ssh-rsa AAAA-issuer");
+                }
+                _ => unreachable!(),
+            }
+        }
+    });
+
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"));
+    let ssh = client
+        .ssh_public("team/ssh")
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(
+        ssh.public_key()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .as_str(),
+        "ssh-ed25519 AAAA-default"
+    );
+    assert_eq!(
+        ssh.issuer_public_key("blue")
+            .await
+            .unwrap_or_else(|error| panic!("{error}"))
+            .as_str(),
+        "ssh-rsa AAAA-issuer"
+    );
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
@@ -6289,7 +6366,7 @@ async fn identity_oidc_provider_helpers_use_documented_paths() {
                 }
                 3 => {
                     assert!(request.starts_with(
-                        "LIST /v1/identity/oidc/provider?client_id=app-client HTTP/1.1"
+                        "LIST /v1/identity/oidc/provider?allowed_client_id=app-client HTTP/1.1"
                     ));
                     r#"{"data":{"keys":["app"],"key_info":{"app":{"issuer":"https://issuer.example.com","allowed_client_ids":["app-client"],"scopes_supported":["openid"]}}}}"#
                 }
@@ -7084,7 +7161,7 @@ async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
                         .to_owned()
                 }
                 5 => {
-                    assert!(request.starts_with("LIST /v1/ldap/static-role HTTP/1.1"));
+                    assert!(request.starts_with("GET /v1/ldap/static-role HTTP/1.1"));
                     r#"{"data":{"keys":["app"]}}"#.to_owned()
                 }
                 6 => {
@@ -11142,7 +11219,7 @@ async fn ssh_role_otp_and_ca_paths_are_documented() {
                     )
                 }
                 10 => {
-                    assert!(request.starts_with("PATCH /v1/ssh/issuer/default HTTP/1.1"));
+                    assert!(request.starts_with("POST /v1/ssh/issuer/default HTTP/1.1"));
                     assert!(request.contains(r#""issuer_name":"renamed""#));
                     (
                         "200 OK",

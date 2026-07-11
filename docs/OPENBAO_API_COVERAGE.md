@@ -228,10 +228,9 @@ Support plan:
   use the typed ACME config, EAB, and directory URL helpers to hand off to a
   dedicated ACME client.
 
-OCSP and public CA/CRL/certificate distribution endpoints are intentionally
-left to OCSP/TLS clients, CRL checkers, or external HTTP tooling. They do not
-need OpenBao token handling and should not force binary protocol dependencies
-into this SDK.
+Compatibility Commit 13 added token-free bounded OCSP and public
+CA/CRL/certificate distribution transport. ASN.1 parsing and ACME protocol
+state machines remain with established protocol libraries.
 - `0.5.0`: database connection config/list/read/delete/reset, root rotation,
   dynamic role list/write/read/delete, dynamic credentials, static role
   list/write/read/delete, static credentials, and static role rotation are
@@ -240,8 +239,9 @@ into this SDK.
   validation are implemented. SSH role management, zero-address roles, IP role
   lookup, OTP credential issue, default issuer config, issuer
   list/submit/read/update/delete, authenticated CA public-key metadata, CA
-  sign/issue, and OTP verification are implemented. Raw unauthenticated
-  text/plain SSH public-key reads are intentionally not typed.
+  sign/issue, and OTP verification are implemented. Compatibility Commit 14
+  adds complete role fields and token-free bounded default/per-issuer
+  `text/plain` public-key reads.
 - `0.7.0`: Cubbyhole read/write/delete/list is implemented. Kubernetes secrets
   engine config, roles, role listing, deletion, and credential generation are
   implemented. RabbitMQ connection config, lease config, role

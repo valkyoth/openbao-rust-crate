@@ -13,12 +13,15 @@
 - Audit status: exact inventory and field evidence are captured. Public helper,
   transport, security, and test evidence remain intentionally unverified.
 - Release target for closure: `2.0.0`.
-- Implementation progress: compatibility Commits 12 and 13 migrated KV v1, KV v2,
+- Implementation progress: compatibility Commits 12 through 14 migrated KV v1, KV v2,
   Cubbyhole, and Transit through exact-release dispatch. KV SCAN and detailed
   metadata are locally rejected before OpenBao 2.2.0; Transit CSR and
   certificate installation are locally rejected before 2.1.0. PKI now uses
   exact-release dispatch, exposes unauthenticated bounded public distribution
-  and OCSP helpers, and provides a feature-gated ACME client handoff.
+  and OCSP helpers, and provides a feature-gated ACME client handoff. Identity,
+  database, SSH, LDAP, Kubernetes, RabbitMQ, and TOTP now use exact-release
+  dispatch; SSH public-key reads and reviewed built-in database connection
+  option types are complete.
 
 This is a static audit checkpoint, not a compatibility certification. Live
 OpenAPI capture and behavior tests against the locked `v2.5.5` image remain
@@ -56,8 +59,8 @@ The replacement matrix reports:
 
 | Classification | Rows |
 | --- | ---: |
-| `unverified` | 641 |
-| `confirmed-gap` | 3 |
+| `unverified` | 643 |
+| `confirmed-gap` | 1 |
 | `typed` | 0 |
 | `typed-gated` | 0 |
 | Total | 644 |
@@ -80,7 +83,7 @@ new full-support goal:
 | PKI ACME directories and protocol | 4 | Add a first-class, feature-gated ACME protocol handoff/client boundary rather than URL-only classification. |
 | PKI public CA, certificate, and CRL reads | 22 | Add unauthenticated typed JSON, bounded PEM/text, and DER byte helpers. |
 | PKI OCSP | 2 | Add bounded GET and POST OCSP byte helpers with correct MIME types and request encoding. |
-| SSH public keys | 2 | Add unauthenticated bounded text/public-key helpers. |
+| SSH public keys | 2 | Completed in compatibility Commit 14 with an unauthenticated bounded public-key handle. |
 | Identity OIDC provider protocol | 3 | Add typed authorize, token, and userinfo operations with PKCE and secret-aware token handling. |
 | System UI headers | 4 | Add sudo-sensitive typed read, write, list, and delete helpers. |
 | Internal counters | 2 | Add gated typed entity and token counter responses with stability warnings. |
@@ -108,10 +111,10 @@ starting point; the generated matrix is the current source of truth:
 | Key rotation | 11 | Legacy keyring alias, root rotation, automatic rotation config read/write aliases, verification, and backup operations are absent. |
 | PKI CRL rotation | 2 | The docs specify GET for CRL and delta-CRL rotation; current helpers send POST. |
 
-Compatibility Commits 10 through 12 have moved reviewed system,
-authentication, KV, Cubbyhole, and Transit rows out of the confirmed-gap set.
-The remaining `3` confirmed gaps are SSH public-key reads and `sys/monitor`.
-No support percentage is published from this backlog.
+Compatibility Commits 10 through 14 have moved reviewed system,
+authentication, KV, Cubbyhole, Transit, PKI, Identity, and remaining engine
+rows out of the confirmed-gap set. The remaining confirmed gap is
+`GET /sys/monitor`. No support percentage is published from this backlog.
 
 ### Exact Confirmed False-Typed Operations
 
@@ -237,18 +240,21 @@ Completed in compatibility Commit 13:
 
 ### Identity And Database
 
-- Entity merge `conflicting_alias_ids_to_keep`.
-- Built-in database plugin connection fields are not fully typed. The current
-  secret-aware, string-only extension map prevents unknown values from entering
-  ordinary `String` fields or `Debug`, but cannot faithfully represent
-  documented booleans, integers, lists, or structured plugin options.
-- PostgreSQL, MySQL/MariaDB, Cassandra, InfluxDB, and Valkey need reviewed
-  plugin-specific typed connection builders and secret-aware debug behavior.
+Completed in compatibility Commit 14:
 
-This list records confirmed examples, not the final field inventory. Commit
-03A in the compatibility plan must generate and manually verify the complete
-method, parameter, response, and security-classification matrix before closure
-implementation proceeds.
+- entity merge `conflicting_alias_ids_to_keep` and the documented
+  `allowed_client_id` provider-list query;
+- reviewed PostgreSQL, MySQL/MariaDB family, Cassandra, InfluxDB, and Valkey
+  connection option types with native booleans and integers;
+- `SecretString` treatment and redacted `Debug` for DSNs, passwords, private
+  TLS material, and plugin PEM/JSON credential bundles;
+- explicit `insecure-database-tls-acknowledged` gating for built-in options
+  that disable database-server certificate verification;
+- the secret-only extension map remains the explicit boundary for external
+  plugin schemas whose version does not follow the OpenBao core release.
+
+The generated contract matrix and 666-operation exact-release capability
+registry remain the source of truth beyond these narrative highlights.
 
 ## Required Matrix Redesign
 

@@ -173643,8 +173643,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated text/plain SSH public key reads stay outside the typed JSON client.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -173694,7 +173694,7 @@
       ],
       "operation_key": "GET /ssh/issuer/:issuer_ref/public_key",
       "path": "/ssh/issuer/:issuer_ref/public_key",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,
@@ -175617,8 +175617,8 @@
         ]
       },
       "legacy_matrix": {
-        "note": "Unauthenticated text/plain SSH public key reads stay outside the typed JSON client.",
-        "status": "external"
+        "note": "Reviewed during version-aware endpoint migration.",
+        "status": "typed"
       },
       "methods": [
         "GET"
@@ -175656,7 +175656,7 @@
       ],
       "operation_key": "GET /ssh/public_key",
       "path": "/ssh/public_key",
-      "review_status": "confirmed-gap",
+      "review_status": "unverified",
       "security": {
         "authentication_review": "required",
         "internal": false,

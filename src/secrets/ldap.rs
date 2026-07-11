@@ -578,16 +578,14 @@ impl Ldap<'_> {
     /// Creates or updates LDAP engine configuration.
     pub async fn write_config(&self, config: &LdapConfig) -> Result<Empty> {
         config.validate()?;
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["config"])?, Some(config))
+        self.request(Method::POST, &self.path(&["config"])?, Some(config))
             .await
     }
 
     /// Reads LDAP engine configuration.
     pub async fn read_config(&self) -> Result<LdapConfig> {
         let envelope: ResponseEnvelope<LdapConfig> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["config"])?,
                 Option::<&Empty>::None,
@@ -603,28 +601,25 @@ impl Ldap<'_> {
 
     /// Rotates the LDAP bind user's password.
     pub async fn rotate_root(&self) -> Result<Empty> {
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["rotate-root"])?, Some(&Empty {}))
+        self.request(Method::POST, &self.path(&["rotate-root"])?, Some(&Empty {}))
             .await
     }
 
     /// Creates or updates a static LDAP role.
     pub async fn write_static_role(&self, name: &str, role: &LdapStaticRole) -> Result<Empty> {
         role.validate()?;
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["static-role", name])?,
-                Some(role),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["static-role", name])?,
+            Some(role),
+        )
+        .await
     }
 
     /// Reads a static LDAP role.
     pub async fn read_static_role(&self, name: &str) -> Result<LdapStaticRole> {
         let envelope: ResponseEnvelope<LdapStaticRole> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["static-role", name])?,
                 Option::<&Empty>::None,
@@ -646,8 +641,7 @@ impl Ldap<'_> {
     /// Reads static LDAP credentials.
     pub async fn static_credentials(&self, name: &str) -> Result<LdapStaticCredentials> {
         let envelope: ResponseEnvelope<LdapStaticCredentials> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["static-cred", name])?,
                 Option::<&Empty>::None,
@@ -658,28 +652,25 @@ impl Ldap<'_> {
 
     /// Rotates a static LDAP role password.
     pub async fn rotate_static_role(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["rotate-role", name])?,
-                Some(&Empty {}),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["rotate-role", name])?,
+            Some(&Empty {}),
+        )
+        .await
     }
 
     /// Creates or updates a dynamic LDAP role.
     pub async fn write_dynamic_role(&self, name: &str, role: &LdapDynamicRole) -> Result<Empty> {
         role.validate()?;
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["role", name])?, Some(role))
+        self.request(Method::POST, &self.path(&["role", name])?, Some(role))
             .await
     }
 
     /// Reads a dynamic LDAP role.
     pub async fn read_dynamic_role(&self, name: &str) -> Result<LdapDynamicRole> {
         let envelope: ResponseEnvelope<LdapDynamicRole> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["role", name])?,
                 Option::<&Empty>::None,
@@ -696,8 +687,7 @@ impl Ldap<'_> {
     /// Generates dynamic LDAP credentials.
     pub async fn dynamic_credentials(&self, name: &str) -> Result<LdapDynamicCredentials> {
         let envelope: ResponseEnvelope<LdapDynamicCredentialData> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["creds", name])?,
                 Option::<&Empty>::None,
@@ -716,16 +706,14 @@ impl Ldap<'_> {
     /// Creates or updates a library set.
     pub async fn write_library_set(&self, name: &str, set: &LdapLibrarySet) -> Result<Empty> {
         set.validate()?;
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["library", name])?, Some(set))
+        self.request(Method::POST, &self.path(&["library", name])?, Some(set))
             .await
     }
 
     /// Reads a library set.
     pub async fn read_library_set(&self, name: &str) -> Result<LdapLibrarySet> {
         let envelope: ResponseEnvelope<LdapLibrarySet> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["library", name])?,
                 Option::<&Empty>::None,
@@ -747,8 +735,7 @@ impl Ldap<'_> {
     /// Reads library set account status.
     pub async fn library_status(&self, name: &str) -> Result<LdapLibraryStatus> {
         let envelope: ResponseEnvelope<LdapLibraryStatus> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["library", name, "status"])?,
                 Option::<&Empty>::None,
@@ -765,8 +752,7 @@ impl Ldap<'_> {
     ) -> Result<LdapCheckOut> {
         request.validate()?;
         let envelope: ResponseEnvelope<LdapCheckOutData> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["library", name, "check-out"])?,
                 Some(request),
@@ -785,8 +771,7 @@ impl Ldap<'_> {
     pub async fn check_in(&self, name: &str, request: &LdapCheckInRequest) -> Result<LdapCheckIn> {
         request.validate()?;
         let envelope: ResponseEnvelope<LdapCheckIn> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["library", name, "check-in"])?,
                 Some(request),
@@ -804,8 +789,7 @@ impl Ldap<'_> {
     ) -> Result<LdapCheckIn> {
         request.validate()?;
         let envelope: ResponseEnvelope<LdapCheckIn> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["library", "manage", name, "check-in"])?,
                 Some(request),
@@ -815,11 +799,13 @@ impl Ldap<'_> {
     }
 
     async fn list_at(&self, tail: &[&str]) -> Result<LdapList> {
-        let method =
-            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let method = if tail == ["static-role"] {
+            Method::GET
+        } else {
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?
+        };
         let envelope: ResponseEnvelope<LdapList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(tail)?,
                 &[],
@@ -831,12 +817,79 @@ impl Ldap<'_> {
     }
 
     async fn delete_at(&self, tail: &[&str]) -> Result<Empty> {
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(tail)?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
         self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(tail)?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            .request_secret_json_internal(
+                "/ldap/",
+                "ldap",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+            )
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_accepting(
+                "/ldap/",
+                "ldap",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/ldap/",
+                "ldap",
+                &self.mount.join("/"),
+                method,
+                path,
+                query,
+                &[],
+                body,
+                accepted_statuses,
             )
             .await
     }

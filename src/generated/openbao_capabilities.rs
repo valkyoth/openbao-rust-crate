@@ -2123,6 +2123,19 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
+        "openbao.get.identity.oidc.well.known.keys.b28d9a9a0b724326",
+        OpenBaoHttpMethod::Get,
+        "/identity/oidc/.well-known/keys",
+        OpenBaoOperationDisposition::LegacyTypedClaim,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
         "openbao.get.identity.oidc.well.known.openid.configuration.1599ca6e96c34102",
         OpenBaoHttpMethod::Get,
         "/identity/oidc/.well-known/openid-configuration",
@@ -2934,7 +2947,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.ssh.issuer.issuer.ref.public.key.4947d28efdfd67d7",
         OpenBaoHttpMethod::Get,
         "/ssh/issuer/:issuer_ref/public_key",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -2952,7 +2965,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         "openbao.get.ssh.public.key.1ff016a9b5f14574",
         OpenBaoHttpMethod::Get,
         "/ssh/public_key",
-        OpenBaoOperationDisposition::ExternalBoundary,
+        OpenBaoOperationDisposition::LegacyTypedClaim,
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
@@ -7499,6 +7512,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
                 OpenBaoVersion::new(2, 0, 0),
                 OpenBaoVersion::new(2, 5, 5),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.post.ssh.issuer.issuer.ref.03843bf34ae33548",
+        OpenBaoHttpMethod::Post,
+        "/ssh/issuer/:issuer_ref",
+        OpenBaoOperationDisposition::LegacyTypedClaim,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 2, 2),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 3, 1),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
             ),
         ],
     ),

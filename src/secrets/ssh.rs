@@ -6,18 +6,22 @@
 use core::fmt;
 use std::{collections::BTreeMap, net::IpAddr};
 
-use reqwest::{Method, StatusCode};
+use reqwest::{
+    Method, StatusCode,
+    header::{ACCEPT, HeaderValue},
+};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize,
-    de::{Error as DeError, IgnoredAny, MapAccess, Visitor},
+    de::{Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
 
 use crate::{
-    Authenticated, Client, Error, Result,
+    Authenticated, Client, Error, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_vec,
+        Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_map,
+        deserialize_bounded_string_vec,
     },
 };
 
@@ -30,6 +34,29 @@ const MIN_RSA_KEY_BITS: u16 = 3072;
 pub struct Ssh<'a> {
     client: &'a Client<Authenticated>,
     mount: Vec<String>,
+}
+
+/// Unauthenticated handle for SSH CA public-key distribution endpoints.
+#[derive(Debug)]
+pub struct SshPublic<'a> {
+    client: &'a Client<Unauthenticated>,
+    mount: Vec<String>,
+}
+
+/// Bounded SSH CA public key returned by a distribution endpoint.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SshPublicKey(String);
+
+impl SshPublicKey {
+    /// Borrows the validated OpenSSH public-key text.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Consumes the wrapper and returns the OpenSSH public-key text.
+    pub fn into_string(self) -> String {
+        self.0
+    }
 }
 
 /// SSH role key type.
@@ -85,6 +112,9 @@ impl ListEntries for SshRoleList {
 /// SSH role create/update request.
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct SshRoleRequest {
+    /// CA signature algorithm selection.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub algorithm_signer: Option<String>,
     /// Default username for generated credentials.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_user: Option<String>,
@@ -118,9 +148,27 @@ pub struct SshRoleRequest {
     /// Whether subdomains are allowed in host certificate principals.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allow_subdomains: Option<bool>,
+    /// Allows certificates with no principals.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_empty_principals: Option<bool>,
+    /// Allows caller-selected SSH key IDs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_user_key_ids: Option<bool>,
+    /// Comma-separated host domains allowed by a CA role.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_domains: Option<String>,
+    /// Treats allowed domains as identity templates.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_domains_template: Option<bool>,
+    /// Allowed key lengths keyed by SSH key type.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub allowed_user_key_lengths: BTreeMap<String, Vec<u16>>,
     /// Default certificate extensions.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub default_extensions: BTreeMap<String, String>,
+    /// Treats default extension values as identity templates.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_extensions_template: Option<bool>,
     /// Allowed certificate extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed_extensions: Option<String>,
@@ -136,6 +184,15 @@ pub struct SshRoleRequest {
     /// Maximum certificate TTL.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_ttl: Option<String>,
+    /// Comma-separated CIDRs excluded from OTP roles.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exclude_cidr_list: Option<String>,
+    /// Template used to produce certificate key IDs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_id_format: Option<String>,
+    /// Backdates generated certificates by this duration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub not_before_duration: Option<String>,
     /// Issuer reference used by this role.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub issuer_ref: Option<String>,
@@ -180,18 +237,41 @@ impl SshRoleRequest {
         validate_optional_ssh_field(self.default_user.as_deref(), "ssh default_user")?;
         validate_optional_ssh_field(self.cidr_list.as_deref(), "ssh cidr_list")?;
         validate_optional_ssh_field(self.allowed_users.as_deref(), "ssh allowed_users")?;
+        validate_optional_ssh_field(self.allowed_domains.as_deref(), "ssh allowed_domains")?;
+        validate_optional_ssh_field(self.exclude_cidr_list.as_deref(), "ssh exclude_cidr_list")?;
+        validate_optional_ssh_field(self.key_id_format.as_deref(), "ssh key_id_format")?;
         validate_optional_duration(self.ttl.as_deref(), "ssh role ttl")?;
         validate_optional_duration(self.max_ttl.as_deref(), "ssh role max_ttl")?;
+        validate_optional_duration(
+            self.not_before_duration.as_deref(),
+            "ssh role not_before_duration",
+        )?;
+        if self.allowed_user_key_lengths.len() > crate::response::MAX_RESPONSE_STRINGS
+            || self
+                .allowed_user_key_lengths
+                .values()
+                .any(|lengths| lengths.len() > crate::response::MAX_RESPONSE_STRINGS)
+        {
+            return Err(Error::InvalidParameter(
+                "SSH allowed_user_key_lengths exceeds item limit".into(),
+            ));
+        }
         Ok(())
     }
 }
 
 /// SSH role read response.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct SshRoleInfo {
+    /// CA signature algorithm selection.
+    #[serde(default)]
+    pub algorithm_signer: Option<String>,
     /// Default username for generated credentials.
     #[serde(default)]
     pub default_user: Option<String>,
+    /// Whether the default user is an identity template.
+    #[serde(default)]
+    pub default_user_template: Option<bool>,
     /// Comma-separated CIDR list.
     #[serde(default)]
     pub cidr_list: Option<String>,
@@ -204,12 +284,66 @@ pub struct SshRoleInfo {
     /// Allowed principal/user list.
     #[serde(default)]
     pub allowed_users: Option<String>,
+    /// Whether allowed users are identity templates.
+    #[serde(default)]
+    pub allowed_users_template: Option<bool>,
+    /// Whether user certificates are allowed.
+    #[serde(default)]
+    pub allow_user_certificates: Option<bool>,
+    /// Whether host certificates are allowed.
+    #[serde(default)]
+    pub allow_host_certificates: Option<bool>,
+    /// Whether bare domains are allowed.
+    #[serde(default)]
+    pub allow_bare_domains: Option<bool>,
+    /// Whether subdomains are allowed.
+    #[serde(default)]
+    pub allow_subdomains: Option<bool>,
+    /// Whether empty principals are allowed.
+    #[serde(default)]
+    pub allow_empty_principals: Option<bool>,
+    /// Whether caller-selected key IDs are allowed.
+    #[serde(default)]
+    pub allow_user_key_ids: Option<bool>,
+    /// Allowed host domains.
+    #[serde(default)]
+    pub allowed_domains: Option<String>,
+    /// Whether allowed domains are identity templates.
+    #[serde(default)]
+    pub allowed_domains_template: Option<bool>,
+    /// Allowed user key lengths keyed by key type.
+    #[serde(default, deserialize_with = "deserialize_bounded_key_lengths")]
+    pub allowed_user_key_lengths: BTreeMap<String, Vec<u16>>,
+    /// Default certificate extensions.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_map")]
+    pub default_extensions: BTreeMap<String, String>,
+    /// Whether default extensions are identity templates.
+    #[serde(default)]
+    pub default_extensions_template: Option<bool>,
+    /// Allowed certificate extensions.
+    #[serde(default)]
+    pub allowed_extensions: Option<String>,
+    /// Default critical options.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_map")]
+    pub default_critical_options: BTreeMap<String, String>,
+    /// Allowed critical options.
+    #[serde(default)]
+    pub allowed_critical_options: Option<String>,
     /// Default certificate TTL.
     #[serde(default)]
     pub ttl: Option<String>,
     /// Maximum certificate TTL.
     #[serde(default)]
     pub max_ttl: Option<String>,
+    /// Excluded CIDRs.
+    #[serde(default)]
+    pub exclude_cidr_list: Option<String>,
+    /// Certificate key-ID template.
+    #[serde(default)]
+    pub key_id_format: Option<String>,
+    /// Certificate backdating duration.
+    #[serde(default)]
+    pub not_before_duration: Option<String>,
     /// Issuer reference used by this role.
     #[serde(default)]
     pub issuer_ref: Option<String>,
@@ -670,6 +804,64 @@ impl Client<Authenticated> {
     }
 }
 
+impl Client<Unauthenticated> {
+    /// Uses public SSH CA distribution endpoints at `mount`.
+    pub fn ssh_public(&self, mount: impl Into<String>) -> Result<SshPublic<'_>> {
+        Ok(SshPublic {
+            client: self,
+            mount: validate_mount_path(&mount.into())?,
+        })
+    }
+}
+
+impl SshPublic<'_> {
+    /// Reads the mount's default SSH CA public key without sending a token.
+    pub async fn public_key(&self) -> Result<SshPublicKey> {
+        self.read(&["public_key"]).await
+    }
+
+    /// Reads one issuer's SSH CA public key without sending a token.
+    pub async fn issuer_public_key(&self, issuer_ref: &str) -> Result<SshPublicKey> {
+        self.read(&["issuer", issuer_ref, "public_key"]).await
+    }
+
+    async fn read(&self, tail: &[&str]) -> Result<SshPublicKey> {
+        let path = self.path(tail)?;
+        let body = self
+            .client
+            .request_secret_bytes_headers_accepting(
+                "/ssh/",
+                "ssh",
+                &self.mount.join("/"),
+                Method::GET,
+                &path,
+                &[] as &[(&str, String)],
+                &[(ACCEPT, HeaderValue::from_static("text/plain"))],
+                None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        if body.len() > MAX_SSH_PUBLIC_KEY_BYTES {
+            return Err(Error::Decode(
+                "SSH public-key response exceeds maximum allowed length".into(),
+            ));
+        }
+        let key = body
+            .with_secret(|bytes| String::from_utf8(bytes.to_vec()))
+            .map_err(|_| Error::Decode("SSH public-key response is not UTF-8".into()))?;
+        validate_ssh_public_key(&key)?;
+        Ok(SshPublicKey(key))
+    }
+
+    fn path(&self, tail: &[&str]) -> Result<String> {
+        let mut segments = self.mount.clone();
+        for segment in tail {
+            segments.extend(validate_endpoint_path(segment)?);
+        }
+        Ok(segments.join("/"))
+    }
+}
+
 impl Ssh<'_> {
     /// Lists SSH role names.
     pub async fn list_roles(&self) -> Result<SshRoleList> {
@@ -686,8 +878,7 @@ impl Ssh<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<SshRoleList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(&["roles"])?,
                 &query,
@@ -702,8 +893,7 @@ impl Ssh<'_> {
     pub async fn lookup_roles_by_ip(&self, ip: IpAddr) -> Result<SshRoleList> {
         let payload = SshLookupPayload { ip };
         let envelope: ResponseEnvelope<SshRoleList> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["lookup"])?, Some(&payload))
+            .request(Method::POST, &self.path(&["lookup"])?, Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -711,16 +901,14 @@ impl Ssh<'_> {
     /// Creates or updates an SSH role.
     pub async fn write_role(&self, name: &str, request: &SshRoleRequest) -> Result<Empty> {
         request.validate()?;
-        self.client
-            .request_json_internal(Method::POST, &self.path(&["roles", name])?, Some(request))
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(request))
             .await
     }
 
     /// Reads an SSH role.
     pub async fn read_role(&self, name: &str) -> Result<SshRoleInfo> {
         let envelope: ResponseEnvelope<SshRoleInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["roles", name])?,
                 Option::<&Empty>::None,
@@ -731,20 +919,18 @@ impl Ssh<'_> {
 
     /// Deletes an SSH role.
     pub async fn delete_role(&self, name: &str) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::DELETE,
-                &self.path(&["roles", name])?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::DELETE,
+            &self.path(&["roles", name])?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Reads zero-address role configuration.
     pub async fn read_zero_address_roles(&self) -> Result<SshRoleList> {
         let envelope: ResponseEnvelope<SshRoleList> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["config", "zeroaddress"])?,
                 Option::<&Empty>::None,
@@ -759,24 +945,22 @@ impl Ssh<'_> {
         struct Payload<'a> {
             roles: &'a [String],
         }
-        self.client
-            .request_json_internal(
-                Method::POST,
-                &self.path(&["config", "zeroaddress"])?,
-                Some(&Payload { roles }),
-            )
-            .await
+        self.request(
+            Method::POST,
+            &self.path(&["config", "zeroaddress"])?,
+            Some(&Payload { roles }),
+        )
+        .await
     }
 
     /// Deletes zero-address role configuration.
     pub async fn delete_zero_address_roles(&self) -> Result<Empty> {
-        self.client
-            .request_json_internal(
-                Method::DELETE,
-                &self.path(&["config", "zeroaddress"])?,
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request(
+            Method::DELETE,
+            &self.path(&["config", "zeroaddress"])?,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
     /// Generates SSH OTP credentials for a role.
@@ -786,8 +970,7 @@ impl Ssh<'_> {
         request: &SshCredentialsRequest,
     ) -> Result<SshCredentials> {
         let envelope: ResponseEnvelope<SshCredentials> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["creds", role])?, Some(request))
+            .request(Method::POST, &self.path(&["creds", role])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -795,8 +978,7 @@ impl Ssh<'_> {
     /// Reads the default issuer configuration.
     pub async fn read_issuer_config(&self) -> Result<SshIssuerConfig> {
         let envelope: ResponseEnvelope<SshIssuerConfig> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["config", "issuers"])?,
                 Option::<&Empty>::None,
@@ -811,8 +993,7 @@ impl Ssh<'_> {
         request: &SshIssuerConfigRequest,
     ) -> Result<SshIssuerConfig> {
         let envelope: ResponseEnvelope<SshIssuerConfig> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::POST,
                 &self.path(&["config", "issuers"])?,
                 Some(request),
@@ -836,8 +1017,7 @@ impl Ssh<'_> {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
         let envelope: ResponseEnvelope<SshIssuerList> = self
-            .client
-            .request_json_query_accepting(
+            .request_query(
                 method,
                 &self.path(&["issuers"])?,
                 &query,
@@ -852,8 +1032,7 @@ impl Ssh<'_> {
     pub async fn submit_default_ca(&self, request: &SshCaSubmitRequest) -> Result<SshIssuerInfo> {
         let payload = request.payload();
         let envelope: ResponseEnvelope<SshIssuerInfo> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["config", "ca"])?, Some(&payload))
+            .request(Method::POST, &self.path(&["config", "ca"])?, Some(&payload))
             .await?;
         Ok(envelope.data)
     }
@@ -870,18 +1049,15 @@ impl Ssh<'_> {
         } else {
             self.path(&["issuers", "import"])?
         };
-        let envelope: ResponseEnvelope<SshIssuerInfo> = self
-            .client
-            .request_json_internal(Method::POST, &path, Some(&payload))
-            .await?;
+        let envelope: ResponseEnvelope<SshIssuerInfo> =
+            self.request(Method::POST, &path, Some(&payload)).await?;
         Ok(envelope.data)
     }
 
     /// Reads SSH issuer metadata by issuer ID, name, or `default`.
     pub async fn read_issuer(&self, issuer_ref: &str) -> Result<SshIssuerInfo> {
         let envelope: ResponseEnvelope<SshIssuerInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["issuer", issuer_ref])?,
                 Option::<&Empty>::None,
@@ -892,17 +1068,15 @@ impl Ssh<'_> {
 
     /// Updates SSH issuer metadata by issuer ID, name, or `default`.
     ///
-    /// OpenBao supports both `POST` and `PATCH`; this helper uses `PATCH`
-    /// because the request represents a partial metadata update.
+    /// OpenBao documents this partial metadata update as `POST`.
     pub async fn update_issuer(
         &self,
         issuer_ref: &str,
         request: &SshIssuerUpdateRequest,
     ) -> Result<SshIssuerInfo> {
         let envelope: ResponseEnvelope<SshIssuerInfo> = self
-            .client
-            .request_json_internal(
-                Method::PATCH,
+            .request(
+                Method::POST,
                 &self.path(&["issuer", issuer_ref])?,
                 Some(request),
             )
@@ -913,8 +1087,7 @@ impl Ssh<'_> {
     /// Reads the authenticated default CA public key metadata.
     pub async fn read_ca_public_key(&self) -> Result<SshPublicKeyInfo> {
         let envelope: ResponseEnvelope<SshPublicKeyInfo> = self
-            .client
-            .request_json_internal(
+            .request(
                 Method::GET,
                 &self.path(&["config", "ca"])?,
                 Option::<&Empty>::None,
@@ -925,34 +1098,31 @@ impl Ssh<'_> {
 
     /// Deletes all SSH CA information in the mount, including the default issuer.
     pub async fn delete_ca_information(&self) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["config", "ca"])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["config", "ca"])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Deletes an SSH issuer by issuer ID, name, or `default`.
     pub async fn delete_issuer(&self, issuer_ref: &str) -> Result<Empty> {
-        self.client
-            .request_json_accepting(
-                Method::DELETE,
-                &self.path(&["issuer", issuer_ref])?,
-                Option::<&Empty>::None,
-                &[StatusCode::OK, StatusCode::NO_CONTENT],
-            )
-            .await
+        self.request_accepting(
+            Method::DELETE,
+            &self.path(&["issuer", issuer_ref])?,
+            Option::<&Empty>::None,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
     }
 
     /// Signs an SSH public key with a role.
     pub async fn sign(&self, role: &str, request: &SshSignRequest) -> Result<SshSignResponse> {
         request.validate()?;
         let envelope: ResponseEnvelope<SshSignResponse> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["sign", role])?, Some(request))
+            .request(Method::POST, &self.path(&["sign", role])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -961,8 +1131,7 @@ impl Ssh<'_> {
     pub async fn issue(&self, role: &str, request: &SshIssueRequest) -> Result<SshIssueResponse> {
         request.validate()?;
         let envelope: ResponseEnvelope<SshIssueResponse> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["issue", role])?, Some(request))
+            .request(Method::POST, &self.path(&["issue", role])?, Some(request))
             .await?;
         Ok(envelope.data)
     }
@@ -973,10 +1142,70 @@ impl Ssh<'_> {
             otp: request.otp.expose_secret(),
         };
         let envelope: ResponseEnvelope<SshVerifyResponse> = self
-            .client
-            .request_json_internal(Method::POST, &self.path(&["verify"])?, Some(&payload))
+            .request(Method::POST, &self.path(&["verify"])?, Some(&payload))
             .await?;
         Ok(envelope.data)
+    }
+
+    async fn request<T, B>(&self, method: Method, path: &str, body: Option<&B>) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_internal("/ssh/", "ssh", &self.mount.join("/"), method, path, body)
+            .await
+    }
+
+    async fn request_accepting<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_accepting(
+                "/ssh/",
+                "ssh",
+                &self.mount.join("/"),
+                method,
+                path,
+                body,
+                accepted_statuses,
+            )
+            .await
+    }
+
+    async fn request_query<T, B>(
+        &self,
+        method: Method,
+        path: &str,
+        query: &[(&str, String)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.client
+            .request_secret_json_query_headers_accepting(
+                "/ssh/",
+                "ssh",
+                &self.mount.join("/"),
+                method,
+                path,
+                query,
+                &[],
+                body,
+                accepted_statuses,
+            )
+            .await
     }
 
     fn path(&self, tail: &[&str]) -> Result<String> {
@@ -1076,6 +1305,82 @@ fn validate_ssh_issue_key_bits(
     }
 }
 
+fn deserialize_bounded_key_lengths<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, Vec<u16>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(SshKeyLengthMapVisitor)
+}
+
+struct SshKeyLengthMapVisitor;
+
+impl<'de> Visitor<'de> for SshKeyLengthMapVisitor {
+    type Value = BTreeMap<String, Vec<u16>>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a bounded SSH key-type to key-length map")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < crate::response::MAX_RESPONSE_STRINGS {
+            let Some((key, value)) = map.next_entry::<String, BoundedSshKeyLengths>()? else {
+                return Ok(values);
+            };
+            if values.insert(key, value.0).is_some() {
+                return Err(A::Error::custom("duplicate SSH key-length type"));
+            }
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("SSH key-length map exceeds item limit"));
+        }
+        Ok(values)
+    }
+}
+
+struct BoundedSshKeyLengths(Vec<u16>);
+
+impl<'de> Deserialize<'de> for BoundedSshKeyLengths {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(SshKeyLengthListVisitor)
+    }
+}
+
+struct SshKeyLengthListVisitor;
+
+impl<'de> Visitor<'de> for SshKeyLengthListVisitor {
+    type Value = BoundedSshKeyLengths;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a bounded SSH key-length list")
+    }
+
+    fn visit_seq<A>(self, mut sequence: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < crate::response::MAX_RESPONSE_STRINGS {
+            let Some(value) = sequence.next_element::<u16>()? else {
+                return Ok(BoundedSshKeyLengths(values));
+            };
+            values.push(value);
+        }
+        if sequence.next_element::<IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom("SSH key-length list exceeds item limit"));
+        }
+        Ok(BoundedSshKeyLengths(values))
+    }
+}
+
 fn deserialize_bounded_issuer_info_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, SshIssuerInfo>, D::Error>
@@ -1128,7 +1433,7 @@ mod tests {
 
     use super::{
         SshCaSubmitRequest, SshCredentials, SshIssueKeyType, SshIssueRequest, SshIssueResponse,
-        SshIssuerList, SshRoleList, SshRoleRequest, SshSignRequest, SshVerifyRequest,
+        SshIssuerList, SshRoleInfo, SshRoleList, SshRoleRequest, SshSignRequest, SshVerifyRequest,
     };
 
     #[test]
@@ -1164,6 +1469,19 @@ mod tests {
             Ok(_) => panic!("oversized SSH role list unexpectedly decoded"),
             Err(error) => error,
         };
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn ssh_role_key_length_maps_are_bounded_before_nested_values() {
+        let oversized = (0..=crate::response::MAX_RESPONSE_STRINGS)
+            .map(|value| serde_json::json!(value))
+            .collect::<Vec<_>>();
+        let error = serde_json::from_value::<SshRoleInfo>(serde_json::json!({
+            "allowed_user_key_lengths": { "rsa": oversized }
+        }))
+        .err()
+        .unwrap_or_else(|| panic!("oversized SSH key-length list unexpectedly decoded"));
         assert!(error.to_string().contains("exceeds item limit"));
     }
 
