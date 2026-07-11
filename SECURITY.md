@@ -91,7 +91,11 @@ Please include:
 - Typed fields whose availability changes between locked OpenBao profiles are
   validated before secret payload construction. A selected unsupported field
   fails with a secret-free endpoint, field, and version error; it is never
-  silently omitted. Raw and external-plugin JSON remain outside this guarantee.
+  silently omitted. This guarantee uses the client compatibility profile. A
+  client without a configured compatibility policy is unverified and assumes
+  the newest reviewed profile, so it does not reject fields merely because the
+  actual server may be older. Raw and external-plugin JSON remain outside this
+  guarantee.
 
 ## Admin Bootstrap Concurrency
 

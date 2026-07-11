@@ -10,7 +10,7 @@ use reqwest::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize,
-    de::{DeserializeOwned, IgnoredAny, MapAccess, Visitor},
+    de::{DeserializeOwned, DeserializeSeed, IgnoredAny, MapAccess, Visitor},
     ser::SerializeMap,
 };
 use serde_json::Value as JsonValue;
@@ -23,6 +23,9 @@ use crate::{
         deserialize_optional_bounded_string_map,
     },
 };
+
+const MAX_KV2_SUBKEY_NODES: usize = crate::response::MAX_RESPONSE_STRINGS;
+const MAX_KV2_SUBKEY_DEPTH: usize = 64;
 
 /// Handle for a mounted KV v2 secrets engine.
 #[derive(Debug)]
@@ -212,6 +215,7 @@ pub struct Kv2Subkeys {
     /// Requested version metadata.
     pub metadata: Kv2Metadata,
     /// Recursive object shape. Leaf values are JSON `null`.
+    #[serde(deserialize_with = "deserialize_bounded_subkeys")]
     pub subkeys: JsonValue,
 }
 
@@ -753,6 +757,153 @@ where
     )
 }
 
+fn deserialize_bounded_subkeys<'de, D>(deserializer: D) -> core::result::Result<JsonValue, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let mut remaining = MAX_KV2_SUBKEY_NODES;
+    BoundedSubkeysSeed {
+        remaining: &mut remaining,
+        depth: 0,
+    }
+    .deserialize(deserializer)
+}
+
+struct BoundedSubkeysSeed<'a> {
+    remaining: &'a mut usize,
+    depth: usize,
+}
+
+impl<'de> DeserializeSeed<'de> for BoundedSubkeysSeed<'_> {
+    type Value = JsonValue;
+
+    fn deserialize<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if self.depth > MAX_KV2_SUBKEY_DEPTH {
+            return Err(serde::de::Error::custom(
+                "OpenBao KV subkey shape exceeds depth limit",
+            ));
+        }
+        let Some(remaining) = self.remaining.checked_sub(1) else {
+            return Err(serde::de::Error::custom(
+                "OpenBao KV subkey shape exceeds node limit",
+            ));
+        };
+        *self.remaining = remaining;
+        deserializer.deserialize_any(BoundedSubkeysVisitor {
+            remaining: self.remaining,
+            depth: self.depth,
+        })
+    }
+}
+
+struct BoundedSubkeysVisitor<'a> {
+    remaining: &'a mut usize,
+    depth: usize,
+}
+
+impl<'de> Visitor<'de> for BoundedSubkeysVisitor<'_> {
+    type Value = JsonValue;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a bounded KV subkey object with null leaves")
+    }
+
+    fn visit_unit<E>(self) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(JsonValue::Null)
+    }
+
+    fn visit_bool<E>(self, _value: bool) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        invalid_subkey_leaf()
+    }
+
+    fn visit_i64<E>(self, _value: i64) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        invalid_subkey_leaf()
+    }
+
+    fn visit_u64<E>(self, _value: u64) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        invalid_subkey_leaf()
+    }
+
+    fn visit_f64<E>(self, _value: f64) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        invalid_subkey_leaf()
+    }
+
+    fn visit_str<E>(self, _value: &str) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        invalid_subkey_leaf()
+    }
+
+    fn visit_string<E>(self, _value: String) -> core::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        invalid_subkey_leaf()
+    }
+
+    fn visit_seq<A>(self, _seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        invalid_subkey_leaf()
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = serde_json::Map::new();
+        while *self.remaining > 0 {
+            let Some(key) = map.next_key::<String>()? else {
+                return Ok(JsonValue::Object(values));
+            };
+            let value = map.next_value_seed(BoundedSubkeysSeed {
+                remaining: self.remaining,
+                depth: self.depth + 1,
+            })?;
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao KV subkey shape contains duplicate keys",
+                ));
+            }
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "OpenBao KV subkey shape exceeds node limit",
+            ));
+        }
+        Ok(JsonValue::Object(values))
+    }
+}
+
+fn invalid_subkey_leaf<T, E>() -> core::result::Result<T, E>
+where
+    E: serde::de::Error,
+{
+    Err(E::custom(
+        "OpenBao KV subkey shape contains a non-null leaf",
+    ))
+}
+
 fn deserialize_bounded_secret_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, SecretString>, D::Error>
@@ -833,7 +984,10 @@ mod tests {
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::{Kv2KeyMetadata, Kv2List, Kv2ServiceConfig};
+    use super::{
+        Kv2KeyMetadata, Kv2List, Kv2ServiceConfig, Kv2Subkeys, MAX_KV2_SUBKEY_DEPTH,
+        MAX_KV2_SUBKEY_NODES,
+    };
 
     #[test]
     fn kv2_paths_are_validated() {
@@ -917,6 +1071,52 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn kv2_subkey_shapes_are_bounded_before_nested_value_allocation() {
+        let response = |subkeys| {
+            serde_json::json!({
+                "metadata": {
+                    "created_time": "2026-07-11T00:00:00Z",
+                    "version": 1
+                },
+                "subkeys": subkeys
+            })
+        };
+
+        let accepted = serde_json::from_value::<Kv2Subkeys>(response(serde_json::json!({
+            "database": { "username": null }
+        })))
+        .unwrap_or_else(|error| panic!("bounded subkey shape was rejected: {error}"));
+        assert!(accepted.subkeys["database"]["username"].is_null());
+
+        let mut wide = serde_json::Map::new();
+        for index in 0..MAX_KV2_SUBKEY_NODES {
+            wide.insert(format!("key-{index}"), serde_json::Value::Null);
+        }
+        let error = serde_json::from_value::<Kv2Subkeys>(response(serde_json::Value::Object(wide)))
+            .err()
+            .unwrap_or_else(|| panic!("oversized KV subkey shape unexpectedly decoded"));
+        assert!(error.to_string().contains("node limit"));
+
+        let mut deep = serde_json::Value::Null;
+        for index in 0..=MAX_KV2_SUBKEY_DEPTH {
+            let mut level = serde_json::Map::new();
+            level.insert(format!("level-{index}"), deep);
+            deep = serde_json::Value::Object(level);
+        }
+        let error = serde_json::from_value::<Kv2Subkeys>(response(deep))
+            .err()
+            .unwrap_or_else(|| panic!("over-deep KV subkey shape unexpectedly decoded"));
+        assert!(error.to_string().contains("depth limit"));
+
+        let error = serde_json::from_value::<Kv2Subkeys>(response(serde_json::json!({
+            "unexpected": "secret-value"
+        })))
+        .err()
+        .unwrap_or_else(|| panic!("non-null KV subkey leaf unexpectedly decoded"));
+        assert!(!error.to_string().contains("secret-value"));
     }
 
     #[test]

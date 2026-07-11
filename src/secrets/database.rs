@@ -155,6 +155,11 @@ impl DatabaseConnectionConfig {
             }
         };
         let disables_tls_verification = match self.builtin_options.as_ref() {
+            Some(DatabaseBuiltinConnectionConfig::PostgreSql(options)) => {
+                postgres_dsn_explicitly_disables_tls_verification(
+                    options.connection_url.expose_secret(),
+                )
+            }
             Some(DatabaseBuiltinConnectionConfig::MySql(options)) => {
                 options.tls_skip_verify == Some(true)
             }
@@ -362,6 +367,11 @@ impl MySqlPlugin {
 #[derive(Clone, Default)]
 pub struct PostgreSqlConnectionOptions {
     /// Templated PostgreSQL DSN.
+    ///
+    /// Explicit `sslmode=disable`, `allow`, `prefer`, or `require` settings
+    /// require the `insecure-database-tls-acknowledged` Cargo feature because
+    /// they do not authenticate the database server certificate. Both URI
+    /// query parameters and PostgreSQL keyword/value DSNs are checked.
     pub connection_url: SecretString,
     /// Root username.
     pub username: Option<String>,
@@ -405,6 +415,174 @@ impl fmt::Debug for PostgreSqlConnectionOptions {
             .field("disable_escaping", &self.disable_escaping)
             .field("password_authentication", &self.password_authentication)
             .finish()
+    }
+}
+
+fn postgres_dsn_explicitly_disables_tls_verification(dsn: &str) -> bool {
+    postgres_uri_query_has_insecure_sslmode(dsn) || postgres_keyword_dsn_has_insecure_sslmode(dsn)
+}
+
+fn postgres_uri_query_has_insecure_sslmode(dsn: &str) -> bool {
+    let Some((_, query_and_fragment)) = dsn.split_once('?') else {
+        return false;
+    };
+    let query = query_and_fragment
+        .split_once('#')
+        .map_or(query_and_fragment, |(query, _)| query);
+    query.split('&').any(|parameter| {
+        let Some((key, value)) = parameter.split_once('=') else {
+            return false;
+        };
+        percent_decoded_ascii_eq(key, b"sslmode")
+            && postgres_percent_encoded_sslmode_is_insecure(value)
+    })
+}
+
+fn postgres_keyword_dsn_has_insecure_sslmode(dsn: &str) -> bool {
+    let bytes = dsn.as_bytes();
+    let mut offset = 0_usize;
+    while offset < bytes.len() {
+        while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
+            offset += 1;
+        }
+        let key_start = offset;
+        while bytes
+            .get(offset)
+            .is_some_and(|byte| !byte.is_ascii_whitespace() && *byte != b'=')
+        {
+            offset += 1;
+        }
+        let key_end = offset;
+        while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
+            offset += 1;
+        }
+        if bytes.get(offset) != Some(&b'=') {
+            while bytes
+                .get(offset)
+                .is_some_and(|byte| !byte.is_ascii_whitespace())
+            {
+                offset += 1;
+            }
+            continue;
+        }
+        offset += 1;
+        while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
+            offset += 1;
+        }
+
+        let quoted = bytes.get(offset) == Some(&b'\'');
+        if quoted {
+            offset += 1;
+        }
+        let value_start = offset;
+        let mut escaped = false;
+        while let Some(byte) = bytes.get(offset) {
+            if escaped {
+                escaped = false;
+                offset += 1;
+            } else if *byte == b'\\' {
+                escaped = true;
+                offset += 1;
+            } else if (quoted && *byte == b'\'') || (!quoted && byte.is_ascii_whitespace()) {
+                break;
+            } else {
+                offset += 1;
+            }
+        }
+        let value_end = offset;
+        if quoted && bytes.get(offset) == Some(&b'\'') {
+            offset += 1;
+        }
+
+        if ascii_eq_ignore_case(&bytes[key_start..key_end], b"sslmode")
+            && postgres_sslmode_is_insecure_escaped(&bytes[value_start..value_end])
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn postgres_percent_encoded_sslmode_is_insecure(value: &str) -> bool {
+    [b"disable".as_slice(), b"allow", b"prefer", b"require"]
+        .iter()
+        .any(|mode| percent_decoded_ascii_eq(value, mode))
+}
+
+fn postgres_sslmode_is_insecure_escaped(value: &[u8]) -> bool {
+    [b"disable".as_slice(), b"allow", b"prefer", b"require"]
+        .iter()
+        .any(|mode| escaped_ascii_eq(value, mode))
+}
+
+fn ascii_eq_ignore_case(value: &[u8], expected: &[u8]) -> bool {
+    value.len() == expected.len()
+        && value
+            .iter()
+            .zip(expected)
+            .all(|(left, right)| left.eq_ignore_ascii_case(right))
+}
+
+fn escaped_ascii_eq(value: &[u8], expected: &[u8]) -> bool {
+    let mut expected = expected.iter();
+    let mut offset = 0_usize;
+    while let Some(byte) = value.get(offset) {
+        let decoded = if *byte == b'\\' {
+            offset += 1;
+            let Some(escaped) = value.get(offset) else {
+                return false;
+            };
+            *escaped
+        } else {
+            *byte
+        };
+        let Some(expected) = expected.next() else {
+            return false;
+        };
+        if !decoded.eq_ignore_ascii_case(expected) {
+            return false;
+        }
+        offset += 1;
+    }
+    expected.next().is_none()
+}
+
+fn percent_decoded_ascii_eq(value: &str, expected: &[u8]) -> bool {
+    let bytes = value.as_bytes();
+    let mut expected = expected.iter();
+    let mut offset = 0_usize;
+    while let Some(byte) = bytes.get(offset) {
+        let decoded = if *byte == b'%' {
+            let (Some(high), Some(low)) = (bytes.get(offset + 1), bytes.get(offset + 2)) else {
+                return false;
+            };
+            let (Some(high), Some(low)) = (hex_value(*high), hex_value(*low)) else {
+                return false;
+            };
+            offset += 2;
+            (high << 4) | low
+        } else if *byte == b'+' {
+            b' '
+        } else {
+            *byte
+        };
+        let Some(expected) = expected.next() else {
+            return false;
+        };
+        if !decoded.eq_ignore_ascii_case(expected) {
+            return false;
+        }
+        offset += 1;
+    }
+    expected.next().is_none()
+}
+
+const fn hex_value(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
     }
 }
 
@@ -1566,6 +1744,7 @@ mod tests {
         DatabaseCredentials, DatabaseList, DatabaseRole, DatabaseStaticCredentials,
         InfluxDbConnectionOptions, MySqlConnectionOptions, MySqlPlugin,
         PostgreSqlConnectionOptions, ValkeyConnectionOptions,
+        postgres_dsn_explicitly_disables_tls_verification,
     };
 
     #[test]
@@ -1711,6 +1890,55 @@ mod tests {
             .unwrap_or_else(|| panic!("insecure database TLS unexpectedly accepted"));
         assert!(error.to_string().contains("requires"));
         assert!(!error.to_string().contains("password"));
+    }
+
+    #[test]
+    fn postgres_dsn_tls_bypass_detection_covers_uri_and_keyword_forms() {
+        for dsn in [
+            "postgresql://db.example/openbao?sslmode=disable",
+            "postgresql://db.example/openbao?SSLMode=ALLOW",
+            "postgresql://db.example/openbao?%73slmode=prefer",
+            "postgresql://db.example/openbao?sslmode=%72equire",
+            "host=db.example sslmode=disable dbname=openbao",
+            "host=db.example sslmode = 'ALLOW' dbname=openbao",
+            r"host=db.example sslmode='pre\fer' dbname=openbao",
+        ] {
+            assert!(
+                postgres_dsn_explicitly_disables_tls_verification(dsn),
+                "insecure sslmode was not detected"
+            );
+        }
+
+        for dsn in [
+            "postgresql://db.example/openbao?sslmode=verify-full",
+            "postgresql://db.example/sslmode=disable?application_name=sslmode%3Ddisable",
+            "host=db.example sslmode=verify-ca password=sslmode=disable",
+            "postgresql://db.example/openbao",
+        ] {
+            assert!(
+                !postgres_dsn_explicitly_disables_tls_verification(dsn),
+                "secure or unrelated DSN was rejected"
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(not(feature = "insecure-database-tls-acknowledged"))]
+    fn postgres_dsn_tls_bypass_requires_acknowledgement() {
+        let config =
+            DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::PostgreSql(
+                PostgreSqlConnectionOptions::new(SecretString::from(
+                    "postgresql://{{username}}:{{password}}@db.example/openbao?sslmode=require",
+                )),
+            ));
+        let error = config
+            .validate()
+            .err()
+            .unwrap_or_else(|| panic!("insecure PostgreSQL TLS unexpectedly accepted"));
+        assert!(error.to_string().contains("requires"));
+        assert!(!error.to_string().contains("username"));
+        assert!(!error.to_string().contains("password"));
+        assert!(!error.to_string().contains("db.example"));
     }
 
     #[test]
