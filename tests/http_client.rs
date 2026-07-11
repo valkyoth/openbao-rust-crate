@@ -25,6 +25,115 @@ use openbao::{
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
+#[tokio::test]
+async fn versioned_request_fields_fail_before_secret_transport() {
+    let version = OpenBaoVersion::new(2, 0, 0);
+    let policy =
+        OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(
+        OpenBaoConfig::new("https://127.0.0.1:1")
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(test_secret(&["field-validation", "-token"]));
+
+    let jwt_result = client
+        .jwt_admin_at("jwt")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .configure(&openbao::auth::jwt::JwtConfig {
+            oidc_client_secret: Some(test_secret(&["oidc", "-secret"])),
+            skip_jwks_validation: Some(true),
+            ..openbao::auth::jwt::JwtConfig::default()
+        })
+        .await;
+    let jwt_error = match jwt_result {
+        Ok(_) => panic!("old profile unexpectedly accepted skip_jwks_validation"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        &jwt_error,
+        Error::UnsupportedOpenBaoRequestField {
+            endpoint: "auth.jwt.config",
+            field: "skip_jwks_validation",
+            version: rejected
+        } if *rejected == version
+    ));
+    let jwt_display = jwt_error.to_string();
+    assert!(!jwt_display.contains("oidc-secret"));
+    assert!(!jwt_display.contains("field-validation-token"));
+
+    let transit_result = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .data_key(
+            "service",
+            openbao::secrets::transit::TransitDataKeyType::Plaintext,
+            &openbao::secrets::transit::TransitDataKeyRequest {
+                associated_data: Some(test_secret(&["associated", "-secret"])),
+                ..openbao::secrets::transit::TransitDataKeyRequest::default()
+            },
+        )
+        .await;
+    let transit_error = match transit_result {
+        Ok(_) => panic!("old profile unexpectedly accepted Transit associated_data"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        &transit_error,
+        Error::UnsupportedOpenBaoRequestField {
+            endpoint: "transit.datakey",
+            field: "associated_data",
+            version: rejected
+        } if *rejected == version
+    ));
+    assert!(!transit_error.to_string().contains("associated-secret"));
+
+    let policy_result = client
+        .sys()
+        .write_policy(
+            "service",
+            &openbao::sys::PolicyWriteRequest::new("path \"secret/data\" {}").with_ttl("1h"),
+        )
+        .await;
+    let policy_error = match policy_result {
+        Ok(_) => panic!("old profile unexpectedly accepted policy ttl"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        &policy_error,
+        Error::UnsupportedOpenBaoRequestField {
+            endpoint: "sys.policy.write",
+            field: "ttl",
+            version: rejected
+        } if *rejected == version
+    ));
+
+    let pki_result = client
+        .pki("pki")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .write_role(
+            "service",
+            &openbao::secrets::pki::PkiRole {
+                allowed_ip_sans_cidr: vec!["10.0.0.0/8".to_owned()],
+                ..openbao::secrets::pki::PkiRole::default()
+            },
+        )
+        .await;
+    let pki_error = match pki_result {
+        Ok(_) => panic!("old profile unexpectedly accepted allowed_ip_sans_cidr"),
+        Err(error) => error,
+    };
+    assert!(matches!(
+        &pki_error,
+        Error::UnsupportedOpenBaoRequestField {
+            endpoint: "pki.role",
+            field: "allowed_ip_sans_cidr",
+            version: rejected
+        } if *rejected == version
+    ));
+}
+
 #[cfg(feature = "monitor-stream")]
 use futures_core::Stream;
 

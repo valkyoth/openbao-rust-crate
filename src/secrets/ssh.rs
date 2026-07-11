@@ -148,7 +148,7 @@ pub struct SshRoleRequest {
     /// Whether subdomains are allowed in host certificate principals.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allow_subdomains: Option<bool>,
-    /// Allows certificates with no principals.
+    /// Allows certificates with no principals (OpenBao 2.0.2+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allow_empty_principals: Option<bool>,
     /// Allows caller-selected SSH key IDs.
@@ -193,7 +193,7 @@ pub struct SshRoleRequest {
     /// Backdates generated certificates by this duration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_before_duration: Option<String>,
-    /// Issuer reference used by this role.
+    /// Issuer reference used by this role (OpenBao 2.3.1+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub issuer_ref: Option<String>,
 }
@@ -901,6 +901,18 @@ impl Ssh<'_> {
     /// Creates or updates an SSH role.
     pub async fn write_role(&self, name: &str, request: &SshRoleRequest) -> Result<Empty> {
         request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ALLOW_EMPTY_PRINCIPALS,
+                    request.allow_empty_principals.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ISSUER_REF,
+                    request.issuer_ref.is_some(),
+                ),
+            ])
+            .await?;
         self.request(Method::POST, &self.path(&["roles", name])?, Some(request))
             .await
     }

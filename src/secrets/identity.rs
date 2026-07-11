@@ -1238,6 +1238,8 @@ impl IdentityOidcProviderTokenRequest {
     }
 
     /// Creates a client-credentials request for a space-delimited scope list.
+    ///
+    /// The provider token `scope` field requires OpenBao 2.5 or later.
     pub fn client_credentials(scope: impl Into<String>) -> Self {
         Self {
             grant_type: IdentityOidcGrantType::ClientCredentials,
@@ -2723,6 +2725,12 @@ impl IdentityOidcProvider<'_> {
         request: &IdentityOidcProviderTokenRequest,
     ) -> Result<IdentityOidcProviderTokenResponse> {
         request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::IDENTITY_PROVIDER_TOKEN_SCOPE,
+                request.scope.is_some(),
+            )])
+            .await?;
         let mut fields = vec![(
             "grant_type",
             match request.grant_type {

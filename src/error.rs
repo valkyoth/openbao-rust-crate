@@ -53,6 +53,15 @@ pub enum Error {
         /// Exact compatibility profile used for dispatch.
         version: OpenBaoVersion,
     },
+    /// A caller-selected request field is unavailable on the selected profile.
+    UnsupportedOpenBaoRequestField {
+        /// Stable, secret-free logical endpoint identifier.
+        endpoint: &'static str,
+        /// Public Rust/JSON field name.
+        field: &'static str,
+        /// Exact compatibility profile used for validation.
+        version: OpenBaoVersion,
+    },
     /// A public raw request was attempted without explicit acknowledgement.
     RawApiDisabled,
     /// A crate invariant was violated.
@@ -128,6 +137,14 @@ impl fmt::Display for Error {
             Self::UnsupportedOpenBaoCapability { endpoint, version } => write!(
                 formatter,
                 "OpenBao capability {endpoint} is unsupported for server version {version}"
+            ),
+            Self::UnsupportedOpenBaoRequestField {
+                endpoint,
+                field,
+                version,
+            } => write!(
+                formatter,
+                "OpenBao request field {endpoint}.{field} is unsupported for server version {version}"
             ),
             Self::RawApiDisabled => write!(
                 formatter,

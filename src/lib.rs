@@ -133,6 +133,7 @@ pub mod plugin;
 pub mod policy;
 #[cfg(feature = "transit")]
 pub mod posture;
+mod request_compatibility;
 mod response;
 #[cfg(feature = "time")]
 pub mod timestamp;

@@ -88,6 +88,10 @@ Please include:
 - Configured certificate revocation lists fail closed unless Rustls is the
   selected backend. Enabling acknowledged native TLS alongside Rustls selects
   native TLS and therefore rejects CRL-bearing client configurations.
+- Typed fields whose availability changes between locked OpenBao profiles are
+  validated before secret payload construction. A selected unsupported field
+  fails with a secret-free endpoint, field, and version error; it is never
+  silently omitted. Raw and external-plugin JSON remain outside this guarantee.
 
 ## Admin Bootstrap Concurrency
 

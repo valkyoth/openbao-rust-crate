@@ -423,6 +423,10 @@ method/path operations. The earlier `597/643` coverage claim has been withdrawn:
 the exact baseline intentionally marks all rows `unverified` or
 `confirmed-gap` until public helper, field, transport, security, and test
 evidence is linked. It is an implementation backlog, not a support percentage.
+Version-dependent typed request fields and their exact introduction profiles
+are documented in
+[docs/OPENBAO_REQUEST_FIELD_COMPATIBILITY.md](docs/OPENBAO_REQUEST_FIELD_COMPATIBILITY.md).
+Selected unsupported fields fail locally and are never silently omitted.
 
 ### Client, Transport, And TLS
 

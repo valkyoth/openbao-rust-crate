@@ -1022,7 +1022,7 @@ impl ListEntries for TransitKeyList {
 pub struct TransitEncryptRequest {
     /// Base64-encoded plaintext.
     pub plaintext: SecretString,
-    /// Base64-encoded AEAD associated data.
+    /// Base64-encoded AEAD associated data (OpenBao 2.5+).
     pub associated_data: Option<SecretString>,
     /// Base64-encoded derivation context.
     pub context: Option<SecretString>,
@@ -2514,6 +2514,12 @@ impl Transit<'_> {
         data_key_type: TransitDataKeyType,
         request: &TransitDataKeyRequest,
     ) -> Result<TransitDataKeyResponse> {
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::TRANSIT_DATA_KEY_ASSOCIATED_DATA,
+                request.associated_data.is_some(),
+            )])
+            .await?;
         let payload = TransitDataKeyPayload {
             associated_data: request
                 .associated_data

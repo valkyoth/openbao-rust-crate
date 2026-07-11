@@ -1106,6 +1106,28 @@ impl Client<Unauthenticated> {
 }
 
 impl<State> Client<State> {
+    pub(crate) async fn validate_versioned_request_fields(
+        &self,
+        fields: &[(
+            &'static crate::request_compatibility::VersionedRequestField,
+            bool,
+        )],
+    ) -> Result<()> {
+        let report = self.ensure_compatibility().await?;
+        let version = report.profile_version().or_else(|| {
+            (report.status() == crate::compatibility::OpenBaoCompatibilityStatus::Unverified)
+                .then(latest_generated_profile)
+                .flatten()
+        });
+        let version = version.ok_or(Error::Internal(
+            "OpenBao compatibility report has no request-field profile",
+        ))?;
+        if !is_generated_profile(version) {
+            return Err(Error::UnsupportedOpenBaoVersion(version));
+        }
+        crate::request_compatibility::validate_request_fields(version, fields)
+    }
+
     /// Returns the validated base URL.
     pub fn base_url(&self) -> &Url {
         &self.config.base_url

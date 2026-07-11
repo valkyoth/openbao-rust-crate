@@ -79,10 +79,10 @@ pub struct JwtConfig {
         deserialize_with = "deserialize_bounded_string_map_or_default"
     )]
     pub provider_config: BTreeMap<String, String>,
-    /// TLS server names accepted instead of the URL hostname for OIDC/JWKS.
+    /// TLS server names accepted instead of the URL hostname for OIDC/JWKS (OpenBao 2.4+).
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub override_allowed_server_names: Vec<String>,
-    /// Save configuration even when initial JWKS validation fails.
+    /// Save configuration even when initial JWKS validation fails (OpenBao 2.3.1+).
     #[serde(default)]
     pub skip_jwks_validation: Option<bool>,
     /// Whether namespaces are encoded in OIDC state.
@@ -266,13 +266,13 @@ pub struct JwtRole {
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub oidc_scopes: Vec<String>,
-    /// OIDC callback mode: `client`, `direct`, or `device`.
+    /// OIDC callback mode: `client`, `direct`, or `device` (OpenBao 2.1+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub callback_mode: Option<String>,
-    /// Poll interval in seconds for direct and device callback modes.
+    /// Poll interval in seconds for direct and device callback modes (OpenBao 2.1+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub poll_interval: Option<u64>,
-    /// Disables OpenBao's direct-flow confirmation page.
+    /// Disables OpenBao's direct-flow confirmation page (OpenBao 2.5.2+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub oidc_disable_confirmation: Option<bool>,
     /// Emits received OIDC tokens and claims to debug logs.
@@ -284,7 +284,7 @@ pub struct JwtRole {
     /// Maximum age accepted since the user's active authentication.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_age: Option<String>,
-    /// Allows token policy templates to reference JWT/OIDC claims.
+    /// Allows token policy templates to reference JWT/OIDC claims (OpenBao 2.1+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_policies_template_claims: Option<bool>,
     /// Policies attached to generated tokens.
@@ -1067,6 +1067,18 @@ impl JwtAuth<'_> {
 impl JwtAuthAdmin<'_> {
     /// Configures the JWT/OIDC auth method.
     pub async fn configure(&self, config: &JwtConfig) -> Result<Empty> {
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::JWT_CONFIG_SKIP_JWKS_VALIDATION,
+                    config.skip_jwks_validation.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::JWT_CONFIG_OVERRIDE_ALLOWED_SERVER_NAMES,
+                    !config.override_allowed_server_names.is_empty(),
+                ),
+            ])
+            .await?;
         let payload = JwtConfigPayload {
             oidc_discovery_url: config.oidc_discovery_url.as_deref(),
             oidc_discovery_ca_pem: config.oidc_discovery_ca_pem.as_deref(),
@@ -1133,6 +1145,26 @@ impl JwtAuthAdmin<'_> {
     /// Creates or updates a JWT/OIDC auth role.
     pub async fn write_role(&self, name: &str, role: &JwtRole) -> Result<Empty> {
         role.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::JWT_ROLE_CALLBACK_MODE,
+                    role.callback_mode.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::JWT_ROLE_POLL_INTERVAL,
+                    role.poll_interval.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::JWT_ROLE_TOKEN_POLICY_TEMPLATES,
+                    role.token_policies_template_claims.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::JWT_ROLE_DISABLE_CONFIRMATION,
+                    role.oidc_disable_confirmation.is_some(),
+                ),
+            ])
+            .await?;
         let name = validate_mount_path(name)?.join("/");
         self.client
             .request_auth_json_internal(

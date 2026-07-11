@@ -730,6 +730,8 @@ Pentest focus:
 
 ### Commit 15: Enforce Version-Specific Request Fields
 
+Status: implemented. Pentest this commit from `2f1bab42ad57bf5c3a77905712dbba3fed7ab41a` to the resulting Commit 15 hash.
+
 Suggested commit title: `Validate OpenBao request fields by version`
 
 Goal:

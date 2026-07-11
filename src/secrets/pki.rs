@@ -145,7 +145,7 @@ pub struct PkiRole {
     /// Allows requested IP SANs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub allow_ip_sans: Option<bool>,
-    /// CIDR ranges allowed for requested IP SANs.
+    /// CIDR ranges allowed for requested IP SANs (OpenBao 2.5+).
     #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub allowed_ip_sans_cidr: Vec<String>,
@@ -209,13 +209,13 @@ pub struct PkiRole {
     /// Not-before skew duration.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_before_duration: Option<String>,
-    /// Not-before request bound mode.
+    /// Not-before request bound mode (OpenBao 2.3.1+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_before_bound: Option<String>,
-    /// Explicit not-before timestamp.
+    /// Explicit not-before timestamp (OpenBao 2.1+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_before: Option<String>,
-    /// Not-after request bound mode or timestamp.
+    /// Not-after request bound mode or timestamp (OpenBao 2.3.1+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_after_bound: Option<String>,
     /// Explicit not-after timestamp.
@@ -457,7 +457,7 @@ pub struct PkiGenerateRootRequest {
     /// Not-before skew duration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_before_duration: Option<String>,
-    /// Explicit not-before timestamp.
+    /// Explicit not-before timestamp (OpenBao 2.1+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_before: Option<String>,
     /// Explicit not-after timestamp.
@@ -551,7 +551,7 @@ pub struct PkiGenerateIntermediateRequest {
     /// Not-before skew duration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_before_duration: Option<String>,
-    /// Explicit not-before timestamp.
+    /// Explicit not-before timestamp (OpenBao 2.1+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_before: Option<String>,
     /// Explicit not-after timestamp.
@@ -800,7 +800,7 @@ pub struct PkiTidyRequest {
     /// Tidies ACME state where supported.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tidy_acme: Option<bool>,
-    /// Tidies invalid certificates where supported.
+    /// Tidies invalid certificates where supported (OpenBao 2.1+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tidy_invalid_certs: Option<bool>,
     /// Tidies expired issuer metadata where supported.
@@ -824,7 +824,7 @@ pub struct PkiTidyRequest {
     /// Pause duration between tidy batches.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pause_duration: Option<String>,
-    /// Page size for tidy operations.
+    /// Page size for tidy operations (OpenBao 2.2+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page_size: Option<u64>,
     /// Whether to maintain stored certificate counts.
@@ -940,7 +940,7 @@ pub struct PkiAutoTidyConfig {
     /// Tidies revocation queue entries.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tidy_revocation_queue: Option<bool>,
-    /// Tidies invalid certificates.
+    /// Tidies invalid certificates (OpenBao 2.1+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tidy_invalid_certs: Option<bool>,
     /// Tidies expired issuer metadata.
@@ -962,7 +962,7 @@ pub struct PkiAutoTidyConfig {
         skip_serializing_if = "Option::is_none"
     )]
     pub safety_buffer: Option<String>,
-    /// Safety buffer applied specifically to revoked certificates.
+    /// Safety buffer applied specifically to revoked certificates (OpenBao 2.1+).
     #[serde(
         default,
         deserialize_with = "deserialize_optional_string_or_u64",
@@ -990,7 +990,7 @@ pub struct PkiAutoTidyConfig {
         skip_serializing_if = "Option::is_none"
     )]
     pub pause_duration: Option<String>,
-    /// Page size for tidy batches.
+    /// Page size for tidy batches (OpenBao 2.2+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub page_size: Option<u64>,
     /// Whether to maintain stored certificate counts.
@@ -1186,7 +1186,7 @@ pub struct PkiSignVerbatimRequest {
     /// Certificate return format.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<String>,
-    /// Explicit not-before timestamp.
+    /// Explicit not-before timestamp (OpenBao 2.1+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_before: Option<String>,
     /// Explicit not-after timestamp.
@@ -1912,12 +1912,59 @@ impl PkiPublic<'_> {
 }
 
 impl Pki<'_> {
+    async fn validate_authority_request_fields(&self, not_before_is_set: bool) -> Result<()> {
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::PKI_AUTHORITY_NOT_BEFORE,
+                not_before_is_set,
+            )])
+            .await
+    }
+
+    async fn validate_role_request_fields(&self, role: &PkiRole) -> Result<()> {
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::PKI_ROLE_NOT_BEFORE,
+                    role.not_before.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::PKI_ROLE_NOT_BEFORE_BOUND,
+                    role.not_before_bound.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::PKI_ROLE_NOT_AFTER_BOUND,
+                    role.not_after_bound.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::PKI_ROLE_ALLOWED_IP_SANS_CIDR,
+                    !role.allowed_ip_sans_cidr.is_empty(),
+                ),
+            ])
+            .await
+    }
+
+    #[cfg(feature = "operator-ops")]
+    async fn validate_sign_verbatim_request_fields(
+        &self,
+        request: &PkiSignVerbatimRequest,
+    ) -> Result<()> {
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::PKI_SIGN_VERBATIM_NOT_BEFORE,
+                request.not_before.is_some(),
+            )])
+            .await
+    }
+
     /// Generates a root CA certificate.
     pub async fn generate_root(
         &self,
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_authority_request_fields(request.not_before.is_some())
+            .await?;
         self.enveloped(
             Method::POST,
             &self.path(&["root", "generate", generation_type.as_path_segment()])?,
@@ -1932,6 +1979,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_authority_request_fields(request.not_before.is_some())
+            .await?;
         self.enveloped(
             Method::POST,
             &self.path(&[
@@ -1951,6 +2000,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_authority_request_fields(request.not_before.is_some())
+            .await?;
         self.enveloped(
             Method::POST,
             &self.path(&["root", "rotate", generation_type.as_path_segment()])?,
@@ -2015,6 +2066,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateIntermediateRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_authority_request_fields(request.not_before.is_some())
+            .await?;
         self.enveloped(
             Method::POST,
             &self.path(&[
@@ -2033,6 +2086,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateIntermediateRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_authority_request_fields(request.not_before.is_some())
+            .await?;
         self.enveloped(
             Method::POST,
             &self.path(&[
@@ -2139,12 +2194,14 @@ impl Pki<'_> {
 
     /// Creates or replaces a PKI role.
     pub async fn write_role(&self, name: &str, role: &PkiRole) -> Result<Empty> {
+        self.validate_role_request_fields(role).await?;
         self.request(Method::POST, &self.path(&["roles", name])?, Some(role))
             .await
     }
 
     /// Patches a PKI role with JSON Merge Patch semantics.
     pub async fn patch_role(&self, name: &str, patch: &PkiRole) -> Result<PkiRole> {
+        self.validate_role_request_fields(patch).await?;
         self.enveloped_with_headers(
             Method::PATCH,
             &self.path(&["roles", name])?,
@@ -2296,6 +2353,18 @@ impl Pki<'_> {
 
     /// Starts PKI tidy with the requested options.
     pub async fn tidy(&self, request: &PkiTidyRequest) -> Result<Empty> {
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::PKI_TIDY_INVALID_CERTS,
+                    request.tidy_invalid_certs.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::PKI_TIDY_PAGE_SIZE,
+                    request.page_size.is_some(),
+                ),
+            ])
+            .await?;
         self.request(Method::POST, &self.path(&["tidy"])?, Some(request))
             .await
     }
@@ -2332,6 +2401,22 @@ impl Pki<'_> {
 
     /// Sets PKI automatic tidy configuration.
     pub async fn write_auto_tidy_config(&self, config: &PkiAutoTidyConfig) -> Result<Empty> {
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::PKI_AUTO_TIDY_INVALID_CERTS,
+                    config.tidy_invalid_certs.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::PKI_AUTO_TIDY_REVOKED_SAFETY_BUFFER,
+                    config.revoked_safety_buffer.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::PKI_AUTO_TIDY_PAGE_SIZE,
+                    config.page_size.is_some(),
+                ),
+            ])
+            .await?;
         self.request(
             Method::POST,
             &self.path(&["config", "auto-tidy"])?,
@@ -2396,6 +2481,7 @@ impl Pki<'_> {
         &self,
         request: &PkiSignVerbatimRequest,
     ) -> Result<PkiCertificateBundle> {
+        self.validate_sign_verbatim_request_fields(request).await?;
         self.enveloped(Method::POST, &self.path(&["sign-verbatim"])?, Some(request))
             .await
     }
@@ -2411,6 +2497,7 @@ impl Pki<'_> {
         role: &str,
         request: &PkiSignVerbatimRequest,
     ) -> Result<PkiCertificateBundle> {
+        self.validate_sign_verbatim_request_fields(request).await?;
         self.enveloped(
             Method::POST,
             &self.path(&["sign-verbatim", role])?,
@@ -2430,6 +2517,7 @@ impl Pki<'_> {
         issuer_ref: &str,
         request: &PkiSignVerbatimRequest,
     ) -> Result<PkiCertificateBundle> {
+        self.validate_sign_verbatim_request_fields(request).await?;
         self.enveloped(
             Method::POST,
             &self.path(&["issuer", issuer_ref, "sign-verbatim"])?,
@@ -2450,6 +2538,7 @@ impl Pki<'_> {
         role: &str,
         request: &PkiSignVerbatimRequest,
     ) -> Result<PkiCertificateBundle> {
+        self.validate_sign_verbatim_request_fields(request).await?;
         self.enveloped(
             Method::POST,
             &self.path(&["issuer", issuer_ref, "sign-verbatim", role])?,

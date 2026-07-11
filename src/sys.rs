@@ -1327,7 +1327,7 @@ pub struct RaftJoinRequest {
     pub auto_join_scheme: Option<String>,
     /// Port used for auto-join.
     pub auto_join_port: Option<u16>,
-    /// Join as a non-voting server.
+    /// Join as a non-voting server (OpenBao 2.2+).
     pub non_voter: Option<bool>,
 }
 
@@ -2267,7 +2267,7 @@ pub struct OperatorRotationConfig {
     /// Whether automatic rotation is enabled.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
-    /// Maximum time between rotations.
+    /// Maximum time between rotations (OpenBao 2.4+).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interval: Option<LeaseDuration>,
     /// Maximum cryptographic operations between rotations.
@@ -3056,16 +3056,16 @@ impl<'de> Deserialize<'de> for PolicyInfo {
 pub struct PolicyWriteRequest {
     /// Policy document.
     pub policy: String,
-    /// Expiration timestamp. Mutually exclusive with `ttl`.
+    /// Expiration timestamp (OpenBao 2.3.1+). Mutually exclusive with `ttl`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expiration: Option<String>,
-    /// Policy lifetime duration. Mutually exclusive with `expiration`.
+    /// Policy lifetime duration (OpenBao 2.3.1+). Mutually exclusive with `expiration`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ttl: Option<String>,
-    /// Check-and-set version. Use `-1` for strict create.
+    /// Check-and-set version (OpenBao 2.3.1+). Use `-1` for strict create.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cas: Option<i64>,
-    /// Whether check-and-set should be required by this update.
+    /// Whether check-and-set should be required by this update (OpenBao 2.3.1+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cas_required: Option<bool>,
 }
@@ -3084,6 +3084,18 @@ impl PolicyWriteRequest {
     pub fn with_ttl(mut self, ttl: impl Into<String>) -> Self {
         self.ttl = Some(ttl.into());
         self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.expiration.is_some() && self.ttl.is_some() {
+            return Err(Error::InvalidParameter(
+                "policy expiration and ttl are mutually exclusive".into(),
+            ));
+        }
+        if let Some(ttl) = &self.ttl {
+            crate::validation::validate_duration_parameter(ttl, "policy ttl")?;
+        }
+        Ok(())
     }
 }
 
@@ -4034,7 +4046,7 @@ pub struct PluginRegisterRequest {
     pub args: Vec<SecretString>,
     /// Environment entries in `KEY=value` form. Treat as secret material.
     pub env: Vec<SecretString>,
-    /// Whether the plugin is an OCI-backed declarative plugin.
+    /// Whether the plugin is an OCI-backed declarative plugin (OpenBao 2.5+).
     pub oci: Option<bool>,
 }
 
@@ -5188,6 +5200,12 @@ impl Sys<'_, Authenticated> {
         config: &OperatorRotationConfig,
     ) -> Result<Empty> {
         self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::ROTATION_INTERVAL,
+                config.interval.is_some(),
+            )])
+            .await?;
+        self.client
             .request_sys_json_internal(Method::POST, "sys/rotate/config", Some(config))
             .await
     }
@@ -5930,6 +5948,27 @@ impl Sys<'_, Authenticated> {
 
     /// Creates or updates an ACL policy.
     pub async fn write_policy(&self, name: &str, request: &PolicyWriteRequest) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::POLICY_EXPIRATION,
+                    request.expiration.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_TTL,
+                    request.ttl.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_CAS,
+                    request.cas.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_CAS_REQUIRED,
+                    request.cas_required.is_some(),
+                ),
+            ])
+            .await?;
         self.client
             .request_sys_json_internal(
                 Method::POST,
@@ -6453,6 +6492,12 @@ impl Sys<'_, Authenticated> {
         request: &PluginRegisterRequest,
     ) -> Result<Empty> {
         validate_sha256_hex(&request.sha256, "plugin SHA-256")?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::PLUGIN_OCI,
+                request.oci.is_some(),
+            )])
+            .await?;
         let payload = PluginRegisterPayload {
             version: request.version.as_deref(),
             sha256: &request.sha256,
@@ -6824,6 +6869,12 @@ impl Sys<'_, Authenticated> {
     /// leader shares.
     pub async fn raft_join(&self, request: &RaftJoinRequest) -> Result<RaftJoinResponse> {
         request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::RAFT_JOIN_NON_VOTER,
+                request.non_voter.is_some(),
+            )])
+            .await?;
         let payload = RaftJoinPayload {
             leader_api_addr: &request.leader_api_addr,
             retry: request.retry,
@@ -9755,6 +9806,17 @@ mod tests {
             PolicyWriteRequest::new("path \"secret/*\" { capabilities = [\"read\"] }").ttl,
             None
         );
+        let conflicting_policy = PolicyWriteRequest {
+            expiration: Some("2030-01-01T00:00:00Z".to_owned()),
+            ttl: Some("1h".to_owned()),
+            ..PolicyWriteRequest::new("path \"secret/*\" {}")
+        };
+        let error = conflicting_policy
+            .validate()
+            .err()
+            .unwrap_or_else(|| panic!("conflicting policy lifetime unexpectedly accepted"));
+        assert!(error.to_string().contains("mutually exclusive"));
+        assert!(!error.to_string().contains("2030"));
     }
 
     #[test]
