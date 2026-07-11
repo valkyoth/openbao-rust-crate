@@ -61,6 +61,8 @@ python3 scripts/openbao_api_snapshots.py --verify
 python3 scripts/openbao_api_snapshots.py --self-test
 python3 -B scripts/generate_openbao_response_fixtures.py --verify
 python3 -B scripts/generate_openbao_response_fixtures.py --self-test
+python3 -B scripts/generate_openbao_version_contracts.py --verify
+python3 -B scripts/generate_openbao_version_contracts.py --self-test
 python3 scripts/openbao_test_harness.py --self-test
 python3 scripts/openbao_core_matrix.py --verify
 python3 scripts/openbao_core_matrix.py --self-test
@@ -121,6 +123,14 @@ rendered-observation identity against the release inventory.
 OpenAPI documents. It carries the exact source digest for each release and
 provides serde fixtures for reviewed response-shape transitions. CI regenerates
 the file in memory and rejects any stale or manually detached fixture.
+
+`version-contract-matrix.json` joins the capability registry, exact tagged
+contracts, request-field rules, response fixtures, and representative live
+core-flow results into all 13,986 operation/profile cells. Its generated
+summary and the user-facing `docs/OPENBAO_VERSION_SUPPORT_MATRIX.md` derive
+coverage percentages mechanically. Live and fixture evidence remains labeled
+as representative so a profile pass cannot be misreported as an endpoint-level
+live test.
 
 To reproduce all online evidence from an exact OpenBao source clone:
 

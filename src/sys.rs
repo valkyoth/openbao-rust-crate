@@ -765,6 +765,18 @@ pub struct UiNamespaces {
     pub namespaces: Vec<String>,
 }
 
+/// Enabled UI feature flags returned by OpenBao through `2.4.4`.
+///
+/// `/sys/internal/ui/feature-flags` was removed in OpenBao `2.5.0`. The
+/// version-aware dispatcher rejects this helper locally for newer profiles.
+#[cfg(feature = "unstable-internal-ops")]
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct UiFeatureFlags {
+    /// Enabled internal UI feature identifiers.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub feature_flags: Vec<String>,
+}
+
 /// Visible mounts returned by `/sys/internal/ui/mounts`.
 ///
 /// OpenBao documents this endpoint as internal UI and CLI preflight support
@@ -5819,6 +5831,27 @@ impl Sys<'_, Authenticated> {
                 Method::GET,
                 &internal_ui_mount_path(path)?,
                 Option::<&Empty>::None,
+            )
+            .await
+    }
+
+    /// Reads the historical internal UI feature flags endpoint.
+    ///
+    /// This unstable endpoint exists in locked OpenBao profiles from `2.0.0`
+    /// through `2.4.4` and was removed in `2.5.0`. A selected newer profile
+    /// returns [`Error::UnsupportedOpenBaoCapability`] before transmission.
+    #[cfg(feature = "unstable-internal-ops")]
+    pub async fn ui_feature_flags(&self) -> Result<UiFeatureFlags> {
+        self.client
+            .request_registered_json_query_headers_accepting(
+                "/sys/",
+                Method::GET,
+                "sys/internal/ui/feature-flags",
+                "sys/internal/ui/feature-flags",
+                &[] as &[(&str, String)],
+                &[],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
             )
             .await
     }

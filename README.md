@@ -231,6 +231,9 @@ Reviewed response-shape transitions are additionally compiled into
 and deserialized by the public Rust response types for every locked release.
 See [the response compatibility policy](docs/OPENBAO_RESPONSE_COMPATIBILITY.md)
 for alias, unknown-field, enum, bounds, and secret-handling rules.
+The generated [exact-version support matrix](docs/OPENBAO_VERSION_SUPPORT_MATRIX.md)
+classifies every operation/profile cell and separates contract coverage from
+representative live and serde evidence.
 The live result is explicitly a tested subset of health, mount, KV, policy,
 token, capability, and response-wrapping behavior. It is not yet a claim that
 every typed helper works on every historical release. Capability profiles

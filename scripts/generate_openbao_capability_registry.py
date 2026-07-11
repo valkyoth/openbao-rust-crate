@@ -41,8 +41,8 @@ MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_OPERATIONS = 2048
 MAX_PATH_BYTES = 4096
 EXPECTED_OPERATION_COUNT = 666
-EXPECTED_REGISTRY_SHA256 = "1bd9ca4c8cae4701c4f7c79ce332a744f8f79a222f4936f552056f737ad24afe"
-EXPECTED_RUST_SHA256 = "36c62091262dabfaacb240174fd21ac045d0d6bdf60f238f47ba8cf7f97e2629"
+EXPECTED_REGISTRY_SHA256 = "16e80a6e668f3de027ade450f3820f559e1c76eaa0e3064d693bd378af1146f2"
+EXPECTED_RUST_SHA256 = "220051a866e399be218e7986847896b86c61da4608b58ccc20c63265b09790eb"
 EXPECTED_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -77,12 +77,11 @@ PLACEHOLDER_NAME = re.compile(r":([A-Za-z0-9_-]{1,128})", re.ASCII)
 DISPOSITIONS = {
     "typed": "typed",
     "typed-gated": "typed-gated",
-    "external": "external",
-    "partial": "partial",
-    "omitted": "omitted",
-    "rejected": "security-blocked",
 }
 SECURITY_BLOCKED = frozenset()
+HISTORICAL_DISPOSITIONS = {
+    ("GET", "/sys/internal/ui/feature-flags"): "typed-gated",
+}
 SAFE_ID = re.compile(r"openbao\.[a-z0-9._-]{1,112}\.[0-9a-f]{16}", re.ASCII)
 
 
@@ -234,6 +233,9 @@ def build_registry() -> dict[str, Any]:
     current = matrix_operations(matrix)
     for key in OPENAPI_OPERATION_SUPPLEMENTS:
         current[key] = "typed"
+    for key in HISTORICAL_DISPOSITIONS:
+        if key in current:
+            raise RegistryError("historical capability unexpectedly re-entered the current contract")
     versions = [record["version"] for record in releases["records"]]
     if [record["version"] for record in snapshot_lock["records"]] != versions:
         raise RegistryError("snapshot and release inventories are misaligned")
@@ -258,7 +260,9 @@ def build_registry() -> dict[str, Any]:
 
     operations: list[dict[str, Any]] = []
     for method, path in all_operations:
-        disposition = current.get((method, path), "unlinked")
+        disposition = current.get(
+            (method, path), HISTORICAL_DISPOSITIONS.get((method, path), "unlinked")
+        )
         if operation_key(method, path) in SECURITY_BLOCKED:
             disposition = "security-blocked"
         states: list[tuple[str, str]] = []
@@ -350,13 +354,7 @@ def validate_registry(registry: dict[str, Any]) -> None:
         method, path = validate_operation(operation["method"], operation["path_template"])
         identifier = operation["id"]
         if identifier != stable_id(method, path) or operation["disposition"] not in {
-            "typed",
-            "typed-gated",
-            "external",
-            "partial",
-            "omitted",
-            "security-blocked",
-            "unlinked",
+            "typed", "typed-gated", "security-blocked"
         }:
             raise RegistryError("capability operation identity or disposition is invalid")
         if (method, path) in routes:
@@ -394,13 +392,22 @@ def validate_registry(registry: dict[str, Any]) -> None:
                 latest_available = state[0] == "documented"
         if expected_start != len(versions):
             raise RegistryError("capability ranges do not cover every exact profile")
-        if operation["disposition"] in {"typed", "typed-gated"} and not latest_available:
+        historical_disposition = HISTORICAL_DISPOSITIONS.get((method, path))
+        if (
+            operation["disposition"] in {"typed", "typed-gated"}
+            and not latest_available
+            and historical_disposition != operation["disposition"]
+        ):
             raise RegistryError("typed capability is unavailable in the current profile")
+        if historical_disposition is not None and latest_available:
+            raise RegistryError("historical-only capability is unexpectedly current")
         key = operation_key(method, path)
         if (key in SECURITY_BLOCKED) != (operation["disposition"] == "security-blocked"):
             raise RegistryError("security-blocked capability disposition was downgraded")
     if ids != sorted(set(ids)):
         raise RegistryError("capability identifiers are duplicated or unordered")
+    if any(item["disposition"] == "unlinked" for item in operations):
+        raise RegistryError("capability registry contains an unexplained historical operation")
     summary = registry["summary"]
     expected_counts = dict(sorted(Counter(item["disposition"] for item in operations).items()))
     if summary != {
@@ -425,13 +432,9 @@ def rust_version(value: str) -> str:
 def rust_output(registry: dict[str, Any]) -> bytes:
     method_names = {value: value.title() for value in METHODS}
     disposition_names = {
-        "typed": "LegacyTypedClaim",
-        "typed-gated": "LegacyTypedGatedClaim",
-        "external": "ExternalBoundary",
-        "partial": "PartialLegacyClaim",
-        "omitted": "OmittedLegacyClaim",
+        "typed": "Typed",
+        "typed-gated": "TypedGated",
         "security-blocked": "SecurityBlocked",
-        "unlinked": "UnlinkedHistorical",
     }
     evidence_names = {
         "none": "None",

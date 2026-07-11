@@ -65,6 +65,13 @@ Please include:
   or live-compatibility claim. Security-blocked operation identities are
   maintained in reviewed generator code, and generated documentation cannot
   re-enable them.
+- The complete version contract matrix classifies every operation/profile
+  cell, but its `100.00%` figure is classification coverage rather than a claim
+  that every endpoint ran live. The report binds its capability, request,
+  response-fixture, and core-flow inputs by SHA-256; labels live and serde
+  evidence as representative; rejects skipped core-flow passes; and records
+  that no external database, directory, cloud, OIDC, MFA, DNS, or broker
+  service was exercised.
 - Version-aware typed dispatch selects exactly one reviewed operation before
   request serialization. The method comes from immutable registry evidence;
   concrete paths and required query selectors must match that operation's

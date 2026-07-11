@@ -554,27 +554,15 @@ impl OpenBaoHttpMethod {
     }
 }
 
-/// Current crate review disposition attached to a stable operation identity.
-///
-/// Legacy claims are retained only as migration input. They are not exact
-/// compatibility claims; later endpoint migration commits replace them with
-/// helper, field, transport, and test evidence.
+/// Current crate implementation disposition attached to a stable operation identity.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum OpenBaoOperationDisposition {
-    /// The pre-2.0 matrix claimed an ungated typed helper.
-    LegacyTypedClaim,
-    /// The pre-2.0 matrix claimed a feature-gated typed helper.
-    LegacyTypedGatedClaim,
-    /// The operation was assigned to an external protocol/tool boundary.
-    ExternalBoundary,
-    /// The legacy implementation covered a different method or only part of the operation.
-    PartialLegacyClaim,
-    /// The legacy matrix omitted the operation.
-    OmittedLegacyClaim,
+    /// The operation has an ungated typed helper.
+    Typed,
+    /// The operation has a typed helper behind its documented feature gate.
+    TypedGated,
     /// Crate security policy blocks this operation regardless of server documentation.
     SecurityBlocked,
-    /// A historical operation is absent from the current 2.5.5 contract.
-    UnlinkedHistorical,
 }
 
 /// Immutable evidence supporting one exact-release capability range.
@@ -1221,7 +1209,7 @@ mod tests {
         );
         assert_eq!(
             historical.disposition(),
-            OpenBaoOperationDisposition::UnlinkedHistorical
+            OpenBaoOperationDisposition::TypedGated
         );
 
         let monitor = openbao_operations()
@@ -1238,7 +1226,7 @@ mod tests {
         );
         assert_eq!(
             monitor.disposition(),
-            OpenBaoOperationDisposition::LegacyTypedGatedClaim
+            OpenBaoOperationDisposition::TypedGated
         );
     }
 
@@ -1251,7 +1239,7 @@ mod tests {
         assert_eq!(statuses.len(), openbao_operations().len());
         assert_eq!(profile.version(), OpenBaoVersion::new(2, 5, 5));
         assert!(statuses.iter().any(|status| {
-            status.operation().disposition() == OpenBaoOperationDisposition::LegacyTypedClaim
+            status.operation().disposition() == OpenBaoOperationDisposition::Typed
                 && status.availability() == OpenBaoCapabilityAvailability::DocumentedRoute
                 && status.evidence() != OpenBaoCapabilityEvidence::None
         }));

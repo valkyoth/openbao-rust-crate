@@ -33,6 +33,10 @@ echo "checks: versioned OpenBao response fixtures"
 python3 -B scripts/generate_openbao_response_fixtures.py --verify
 python3 -B scripts/generate_openbao_response_fixtures.py --self-test
 
+echo "checks: complete OpenBao version contracts"
+python3 -B scripts/generate_openbao_version_contracts.py --verify
+python3 -B scripts/generate_openbao_version_contracts.py --self-test
+
 echo "checks: version-locked OpenBao integration harness"
 python3 scripts/openbao_test_harness.py --self-test
 

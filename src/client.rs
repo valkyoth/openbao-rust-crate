@@ -1315,8 +1315,7 @@ impl<State> Client<State> {
         }
         if !matches!(
             operation.disposition(),
-            OpenBaoOperationDisposition::LegacyTypedClaim
-                | OpenBaoOperationDisposition::LegacyTypedGatedClaim
+            OpenBaoOperationDisposition::Typed | OpenBaoOperationDisposition::TypedGated
         ) {
             return Err(Error::UnsupportedOpenBaoCapability {
                 endpoint: endpoint.id(),
@@ -1464,8 +1463,7 @@ impl<State> Client<State> {
             Some(OpenBaoCapabilityAvailability::DocumentedRoute)
         ) || !matches!(
             operation.disposition(),
-            OpenBaoOperationDisposition::LegacyTypedClaim
-                | OpenBaoOperationDisposition::LegacyTypedGatedClaim
+            OpenBaoOperationDisposition::Typed | OpenBaoOperationDisposition::TypedGated
         ) {
             return Err(Error::UnsupportedOpenBaoCapability {
                 endpoint: operation.id(),

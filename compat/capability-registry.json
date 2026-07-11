@@ -3542,7 +3542,7 @@
       ]
     },
     {
-      "disposition": "unlinked",
+      "disposition": "typed-gated",
       "id": "openbao.get.sys.internal.ui.feature.flags.7c6ce5d8090f0c8d",
       "method": "GET",
       "path_template": "/sys/internal/ui/feature-flags",
@@ -9597,8 +9597,7 @@
   "summary": {
     "dispositions": {
       "typed": 580,
-      "typed-gated": 85,
-      "unlinked": 1
+      "typed-gated": 86
     },
     "operation_count": 666,
     "profile_count": 21

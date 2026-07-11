@@ -783,6 +783,9 @@ Pentest focus:
 
 Suggested commit title: `Complete OpenBao version contract tests`
 
+Status: implemented. Pentest this commit from
+`f2862e49149022fb708aeb57caf899a1bffeced3` to the resulting Commit 17 hash.
+
 Goal:
 
 - add endpoint-presence, request-shape, response-fixture, and representative

@@ -315,6 +315,57 @@ async fn unstable_internal_system_helpers_are_gated_and_typed() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "unstable-internal-ops")]
+#[tokio::test]
+async fn historical_ui_feature_flags_are_version_routed() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/internal/ui/feature-flags HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"feature_flags":["legacy-ui-feature"]}"#,
+        );
+    });
+
+    let historical_policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 4, 4))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let historical = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(historical_policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(test_secret(&["historical-ui", "-token"]));
+    let flags = historical
+        .sys()
+        .ui_feature_flags()
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(flags.feature_flags, ["legacy-ui-feature"]);
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+
+    let current_policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 5, 0))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let current = Client::from_config(
+        OpenBaoConfig::new("https://127.0.0.1:1")
+            .map(|config| config.compatibility_policy(current_policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(test_secret(&["current-ui", "-token"]));
+    assert!(matches!(
+        current.sys().ui_feature_flags().await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+}
+
 #[derive(Debug, Deserialize)]
 struct SecretData {
     value: String,
