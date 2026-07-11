@@ -3,7 +3,7 @@
 use core::fmt;
 use std::collections::BTreeMap;
 
-use reqwest::{Method, StatusCode};
+use reqwest::{Method, StatusCode, Url};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
@@ -177,7 +177,7 @@ impl DatabaseConnectionConfig {
         };
         let disables_tls_verification = match self.builtin_options.as_ref() {
             Some(DatabaseBuiltinConnectionConfig::PostgreSql(options)) => {
-                !postgres_dsn_uses_verify_full(options.connection_url.expose_secret())
+                !postgres_dsn_uses_hardened_tcp_tls(options.connection_url.expose_secret())
             }
             Some(DatabaseBuiltinConnectionConfig::MySql(options)) => {
                 options.tls_skip_verify == Some(true)
@@ -387,10 +387,12 @@ impl MySqlPlugin {
 pub struct PostgreSqlConnectionOptions {
     /// Templated PostgreSQL DSN.
     ///
-    /// The DSN must explicitly select `sslmode=verify-full`. Missing, empty,
-    /// duplicated, service-file-only, unsupported URI syntax, or weaker TLS
-    /// modes require the `insecure-database-tls-acknowledged` Cargo feature.
-    /// Both URI query parameters and PostgreSQL keyword/value DSNs are checked.
+    /// The DSN must explicitly select `sslmode=verify-full` and an effective
+    /// TCP host. Missing, empty, duplicated, service-file-indirect, Unix-socket,
+    /// unsupported URI, or weaker TLS configurations require the
+    /// `insecure-database-tls-acknowledged` Cargo feature. Both URI query
+    /// parameters and PostgreSQL keyword/value DSNs are checked using pgx's
+    /// case-sensitive parameter spellings.
     pub connection_url: SecretString,
     /// Root username.
     pub username: Option<String>,
@@ -437,20 +439,14 @@ impl fmt::Debug for PostgreSqlConnectionOptions {
     }
 }
 
-fn postgres_dsn_uses_verify_full(dsn: &str) -> bool {
+fn postgres_dsn_uses_hardened_tcp_tls(dsn: &str) -> bool {
     if postgres_dsn_uses_uri_syntax(dsn) {
-        return postgres_uri_query_sslmode(dsn) == PostgresTlsPosture::VerifyFull;
+        return postgres_uri_uses_hardened_tcp_tls(dsn);
     }
     if postgres_dsn_has_unsupported_uri_like_prefix(dsn) {
         return false;
     }
-    postgres_keyword_dsn_sslmode(dsn) == PostgresTlsPosture::VerifyFull
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum PostgresTlsPosture {
-    MissingOrInsecure,
-    VerifyFull,
+    postgres_keyword_dsn_uses_hardened_tcp_tls(dsn)
 }
 
 fn postgres_dsn_uses_uri_syntax(dsn: &str) -> bool {
@@ -469,43 +465,75 @@ fn postgres_dsn_has_unsupported_uri_like_prefix(dsn: &str) -> bool {
         .is_none_or(|assignment| scheme_separator < assignment)
 }
 
-fn postgres_uri_query_sslmode(dsn: &str) -> PostgresTlsPosture {
-    let Some((_, query_and_fragment)) = dsn.split_once('?') else {
-        return PostgresTlsPosture::MissingOrInsecure;
+fn postgres_uri_uses_hardened_tcp_tls(dsn: &str) -> bool {
+    let Ok(url) = Url::parse(dsn) else {
+        return false;
     };
-    let query = query_and_fragment
-        .split_once('#')
-        .map_or(query_and_fragment, |(query, _)| query);
-    let mut posture = PostgresTlsPosture::MissingOrInsecure;
-    let mut found = false;
+    if !matches!(url.scheme(), "postgres" | "postgresql") || url.fragment().is_some() {
+        return false;
+    }
+    let Some(query) = url.query() else {
+        return false;
+    };
+    let mut verify_full = false;
+    let mut host_override: Option<Vec<u8>> = None;
     for parameter in query.split('&') {
         let (key, value) = match parameter.split_once('=') {
             Some((key, value)) => (key, value),
             None => (parameter, ""),
         };
-        if percent_decoded_ascii_eq(key, b"sslmode") {
-            if found {
-                return PostgresTlsPosture::MissingOrInsecure;
+        let Some(key) = percent_decode_strict(key) else {
+            return false;
+        };
+        if key != b"sslmode"
+            && key != b"host"
+            && key != b"service"
+            && key != b"servicefile"
+            && [b"sslmode".as_slice(), b"host", b"service", b"servicefile"]
+                .iter()
+                .any(|expected| ascii_eq_ignore_case(&key, expected))
+        {
+            return false;
+        }
+        if key == b"sslmode" {
+            if verify_full || percent_decode_strict(value).as_deref() != Some(b"verify-full") {
+                return false;
             }
-            found = true;
-            posture = if percent_decoded_ascii_eq(value, b"verify-full") {
-                PostgresTlsPosture::VerifyFull
-            } else {
-                PostgresTlsPosture::MissingOrInsecure
-            };
+            verify_full = true;
+        } else if key == b"host" {
+            if host_override.is_some() {
+                return false;
+            }
+            host_override = percent_decode_strict(value);
+            if host_override.is_none() {
+                return false;
+            }
+        } else if matches!(key.as_slice(), b"service" | b"servicefile") {
+            return false;
         }
     }
-    posture
+    if !verify_full {
+        return false;
+    }
+    match host_override {
+        Some(host) => postgres_hosts_are_explicit_tcp(&host),
+        None => url
+            .host_str()
+            .is_some_and(|host| postgres_hosts_are_explicit_tcp(host.as_bytes())),
+    }
 }
 
-fn postgres_keyword_dsn_sslmode(dsn: &str) -> PostgresTlsPosture {
+fn postgres_keyword_dsn_uses_hardened_tcp_tls(dsn: &str) -> bool {
     let bytes = dsn.as_bytes();
     let mut offset = 0_usize;
-    let mut posture = PostgresTlsPosture::MissingOrInsecure;
-    let mut found = false;
+    let mut verify_full = false;
+    let mut host: Option<Vec<u8>> = None;
     while offset < bytes.len() {
         while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
             offset += 1;
+        }
+        if offset == bytes.len() {
+            break;
         }
         let key_start = offset;
         while bytes
@@ -519,13 +547,7 @@ fn postgres_keyword_dsn_sslmode(dsn: &str) -> PostgresTlsPosture {
             offset += 1;
         }
         if bytes.get(offset) != Some(&b'=') {
-            while bytes
-                .get(offset)
-                .is_some_and(|byte| !byte.is_ascii_whitespace())
-            {
-                offset += 1;
-            }
-            continue;
+            return false;
         }
         offset += 1;
         while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
@@ -552,23 +574,71 @@ fn postgres_keyword_dsn_sslmode(dsn: &str) -> PostgresTlsPosture {
             }
         }
         let value_end = offset;
-        if quoted && bytes.get(offset) == Some(&b'\'') {
+        if quoted {
+            if bytes.get(offset) != Some(&b'\'') {
+                return false;
+            }
             offset += 1;
+            if bytes
+                .get(offset)
+                .is_some_and(|byte| !byte.is_ascii_whitespace())
+            {
+                return false;
+            }
+        } else if escaped {
+            return false;
         }
 
-        if ascii_eq_ignore_case(&bytes[key_start..key_end], b"sslmode") {
-            if found {
-                return PostgresTlsPosture::MissingOrInsecure;
+        let key = &bytes[key_start..key_end];
+        if key != b"sslmode"
+            && key != b"host"
+            && key != b"service"
+            && key != b"servicefile"
+            && [b"sslmode".as_slice(), b"host", b"service", b"servicefile"]
+                .iter()
+                .any(|expected| ascii_eq_ignore_case(key, expected))
+        {
+            return false;
+        }
+        if key == b"sslmode" {
+            if verify_full {
+                return false;
             }
-            found = true;
-            posture = if escaped_ascii_eq(&bytes[value_start..value_end], b"verify-full") {
-                PostgresTlsPosture::VerifyFull
-            } else {
-                PostgresTlsPosture::MissingOrInsecure
+            let Some(value) = decode_keyword_value(&bytes[value_start..value_end]) else {
+                return false;
             };
+            if value != b"verify-full" {
+                return false;
+            }
+            verify_full = true;
+        } else if key == b"host" {
+            if host.is_some() {
+                return false;
+            }
+            host = decode_keyword_value(&bytes[value_start..value_end]);
+            if host.is_none() {
+                return false;
+            }
+        } else if matches!(key, b"service" | b"servicefile") {
+            return false;
         }
     }
-    posture
+    verify_full && host.is_some_and(|host| postgres_hosts_are_explicit_tcp(&host))
+}
+
+fn decode_keyword_value(value: &[u8]) -> Option<Vec<u8>> {
+    let mut decoded = Vec::with_capacity(value.len());
+    let mut offset = 0_usize;
+    while let Some(byte) = value.get(offset) {
+        if *byte == b'\\' {
+            offset += 1;
+            decoded.push(*value.get(offset)?);
+        } else {
+            decoded.push(*byte);
+        }
+        offset += 1;
+    }
+    Some(decoded)
 }
 
 fn ascii_eq_ignore_case(value: &[u8], expected: &[u8]) -> bool {
@@ -579,58 +649,51 @@ fn ascii_eq_ignore_case(value: &[u8], expected: &[u8]) -> bool {
             .all(|(left, right)| left.eq_ignore_ascii_case(right))
 }
 
-fn escaped_ascii_eq(value: &[u8], expected: &[u8]) -> bool {
-    let mut expected = expected.iter();
-    let mut offset = 0_usize;
-    while let Some(byte) = value.get(offset) {
-        let decoded = if *byte == b'\\' {
-            offset += 1;
-            let Some(escaped) = value.get(offset) else {
-                return false;
-            };
-            *escaped
-        } else {
-            *byte
-        };
-        let Some(expected) = expected.next() else {
-            return false;
-        };
-        if !decoded.eq_ignore_ascii_case(expected) {
-            return false;
-        }
-        offset += 1;
-    }
-    expected.next().is_none()
-}
-
-fn percent_decoded_ascii_eq(value: &str, expected: &[u8]) -> bool {
+fn percent_decode_strict(value: &str) -> Option<Vec<u8>> {
     let bytes = value.as_bytes();
-    let mut expected = expected.iter();
+    let mut decoded = Vec::with_capacity(bytes.len());
     let mut offset = 0_usize;
     while let Some(byte) = bytes.get(offset) {
-        let decoded = if *byte == b'%' {
+        if *byte == b'%' {
             let (Some(high), Some(low)) = (bytes.get(offset + 1), bytes.get(offset + 2)) else {
-                return false;
+                return None;
             };
             let (Some(high), Some(low)) = (hex_value(*high), hex_value(*low)) else {
-                return false;
+                return None;
             };
             offset += 2;
-            (high << 4) | low
+            decoded.push((high << 4) | low);
         } else if *byte == b'+' {
-            b' '
+            decoded.push(b' ');
         } else {
-            *byte
-        };
-        let Some(expected) = expected.next() else {
-            return false;
-        };
-        if !decoded.eq_ignore_ascii_case(expected) {
-            return false;
+            decoded.push(*byte);
         }
         offset += 1;
     }
-    expected.next().is_none()
+    Some(decoded)
+}
+
+fn postgres_hosts_are_explicit_tcp(hosts: &[u8]) -> bool {
+    let Ok(hosts) = core::str::from_utf8(hosts) else {
+        return false;
+    };
+    hosts.split(',').all(|host| {
+        let host = host.trim();
+        !host.is_empty()
+            && host
+                .bytes()
+                .all(|byte| !byte.is_ascii_whitespace() && !byte.is_ascii_control())
+            && !matches!(host.as_bytes().first(), Some(b'/' | b'\\'))
+            && !postgres_host_is_windows_absolute_path(host)
+    })
+}
+
+fn postgres_host_is_windows_absolute_path(host: &str) -> bool {
+    let bytes = host.as_bytes();
+    bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && matches!(bytes[2], b'/' | b'\\')
 }
 
 const fn hex_value(byte: u8) -> Option<u8> {
@@ -1800,7 +1863,7 @@ mod tests {
         DatabaseCredentials, DatabaseList, DatabaseRole, DatabaseStaticCredentials,
         InfluxDbConnectionOptions, MySqlConnectionOptions, MySqlPlugin,
         PostgreSqlConnectionOptions, REVIEWED_BUILTIN_DATABASE_PLUGINS, ValkeyConnectionOptions,
-        postgres_dsn_uses_verify_full,
+        postgres_dsn_uses_hardened_tcp_tls,
     };
 
     #[test]
@@ -1962,31 +2025,45 @@ mod tests {
             "postgresql://db.example/openbao?%73slmode&sslmode=verify-full",
             "postgresql://db.example/openbao?sslmode",
             "postgresql://db.example/openbao?service=production",
+            "postgresql://db.example/openbao?sslmode=verify-full&host=%2Ftmp",
+            "postgresql://db.example/openbao?sslmode=verify-full&host=db+example",
+            "postgresql:///openbao?sslmode=verify-full&host=%2Ftmp",
+            "postgresql://db.example/openbao?sslmode=verify-full&host=C%3A%5Cpg",
+            "postgresql://db.example/openbao?sslmode=verify-full&service=production",
+            "postgres://db.example/openbao?SSLMode=VERIFY-FULL",
+            "postgres://db.example/openbao?sslmode=VERIFY-FULL",
             "POSTGRESQL://db.example/openbao?sslmode=verify-full",
             "mysql://db.example/openbao?sslmode=verify-full",
             "host=db.example dbname=openbao",
             "host=db.example sslmode=disable dbname=openbao",
             "host=db.example sslmode=verify-full sslmode=prefer",
             "host=db.example sslmode=prefer sslmode=verify-full",
+            "host=/tmp sslmode=verify-full dbname=openbao",
+            r"host='C:\\pg' sslmode=verify-full dbname=openbao",
+            "host=db.example SSLMODE=verify-full dbname=openbao",
+            "host=db.example sslmode=VERIFY-FULL dbname=openbao",
+            "host=db.example sslmode='verify-full dbname=openbao",
+            "host=db.example sslmode=verify-full service=production",
             "service=production",
         ] {
             assert!(
-                !postgres_dsn_uses_verify_full(dsn),
+                !postgres_dsn_uses_hardened_tcp_tls(dsn),
                 "missing or insecure effective sslmode was accepted"
             );
         }
 
         for dsn in [
             "postgresql://db.example/openbao?sslmode=verify-full",
-            "postgres://db.example/openbao?SSLMode=VERIFY-FULL",
+            "postgresql://{{username}}:{{password}}@db.example/openbao?sslmode=verify-full",
             "postgresql://db.example/openbao?%73slmode=verify%2Dfull",
+            "postgresql:///openbao?sslmode=verify-full&host=db.example",
+            "postgresql://db.example/openbao?sslmode=verify-full&host=db.internal%2Cdb.backup",
             "host=db.example sslmode=verify-full dbname=openbao",
-            "host=db.example sslmode = 'VERIFY-FULL' dbname=openbao",
             r"host=db.example sslmode='verify\-full' dbname=openbao",
-            "service=production sslmode=verify-full",
+            "host=db.example,db.backup sslmode=verify-full",
         ] {
             assert!(
-                postgres_dsn_uses_verify_full(dsn),
+                postgres_dsn_uses_hardened_tcp_tls(dsn),
                 "effective verify-full sslmode was rejected"
             );
         }

@@ -97,9 +97,12 @@ Please include:
   native TLS and therefore rejects CRL-bearing client configurations.
 - Reviewed built-in database plugins require typed connection options. Without
   `insecure-database-tls-acknowledged`, PostgreSQL DSNs must explicitly resolve
-  to one unambiguous `sslmode=verify-full`; omitted, duplicated,
-  service-file-only, empty, unsupported URI syntax, or weaker modes fail
-  locally before credential-bearing request serialization.
+  to one unambiguous, case-exact `sslmode=verify-full` and an effective TCP
+  host. Unix-domain sockets, service-file indirection, duplicate host/security
+  keys, malformed quoting, empty hosts, unsupported URI syntax, or weaker modes
+  fail locally before credential-bearing request serialization. This prevents
+  pgx from silently bypassing TLS because a URI query or keyword DSN selected a
+  local socket.
 - Typed fields whose availability changes between locked OpenBao profiles are
   validated before secret payload construction. A selected unsupported field
   fails with a secret-free endpoint, field, and version error; it is never
