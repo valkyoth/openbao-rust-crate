@@ -9,7 +9,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-openbao = { path = "..", version = "=2.0.1", features = ["sys"] }
+openbao = { path = "..", version = "=2.0.2", features = ["sys"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

@@ -49,6 +49,11 @@ matrix and final pentest. `2.0.1` corrects the README and active release
 documentation to describe the shipped compatibility selector and explain how
 current SDK releases safely target older OpenBao servers.
 
+`2.0.2` narrows the crates.io source package to runtime code, examples,
+selected package-local tests, required fixtures, user-facing documentation,
+licenses, security policy, and changelog. Complete compatibility evidence and
+maintainer tooling remain in the signed Git source.
+
 ## Standing Release Gates
 
 Every release:
@@ -709,3 +714,21 @@ Stop criteria:
 - release notes, changelog, metadata validation, and release scripts cover
   `2.0.1`;
 - all standard release gates and GitHub checks pass before tagging `v2.0.1`.
+
+### 2.0.2 - Focused crates.io Source Package
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.0.2`;
+- crates.io excludes `.github`, `compat`, `deploy`, `kani`, `release-notes`,
+  scripts, maintainer policy, generated matrices, historical plans,
+  the live integration test, and the complete contract-evidence test;
+- package-local source tests retain their required TLS, response, and request
+  compatibility fixtures;
+- README links to excluded evidence and tooling resolve to immutable `v2.0.2`
+  GitHub paths;
+- the release gate rejects forbidden archive paths and compressed archives
+  larger than 2 MiB;
+- the packaged source passes all-feature tests independently of the repository;
+- all standard release gates and GitHub checks pass before tagging `v2.0.2`.

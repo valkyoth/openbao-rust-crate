@@ -30,6 +30,8 @@ boundaries explicit.
 - Release evidence: signed `v2.0.0` passed GitHub CI, CodeQL, the full
   21-release compatibility workflow, and the exact-commit pentest. `2.0.1`
   corrects release documentation without changing the compatibility contract.
+  `2.0.2` narrows the crates.io source package while retaining complete release
+  evidence in the corresponding signed Git tag.
 
 ## Stabilization Rules
 

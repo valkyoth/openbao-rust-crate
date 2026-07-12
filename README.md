@@ -157,13 +157,16 @@ Implemented now:
 - Generated read-only capability profiles with 666 stable, secret-free
   operation identities and complete exact-release range coverage.
 
-`2.0.1` is a documentation correction release for the stable `2.0.x` API. It
-documents the shipped compatibility selector and historical OpenBao support
-without changing endpoint behavior. Feature history and release details live
-in [CHANGELOG.md](CHANGELOG.md) and [release-notes](release-notes).
+`2.0.2` keeps the stable `2.0.x` API and publishes a focused source package.
+Repository-only compatibility evidence, CI workflows, release tooling, and
+historical planning files remain available from the signed Git tag without
+being copied into every crates.io download. Feature history and release details
+live in [CHANGELOG.md](CHANGELOG.md) and the
+[GitHub releases](https://github.com/valkyoth/openbao-rust-crate/releases).
 
-See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
-[Release Plan](docs/RELEASE_PLAN.md) for the stable support policy.
+See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and the
+[Release Plan](https://github.com/valkyoth/openbao-rust-crate/blob/v2.0.2/docs/RELEASE_PLAN.md)
+for the stable support policy.
 
 ## Trust Dashboard
 
@@ -189,8 +192,10 @@ See [API Coverage](docs/OPENBAO_API_COVERAGE.md) and
 | Pentest gate | Required before tagging a release |
 
 Security details live in [SECURITY.md](SECURITY.md). Release evidence and
-release sequencing live in [release-notes](release-notes) and
-[docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md).
+release sequencing live in the
+[signed repository source](https://github.com/valkyoth/openbao-rust-crate/tree/v2.0.2/release-notes)
+and
+[release plan](https://github.com/valkyoth/openbao-rust-crate/blob/v2.0.2/docs/RELEASE_PLAN.md).
 
 ## Rust Version Support
 
@@ -222,15 +227,17 @@ separate claims:
 | --- | --- | --- |
 | `0.1.0` through `1.0.2` | Release-tested with OpenBao `2.5.4`. | Historical result only; not a current security endorsement. |
 | `1.1.0` through `1.1.2` | Release-tested with OpenBao `2.5.5`. | OpenBao `2.5.5` remains the newest reviewed server profile. |
-| `2.0.0` through `2.0.1` | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Exact profiles `2.0.0` through `2.5.4` are security-deprecated compatibility targets and do not include all fixes present in `2.5.5`. |
+| `2.0.0` through `2.0.2` | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Exact profiles `2.0.0` through `2.5.4` are security-deprecated compatibility targets and do not include all fixes present in `2.5.5`. |
 
 The immutable source and OCI artifact inventory for those historical releases
-is committed under [`compat/`](compat/README.md), together with deterministic
+is committed under
+[`compat/`](https://github.com/valkyoth/openbao-rust-crate/tree/v2.0.2/compat),
+together with deterministic
 tagged-documentation snapshots, normalized server-generated OpenAPI snapshots,
 adjacent-release contract diffs, a generated capability registry, and
 machine-readable live core-flow results.
 Reviewed response-shape transitions are additionally compiled into
-[`tests/fixtures/openbao_response_profiles.json`](tests/fixtures/openbao_response_profiles.json)
+[`tests/fixtures/openbao_response_profiles.json`](https://github.com/valkyoth/openbao-rust-crate/blob/v2.0.2/tests/fixtures/openbao_response_profiles.json)
 and deserialized by the public Rust response types for every locked release.
 See [the response compatibility policy](docs/OPENBAO_RESPONSE_COMPATIBILITY.md)
 for alias, unknown-field, enum, bounds, and secret-handling rules.
@@ -486,8 +493,9 @@ typed, typed-gated, or security-blocked. OpenBao `2.5.5` has 665 documented
 operations: 580 typed and 85 typed-gated.
 
 The original exact-source extraction remains available in
-[docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](docs/OPENBAO_2_5_ENDPOINT_MATRIX.md) and
-[`docs/openbao-2.5-contract-matrix.json`](docs/openbao-2.5-contract-matrix.json).
+[docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](https://github.com/valkyoth/openbao-rust-crate/blob/v2.0.2/docs/OPENBAO_2_5_ENDPOINT_MATRIX.md)
+and
+[`docs/openbao-2.5-contract-matrix.json`](https://github.com/valkyoth/openbao-rust-crate/blob/v2.0.2/docs/openbao-2.5-contract-matrix.json).
 Its 644 tagged-documentation rows and 663 expanded operations are historical
 audit inputs, not the final support report. Two additional operations came from
 the locked OpenAPI evidence, and one operation exists only in an older profile.
@@ -1934,6 +1942,11 @@ plugin schemas are deployment-specific.
 
 ## Local OpenBao Dev Instance
 
+The development, compatibility, Kani, and release commands below are
+repository-only tooling and are intentionally not copied into the crates.io
+source package. Run them from a checkout of the
+[`v2.0.2` signed source](https://github.com/valkyoth/openbao-rust-crate/tree/v2.0.2).
+
 The local dev stack uses Podman, TLS, a private CA, and loopback-only ports in
 the requested `994x` range.
 
@@ -2062,7 +2075,8 @@ OPENBAO_KANI_TOOLCHAIN=<supported-rust-toolchain> scripts/check_kani.sh
 The normal `scripts/checks.sh` gate also invokes `scripts/check_kani.sh`. When
 the compatible Rust toolchain or `cargo-kani` is not installed, the Kani script
 prints a skip message instead of failing local development checks. See
-[kani/README.md](kani/README.md) for the exact proof scope and current
+[Kani documentation](https://github.com/valkyoth/openbao-rust-crate/blob/v2.0.2/kani/README.md)
+for the exact proof scope and current
 limitations.
 
 ## Compatibility Fuzzing

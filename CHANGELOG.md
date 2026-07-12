@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.0.2 - 2026-07-12
+
+### Changed
+
+- Reduced the crates.io source package to runtime source, examples, selected
+  package-local tests and fixtures, user-facing documentation, licenses,
+  security policy, and changelog.
+- Kept compatibility snapshots, generated evidence, CI workflows, deployment
+  files, release tooling, historical release notes, maintainer plans, Kani
+  instructions and development policy in the signed Git source
+  rather than publishing them in every crate archive.
+- Added a release-gate package allowlist check that rejects repository-only
+  paths if they re-enter the crates.io archive.
+- Changed README links for excluded evidence and maintainer documentation to
+  immutable `v2.0.2` GitHub paths.
+
+### Security
+
+- Retained package-local HTTP and serde tests plus the exact fixtures required
+  by source unit tests. Live OpenBao and complete version-contract tests remain
+  enforced in the repository release gate.
+
 ## 2.0.1 - 2026-07-11
 
 ### Fixed

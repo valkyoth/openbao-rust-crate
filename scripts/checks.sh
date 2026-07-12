@@ -72,7 +72,44 @@ echo "checks: docs"
 cargo doc --no-deps --all-features
 
 echo "checks: package"
+package_files="$(cargo package --locked --allow-dirty --list)"
+for forbidden in \
+  '.github/' \
+  'compat/' \
+  'deploy/' \
+  'kani/' \
+  'release-notes/' \
+  'scripts/' \
+  'CONTRIBUTING.md' \
+  'deny.toml' \
+  'rust-toolchain.toml' \
+  'docs/OPENBAO_2_5_ENDPOINT_MATRIX.md' \
+  'docs/OPENBAO_2_5_FULL_SUPPORT_AUDIT.md' \
+  'docs/OPENBAO_VERSION_COMPATIBILITY_PLAN.md' \
+  'docs/RELEASE_PLAN.md' \
+  'docs/openbao-2.5-contract-matrix.json' \
+  'docs/openbao-2.5-endpoint-matrix.csv' \
+  'docs/release-notes-template.md' \
+  'tests/openbao_integration.rs' \
+  'tests/version_contract.rs'
+do
+  if printf '%s\n' "$package_files" | grep -F -q "$forbidden"; then
+    echo "repository-only path entered crates.io package: $forbidden" >&2
+    exit 1
+  fi
+done
 cargo package --locked --allow-dirty
+package_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
+package_archive="target/package/openbao-${package_version}.crate"
+package_bytes="$(wc -c < "$package_archive")"
+if [ "$package_bytes" -gt 2097152 ]; then
+  echo "crates.io package exceeds 2 MiB compressed limit: $package_bytes bytes" >&2
+  exit 1
+fi
+echo "checks: package archive $package_bytes bytes"
+echo "checks: packaged source tests"
+cargo test --manifest-path "target/package/openbao-${package_version}/Cargo.toml" \
+  --locked --all-targets --all-features
 
 echo "checks: dependency policy"
 cargo deny check

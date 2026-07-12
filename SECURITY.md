@@ -4,9 +4,10 @@ Security is the primary design constraint for this crate.
 
 ## Supported Versions
 
-Until `1.0.0`, only the latest published pre-`1.0` version receives security
-fixes. After `1.0.0`, the project will document a stable support window in this
-file.
+Only the latest published stable `2.0.x` release receives security fixes. An
+older OpenBao server profile can remain wire-compatible without making either
+that server release or an older SDK patch eligible for security maintenance.
+Upgrade the SDK independently of the selected OpenBao compatibility profile.
 
 ## Reporting A Vulnerability
 
@@ -56,6 +57,11 @@ Please include:
   checksum-anchored, duplicate-key-safe offline validator documented in
   `compat/README.md`. Artifact identity alone is not an API compatibility or
   server security endorsement.
+- Compatibility evidence, CI workflows, generators, release scripts, and
+  maintainer policy remain in each signed Git tag rather than the crates.io
+  source package. The package retains the compiled reviewed registry and
+  `.cargo_vcs_info.json` identifies its source commit; release review must use
+  both the crate archive and corresponding signed source tag.
 - Historical API evidence is accepted only through the separately anchored
   snapshot validator. Tagged documentation remains primary, rendered pages are
   secondary observations, and normalized OpenAPI remains supporting evidence;

@@ -1,6 +1,6 @@
 [package]
 name = "openbao"
-version = "2.0.1"
+version = "2.0.2"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -12,34 +12,29 @@ readme = "README.md"
 keywords = ["openbao", "vault", "secrets", "security"]
 categories = ["api-bindings", "authentication", "cryptography"]
 include = [
-    "build.rs",
-    "src/**",
-    "tests/**",
-    "examples/**",
-    "compat/**",
-    "docs/**",
-    "kani/**",
-    "release-notes/**",
-    "scripts/*.py",
-    "scripts/*.sh",
-    "deploy/podman/compose.dev.yml",
-    "deploy/podman/openbao.dev.env.example",
-    "deploy/podman/openbao.hcl",
-    ".github/CODEOWNERS",
-    ".github/FUNDING.yml",
-    ".github/ISSUE_TEMPLATE/**",
-    ".github/PULL_REQUEST_TEMPLATE.md",
-    ".github/dependabot.yml",
-    ".github/workflows/**",
-    "Cargo.toml",
-    "Cargo.lock",
-    "rust-toolchain.toml",
-    "deny.toml",
-    "README.md",
-    "CONTRIBUTING.md",
-    "CHANGELOG.md",
-    "SECURITY.md",
-    "LICENSE-*",
+    "/build.rs",
+    "/src/**",
+    "/examples/**",
+    "/tests/http_client.rs",
+    "/tests/serde_fixtures.rs",
+    "/tests/fixtures/*.json",
+    "/tests/fixtures/tls_test_ca.pem",
+    "/tests/fixtures/tls_test_ca.crl.pem",
+    "/docs/API_STABILITY_AUDIT.md",
+    "/docs/CUSTOM_PLUGIN_PATTERN.md",
+    "/docs/MIGRATION_GUIDE.md",
+    "/docs/OPENBAO_API_COVERAGE.md",
+    "/docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md",
+    "/docs/OPENBAO_REQUEST_FIELD_COMPATIBILITY.md",
+    "/docs/OPENBAO_RESPONSE_COMPATIBILITY.md",
+    "/docs/OPENBAO_VERSION_SELECTION.md",
+    "/docs/OPENBAO_VERSION_SUPPORT_MATRIX.md",
+    "/docs/QUANTUM_READINESS.md",
+    "/Cargo.toml",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/SECURITY.md",
+    "/LICENSE-*",
 ]
 
 [features]
