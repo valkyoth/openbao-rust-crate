@@ -49,8 +49,8 @@ MAX_PATH_BYTES = 4096
 EXPECTED_OPERATION_COUNT = 666
 EXPECTED_STAGED_OPERATION_COUNT = 690
 EXPECTED_REGISTRY_SHA256 = "16e80a6e668f3de027ade450f3820f559e1c76eaa0e3064d693bd378af1146f2"
-EXPECTED_STAGED_REGISTRY_SHA256 = "b5843e76c8515e911dc7ceb8e206a53944b4bfd8d0da80aee2e2fb1a64a2fed0"
-EXPECTED_RUST_SHA256 = "b09bc77e5caf6a6cf07c04c0f16ce1af79b2225eb3773529a510fada9319f997"
+EXPECTED_STAGED_REGISTRY_SHA256 = "4c7a2c07055c4ecf990f7519f6ea1126a2f382ebe2444cf87237f979438171fc"
+EXPECTED_RUST_SHA256 = "5a202e1a1b72e27dddd83613048c13b429e9f1c6f9e47c38416257030eba567f"
 EXPECTED_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -108,10 +108,10 @@ STAGED_DISPOSITIONS = {
     ("GET", "/sys/generate-root-token/attempt"): "typed-gated",
     ("POST", "/sys/generate-root-token/attempt"): "typed-gated",
     ("POST", "/sys/generate-root-token/update"): "typed-gated",
-    ("DELETE", "/sys/namespaces/:path/delete-sealed"): "pending-typed-gated",
-    ("GET", "/sys/namespaces/:path/seal-status"): "pending-typed",
-    ("POST", "/sys/namespaces/:path/seal"): "pending-typed-gated",
-    ("POST", "/sys/namespaces/:path/unseal"): "pending-typed-gated",
+    ("DELETE", "/sys/namespaces/:path/delete-sealed"): "typed-gated",
+    ("GET", "/sys/namespaces/:path/seal-status"): "typed",
+    ("POST", "/sys/namespaces/:path/seal"): "typed-gated",
+    ("POST", "/sys/namespaces/:path/unseal"): "typed-gated",
     ("DELETE", "/sys/workflows/manage/:path"): "pending-typed",
     ("GET", "/sys/workflows/manage/:path"): "pending-typed",
     ("LIST", "/sys/workflows/manage"): "pending-typed",

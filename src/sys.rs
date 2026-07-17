@@ -45,6 +45,14 @@ const MAX_MONITOR_FRAME_BYTES: usize = 1024 * 1024;
 const MAX_MONITOR_TRANSPORT_CHUNK_BYTES: usize = 1024 * 1024;
 #[cfg(feature = "operator-ops")]
 const MAX_SYS_PPROF_SECONDS: u16 = 300;
+#[cfg(feature = "operator-ops")]
+const MAX_NAMESPACE_KEY_SHARES: usize = 255;
+#[cfg(feature = "operator-ops")]
+const MAX_NAMESPACE_PGP_KEY_BYTES: usize = 64 * 1024;
+#[cfg(feature = "operator-ops")]
+const MAX_NAMESPACE_KEY_SHARE_BYTES: usize = 64 * 1024;
+#[cfg(feature = "operator-ops")]
+const MAX_NAMESPACE_UNSEAL_KEY_BYTES: usize = 4096;
 
 /// System backend handle.
 #[derive(Debug)]
@@ -1167,13 +1175,13 @@ pub struct VersionHistoryEntry {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct NamespaceInfo {
     /// Namespace identifier.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_safe_metadata_string")]
     pub id: String,
     /// Namespace path.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_safe_metadata_string")]
     pub path: String,
     /// Caller-defined namespace metadata.
-    #[serde(default, deserialize_with = "deserialize_bounded_string_map")]
+    #[serde(default, deserialize_with = "deserialize_bounded_safe_metadata_map")]
     pub custom_metadata: BTreeMap<String, String>,
 }
 
@@ -1207,6 +1215,31 @@ struct NamespaceClearMetadataRequest {
     custom_metadata: Option<BTreeMap<String, String>>,
 }
 
+#[cfg(feature = "operator-ops")]
+#[derive(Serialize)]
+struct SealableNamespacePayload<'a> {
+    custom_metadata: &'a BTreeMap<String, String>,
+    seal: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pgp_keys: Option<&'a [String]>,
+}
+
+#[cfg(feature = "operator-ops")]
+#[derive(Serialize)]
+struct NamespaceUnsealPayload<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    key: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reset: Option<bool>,
+}
+
+#[cfg(feature = "operator-ops")]
+#[derive(Deserialize)]
+struct OptionalSealedNamespaceDeletionEnvelope {
+    #[serde(default)]
+    data: Option<SealedNamespaceDeletionStatus>,
+}
+
 impl NamespaceRequest {
     /// Creates an empty namespace request.
     #[must_use]
@@ -1220,6 +1253,189 @@ impl NamespaceRequest {
         self.custom_metadata.insert(key.into(), value.into());
         self
     }
+}
+
+/// Request for creating a Shamir-sealed namespace.
+///
+/// Available only with `operator-ops` and `operator-ops-acknowledged` because
+/// a successful response returns the namespace's unseal shares. Sealable
+/// namespaces are supported by OpenBao 2.6.0 and newer exact profiles.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone)]
+pub struct SealableNamespaceRequest {
+    key_shares: u8,
+    key_threshold: u8,
+    pgp_keys: Vec<String>,
+    custom_metadata: BTreeMap<String, String>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl SealableNamespaceRequest {
+    /// Creates a validated Shamir seal configuration.
+    pub fn new(key_shares: u8, key_threshold: u8) -> Result<Self> {
+        validate_namespace_key_share_options(key_shares, key_threshold)?;
+        Ok(Self {
+            key_shares,
+            key_threshold,
+            pgp_keys: Vec::new(),
+            custom_metadata: BTreeMap::new(),
+        })
+    }
+
+    /// Adds one caller-defined namespace metadata entry.
+    #[must_use]
+    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.custom_metadata.insert(key.into(), value.into());
+        self
+    }
+
+    /// Configures base64-encoded OpenPGP public keys for encrypting shares.
+    ///
+    /// The number of keys must equal `key_shares`. OpenBao returns encrypted
+    /// shares when these keys are supplied; the returned values remain secret
+    /// operator material even though the input keys are public.
+    pub fn with_pgp_keys<I, S>(mut self, keys: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let mut collected = Vec::new();
+        for key in keys {
+            if collected.len() >= MAX_NAMESPACE_KEY_SHARES {
+                return Err(Error::InvalidParameter(
+                    "namespace PGP key list exceeds maximum share count".into(),
+                ));
+            }
+            collected.push(key.into());
+        }
+        self.pgp_keys = collected;
+        validate_sealable_namespace_request(&self)?;
+        Ok(self)
+    }
+
+    fn seal_document(&self) -> String {
+        format!(
+            "seal \"shamir\" {{ shares = {} threshold = {} }}",
+            self.key_shares, self.key_threshold
+        )
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for SealableNamespaceRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SealableNamespaceRequest")
+            .field("key_shares", &self.key_shares)
+            .field("key_threshold", &self.key_threshold)
+            .field("pgp_keys_count", &self.pgp_keys.len())
+            .field("custom_metadata_count", &self.custom_metadata.len())
+            .finish()
+    }
+}
+
+/// Result of creating a Shamir-sealed namespace.
+///
+/// `key_shares` are the only material capable of unsealing the namespace and
+/// must be transferred immediately to separate operator custody.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct SealableNamespaceCreation {
+    /// Internal namespace UUID.
+    #[serde(default, deserialize_with = "deserialize_safe_metadata_string")]
+    pub uuid: String,
+    /// Namespace accessor identifier.
+    #[serde(default, deserialize_with = "deserialize_safe_metadata_string")]
+    pub id: String,
+    /// Fully qualified namespace path.
+    #[serde(default, deserialize_with = "deserialize_safe_metadata_string")]
+    pub path: String,
+    /// Whether namespace deletion is in progress.
+    #[serde(default)]
+    pub tainted: bool,
+    /// Whether the namespace API lock is active.
+    #[serde(default)]
+    pub locked: bool,
+    /// Caller-defined metadata returned by OpenBao.
+    #[serde(default, deserialize_with = "deserialize_bounded_safe_metadata_map")]
+    pub custom_metadata: BTreeMap<String, String>,
+    /// Generated unseal shares. Treat as highly sensitive operator material.
+    #[serde(deserialize_with = "deserialize_namespace_key_shares")]
+    pub key_shares: Vec<SecretString>,
+    /// Number of shares required to unseal the namespace.
+    pub key_threshold: u8,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for SealableNamespaceCreation {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SealableNamespaceCreation")
+            .field("uuid", &self.uuid)
+            .field("id", &self.id)
+            .field("path", &self.path)
+            .field("tainted", &self.tainted)
+            .field("locked", &self.locked)
+            .field("custom_metadata_count", &self.custom_metadata.len())
+            .field("key_shares_count", &self.key_shares.len())
+            .field("key_threshold", &self.key_threshold)
+            .finish()
+    }
+}
+
+/// Seal status for one OpenBao 2.6+ sealable namespace.
+#[derive(Clone, Debug, Deserialize)]
+pub struct NamespaceSealStatus {
+    /// Namespace seal type. OpenBao 2.6.0 supports `shamir`.
+    #[serde(rename = "type", deserialize_with = "deserialize_safe_metadata_string")]
+    pub seal_type: String,
+    /// Whether the namespace seal has been initialized.
+    pub initialized: bool,
+    /// Whether the namespace is sealed.
+    pub sealed: bool,
+    /// Total Shamir share count.
+    pub n: u8,
+    /// Required Shamir share threshold.
+    pub t: u8,
+    /// Number of accepted shares in the current unseal attempt.
+    pub progress: u8,
+    /// Current unseal attempt nonce.
+    #[serde(deserialize_with = "deserialize_safe_metadata_string")]
+    pub nonce: String,
+}
+
+/// Explicit confirmation for physically deleting a sealed namespace.
+///
+/// Construct this at the call site with [`SealedNamespaceDeletion::confirm`]
+/// or [`SealedNamespaceDeletion::confirm_recursive`].
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SealedNamespaceDeletion {
+    force: bool,
+}
+
+#[cfg(feature = "operator-ops")]
+impl SealedNamespaceDeletion {
+    /// Confirms deletion of one sealed namespace with no children.
+    #[must_use]
+    pub const fn confirm() -> Self {
+        Self { force: false }
+    }
+
+    /// Confirms recursive deletion of the namespace, its data, and children.
+    #[must_use]
+    pub const fn confirm_recursive() -> Self {
+        Self { force: true }
+    }
+}
+
+/// Status returned after scheduling sealed namespace deletion.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Debug, Deserialize)]
+pub struct SealedNamespaceDeletionStatus {
+    /// OpenBao deletion status text.
+    #[serde(deserialize_with = "deserialize_safe_metadata_string")]
+    pub status: String,
 }
 
 /// Global rate-limit quota configuration.
@@ -6926,6 +7142,39 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Creates a Shamir-sealed namespace through `/sys/namespaces/:path`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged` and
+    /// only for OpenBao 2.6.0 or newer exact profiles. The generated unseal
+    /// shares are returned once and must be transferred to separate operator
+    /// custody. Losing enough shares to fall below the threshold can make the
+    /// namespace permanently inaccessible.
+    #[cfg(feature = "operator-ops")]
+    pub async fn create_sealable_namespace(
+        &self,
+        path: &str,
+        request: &SealableNamespaceRequest,
+    ) -> Result<SealableNamespaceCreation> {
+        let path = namespace_path(path)?;
+        validate_sealable_namespace_request(request)?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::NAMESPACE_SEAL_CONFIG,
+                true,
+            )])
+            .await?;
+        let payload = SealableNamespacePayload {
+            custom_metadata: &request.custom_metadata,
+            seal: request.seal_document(),
+            pgp_keys: (!request.pgp_keys.is_empty()).then_some(request.pgp_keys.as_slice()),
+        };
+        let envelope: ResponseEnvelope<SealableNamespaceCreation> = self
+            .client
+            .request_sys_json_internal(Method::POST, &path, Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Reads namespace information through `/sys/namespaces/:path`.
     pub async fn read_namespace(&self, path: &str) -> Result<NamespaceInfo> {
         self.client
@@ -6982,6 +7231,116 @@ impl Sys<'_, Authenticated> {
                 &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
             .await
+    }
+
+    /// Reads `/sys/namespaces/:path/seal-status` for a sealable namespace.
+    ///
+    /// This endpoint is available from OpenBao 2.6.0. Reading a non-sealable
+    /// namespace's seal status returns an OpenBao API error.
+    pub async fn namespace_seal_status(&self, path: &str) -> Result<NamespaceSealStatus> {
+        let path = format!("{}/seal-status", namespace_path(path)?);
+        let envelope: ResponseEnvelope<NamespaceSealStatus> = self
+            .client
+            .request_sys_json_internal(Method::GET, &path, Option::<&Empty>::None)
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Seals `/sys/namespaces/:path/seal` and recursively seals its children.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged` and
+    /// only for OpenBao 2.6.0 or newer exact profiles. Sealing immediately
+    /// discards in-memory namespace keys and interrupts any unseal attempt.
+    #[cfg(feature = "operator-ops")]
+    pub async fn seal_namespace(&self, path: &str) -> Result<Empty> {
+        let path = format!("{}/seal", namespace_path(path)?);
+        self.client
+            .request_sys_json_accepting(
+                Method::POST,
+                &path,
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Submits one secret share to `/sys/namespaces/:path/unseal`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged` and
+    /// only for OpenBao 2.6.0 or newer exact profiles. The share is sent as
+    /// sensitive request material and is never included in Debug output.
+    #[cfg(feature = "operator-ops")]
+    pub async fn unseal_namespace(
+        &self,
+        path: &str,
+        key: &SecretString,
+    ) -> Result<NamespaceSealStatus> {
+        validate_namespace_unseal_key(key)?;
+        self.namespace_unseal(path, Some(key), false).await
+    }
+
+    /// Resets progress for `/sys/namespaces/:path/unseal` without a key share.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged` and
+    /// only for OpenBao 2.6.0 or newer exact profiles.
+    #[cfg(feature = "operator-ops")]
+    pub async fn reset_namespace_unseal(&self, path: &str) -> Result<NamespaceSealStatus> {
+        self.namespace_unseal(path, None, true).await
+    }
+
+    /// Physically deletes a sealed namespace through `delete-sealed`.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged` and
+    /// only for OpenBao 2.6.0 or newer exact profiles. This sudo operation does
+    /// not clean up external lease resources. Prefer [`Sys::delete_namespace`]
+    /// whenever the namespace can be unsealed normally.
+    ///
+    /// [`SealedNamespaceDeletion::confirm_recursive`] authorizes irreversible
+    /// deletion of all data and child namespaces. OpenBao schedules physical
+    /// deletion asynchronously. `None` means OpenBao reported that the target
+    /// did not exist.
+    #[cfg(feature = "operator-ops")]
+    pub async fn delete_sealed_namespace(
+        &self,
+        path: &str,
+        confirmation: SealedNamespaceDeletion,
+    ) -> Result<Option<SealedNamespaceDeletionStatus>> {
+        let path = format!("{}/delete-sealed", namespace_path(path)?);
+        let query = confirmation
+            .force
+            .then(|| ("force", "true".to_owned()))
+            .into_iter()
+            .collect::<Vec<_>>();
+        let envelope: OptionalSealedNamespaceDeletionEnvelope = self
+            .client
+            .request_sys_json_query_accepting(
+                Method::DELETE,
+                &path,
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    #[cfg(feature = "operator-ops")]
+    async fn namespace_unseal(
+        &self,
+        path: &str,
+        key: Option<&SecretString>,
+        reset: bool,
+    ) -> Result<NamespaceSealStatus> {
+        let path = format!("{}/unseal", namespace_path(path)?);
+        let payload = NamespaceUnsealPayload {
+            key: key.map(ExposeSecret::expose_secret),
+            reset: reset.then_some(true),
+        };
+        let envelope: ResponseEnvelope<NamespaceSealStatus> = self
+            .client
+            .request_sys_json_internal(Method::POST, &path, Some(&payload))
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Reads global rate-limit quota configuration from `/sys/quotas/config`.
@@ -7767,19 +8126,81 @@ fn validate_namespace_path(path: &str) -> Result<Vec<String>> {
 }
 
 fn validate_namespace_request(request: &NamespaceRequest) -> Result<()> {
-    if request.custom_metadata.len() > crate::response::MAX_RESPONSE_STRINGS {
+    validate_namespace_metadata(&request.custom_metadata)
+}
+
+fn validate_namespace_metadata(metadata: &BTreeMap<String, String>) -> Result<()> {
+    if metadata.len() > crate::response::MAX_RESPONSE_STRINGS {
         return Err(Error::InvalidParameter(
             "namespace metadata exceeds maximum item count".into(),
         ));
     }
-    for (key, value) in &request.custom_metadata {
-        if key.as_bytes().iter().any(u8::is_ascii_control)
-            || value.as_bytes().iter().any(u8::is_ascii_control)
+    for (key, value) in metadata {
+        if key.len() > MAX_SYSTEM_RESPONSE_METADATA_BYTES
+            || value.len() > MAX_SYSTEM_RESPONSE_METADATA_BYTES
         {
+            return Err(Error::InvalidParameter(
+                "namespace metadata exceeds byte limit".into(),
+            ));
+        }
+        if key.chars().any(char::is_control) || value.chars().any(char::is_control) {
             return Err(Error::InvalidParameter(
                 "namespace metadata must not contain control characters".into(),
             ));
         }
+    }
+    Ok(())
+}
+
+#[cfg(feature = "operator-ops")]
+fn validate_sealable_namespace_request(request: &SealableNamespaceRequest) -> Result<()> {
+    validate_namespace_key_share_options(request.key_shares, request.key_threshold)?;
+    validate_namespace_metadata(&request.custom_metadata)?;
+    if !request.pgp_keys.is_empty() && request.pgp_keys.len() != usize::from(request.key_shares) {
+        return Err(Error::InvalidParameter(
+            "namespace PGP key count must equal key share count".into(),
+        ));
+    }
+    for key in &request.pgp_keys {
+        if key.is_empty() || key.len() > MAX_NAMESPACE_PGP_KEY_BYTES {
+            return Err(Error::InvalidParameter(
+                "namespace PGP key is empty or exceeds byte limit".into(),
+            ));
+        }
+        if !key.is_ascii()
+            || key.as_bytes().iter().any(u8::is_ascii_control)
+            || base64_ng::STANDARD.validate_result(key.as_bytes()).is_err()
+        {
+            return Err(Error::InvalidParameter(
+                "namespace PGP keys must be canonical standard base64 text".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(feature = "operator-ops")]
+fn validate_namespace_key_share_options(key_shares: u8, key_threshold: u8) -> Result<()> {
+    validate_key_share_options(key_shares, key_threshold)?;
+    if key_shares > 1 && key_threshold < 2 {
+        return Err(Error::InvalidParameter(
+            "namespace key_threshold must be at least two when multiple shares are configured"
+                .into(),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(feature = "operator-ops")]
+fn validate_namespace_unseal_key(key: &SecretString) -> Result<()> {
+    let value = key.expose_secret();
+    let invalid = value.is_empty()
+        || value.len() > MAX_NAMESPACE_UNSEAL_KEY_BYTES
+        || value.as_bytes().iter().any(u8::is_ascii_control);
+    if invalid {
+        return Err(Error::InvalidParameter(
+            "namespace unseal key is empty, oversized, or contains control characters".into(),
+        ));
     }
     Ok(())
 }
@@ -8241,6 +8662,70 @@ where
         validate_system_response_metadata::<D::Error>(value)?;
     }
     Ok(value)
+}
+
+fn deserialize_bounded_safe_metadata_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let values = deserialize_bounded_string_map(deserializer)?;
+    for (key, value) in &values {
+        validate_system_response_metadata::<D::Error>(key)?;
+        validate_system_response_metadata::<D::Error>(value)?;
+    }
+    Ok(values)
+}
+
+#[cfg(feature = "operator-ops")]
+fn deserialize_namespace_key_shares<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct NamespaceKeySharesVisitor;
+
+    impl<'de> Visitor<'de> for NamespaceKeySharesVisitor {
+        type Value = Vec<SecretString>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                formatter,
+                "at most {MAX_NAMESPACE_KEY_SHARES} namespace key shares"
+            )
+        }
+
+        fn visit_seq<A>(self, mut sequence: A) -> core::result::Result<Self::Value, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let mut shares = Vec::new();
+            while shares.len() < MAX_NAMESPACE_KEY_SHARES {
+                let Some(share) = sequence.next_element::<String>()? else {
+                    return Ok(shares);
+                };
+                if share.is_empty()
+                    || share.len() > MAX_NAMESPACE_KEY_SHARE_BYTES
+                    || share.as_bytes().iter().any(u8::is_ascii_control)
+                {
+                    return Err(A::Error::custom(
+                        "namespace key share is empty, oversized, or contains control characters",
+                    ));
+                }
+                shares.push(SecretString::from(share));
+            }
+            if sequence.next_element::<IgnoredAny>()?.is_some() {
+                return Err(A::Error::custom(
+                    "namespace key share list exceeds item limit",
+                ));
+            }
+            Ok(shares)
+        }
+    }
+
+    deserializer.deserialize_seq(NamespaceKeySharesVisitor)
 }
 
 fn deserialize_bounded_plugin_detail_vec<'de, D>(
@@ -8898,7 +9383,9 @@ mod tests {
     use super::{
         DecodeTokenRequest, DecodeTokenResponse, InFlightRequests, OperatorInitResponse,
         OperatorKeyShareUpdateResponse, OperatorKeySharesRequest, OperatorRecoveryKeyBackup,
-        OperatorTokenGenerationStart, OperatorTokenGenerationStatus,
+        OperatorTokenGenerationStart, OperatorTokenGenerationStatus, SealableNamespaceCreation,
+        SealableNamespacePayload, SealableNamespaceRequest, SealedNamespaceDeletion,
+        validate_namespace_unseal_key,
     };
     #[cfg(feature = "monitor-stream")]
     use super::{MonitorLogFormat, MonitorOptions, MonitorStream};
@@ -9656,6 +10143,104 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn sealable_namespace_requests_validate_and_redact_operator_material() {
+        assert!(SealableNamespaceRequest::new(0, 0).is_err());
+        assert!(SealableNamespaceRequest::new(2, 1).is_err());
+        assert!(SealableNamespaceRequest::new(2, 3).is_err());
+
+        let request = SealableNamespaceRequest::new(3, 2)
+            .and_then(|request| {
+                request.with_pgp_keys(["cGdwLWtleS0x", "cGdwLWtleS0y", "cGdwLWtleS0z"])
+            })
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_metadata("owner", "security");
+        let debug = format!("{request:?}");
+        assert!(debug.contains("pgp_keys_count: 3"));
+        assert!(!debug.contains("cGdwLWtleS0x"));
+        assert!(!debug.contains("security"));
+
+        let payload = SealableNamespacePayload {
+            custom_metadata: &request.custom_metadata,
+            seal: request.seal_document(),
+            pgp_keys: Some(request.pgp_keys.as_slice()),
+        };
+        let encoded = serde_json::to_value(payload).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            encoded["seal"],
+            "seal \"shamir\" { shares = 3 threshold = 2 }"
+        );
+        assert_eq!(encoded["pgp_keys"].as_array().map(Vec::len), Some(3));
+
+        assert!(
+            SealableNamespaceRequest::new(2, 2)
+                .and_then(|request| request.with_pgp_keys(["cGdwLWtleQ=="]))
+                .is_err()
+        );
+        assert!(
+            SealableNamespaceRequest::new(1, 1)
+                .and_then(|request| request.with_pgp_keys(["not-base64"]))
+                .is_err()
+        );
+
+        assert!(validate_namespace_unseal_key(&SecretString::from("")).is_err());
+        assert!(validate_namespace_unseal_key(&SecretString::from("share\nvalue")).is_err());
+        assert!(
+            validate_namespace_unseal_key(&SecretString::from(
+                "x".repeat(super::MAX_NAMESPACE_UNSEAL_KEY_BYTES + 1)
+            ))
+            .is_err()
+        );
+        assert!(!SealedNamespaceDeletion::confirm().force);
+        assert!(SealedNamespaceDeletion::confirm_recursive().force);
+    }
+
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn sealable_namespace_responses_bound_and_redact_key_shares() {
+        let creation: SealableNamespaceCreation = serde_json::from_value(serde_json::json!({
+            "uuid": "namespace-uuid",
+            "id": "namespace-id",
+            "path": "team/app/",
+            "tainted": false,
+            "locked": false,
+            "custom_metadata": {"owner": "security"},
+            "key_shares": ["unseal-share-one", "unseal-share-two"],
+            "key_threshold": 2
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(creation.key_shares[0].expose_secret(), "unseal-share-one");
+        let debug = format!("{creation:?}");
+        assert!(debug.contains("key_shares_count: 2"));
+        assert!(!debug.contains("unseal-share-one"));
+        assert!(!debug.contains("security"));
+
+        let shares = (0..=super::MAX_NAMESPACE_KEY_SHARES)
+            .map(|index| format!("share-{index}"))
+            .collect::<Vec<_>>();
+        let error = serde_json::from_value::<SealableNamespaceCreation>(serde_json::json!({
+            "key_shares": shares,
+            "key_threshold": 2
+        }))
+        .err()
+        .unwrap_or_else(|| panic!("oversized namespace key shares unexpectedly decoded"));
+        assert!(error.to_string().contains("exceeds item limit"));
+
+        assert!(
+            serde_json::from_value::<super::NamespaceSealStatus>(serde_json::json!({
+                "type": "shamir\nforged",
+                "initialized": true,
+                "sealed": true,
+                "n": 3,
+                "t": 2,
+                "progress": 0,
+                "nonce": ""
+            }))
+            .is_err()
+        );
     }
 
     #[test]

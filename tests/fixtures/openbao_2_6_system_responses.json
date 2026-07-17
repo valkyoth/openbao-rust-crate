@@ -70,5 +70,30 @@
     "commit_date": "2026-07-01T00:00:00Z",
     "previous_version": "2.5.5",
     "timestamp_installed": "2026-07-02T00:00:00Z"
+  },
+  "namespace_creation_2_6_0": {
+    "uuid": "namespace-uuid",
+    "id": "namespace-id",
+    "path": "team/payments/",
+    "tainted": false,
+    "locked": false,
+    "custom_metadata": {
+      "owner": "security"
+    },
+    "key_shares": [
+      "fixture-namespace-share-one",
+      "fixture-namespace-share-two",
+      "fixture-namespace-share-three"
+    ],
+    "key_threshold": 2
+  },
+  "namespace_seal_status_2_6_0": {
+    "type": "shamir",
+    "initialized": true,
+    "sealed": true,
+    "n": 3,
+    "t": 2,
+    "progress": 1,
+    "nonce": "fixture-unseal-nonce"
   }
 }

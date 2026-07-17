@@ -33,6 +33,7 @@ field to make a request appear compatible.
 | `sys.init` | `stored_shares` | `2.0.0` | `2.5.5` |
 | `sys.rekey` | `stored_shares` | `2.0.0` | `2.5.5` |
 | `sys.config.cors` | `allow_credentials` | `2.6.0` | `-` |
+| `sys.namespaces.create` | `seal` | `2.6.0` | `-` |
 | `sys.storage.raft.join` | `non_voter` | `2.2.0` | `-` |
 | `sys.rotate.config` | `interval` | `2.4.0` | `-` |
 | `sys.plugins.catalog.register` | `oci` | `2.5.0` | `-` |
@@ -78,6 +79,9 @@ proof when tagged documentation or live behavior contradicts it.
   sends an ineffective operator-ceremony field.
 - CORS `allow_credentials` is rejected before `2.6.0`; omitting it preserves
   the older CORS request shape.
+- Sealable namespace creation is rejected before `2.6.0`. The typed helper
+  always sends a validated Shamir `seal` document and never silently creates
+  an ordinary namespace when the selected profile lacks namespace sealing.
 
 ## Boundary
 

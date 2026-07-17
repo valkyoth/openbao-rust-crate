@@ -1180,7 +1180,7 @@ mod tests {
         let operations = openbao_operations();
         let versions = openbao_profile_versions();
 
-        assert_eq!(operations.len(), 670);
+        assert_eq!(operations.len(), 674);
         assert_eq!(versions.len(), 22);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
@@ -1220,6 +1220,46 @@ mod tests {
             openapi_only.evidence(OpenBaoVersion::new(2, 5, 5)),
             Some(OpenBaoCapabilityEvidence::LockedOpenApi)
         );
+
+        for (method, path, disposition) in [
+            (
+                OpenBaoHttpMethod::Delete,
+                "/sys/namespaces/:path/delete-sealed",
+                OpenBaoOperationDisposition::TypedGated,
+            ),
+            (
+                OpenBaoHttpMethod::Get,
+                "/sys/namespaces/:path/seal-status",
+                OpenBaoOperationDisposition::Typed,
+            ),
+            (
+                OpenBaoHttpMethod::Post,
+                "/sys/namespaces/:path/seal",
+                OpenBaoOperationDisposition::TypedGated,
+            ),
+            (
+                OpenBaoHttpMethod::Post,
+                "/sys/namespaces/:path/unseal",
+                OpenBaoOperationDisposition::TypedGated,
+            ),
+        ] {
+            let operation = operations
+                .iter()
+                .copied()
+                .find(|operation| operation.method() == method && operation.path_template() == path)
+                .unwrap_or_else(|| {
+                    panic!("missing sealable namespace operation {method:?} {path}")
+                });
+            assert_eq!(operation.disposition(), disposition);
+            assert_eq!(
+                operation.availability(OpenBaoVersion::new(2, 5, 5)),
+                Some(OpenBaoCapabilityAvailability::NotDocumented)
+            );
+            assert_eq!(
+                operation.availability(OpenBaoVersion::new(2, 6, 0)),
+                Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+            );
+        }
     }
 
     #[test]

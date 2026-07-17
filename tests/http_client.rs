@@ -3495,6 +3495,65 @@ async fn sys_namespace_lifecycle_uses_documented_paths() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
+async fn sealable_namespace_operations_reject_pre_2_6_profiles_before_transport() {
+    let version = OpenBaoVersion::new(2, 5, 5);
+    let policy =
+        OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(
+        OpenBaoConfig::new("https://127.0.0.1:1")
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .and_then(|client| client.try_with_token(SecretString::from("namespace-operator-token")))
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    let create = client
+        .sys()
+        .create_sealable_namespace(
+            "team/app",
+            &openbao::sys::SealableNamespaceRequest::new(3, 2)
+                .unwrap_or_else(|error| panic!("{error}")),
+        )
+        .await;
+    assert!(matches!(
+        create,
+        Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "sys.namespaces.create",
+            field: "seal",
+            version: rejected,
+        }) if rejected == version
+    ));
+
+    assert!(matches!(
+        client.sys().namespace_seal_status("team/app").await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client.sys().seal_namespace("team/app").await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client
+            .sys()
+            .unseal_namespace("team/app", &SecretString::from("namespace-unseal-share"))
+            .await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client.sys().reset_namespace_unseal("team/app").await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client
+            .sys()
+            .delete_sealed_namespace("team/app", openbao::sys::SealedNamespaceDeletion::confirm(),)
+            .await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+}
+
 #[tokio::test]
 async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));

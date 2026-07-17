@@ -20,9 +20,11 @@ use openbao::secrets::pki::PkiCertificateBundle;
 use openbao::secrets::pki::PkiRole;
 use openbao::secrets::ssh::SshRoleKeyType;
 use openbao::secrets::totp::{TotpCode, TotpPeriod};
+#[cfg(feature = "operator-ops")]
+use openbao::sys::SealableNamespaceCreation;
 use openbao::sys::{
-    CorsConfig, Health, LeaseLookup, PluginInfo, PolicyInfo, PolicyList, RateLimitQuotaInfo,
-    RateLimitQuotaList, SealStatus, UnsealStatus, VersionHistoryEntry,
+    CorsConfig, Health, LeaseLookup, NamespaceSealStatus, PluginInfo, PolicyInfo, PolicyList,
+    RateLimitQuotaInfo, RateLimitQuotaList, SealStatus, UnsealStatus, VersionHistoryEntry,
 };
 use openbao::{ExposeSecret, ResponseEnvelope, SecretString};
 use serde::Deserialize;
@@ -70,6 +72,9 @@ struct OpenBao26SystemFixtures {
     totp_2_6_0: serde_json::Value,
     version_2_5_5: serde_json::Value,
     version_2_6_0: serde_json::Value,
+    #[cfg(feature = "operator-ops")]
+    namespace_creation_2_6_0: serde_json::Value,
+    namespace_seal_status_2_6_0: serde_json::Value,
 }
 
 #[test]
@@ -203,6 +208,23 @@ fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), B
     let new_version: VersionHistoryEntry = serde_json::from_value(fixtures.version_2_6_0)?;
     assert!(old_version.build_date.is_some());
     assert!(new_version.commit_date.is_some());
+
+    let namespace_status: NamespaceSealStatus =
+        serde_json::from_value(fixtures.namespace_seal_status_2_6_0)?;
+    assert!(namespace_status.sealed);
+    assert_eq!(namespace_status.progress, 1);
+
+    #[cfg(feature = "operator-ops")]
+    {
+        let namespace: SealableNamespaceCreation =
+            serde_json::from_value(fixtures.namespace_creation_2_6_0)?;
+        assert_eq!(namespace.key_shares.len(), 3);
+        assert_eq!(
+            namespace.key_shares[0].expose_secret(),
+            "fixture-namespace-share-one"
+        );
+        assert!(!format!("{namespace:?}").contains("fixture-namespace-share-one"));
+    }
     Ok(())
 }
 

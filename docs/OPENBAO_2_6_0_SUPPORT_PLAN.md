@@ -11,8 +11,10 @@
   an owner-provided pentest for its exact range before the next commit starts.
 - Completed checkpoint: Commit 01 release evidence and Commit 02 API evidence
   are staged and independently validator-anchored. Commit 03 generates the
-  22-profile candidate registry with 690 stable operation identities and four
-  authenticated root-generation route variants. Its historical projection is
+  22-profile candidate registry with 690 stable operation identities. Commit
+  04 implements the changed system contracts and authenticated root-generation
+  routing. Commit 05 adds the typed sealable-namespace lifecycle and resolves
+  its four candidate operation dispositions. The historical projection remains
   byte-identical to the active 21-profile registry. The candidate is explicitly
   introspection-only: runtime policies and dispatch remain capped at 2.5.5
   until final cross-lock promotion in Commit 09.

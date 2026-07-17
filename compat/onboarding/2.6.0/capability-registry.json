@@ -1182,7 +1182,7 @@
       ]
     },
     {
-      "disposition": "pending-typed-gated",
+      "disposition": "typed-gated",
       "id": "openbao.delete.sys.namespaces.path.delete.sealed.d6addbb121814952",
       "method": "DELETE",
       "path_template": "/sys/namespaces/:path/delete-sealed",
@@ -3988,7 +3988,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.get.sys.namespaces.path.seal.status.5c4362a54aa06e80",
       "method": "GET",
       "path_template": "/sys/namespaces/:path/seal-status",
@@ -8970,7 +8970,7 @@
       ]
     },
     {
-      "disposition": "pending-typed-gated",
+      "disposition": "typed-gated",
       "id": "openbao.post.sys.namespaces.path.seal.ba184f668eb2fbd3",
       "method": "POST",
       "path_template": "/sys/namespaces/:path/seal",
@@ -8990,7 +8990,7 @@
       ]
     },
     {
-      "disposition": "pending-typed-gated",
+      "disposition": "typed-gated",
       "id": "openbao.post.sys.namespaces.path.unseal.e3a7781910683cee",
       "method": "POST",
       "path_template": "/sys/namespaces/:path/unseal",
@@ -10162,15 +10162,15 @@
   "summary": {
     "dispositions": {
       "pending-security-blocked": 2,
-      "pending-typed": 13,
-      "pending-typed-gated": 5,
-      "typed": 580,
-      "typed-gated": 90
+      "pending-typed": 12,
+      "pending-typed-gated": 2,
+      "typed": 581,
+      "typed-gated": 93
     },
     "operation_count": 690,
-    "pending_operation_count": 20,
+    "pending_operation_count": 16,
     "profile_count": 22,
-    "public_operation_count": 670
+    "public_operation_count": 674
   },
   "versions": [
     "2.0.0",

@@ -237,11 +237,14 @@ unavoidable `reqwest::Body` copy. Use the `raft-stream` feature for larger
 Integrated Storage restore payloads. Its exact-length stream rejects overflow
 and truncation and avoids a second complete snapshot allocation.
 
-The `operator-ops` feature exposes production init, unseal, seal, rekey, and
-rotation APIs. It is disabled by default and fails to compile unless
-`operator-ops-acknowledged` is enabled too. Do not enable it in normal
-application clients; reserve it for audited operator tooling with an external
-key ceremony and custody model.
+The `operator-ops` feature exposes production init, unseal, seal, rekey,
+rotation, and sealable-namespace lifecycle APIs. It is disabled by default and
+fails to compile unless `operator-ops-acknowledged` is enabled too. Namespace
+creation shares and submitted unseal shares are secret values; transfer them
+under an external key ceremony and custody model. Recursive sealed-namespace
+deletion is irreversible and does not clean up external lease resources. Do
+not enable this feature in normal application clients; reserve it for audited
+operator tooling.
 
 The `transit-import` feature is a software BYOK wrapping helper. It depends on
 the host OpenSSL runtime through the `openssl` crate and requires an audited

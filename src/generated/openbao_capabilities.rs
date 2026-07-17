@@ -1068,6 +1068,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
+        "openbao.delete.sys.namespaces.path.delete.sealed.d6addbb121814952",
+        OpenBaoHttpMethod::Delete,
+        "/sys/namespaces/:path/delete-sealed",
+        OpenBaoOperationDisposition::TypedGated,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
         "openbao.delete.sys.namespaces.path.fa0c3076d874eb2e",
         OpenBaoHttpMethod::Delete,
         "/sys/namespaces/:path",
@@ -3605,6 +3623,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.get.sys.namespaces.path.seal.status.5c4362a54aa06e80",
+        OpenBaoHttpMethod::Get,
+        "/sys/namespaces/:path/seal-status",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
                 OpenBaoVersion::new(2, 6, 0),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
             ),
@@ -8072,6 +8108,42 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
                 OpenBaoVersion::new(2, 0, 0),
                 OpenBaoVersion::new(2, 6, 0),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.post.sys.namespaces.path.seal.ba184f668eb2fbd3",
+        OpenBaoHttpMethod::Post,
+        "/sys/namespaces/:path/seal",
+        OpenBaoOperationDisposition::TypedGated,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.post.sys.namespaces.path.unseal.e3a7781910683cee",
+        OpenBaoHttpMethod::Post,
+        "/sys/namespaces/:path/unseal",
+        OpenBaoOperationDisposition::TypedGated,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
             ),
         ],
     ),

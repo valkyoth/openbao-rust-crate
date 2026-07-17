@@ -77,7 +77,7 @@ compile_error!(
 
 #[cfg(all(feature = "operator-ops", not(feature = "operator-ops-acknowledged")))]
 compile_error!(
-    "The operator-ops feature exposes production init, unseal, rekey, rotate, and PKI root-deletion APIs that can return, mutate, or destroy root, unseal, recovery, and encryption-key material. \
+    "The operator-ops feature exposes production init, unseal, rekey, rotate, sealable-namespace lifecycle, and PKI root-deletion APIs that can return, mutate, or destroy root, unseal, recovery, namespace, and encryption-key material. \
      Add feature \"operator-ops-acknowledged\" to confirm you have audited this choice."
 );
 

@@ -114,6 +114,9 @@ pub(crate) mod fields {
         VersionedRequestField::between("sys.rekey", "stored_shares", V2_0_0, V2_5_5);
     pub(crate) const CORS_ALLOW_CREDENTIALS: VersionedRequestField =
         VersionedRequestField::since("sys.config.cors", "allow_credentials", V2_6_0);
+    #[cfg(any(feature = "operator-ops", test))]
+    pub(crate) const NAMESPACE_SEAL_CONFIG: VersionedRequestField =
+        VersionedRequestField::since("sys.namespaces.create", "seal", V2_6_0);
     pub(crate) const RAFT_JOIN_NON_VOTER: VersionedRequestField =
         VersionedRequestField::since("sys.storage.raft.join", "non_voter", V2_2_0);
     #[cfg(any(feature = "operator-ops", test))]
@@ -167,6 +170,7 @@ pub(crate) mod fields {
         OPERATOR_INIT_STORED_SHARES,
         OPERATOR_REKEY_STORED_SHARES,
         CORS_ALLOW_CREDENTIALS,
+        NAMESPACE_SEAL_CONFIG,
         RAFT_JOIN_NON_VOTER,
         ROTATION_INTERVAL,
         PLUGIN_OCI,
@@ -297,6 +301,6 @@ mod tests {
                 ));
             }
         }
-        assert_eq!(identities.len(), 31);
+        assert_eq!(identities.len(), 32);
     }
 }
