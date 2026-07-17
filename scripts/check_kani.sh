@@ -49,6 +49,7 @@ common_args="--no-default-features --features rustls-tls,kani --output-format te
 run_kani "codegen" $common_args --only-codegen
 run_kani "closed version interval" $common_args --harness closed_version_interval_matches_ordering
 run_kani "capability interval selection" $common_args --harness capability_selection_never_escapes_selected_interval
+run_kani "root-generation profile ranges" $common_args --harness root_generation_profile_ranges_never_overlap
 run_kani "path forbidden byte helper" $common_args --harness path_forbidden_byte_helper_matches_documented_policy
 run_kani "duration component single digits" $common_args --harness duration_component_parser_accepts_single_digits
 run_kani "duration component two digits" $common_args --harness duration_component_parser_accepts_two_digits

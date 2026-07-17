@@ -10,8 +10,11 @@
 - Delivery model: ordered commits on `main`. Each commit receives green CI and
   an owner-provided pentest for its exact range before the next commit starts.
 - Completed checkpoint: Commit 01 release evidence and Commit 02 API evidence
-  are staged and independently validator-anchored; 2.6.0 is not yet in the
-  active compatibility inventory.
+  are staged and independently validator-anchored. Commit 03 generates the
+  22-profile candidate registry with 690 stable operation identities and four
+  authenticated root-generation route variants. Its historical projection is
+  byte-identical to the active 21-profile registry; final cross-lock promotion
+  remains Commit 09.
 - Compatibility invariant: append an exact `2.6.0` profile without modifying
   the behavior, evidence hashes, routes, or field rules of the 21 profiles from
   `2.0.0` through `2.5.5`.

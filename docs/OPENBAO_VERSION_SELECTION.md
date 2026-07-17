@@ -3,7 +3,11 @@
 OpenBao documents its HTTP API below `/v1`, but that prefix is not a
 backwards-compatibility guarantee. The SDK therefore selects an immutable
 exact-release profile before a typed request is serialized. Profiles currently
-cover the 21 published stable releases from `2.0.0` through `2.5.5`.
+cover the 21 published stable releases from `2.0.0` through `2.5.5`. During
+the 2.1.0 development cycle, `main` also contains a generated 2.6.0 candidate
+profile. Its evidence is staged and checksum-anchored, but it is not part of
+the stable support matrix until all pending 2.6 operations, field rules,
+fixtures, and exact-image results are promoted atomically.
 
 The recommended policy for new applications is strict automatic detection:
 
@@ -107,7 +111,7 @@ let policy = OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
 );
 ```
 
-This detects the newer version but routes with the newest known profile. Its
+This detects the newer version but routes with the newest generated profile. Its
 report is `AcknowledgedUnknownNewer`, not verified. It cannot prove that the
 new server retained an endpoint, request field, response shape, or behavior.
 Use it only while onboarding and reviewing the new release.
@@ -176,6 +180,13 @@ current documentation.
    user-facing support matrix.
 8. Run the full release gate and an exact-commit pentest before advertising the
    profile.
+
+The candidate registry may expose reviewed route variants during ordered
+development commits. Candidate-only operation identities remain explicitly
+pending and are omitted from the public operation iterator until their typed
+implementation lands. The generator rejects gaps, overlaps, unknown operation
+IDs, historical cell drift, and any candidate output whose anchored checksum
+changes unexpectedly.
 
 Rendered current documentation is only a secondary cross-check. Exact tagged
 source, locked artifacts, reviewed diffs, fixtures, and live evidence remain

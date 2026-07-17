@@ -25,7 +25,7 @@ fn capability_selection_never_escapes_selected_interval() {
     let first_minimum = OpenBaoVersion::new(2, 0, 0);
     let first_maximum = OpenBaoVersion::new(2, 2, 2);
     let second_minimum = OpenBaoVersion::new(2, 3, 1);
-    let second_maximum = OpenBaoVersion::new(2, 5, 5);
+    let second_maximum = OpenBaoVersion::new(2, 6, 0);
     let ranges = [
         OpenBaoCapabilityRange::generated(
             first_minimum,
@@ -43,6 +43,23 @@ fn capability_selection_never_escapes_selected_interval() {
         assert!(version >= selected.minimum());
         assert!(version <= selected.maximum());
     }
+}
+
+#[kani::proof]
+fn root_generation_profile_ranges_never_overlap() {
+    let version = OpenBaoVersion::new(kani::any(), kani::any(), kani::any());
+    let legacy = version_in_closed_interval(
+        version,
+        OpenBaoVersion::new(2, 0, 0),
+        OpenBaoVersion::new(2, 5, 5),
+    );
+    let authenticated = version_in_closed_interval(
+        version,
+        OpenBaoVersion::new(2, 6, 0),
+        OpenBaoVersion::new(2, 6, 0),
+    );
+
+    assert!(!(legacy && authenticated));
 }
 
 #[kani::proof]

@@ -5,7 +5,8 @@
 //! exact reviewed server release.
 //!
 //! This module also exposes a generated read-only registry of secret-free route
-//! templates across the 21 locked OpenBao releases. Registry evidence reports
+//! templates across the 21 locked OpenBao releases plus the staged 2.6.0
+//! profile. Registry evidence reports
 //! what exact tagged documentation contains. Client compatibility policies can
 //! verify and cache the stable version returned by `/sys/health`, or explicitly
 //! select an assumed profile where probing is unavailable. The internal typed
@@ -896,10 +897,11 @@ fn capability_status(
     })
 }
 
-mod generated {
+pub(crate) mod generated {
     use super::{
-        OpenBaoCapabilityEvidence, OpenBaoCapabilityRange, OpenBaoHttpMethod, OpenBaoOperation,
-        OpenBaoOperationDisposition, OpenBaoVersion,
+        OpenBaoCapabilityEvidence, OpenBaoCapabilityRange, OpenBaoEndpointSpec,
+        OpenBaoEndpointVariant, OpenBaoHttpMethod, OpenBaoOperation, OpenBaoOperationDisposition,
+        OpenBaoVersion,
     };
 
     include!("generated/openbao_capabilities.rs");
@@ -968,7 +970,7 @@ mod tests {
 
     #[test]
     fn compatibility_policies_require_locked_profiles() -> Result<()> {
-        let known = OpenBaoVersion::new(2, 5, 5);
+        let known = OpenBaoVersion::new(2, 6, 0);
         let unpublished = OpenBaoVersion::new(2, 4, 2);
 
         assert_eq!(
@@ -990,7 +992,7 @@ mod tests {
     #[test]
     fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
         let strict = OpenBaoCompatibilityPolicy::automatic_strict();
-        let unknown = OpenBaoVersion::new(2, 6, 0);
+        let unknown = OpenBaoVersion::new(2, 6, 1);
         assert_eq!(
             strict.evaluate_detected(unknown),
             Err(OpenBaoCompatibilityFailure::UnknownVersion(unknown))
@@ -1008,7 +1010,7 @@ mod tests {
         assert_eq!(acknowledged.detected_version(), Some(unknown));
         assert_eq!(
             acknowledged.profile_version(),
-            Some(OpenBaoVersion::new(2, 5, 5))
+            Some(OpenBaoVersion::new(2, 6, 0))
         );
         Ok(())
     }
@@ -1160,10 +1162,11 @@ mod tests {
         let operations = openbao_operations();
         let versions = openbao_profile_versions();
 
-        assert_eq!(operations.len(), 666);
-        assert_eq!(versions.len(), 21);
+        assert_eq!(operations.len(), 670);
+        assert_eq!(versions.len(), 22);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
+        assert_eq!(versions[21], OpenBaoVersion::new(2, 6, 0));
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 4, 2)).is_none());
 
         let mut previous = None;
@@ -1192,6 +1195,37 @@ mod tests {
             openapi_only.evidence(OpenBaoVersion::new(2, 5, 5)),
             Some(OpenBaoCapabilityEvidence::LockedOpenApi)
         );
+    }
+
+    #[test]
+    fn generated_root_token_routes_are_gapless_and_profile_specific() {
+        let endpoints = [
+            super::generated::GENERATED_SYS_GENERATE_ROOT_CANCEL,
+            super::generated::GENERATED_SYS_GENERATE_ROOT_START,
+            super::generated::GENERATED_SYS_GENERATE_ROOT_STATUS,
+            super::generated::GENERATED_SYS_GENERATE_ROOT_UPDATE,
+        ];
+
+        for endpoint in endpoints {
+            let variants = endpoint.variants();
+            assert_eq!(variants.len(), 2);
+            assert_eq!(variants[0].minimum(), OpenBaoVersion::new(2, 0, 0));
+            assert_eq!(variants[0].maximum(), OpenBaoVersion::new(2, 5, 5));
+            assert_eq!(variants[1].minimum(), OpenBaoVersion::new(2, 6, 0));
+            assert_eq!(variants[1].maximum(), OpenBaoVersion::new(2, 6, 0));
+            assert_ne!(variants[0].operation_id(), variants[1].operation_id());
+            for (variant, version) in [
+                (variants[0], OpenBaoVersion::new(2, 5, 5)),
+                (variants[1], OpenBaoVersion::new(2, 6, 0)),
+            ] {
+                let operation = openbao_operation(variant.operation_id())
+                    .unwrap_or_else(|| panic!("missing root-generation operation"));
+                assert_eq!(
+                    operation.availability(version),
+                    Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+                );
+            }
+        }
     }
 
     #[test]

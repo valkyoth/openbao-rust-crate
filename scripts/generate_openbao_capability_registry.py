@@ -31,23 +31,33 @@ from validate_openbao_release_lock import (
     LockValidationError,
     validate_lock_files,
 )
+from openbao_onboarding_api import (
+    EXPECTED_LOCK_SHA256 as ONBOARDING_API_LOCK_SHA256,
+    OnboardingError,
+    verify as verify_onboarding_api,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 MATRIX_PATH = ROOT / "docs/openbao-2.5-contract-matrix.json"
 REGISTRY_PATH = ROOT / "compat/capability-registry.json"
+STAGED_REGISTRY_PATH = ROOT / "compat/onboarding/2.6.0/capability-registry.json"
 RUST_PATH = ROOT / "src/generated/openbao_capabilities.rs"
 MAX_INPUT_BYTES = 32 * 1024 * 1024
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_OPERATIONS = 2048
 MAX_PATH_BYTES = 4096
 EXPECTED_OPERATION_COUNT = 666
+EXPECTED_STAGED_OPERATION_COUNT = 690
 EXPECTED_REGISTRY_SHA256 = "16e80a6e668f3de027ade450f3820f559e1c76eaa0e3064d693bd378af1146f2"
-EXPECTED_RUST_SHA256 = "220051a866e399be218e7986847896b86c61da4608b58ccc20c63265b09790eb"
+EXPECTED_STAGED_REGISTRY_SHA256 = "b5843e76c8515e911dc7ceb8e206a53944b4bfd8d0da80aee2e2fb1a64a2fed0"
+EXPECTED_RUST_SHA256 = "b8650a3eae9d44b2b5e99ad81de141401d200b8df3520fe9963abdbc434c3400"
 EXPECTED_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
     "2.4.4", "2.5.0", "2.5.1", "2.5.2", "2.5.3", "2.5.4", "2.5.5",
 )
+STAGED_VERSION = "2.6.0"
+EXPECTED_STAGED_VERSIONS = (*EXPECTED_VERSIONS, STAGED_VERSION)
 
 # These routes are present in the locked OpenAPI documents but are absent from
 # the tagged MDX operation extraction because their surrounding documentation
@@ -81,6 +91,79 @@ DISPOSITIONS = {
 SECURITY_BLOCKED = frozenset()
 HISTORICAL_DISPOSITIONS = {
     ("GET", "/sys/internal/ui/feature-flags"): "typed-gated",
+}
+
+# Candidate-only operations stay out of the public generated operation table
+# until their typed implementation commit lands. Root-token generation is the
+# exception: Commit 03 adds its reviewed route variants for the existing
+# operator ceremony API, so those four operations are already typed-gated.
+STAGED_DISPOSITIONS = {
+    ("DELETE", "/auth/jwt/cel/role/:name"): "pending-typed",
+    ("GET", "/auth/jwt/cel/role/:name"): "pending-typed",
+    ("LIST", "/auth/jwt/cel/role"): "pending-typed",
+    ("PATCH", "/auth/jwt/cel/role/:name"): "pending-typed",
+    ("POST", "/auth/jwt/cel/login"): "pending-typed",
+    ("POST", "/auth/jwt/cel/role/:name"): "pending-typed",
+    ("DELETE", "/sys/generate-root-token/attempt"): "typed-gated",
+    ("GET", "/sys/generate-root-token/attempt"): "typed-gated",
+    ("POST", "/sys/generate-root-token/attempt"): "typed-gated",
+    ("POST", "/sys/generate-root-token/update"): "typed-gated",
+    ("DELETE", "/sys/namespaces/:path/delete-sealed"): "pending-typed-gated",
+    ("GET", "/sys/namespaces/:path/seal-status"): "pending-typed",
+    ("POST", "/sys/namespaces/:path/seal"): "pending-typed-gated",
+    ("POST", "/sys/namespaces/:path/unseal"): "pending-typed-gated",
+    ("DELETE", "/sys/workflows/manage/:path"): "pending-typed",
+    ("GET", "/sys/workflows/manage/:path"): "pending-typed",
+    ("LIST", "/sys/workflows/manage"): "pending-typed",
+    ("LIST", "/sys/workflows/manage/:prefix"): "pending-security-blocked",
+    ("POST", "/sys/workflows/execute/:path"): "pending-typed",
+    ("POST", "/sys/workflows/manage/:path"): "pending-typed",
+    ("POST", "/sys/workflows/trace/:path"): "pending-typed-gated",
+    ("POST", "/sys/workflows/unauthed-execute/:path"): "pending-typed-gated",
+    ("SCAN", "/sys/workflows/manage"): "pending-typed",
+    ("SCAN", "/sys/workflows/manage/:prefix"): "pending-security-blocked",
+}
+PENDING_DISPOSITIONS = {
+    "pending-typed",
+    "pending-typed-gated",
+    "pending-security-blocked",
+}
+CANDIDATE_PATH_CORRECTIONS = {
+    "/auth/jwt/cel/roles": "/auth/jwt/cel/role",
+    "/auth/jwt/cel/roles/:name": "/auth/jwt/cel/role/:name",
+}
+CANDIDATE_METHOD_CORRECTIONS = {
+    ("PUT", "/sys/namespaces/:path/seal"): ("POST", "/sys/namespaces/:path/seal"),
+    ("PUT", "/sys/namespaces/:path/unseal"): ("POST", "/sys/namespaces/:path/unseal"),
+}
+CANDIDATE_OPERATION_SUPPLEMENTS = {
+    ("SCAN", "/sys/workflows/manage"),
+    ("SCAN", "/sys/workflows/manage/:prefix"),
+}
+CANDIDATE_OPENAPI_SUPPLEMENTS = {
+    ("GET", "/identity/oidc/.well-known/keys"),
+    ("GET", "/sys/rotate/(root|recovery)/backup"),
+    ("POST", "/ssh/issuer/:issuer_ref"),
+    ("POST", "/sys/rotate/(root|recovery)/update"),
+    ("POST", "/sys/rotate/root"),
+}
+ROOT_GENERATION_ENDPOINTS = {
+    "sys.generate-root.cancel": (
+        ("DELETE", "/sys/generate-root/attempt"),
+        ("DELETE", "/sys/generate-root-token/attempt"),
+    ),
+    "sys.generate-root.start": (
+        ("POST", "/sys/generate-root/attempt"),
+        ("POST", "/sys/generate-root-token/attempt"),
+    ),
+    "sys.generate-root.status": (
+        ("GET", "/sys/generate-root/attempt"),
+        ("GET", "/sys/generate-root-token/attempt"),
+    ),
+    "sys.generate-root.update": (
+        ("POST", "/sys/generate-root/update"),
+        ("POST", "/sys/generate-root-token/update"),
+    ),
 }
 SAFE_ID = re.compile(r"openbao\.[a-z0-9._-]{1,112}\.[0-9a-f]{16}", re.ASCII)
 
@@ -176,6 +259,24 @@ def documented_operations(document: dict[str, Any], version: str) -> set[tuple[s
     return result
 
 
+def candidate_documented_operations(
+    document: dict[str, Any],
+) -> tuple[set[tuple[str, str]], set[tuple[str, str]]]:
+    """Return reviewed 2.6 routes and the subset corrected from tagged docs."""
+    tagged = documented_operations(document, STAGED_VERSION)
+    result: set[tuple[str, str]] = set()
+    corrected: set[tuple[str, str]] = set()
+    for method, path in tagged:
+        candidate = (method, CANDIDATE_PATH_CORRECTIONS.get(path, path))
+        candidate = CANDIDATE_METHOD_CORRECTIONS.get(candidate, candidate)
+        validate_operation(*candidate)
+        result.add(candidate)
+        if candidate != (method, path):
+            corrected.add(candidate)
+    result.update(CANDIDATE_OPERATION_SUPPLEMENTS)
+    return result, corrected
+
+
 def supplemented_openapi_operations(
     document: dict[str, Any], version: str
 ) -> set[tuple[str, str]]:
@@ -216,6 +317,40 @@ def compress_ranges(
         )
         start = index
     return ranges
+
+
+def state_for_version(
+    operation: dict[str, Any], version: str
+) -> tuple[str, str]:
+    selected = version_tuple(version)
+    for item in operation["ranges"]:
+        if version_tuple(item["minimum"]) <= selected <= version_tuple(item["maximum"]):
+            return item["availability"], item["evidence"]
+    raise RegistryError("capability operation has no state for an exact profile")
+
+
+def root_generation_endpoints() -> list[dict[str, Any]]:
+    endpoints: list[dict[str, Any]] = []
+    for endpoint_id, routes in sorted(ROOT_GENERATION_ENDPOINTS.items()):
+        legacy, current = routes
+        endpoints.append(
+            {
+                "id": endpoint_id,
+                "variants": [
+                    {
+                        "operation_id": stable_id(*legacy),
+                        "minimum": EXPECTED_VERSIONS[0],
+                        "maximum": EXPECTED_VERSIONS[-1],
+                    },
+                    {
+                        "operation_id": stable_id(*current),
+                        "minimum": STAGED_VERSION,
+                        "maximum": STAGED_VERSION,
+                    },
+                ],
+            }
+        )
+    return endpoints
 
 
 def build_registry() -> dict[str, Any]:
@@ -304,6 +439,117 @@ def build_registry() -> dict[str, Any]:
     }
     validate_registry(registry)
     return registry
+
+
+def build_staged_registry(active: dict[str, Any] | None = None) -> dict[str, Any]:
+    active = build_registry() if active is None else active
+    try:
+        onboarding_lock = verify_onboarding_api()
+    except OnboardingError as error:
+        raise RegistryError("staged 2.6 API evidence failed validation") from error
+    documentation_record = onboarding_lock.get("artifacts", {}).get("documentation")
+    if not isinstance(documentation_record, dict):
+        raise RegistryError("staged documentation record is missing")
+    documentation = load_json(ROOT / documentation_record.get("path", ""))
+    candidate_routes, corrected_routes = candidate_documented_operations(documentation)
+    candidate_routes.update(CANDIDATE_OPENAPI_SUPPLEMENTS)
+
+    active_by_route = {
+        (item["method"], item["path_template"]): item for item in active["operations"]
+    }
+    candidate_only = candidate_routes - set(active_by_route)
+    if candidate_only != set(STAGED_DISPOSITIONS):
+        raise RegistryError("staged operation inventory changed without disposition review")
+
+    operations: list[dict[str, Any]] = []
+    all_routes = set(active_by_route) | candidate_routes
+    for method, path in all_routes:
+        active_operation = active_by_route.get((method, path))
+        if active_operation is None:
+            states = [("unavailable", "none")] * len(EXPECTED_VERSIONS)
+            disposition = STAGED_DISPOSITIONS[(method, path)]
+        else:
+            states = [
+                state_for_version(active_operation, version) for version in EXPECTED_VERSIONS
+            ]
+            disposition = active_operation["disposition"]
+        if (method, path) in corrected_routes:
+            candidate_state = ("documented", "locked-openapi")
+        elif (method, path) in candidate_routes:
+            candidate_state = (
+                "documented",
+                "locked-openapi"
+                if (method, path) in CANDIDATE_OPENAPI_SUPPLEMENTS
+                else "tagged-documentation",
+            )
+        else:
+            candidate_state = ("unavailable", "none")
+        states.append(candidate_state)
+        operations.append(
+            {
+                "id": stable_id(method, path),
+                "method": method,
+                "path_template": path,
+                "disposition": disposition,
+                "ranges": compress_ranges(list(EXPECTED_STAGED_VERSIONS), states),
+            }
+        )
+    operations.sort(key=lambda value: value["id"])
+    registry = {
+        "schema": "openbao-staged-capability-registry/v1",
+        "generator_version": 1,
+        "active_registry_sha256": EXPECTED_REGISTRY_SHA256,
+        "onboarding_api_evidence_lock_sha256": ONBOARDING_API_LOCK_SHA256,
+        "versions": list(EXPECTED_STAGED_VERSIONS),
+        "summary": {
+            "operation_count": len(operations),
+            "profile_count": len(EXPECTED_STAGED_VERSIONS),
+            "public_operation_count": sum(
+                item["disposition"] not in PENDING_DISPOSITIONS for item in operations
+            ),
+            "pending_operation_count": sum(
+                item["disposition"] in PENDING_DISPOSITIONS for item in operations
+            ),
+            "dispositions": dict(
+                sorted(Counter(item["disposition"] for item in operations).items())
+            ),
+        },
+        "logical_endpoints": root_generation_endpoints(),
+        "operations": operations,
+    }
+    validate_staged_registry(registry, active)
+    return registry
+
+
+def historical_projection(
+    staged: dict[str, Any], active: dict[str, Any]
+) -> dict[str, Any]:
+    staged_by_id = {item["id"]: item for item in staged["operations"]}
+    projected_operations: list[dict[str, Any]] = []
+    for active_operation in active["operations"]:
+        candidate = staged_by_id.get(active_operation["id"])
+        if candidate is None:
+            raise RegistryError("staged registry removed a historical operation identity")
+        states = [state_for_version(candidate, version) for version in EXPECTED_VERSIONS]
+        projected_operations.append(
+            {
+                "id": candidate["id"],
+                "method": candidate["method"],
+                "path_template": candidate["path_template"],
+                "disposition": candidate["disposition"],
+                "ranges": compress_ranges(list(EXPECTED_VERSIONS), states),
+            }
+        )
+    projection = copy.deepcopy(active)
+    projection["operations"] = projected_operations
+    projection["summary"] = {
+        "operation_count": len(projected_operations),
+        "profile_count": len(EXPECTED_VERSIONS),
+        "dispositions": dict(
+            sorted(Counter(item["disposition"] for item in projected_operations).items())
+        ),
+    }
+    return projection
 
 
 def version_tuple(value: str) -> tuple[int, int, int]:
@@ -418,6 +664,160 @@ def validate_registry(registry: dict[str, Any]) -> None:
         raise RegistryError("capability registry summary is inconsistent")
 
 
+def validate_staged_registry(
+    registry: dict[str, Any], active: dict[str, Any]
+) -> None:
+    required = {
+        "schema",
+        "generator_version",
+        "active_registry_sha256",
+        "onboarding_api_evidence_lock_sha256",
+        "versions",
+        "summary",
+        "logical_endpoints",
+        "operations",
+    }
+    if (
+        set(registry) != required
+        or registry.get("schema") != "openbao-staged-capability-registry/v1"
+        or registry.get("generator_version") != 1
+        or registry.get("active_registry_sha256") != EXPECTED_REGISTRY_SHA256
+        or registry.get("onboarding_api_evidence_lock_sha256")
+        != ONBOARDING_API_LOCK_SHA256
+        or tuple(registry.get("versions", ())) != EXPECTED_STAGED_VERSIONS
+    ):
+        raise RegistryError("staged capability registry metadata is invalid")
+    operations = registry.get("operations")
+    if not isinstance(operations, list) or len(operations) != EXPECTED_STAGED_OPERATION_COUNT:
+        raise RegistryError("staged capability operation count changed")
+    version_index = {
+        version: index for index, version in enumerate(EXPECTED_STAGED_VERSIONS)
+    }
+    identifiers: list[str] = []
+    routes: set[tuple[str, str]] = set()
+    allowed_dispositions = {
+        "typed",
+        "typed-gated",
+        "security-blocked",
+        *PENDING_DISPOSITIONS,
+    }
+    allowed_states = {
+        ("unavailable", "none"),
+        ("documented", "tagged-documentation"),
+        ("documented", "locked-openapi"),
+        ("documented", "corrected-2.5.5-contract"),
+    }
+    for operation in operations:
+        if set(operation) != {"id", "method", "path_template", "disposition", "ranges"}:
+            raise RegistryError("staged capability operation fields are invalid")
+        method, path = validate_operation(operation["method"], operation["path_template"])
+        identifier = operation["id"]
+        disposition = operation["disposition"]
+        if identifier != stable_id(method, path) or disposition not in allowed_dispositions:
+            raise RegistryError("staged capability identity or disposition is invalid")
+        if (method, path) in routes:
+            raise RegistryError("staged capability route is duplicated")
+        routes.add((method, path))
+        identifiers.append(identifier)
+        ranges = operation["ranges"]
+        if not isinstance(ranges, list) or not ranges:
+            raise RegistryError("staged capability has no profile ranges")
+        expected_start = 0
+        previous_state: tuple[str, str] | None = None
+        for item in ranges:
+            if set(item) != {"minimum", "maximum", "availability", "evidence"}:
+                raise RegistryError("staged capability range fields are invalid")
+            minimum = version_index.get(item["minimum"])
+            maximum = version_index.get(item["maximum"])
+            state = (item["availability"], item["evidence"])
+            if (
+                minimum != expected_start
+                or maximum is None
+                or maximum < minimum
+                or state not in allowed_states
+                or state == previous_state
+            ):
+                raise RegistryError("staged capability ranges overlap or contain gaps")
+            expected_start = maximum + 1
+            previous_state = state
+        if expected_start != len(EXPECTED_STAGED_VERSIONS):
+            raise RegistryError("staged capability does not cover every exact profile")
+        candidate_state = state_for_version(operation, STAGED_VERSION)
+        if disposition in PENDING_DISPOSITIONS:
+            if candidate_state[0] != "documented" or any(
+                state_for_version(operation, version)[0] != "unavailable"
+                for version in EXPECTED_VERSIONS
+            ):
+                raise RegistryError("pending capability escaped the candidate profile")
+        elif candidate_state[0] == "documented" and disposition not in {
+            "typed",
+            "typed-gated",
+            "security-blocked",
+        }:
+            raise RegistryError("documented candidate capability is unresolved")
+    if identifiers != sorted(set(identifiers)):
+        raise RegistryError("staged capability identifiers are duplicated or unordered")
+
+    summary = registry.get("summary")
+    counts = dict(sorted(Counter(item["disposition"] for item in operations).items()))
+    expected_summary = {
+        "operation_count": len(operations),
+        "profile_count": len(EXPECTED_STAGED_VERSIONS),
+        "public_operation_count": sum(
+            item["disposition"] not in PENDING_DISPOSITIONS for item in operations
+        ),
+        "pending_operation_count": sum(
+            item["disposition"] in PENDING_DISPOSITIONS for item in operations
+        ),
+        "dispositions": counts,
+    }
+    if summary != expected_summary:
+        raise RegistryError("staged capability summary is inconsistent")
+
+    operation_ids = set(identifiers)
+    endpoints = registry.get("logical_endpoints")
+    if not isinstance(endpoints, list) or len(endpoints) != len(ROOT_GENERATION_ENDPOINTS):
+        raise RegistryError("staged logical endpoint inventory is invalid")
+    endpoint_ids: list[str] = []
+    for endpoint in endpoints:
+        if set(endpoint) != {"id", "variants"} or not isinstance(endpoint["variants"], list):
+            raise RegistryError("staged logical endpoint fields are invalid")
+        endpoint_ids.append(endpoint["id"])
+        variants = endpoint["variants"]
+        if len(variants) != 2:
+            raise RegistryError("staged root-generation endpoint variant count changed")
+        expected_minimum = EXPECTED_STAGED_VERSIONS[0]
+        for variant in variants:
+            if set(variant) != {"operation_id", "minimum", "maximum"}:
+                raise RegistryError("staged endpoint variant fields are invalid")
+            if variant["operation_id"] not in operation_ids:
+                raise RegistryError("staged endpoint references an unknown operation")
+            minimum = version_index.get(variant["minimum"])
+            maximum = version_index.get(variant["maximum"])
+            if (
+                minimum is None
+                or maximum is None
+                or minimum > maximum
+                or variant["minimum"] != expected_minimum
+            ):
+                raise RegistryError("staged endpoint variants overlap or contain a gap")
+            expected_minimum = (
+                EXPECTED_STAGED_VERSIONS[maximum + 1]
+                if maximum + 1 < len(EXPECTED_STAGED_VERSIONS)
+                else ""
+            )
+        if expected_minimum:
+            raise RegistryError("staged endpoint variants do not cover every profile")
+    if endpoint_ids != sorted(set(endpoint_ids)):
+        raise RegistryError("staged logical endpoint identifiers are invalid")
+
+    projection = historical_projection(registry, active)
+    if canonical_json(projection) != canonical_json(active):
+        raise RegistryError("staged registry mutated a historical capability cell")
+    if sha256(canonical_json(projection)) != EXPECTED_REGISTRY_SHA256:
+        raise RegistryError("historical capability projection checksum changed")
+
+
 def rust_string(value: str) -> str:
     if any(ord(character) < 0x20 or ord(character) == 0x7F for character in value):
         raise RegistryError("generated Rust string contains a control character")
@@ -451,6 +851,8 @@ def rust_output(registry: dict[str, Any]) -> bytes:
         lines.append(f"    {rust_version(version)},")
     lines.extend(["];", "", "pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &["])
     for operation in registry["operations"]:
+        if operation["disposition"] in PENDING_DISPOSITIONS:
+            continue
         lines.extend(
             [
                 "    OpenBaoOperation::generated(",
@@ -473,12 +875,38 @@ def rust_output(registry: dict[str, Any]) -> bytes:
             )
         lines.extend(["        ],", "    ),"])
     lines.extend(["];", ""])
+    for endpoint in registry.get("logical_endpoints", []):
+        constant = "GENERATED_" + endpoint["id"].upper().replace(".", "_").replace("-", "_")
+        lines.extend(
+            [
+                "#[allow(dead_code)] // Consumed by the following system-compatibility commit.",
+                f"pub(crate) const {constant}: OpenBaoEndpointSpec = OpenBaoEndpointSpec::new(",
+                f"    {rust_string(endpoint['id'])},",
+                "    &[",
+            ]
+        )
+        for variant in endpoint["variants"]:
+            lines.extend(
+                [
+                    "        OpenBaoEndpointVariant::new(",
+                    f"            {rust_string(variant['operation_id'])},",
+                    f"            {rust_version(variant['minimum'])},",
+                    f"            {rust_version(variant['maximum'])},",
+                    "        ),",
+                ]
+            )
+        lines.extend(["    ],", ");", ""])
     return "\n".join(lines).encode()
 
 
 def outputs() -> dict[Path, bytes]:
-    registry = build_registry()
-    return {REGISTRY_PATH: canonical_json(registry), RUST_PATH: rust_output(registry)}
+    active = build_registry()
+    staged = build_staged_registry(active)
+    return {
+        REGISTRY_PATH: canonical_json(active),
+        STAGED_REGISTRY_PATH: canonical_json(staged),
+        RUST_PATH: rust_output(staged),
+    }
 
 
 def atomic_write(path: Path, data: bytes) -> None:
@@ -505,7 +933,11 @@ def atomic_write(path: Path, data: bytes) -> None:
 
 def verify_outputs() -> None:
     generated = outputs()
-    expected_hashes = {REGISTRY_PATH: EXPECTED_REGISTRY_SHA256, RUST_PATH: EXPECTED_RUST_SHA256}
+    expected_hashes = {
+        REGISTRY_PATH: EXPECTED_REGISTRY_SHA256,
+        STAGED_REGISTRY_PATH: EXPECTED_STAGED_REGISTRY_SHA256,
+        RUST_PATH: EXPECTED_RUST_SHA256,
+    }
     for path, expected in generated.items():
         if sha256(expected) != expected_hashes[path]:
             raise RegistryError("generated capability output checksum is not anchored")
@@ -520,6 +952,7 @@ def verify_outputs() -> None:
 def self_test() -> None:
     verify_outputs()
     registry = build_registry()
+    staged = build_staged_registry(registry)
 
     def expect_rejected(label: str, value: dict[str, Any]) -> None:
         try:
@@ -557,6 +990,27 @@ def self_test() -> None:
     if canonical_json(build_registry()) != canonical_json(registry) or rust_output(build_registry()) != rust_output(registry):
         raise RegistryError("capability generation is not deterministic")
 
+    staged_gap = copy.deepcopy(staged)
+    staged_gap["logical_endpoints"][0]["variants"][1]["minimum"] = "2.5.5"
+    try:
+        validate_staged_registry(staged_gap, registry)
+    except RegistryError:
+        pass
+    else:
+        raise RegistryError("capability self-test accepted overlapping candidate routes")
+
+    historical_mutation = copy.deepcopy(staged)
+    historical_mutation["operations"][0]["ranges"][0]["evidence"] = "locked-openapi"
+    try:
+        validate_staged_registry(historical_mutation, registry)
+    except RegistryError:
+        pass
+    else:
+        raise RegistryError("capability self-test accepted historical profile mutation")
+
+    if canonical_json(build_staged_registry(registry)) != canonical_json(staged):
+        raise RegistryError("staged capability generation is not deterministic")
+
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -572,21 +1026,34 @@ def main() -> int:
     try:
         if arguments.generate:
             generated = outputs()
-            expected_hashes = {REGISTRY_PATH: EXPECTED_REGISTRY_SHA256, RUST_PATH: EXPECTED_RUST_SHA256}
+            expected_hashes = {
+                REGISTRY_PATH: EXPECTED_REGISTRY_SHA256,
+                STAGED_REGISTRY_PATH: EXPECTED_STAGED_REGISTRY_SHA256,
+                RUST_PATH: EXPECTED_RUST_SHA256,
+            }
             for path, data in generated.items():
                 if sha256(data) != expected_hashes[path]:
                     raise RegistryError("refusing to write unanchored capability output")
                 atomic_write(path, data)
-            print(f"OpenBao capability registry: wrote {EXPECTED_OPERATION_COUNT} operations")
+            print(
+                "OpenBao capability registry: wrote "
+                f"{EXPECTED_OPERATION_COUNT} active and "
+                f"{EXPECTED_STAGED_OPERATION_COUNT} staged operations"
+            )
         elif arguments.verify:
             verify_outputs()
-            print(f"OpenBao capability registry: {EXPECTED_OPERATION_COUNT} operations verified")
+            print(
+                "OpenBao capability registry: "
+                f"{EXPECTED_OPERATION_COUNT} active and "
+                f"{EXPECTED_STAGED_OPERATION_COUNT} staged operations verified"
+            )
         else:
             self_test()
             print("OpenBao capability registry self-tests: ok")
         return 0
     except (
         RegistryError,
+        OnboardingError,
         SnapshotError,
         OSError,
         UnicodeError,

@@ -44,6 +44,11 @@ server-version compatibility for every published stable release from `2.0.0`
 through `2.5.5`. Rust `1.97.1` is the primary checked toolchain; Rust `1.90.0`
 remains the compatibility floor.
 
+Development on `main` is onboarding OpenBao `2.6.0` for crate `2.1.0`. Its
+22-profile candidate capability registry is staged and checksum-anchored, but
+the stable support claim remains `2.0.0` through `2.5.5` until the remaining
+2.6 APIs, field rules, fixtures, and exact-image tests are promoted together.
+
 The crate is dual-licensed under MIT or Apache-2.0.
 
 ## Current Status
@@ -156,6 +161,9 @@ Implemented now:
   baseline covering all 21 exact releases from `2.0.0` through `2.5.5`.
 - Generated read-only capability profiles with 666 stable, secret-free
   operation identities and complete exact-release range coverage.
+- On `main`, a staged 2.6.0 registry with 690 stable operation identities,
+  explicit pending dispositions, reviewed root-token route variants, and a
+  byte-identical projection of all 21 historical profiles.
 
 `2.0.2` keeps the stable `2.0.x` API and publishes a focused source package.
 Repository-only compatibility evidence, CI workflows, release tooling, and

@@ -340,6 +340,12 @@ async fn unstable_internal_system_helpers_are_gated_and_typed() {
     let client = Client::from_config(
         OpenBaoConfig::new(format!("http://{addr}"))
             .and_then(allow_mock_http)
+            .map(|config| {
+                config.compatibility_policy(
+                    OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 5, 5))
+                        .unwrap_or_else(|error| panic!("{error}")),
+                )
+            })
             .unwrap_or_else(|error| panic!("{error}")),
     )
     .unwrap_or_else(|error| panic!("{error}"))
@@ -1384,7 +1390,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"initialized":true,"sealed":false,"version":"2.6.0"}"#,
+                r#"{"initialized":true,"sealed":false,"version":"2.6.1"}"#,
             );
         });
         let policy = if acknowledged {
@@ -1406,7 +1412,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
                 report.status(),
                 OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
             );
-            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 5, 5)));
+            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 6, 0)));
         } else {
             assert!(matches!(result, Err(Error::UnknownOpenBaoVersion(_))));
         }

@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
 
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::io;
 
@@ -67,16 +68,17 @@ fn public_profiles_match_every_generated_contract_cell() -> Result<(), Box<dyn E
         let version = parse_version(&profile_fixture.version)?;
         let profile = OpenBaoCapabilityProfile::for_version(version)
             .ok_or_else(|| io::Error::other("missing public compatibility profile"))?;
-        let statuses = profile.operations().collect::<Vec<_>>();
-        assert_eq!(statuses.len(), matrix.operations.len());
+        let statuses = profile
+            .operations()
+            .map(|status| (status.operation().id(), status))
+            .collect::<BTreeMap<_, _>>();
+        assert!(statuses.len() >= matrix.operations.len());
         assert_eq!(profile_fixture.cells.len(), matrix.operations.len());
 
-        for ((operation, cell), status) in matrix
-            .operations
-            .iter()
-            .zip(profile_fixture.cells.iter())
-            .zip(statuses.iter())
-        {
+        for (operation, cell) in matrix.operations.iter().zip(profile_fixture.cells.iter()) {
+            let status = statuses
+                .get(operation.id.as_str())
+                .ok_or_else(|| io::Error::other("historical operation identity was removed"))?;
             assert_eq!(status.operation().id(), operation.id);
             let expected_availability = match cell.availability.as_str() {
                 "documented" => OpenBaoCapabilityAvailability::DocumentedRoute,

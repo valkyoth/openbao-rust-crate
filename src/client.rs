@@ -3511,7 +3511,7 @@ mod tests {
         &[OpenBaoEndpointVariant::new(
             "openbao.get.sys.health.e507fdd0e65b1259",
             OpenBaoVersion::new(2, 0, 0),
-            OpenBaoVersion::new(2, 5, 5),
+            OpenBaoVersion::new(2, 6, 0),
         )],
     );
 
@@ -3624,7 +3624,7 @@ mod tests {
         &[OpenBaoEndpointVariant::new(
             "openbao.delete.pki.cel.roles.name.1388a4e7ce4223e8",
             OpenBaoVersion::new(2, 4, 0),
-            OpenBaoVersion::new(2, 5, 5),
+            OpenBaoVersion::new(2, 6, 0),
         )],
     );
 
@@ -3639,7 +3639,7 @@ mod tests {
             OpenBaoEndpointVariant::new(
                 "openbao.get.sys.health.e507fdd0e65b1259",
                 OpenBaoVersion::new(2, 5, 0),
-                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoVersion::new(2, 6, 0),
             ),
         ],
     );
@@ -3649,7 +3649,7 @@ mod tests {
         &[OpenBaoEndpointVariant::new(
             "openbao.get.sys.monitor.31691ac3a18a5972",
             OpenBaoVersion::new(2, 0, 0),
-            OpenBaoVersion::new(2, 5, 5),
+            OpenBaoVersion::new(2, 6, 0),
         )],
     );
 
@@ -3664,7 +3664,7 @@ mod tests {
             OpenBaoEndpointVariant::new(
                 "openbao.get.sys.health.e507fdd0e65b1259",
                 OpenBaoVersion::new(2, 5, 0),
-                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoVersion::new(2, 6, 0),
             ),
         ],
     );
