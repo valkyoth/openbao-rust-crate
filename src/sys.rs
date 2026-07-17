@@ -1138,16 +1138,28 @@ impl ListEntries for VersionHistory {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct VersionHistoryEntry {
     /// Build timestamp, when OpenBao returned one.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub build_date: Option<String>,
     /// Source commit timestamp, returned by OpenBao 2.6+.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub commit_date: Option<String>,
     /// Previous installed version, when known.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub previous_version: Option<String>,
     /// Installation timestamp.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub timestamp_installed: Option<String>,
 }
 
@@ -1784,7 +1796,7 @@ impl RateLimitQuotaRequest {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SealStatus {
     /// Seal type.
-    #[serde(rename = "type")]
+    #[serde(rename = "type", deserialize_with = "deserialize_safe_metadata_string")]
     pub seal_type: String,
     /// Whether the node is initialized.
     pub initialized: bool,
@@ -1800,15 +1812,25 @@ pub struct SealStatus {
     #[serde(default)]
     pub progress: Option<u64>,
     /// Server version.
+    #[serde(deserialize_with = "deserialize_safe_metadata_string")]
     pub version: String,
     /// Legacy build timestamp returned through OpenBao 2.5.x.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub build_date: Option<String>,
     /// Source commit timestamp returned by OpenBao 2.6+.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub commit_date: Option<String>,
     /// Recovery seal type, when OpenBao 2.6+ configures one.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub recovery_seal_type: Option<String>,
 }
 
@@ -1827,18 +1849,31 @@ pub struct UnsealStatus {
     #[serde(default)]
     pub progress: Option<u64>,
     /// Server version.
+    #[serde(deserialize_with = "deserialize_safe_metadata_string")]
     pub version: String,
     /// Cluster name when OpenBao is unsealed.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub cluster_name: Option<String>,
     /// Cluster identifier when OpenBao is unsealed.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub cluster_id: Option<String>,
     /// Legacy build timestamp returned through OpenBao 2.5.x.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub build_date: Option<String>,
     /// Source commit timestamp returned by OpenBao 2.6+.
-    #[serde(default)]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
     pub commit_date: Option<String>,
 }
 
@@ -8167,26 +8202,43 @@ where
     Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
 }
 
+const MAX_SYSTEM_RESPONSE_METADATA_BYTES: usize = 4096;
+
+fn validate_system_response_metadata<E>(value: &str) -> core::result::Result<(), E>
+where
+    E: serde::de::Error,
+{
+    if value.len() > MAX_SYSTEM_RESPONSE_METADATA_BYTES {
+        return Err(E::custom("system response metadata exceeds byte limit"));
+    }
+    if value.chars().any(char::is_control) {
+        return Err(E::custom(
+            "system response metadata contains control characters",
+        ));
+    }
+    Ok(())
+}
+
+fn deserialize_safe_metadata_string<'de, D>(
+    deserializer: D,
+) -> core::result::Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    validate_system_response_metadata::<D::Error>(&value)?;
+    Ok(value)
+}
+
 fn deserialize_optional_safe_metadata_string<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Option<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    const MAX_METADATA_BYTES: usize = 4096;
-
     let value = Option::<String>::deserialize(deserializer)?;
     if let Some(value) = value.as_deref() {
-        if value.len() > MAX_METADATA_BYTES {
-            return Err(D::Error::custom(
-                "system response metadata exceeds byte limit",
-            ));
-        }
-        if value.chars().any(char::is_control) {
-            return Err(D::Error::custom(
-                "system response metadata contains control characters",
-            ));
-        }
+        validate_system_response_metadata::<D::Error>(value)?;
     }
     Ok(value)
 }
@@ -8828,12 +8880,13 @@ mod tests {
     use super::{
         AuditEnableRequest, AuditedRequestHeaders, AuthEnableRequest, Capabilities, Capability,
         CorsConfig, CorsConfigRequest, GeneratedPassword, HaStatus, LeaseDuration, LockedUsers,
-        LoggerLevel, MfaValidateAuth, MfaValidateRequest, MountEnableRequest, NamespaceList,
-        NamespaceRequest, PolicyList, PolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration,
-        RaftJoinRequest, RaftPeerRequest, RateLimitQuotaConfig, RateLimitQuotaList,
-        RateLimitQuotaRequest, RemountRequest, ResultantAcl, SysHashAlgorithm, SysHashRequest,
-        SysRandomRequest, SysRandomResponse, SysRandomSource, UiMounts, UiNamespaces,
-        VersionHistory, audited_request_header_path, internal_ui_mount_path,
+        LoggerLevel, MAX_SYSTEM_RESPONSE_METADATA_BYTES, MfaValidateAuth, MfaValidateRequest,
+        MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest,
+        RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest, RaftPeerRequest,
+        RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest,
+        ResultantAcl, SealStatus, SysHashAlgorithm, SysHashRequest, SysRandomRequest,
+        SysRandomResponse, SysRandomSource, UiMounts, UiNamespaces, UnsealStatus, VersionHistory,
+        VersionHistoryEntry, audited_request_header_path, internal_ui_mount_path,
         locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
         sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
         validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
@@ -9390,6 +9443,69 @@ mod tests {
                 "issue_time": "2026-07-17T10:00:00Z",
                 "expire_time": "2026-07-17T11:00:00Z",
                 "path": "x".repeat(4097)
+            }))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn system_version_and_seal_metadata_is_bounded_and_log_safe() {
+        for field in [
+            "build_date",
+            "commit_date",
+            "previous_version",
+            "timestamp_installed",
+        ] {
+            let mut value = serde_json::json!({
+                "build_date": null,
+                "commit_date": null,
+                "previous_version": null,
+                "timestamp_installed": null
+            });
+            value[field] = serde_json::json!("forged\nmetadata");
+            assert!(serde_json::from_value::<VersionHistoryEntry>(value).is_err());
+        }
+
+        for field in [
+            "type",
+            "version",
+            "build_date",
+            "commit_date",
+            "recovery_seal_type",
+        ] {
+            let mut value = serde_json::json!({
+                "type": "shamir",
+                "initialized": true,
+                "sealed": false,
+                "version": "2.6.0"
+            });
+            value[field] = serde_json::json!("forged\rmetadata");
+            assert!(serde_json::from_value::<SealStatus>(value).is_err());
+        }
+
+        for field in [
+            "version",
+            "cluster_name",
+            "cluster_id",
+            "build_date",
+            "commit_date",
+        ] {
+            let mut value = serde_json::json!({
+                "sealed": false,
+                "version": "2.6.0"
+            });
+            value[field] = serde_json::json!("\u{001b}[31mforged");
+            assert!(serde_json::from_value::<UnsealStatus>(value).is_err());
+        }
+
+        let oversized = "x".repeat(MAX_SYSTEM_RESPONSE_METADATA_BYTES + 1);
+        assert!(
+            serde_json::from_value::<SealStatus>(serde_json::json!({
+                "type": "shamir",
+                "initialized": true,
+                "sealed": false,
+                "version": "2.6.0",
+                "commit_date": oversized
             }))
             .is_err()
         );
