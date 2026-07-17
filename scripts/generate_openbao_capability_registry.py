@@ -50,7 +50,7 @@ EXPECTED_OPERATION_COUNT = 666
 EXPECTED_STAGED_OPERATION_COUNT = 690
 EXPECTED_REGISTRY_SHA256 = "16e80a6e668f3de027ade450f3820f559e1c76eaa0e3064d693bd378af1146f2"
 EXPECTED_STAGED_REGISTRY_SHA256 = "b5843e76c8515e911dc7ceb8e206a53944b4bfd8d0da80aee2e2fb1a64a2fed0"
-EXPECTED_RUST_SHA256 = "b8650a3eae9d44b2b5e99ad81de141401d200b8df3520fe9963abdbc434c3400"
+EXPECTED_RUST_SHA256 = "b09bc77e5caf6a6cf07c04c0f16ce1af79b2225eb3773529a510fada9319f997"
 EXPECTED_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -830,6 +830,11 @@ def rust_version(value: str) -> str:
 
 
 def rust_output(registry: dict[str, Any]) -> bytes:
+    registry_versions = tuple(registry["versions"])
+    if registry_versions[: len(EXPECTED_VERSIONS)] != EXPECTED_VERSIONS:
+        raise RegistryError(
+            "generated capability profiles do not preserve the routable inventory"
+        )
     method_names = {value: value.title() for value in METHODS}
     disposition_names = {
         "typed": "Typed",
@@ -848,6 +853,16 @@ def rust_output(registry: dict[str, Any]) -> bytes:
         "pub(super) const GENERATED_PROFILE_VERSIONS: &[OpenBaoVersion] = &[",
     ]
     for version in registry["versions"]:
+        lines.append(f"    {rust_version(version)},")
+    lines.extend(
+        [
+            "];",
+            "",
+            "// Only fully promoted profiles may drive compatibility policy or dispatch.",
+            "pub(super) const GENERATED_ROUTABLE_PROFILE_VERSIONS: &[OpenBaoVersion] = &[",
+        ]
+    )
+    for version in EXPECTED_VERSIONS:
         lines.append(f"    {rust_version(version)},")
     lines.extend(["];", "", "pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &["])
     for operation in registry["operations"]:

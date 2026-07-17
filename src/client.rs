@@ -40,8 +40,8 @@ use crate::{
     compatibility::{
         OpenBaoCapabilityAvailability, OpenBaoCompatibilityFailure, OpenBaoCompatibilityPolicy,
         OpenBaoCompatibilityReport, OpenBaoEndpointSpec, OpenBaoHttpMethod, OpenBaoOperation,
-        OpenBaoOperationDisposition, OpenBaoVersion, is_generated_profile,
-        latest_generated_profile, openbao_operation, openbao_profile_versions,
+        OpenBaoOperationDisposition, OpenBaoVersion, is_generated_profile, is_routable_profile,
+        latest_routable_profile, openbao_operation, openbao_profile_versions,
     },
     path::{validate_endpoint_path, validate_mount_path},
     response::ErrorEnvelope,
@@ -1148,13 +1148,13 @@ impl<State> Client<State> {
         let report = self.ensure_compatibility().await?;
         let version = report.profile_version().or_else(|| {
             (report.status() == crate::compatibility::OpenBaoCompatibilityStatus::Unverified)
-                .then(latest_generated_profile)
+                .then(latest_routable_profile)
                 .flatten()
         });
         let version = version.ok_or(Error::Internal(
             "OpenBao compatibility report has no request-field profile",
         ))?;
-        if !is_generated_profile(version) {
+        if !is_routable_profile(version) {
             return Err(Error::UnsupportedOpenBaoVersion(version));
         }
         crate::request_compatibility::validate_request_fields(version, fields)
@@ -1299,7 +1299,7 @@ impl<State> Client<State> {
             None if report.status()
                 == crate::compatibility::OpenBaoCompatibilityStatus::Unverified =>
             {
-                latest_generated_profile().ok_or(Error::Internal(
+                latest_routable_profile().ok_or(Error::Internal(
                     "OpenBao compatibility profile inventory is empty",
                 ))?
             }
@@ -1309,7 +1309,7 @@ impl<State> Client<State> {
                 ));
             }
         };
-        if !is_generated_profile(version) {
+        if !is_routable_profile(version) {
             return Err(Error::UnsupportedOpenBaoVersion(version));
         }
 
@@ -1443,13 +1443,13 @@ impl<State> Client<State> {
         let report = self.ensure_compatibility().await?;
         let version = report.profile_version().or_else(|| {
             (report.status() == crate::compatibility::OpenBaoCompatibilityStatus::Unverified)
-                .then(latest_generated_profile)
+                .then(latest_routable_profile)
                 .flatten()
         });
         let version = version.ok_or(Error::Internal(
             "OpenBao compatibility report has no routing profile",
         ))?;
-        if !is_generated_profile(version) {
+        if !is_routable_profile(version) {
             return Err(Error::UnsupportedOpenBaoVersion(version));
         }
 

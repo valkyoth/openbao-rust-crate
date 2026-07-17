@@ -13,8 +13,9 @@
   are staged and independently validator-anchored. Commit 03 generates the
   22-profile candidate registry with 690 stable operation identities and four
   authenticated root-generation route variants. Its historical projection is
-  byte-identical to the active 21-profile registry; final cross-lock promotion
-  remains Commit 09.
+  byte-identical to the active 21-profile registry. The candidate is explicitly
+  introspection-only: runtime policies and dispatch remain capped at 2.5.5
+  until final cross-lock promotion in Commit 09.
 - Compatibility invariant: append an exact `2.6.0` profile without modifying
   the behavior, evidence hashes, routes, or field rules of the 21 profiles from
   `2.0.0` through `2.5.5`.

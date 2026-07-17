@@ -25,6 +25,31 @@ pub(super) const GENERATED_PROFILE_VERSIONS: &[OpenBaoVersion] = &[
     OpenBaoVersion::new(2, 6, 0),
 ];
 
+// Only fully promoted profiles may drive compatibility policy or dispatch.
+pub(super) const GENERATED_ROUTABLE_PROFILE_VERSIONS: &[OpenBaoVersion] = &[
+    OpenBaoVersion::new(2, 0, 0),
+    OpenBaoVersion::new(2, 0, 1),
+    OpenBaoVersion::new(2, 0, 2),
+    OpenBaoVersion::new(2, 0, 3),
+    OpenBaoVersion::new(2, 1, 0),
+    OpenBaoVersion::new(2, 1, 1),
+    OpenBaoVersion::new(2, 2, 0),
+    OpenBaoVersion::new(2, 2, 1),
+    OpenBaoVersion::new(2, 2, 2),
+    OpenBaoVersion::new(2, 3, 1),
+    OpenBaoVersion::new(2, 3, 2),
+    OpenBaoVersion::new(2, 4, 0),
+    OpenBaoVersion::new(2, 4, 1),
+    OpenBaoVersion::new(2, 4, 3),
+    OpenBaoVersion::new(2, 4, 4),
+    OpenBaoVersion::new(2, 5, 0),
+    OpenBaoVersion::new(2, 5, 1),
+    OpenBaoVersion::new(2, 5, 2),
+    OpenBaoVersion::new(2, 5, 3),
+    OpenBaoVersion::new(2, 5, 4),
+    OpenBaoVersion::new(2, 5, 5),
+];
+
 pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
     OpenBaoOperation::generated(
         "openbao.acme.pki.acme.directory.87559f3155381b97",

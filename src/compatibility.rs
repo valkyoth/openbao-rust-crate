@@ -6,12 +6,14 @@
 //!
 //! This module also exposes a generated read-only registry of secret-free route
 //! templates across the 21 locked OpenBao releases plus the staged 2.6.0
-//! profile. Registry evidence reports
-//! what exact tagged documentation contains. Client compatibility policies can
-//! verify and cache the stable version returned by `/sys/health`, or explicitly
-//! select an assumed profile where probing is unavailable. The internal typed
-//! dispatcher binds logical SDK endpoints to reviewed operation variants;
-//! endpoint families adopt that dispatcher in the ordered migration commits.
+//! profile. Registry evidence reports what exact tagged documentation contains.
+//! Staged profiles are available for capability introspection but cannot drive
+//! policy verification or runtime dispatch until their security contract is
+//! promoted. Client compatibility policies can verify and cache the stable
+//! version returned by `/sys/health`, or explicitly select an assumed promoted
+//! profile where probing is unavailable. The internal typed dispatcher binds
+//! logical SDK endpoints to reviewed operation variants; endpoint families
+//! adopt that dispatcher in the ordered migration commits.
 
 use core::{fmt, str::FromStr};
 
@@ -30,13 +32,13 @@ pub struct OpenBaoCompatibilityPolicy {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[non_exhaustive]
 pub enum OpenBaoCompatibilityPolicyKind {
-    /// Detect the server and require one exact locked release.
+    /// Detect the server and require one exact runtime-approved release.
     Exact,
-    /// Detect the server and require a release inside one closed locked range.
+    /// Detect the server and require a release inside one approved closed range.
     Range,
-    /// Detect the server and require any exact release in the registry.
+    /// Detect the server and require any exact runtime-approved release.
     AutomaticStrict,
-    /// Select one exact locked profile without querying the server.
+    /// Select one exact runtime-approved profile without querying the server.
     Assumed,
     /// Detect the server and explicitly tolerate a version newer than the registry.
     AcknowledgedUnknownNewer,
@@ -83,9 +85,9 @@ impl UnknownNewerOpenBaoAcknowledgement {
 pub enum OpenBaoCompatibilityStatus {
     /// No compatibility policy was selected and no server version was checked.
     Unverified,
-    /// The server version was detected and matched a locked profile and policy.
+    /// The server version was detected and matched a runtime-approved profile.
     Verified,
-    /// A locked profile was explicitly selected without a server probe.
+    /// A runtime-approved profile was explicitly selected without a server probe.
     Assumed,
     /// A newer server was detected and the caller acknowledged using the latest profile.
     AcknowledgedUnknownNewer,
@@ -360,26 +362,26 @@ impl FromStr for OpenBaoVersionRequirement {
 }
 
 impl OpenBaoCompatibilityPolicy {
-    /// Detects the server and requires one exact locked release.
+    /// Detects the server and requires one exact runtime-approved release.
     pub fn exact(version: OpenBaoVersion) -> Result<Self> {
-        require_generated_profile(version)?;
+        require_routable_profile(version)?;
         Ok(Self {
             value: OpenBaoCompatibilityPolicyValue::Exact(version),
         })
     }
 
-    /// Detects the server and requires a version inside a closed locked range.
+    /// Detects the server and requires a version inside an approved closed range.
     ///
-    /// Both range endpoints must be exact releases in the immutable inventory.
+    /// Both range endpoints must be exact releases in the runtime-approved inventory.
     pub fn range(requirement: OpenBaoVersionRequirement) -> Result<Self> {
-        require_generated_profile(requirement.minimum())?;
-        require_generated_profile(requirement.maximum())?;
+        require_routable_profile(requirement.minimum())?;
+        require_routable_profile(requirement.maximum())?;
         Ok(Self {
             value: OpenBaoCompatibilityPolicyValue::Range(requirement),
         })
     }
 
-    /// Detects the server and rejects any version absent from the registry.
+    /// Detects the server and rejects versions absent from the approved inventory.
     #[must_use]
     pub const fn automatic_strict() -> Self {
         Self {
@@ -387,23 +389,23 @@ impl OpenBaoCompatibilityPolicy {
         }
     }
 
-    /// Selects one locked profile without querying `/sys/health`.
+    /// Selects one runtime-approved profile without querying `/sys/health`.
     ///
     /// Reports produced by this policy are always marked `Assumed`, never
     /// `Verified`. Use this only where an authenticated proxy blocks the public
     /// health endpoint and deployment configuration supplies the exact version.
     pub fn assume(version: OpenBaoVersion) -> Result<Self> {
-        require_generated_profile(version)?;
+        require_routable_profile(version)?;
         Ok(Self {
             value: OpenBaoCompatibilityPolicyValue::Assumed(version),
         })
     }
 
-    /// Detects the server and tolerates versions newer than the registry.
+    /// Detects the server and tolerates versions newer than the approved inventory.
     ///
-    /// Unknown older versions and unpublished versions inside the known range
-    /// still fail closed. Newer versions select the latest reviewed profile and
-    /// are reported as acknowledged rather than verified.
+    /// Unknown older versions and unpublished versions inside the approved
+    /// range still fail closed. Newer versions select the latest promoted
+    /// profile and are reported as acknowledged rather than verified.
     #[must_use]
     pub const fn automatic_allow_unknown_newer(
         _acknowledgement: UnknownNewerOpenBaoAcknowledgement,
@@ -475,7 +477,7 @@ impl OpenBaoCompatibilityPolicy {
                         requirement,
                     });
                 }
-                if !is_generated_profile(detected) {
+                if !is_routable_profile(detected) {
                     return Err(OpenBaoCompatibilityFailure::UnknownVersion(detected));
                 }
                 Ok(OpenBaoCompatibilityReport::verified(
@@ -485,7 +487,7 @@ impl OpenBaoCompatibilityPolicy {
                 ))
             }
             OpenBaoCompatibilityPolicyValue::AutomaticStrict => {
-                if !is_generated_profile(detected) {
+                if !is_routable_profile(detected) {
                     return Err(OpenBaoCompatibilityFailure::UnknownVersion(detected));
                 }
                 Ok(OpenBaoCompatibilityReport::verified(
@@ -498,14 +500,14 @@ impl OpenBaoCompatibilityPolicy {
                 Ok(OpenBaoCompatibilityReport::assumed(version))
             }
             OpenBaoCompatibilityPolicyValue::AcknowledgedUnknownNewer => {
-                if is_generated_profile(detected) {
+                if is_routable_profile(detected) {
                     return Ok(OpenBaoCompatibilityReport::verified(
                         self.kind(),
                         detected,
                         self.requirement(),
                     ));
                 }
-                let Some(latest) = latest_generated_profile() else {
+                let Some(latest) = latest_routable_profile() else {
                     return Err(OpenBaoCompatibilityFailure::UnknownVersion(detected));
                 };
                 if detected > latest {
@@ -823,7 +825,7 @@ impl OpenBaoEndpointVariant {
 }
 
 impl OpenBaoCapabilityProfile {
-    /// Selects an exact profile from the immutable release inventory.
+    /// Selects an exact evidence profile, including staged candidates.
     pub fn for_version(version: OpenBaoVersion) -> Option<Self> {
         is_generated_profile(version).then_some(Self { version })
     }
@@ -861,7 +863,10 @@ pub fn openbao_operation(id: &str) -> Option<OpenBaoOperation> {
         .map(|index| generated::GENERATED_OPERATIONS[index])
 }
 
-/// Returns all exact OpenBao releases represented by generated profiles.
+/// Returns all exact OpenBao releases represented by generated evidence profiles.
+///
+/// This includes staged candidates that cannot yet drive runtime policies or
+/// request dispatch.
 pub fn openbao_profile_versions() -> &'static [OpenBaoVersion] {
     generated::GENERATED_PROFILE_VERSIONS
 }
@@ -872,16 +877,24 @@ pub(crate) fn is_generated_profile(version: OpenBaoVersion) -> bool {
         .is_ok()
 }
 
-pub(crate) fn latest_generated_profile() -> Option<OpenBaoVersion> {
-    generated::GENERATED_PROFILE_VERSIONS.last().copied()
+pub(crate) fn is_routable_profile(version: OpenBaoVersion) -> bool {
+    generated::GENERATED_ROUTABLE_PROFILE_VERSIONS
+        .binary_search(&version)
+        .is_ok()
 }
 
-fn require_generated_profile(version: OpenBaoVersion) -> Result<()> {
-    if is_generated_profile(version) {
+pub(crate) fn latest_routable_profile() -> Option<OpenBaoVersion> {
+    generated::GENERATED_ROUTABLE_PROFILE_VERSIONS
+        .last()
+        .copied()
+}
+
+fn require_routable_profile(version: OpenBaoVersion) -> Result<()> {
+    if is_routable_profile(version) {
         Ok(())
     } else {
         Err(invalid_requirement(
-            "compatibility policy version is absent from the locked release inventory",
+            "compatibility policy version is absent from the runtime-approved release inventory",
         ))
     }
 }
@@ -950,8 +963,8 @@ mod tests {
         OpenBaoCapabilityAvailability, OpenBaoCapabilityEvidence, OpenBaoCapabilityProfile,
         OpenBaoCompatibilityFailure, OpenBaoCompatibilityPolicy, OpenBaoCompatibilityPolicyKind,
         OpenBaoCompatibilityStatus, OpenBaoHttpMethod, OpenBaoOperationDisposition, OpenBaoVersion,
-        OpenBaoVersionRequirement, UnknownNewerOpenBaoAcknowledgement, openbao_operation,
-        openbao_operations, openbao_profile_versions,
+        OpenBaoVersionRequirement, UnknownNewerOpenBaoAcknowledgement, is_routable_profile,
+        latest_routable_profile, openbao_operation, openbao_operations, openbao_profile_versions,
     };
     use crate::{Error, Result};
 
@@ -969,14 +982,19 @@ mod tests {
     }
 
     #[test]
-    fn compatibility_policies_require_locked_profiles() -> Result<()> {
-        let known = OpenBaoVersion::new(2, 6, 0);
+    fn compatibility_policies_require_runtime_approved_profiles() -> Result<()> {
+        let known = OpenBaoVersion::new(2, 5, 5);
+        let staged = OpenBaoVersion::new(2, 6, 0);
         let unpublished = OpenBaoVersion::new(2, 4, 2);
 
         assert_eq!(
             OpenBaoCompatibilityPolicy::exact(known)?.kind(),
             OpenBaoCompatibilityPolicyKind::Exact
         );
+        assert!(OpenBaoCompatibilityPolicy::exact(staged).is_err());
+        assert!(OpenBaoCompatibilityPolicy::assume(staged).is_err());
+        let staged_range = OpenBaoVersionRequirement::inclusive(known, staged)?;
+        assert!(OpenBaoCompatibilityPolicy::range(staged_range).is_err());
         assert!(OpenBaoCompatibilityPolicy::exact(unpublished).is_err());
         assert!(OpenBaoCompatibilityPolicy::assume(unpublished).is_err());
         assert!(
@@ -992,7 +1010,7 @@ mod tests {
     #[test]
     fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
         let strict = OpenBaoCompatibilityPolicy::automatic_strict();
-        let unknown = OpenBaoVersion::new(2, 6, 1);
+        let unknown = OpenBaoVersion::new(2, 6, 0);
         assert_eq!(
             strict.evaluate_detected(unknown),
             Err(OpenBaoCompatibilityFailure::UnknownVersion(unknown))
@@ -1010,7 +1028,7 @@ mod tests {
         assert_eq!(acknowledged.detected_version(), Some(unknown));
         assert_eq!(
             acknowledged.profile_version(),
-            Some(OpenBaoVersion::new(2, 6, 0))
+            Some(OpenBaoVersion::new(2, 5, 5))
         );
         Ok(())
     }
@@ -1167,6 +1185,13 @@ mod tests {
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
         assert_eq!(versions[21], OpenBaoVersion::new(2, 6, 0));
+        assert_eq!(
+            latest_routable_profile(),
+            Some(OpenBaoVersion::new(2, 5, 5))
+        );
+        assert!(is_routable_profile(OpenBaoVersion::new(2, 5, 5)));
+        assert!(!is_routable_profile(OpenBaoVersion::new(2, 6, 0)));
+        assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 6, 0)).is_some());
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 4, 2)).is_none());
 
         let mut previous = None;

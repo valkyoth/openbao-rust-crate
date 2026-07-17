@@ -46,8 +46,10 @@ remains the compatibility floor.
 
 Development on `main` is onboarding OpenBao `2.6.0` for crate `2.1.0`. Its
 22-profile candidate capability registry is staged and checksum-anchored, but
-the stable support claim remains `2.0.0` through `2.5.5` until the remaining
-2.6 APIs, field rules, fixtures, and exact-image tests are promoted together.
+the candidate profile is introspection-only and cannot drive compatibility
+policies or request routing. The stable support claim remains `2.0.0` through
+`2.5.5` until the remaining 2.6 APIs, field rules, fixtures, and exact-image
+tests are promoted together.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 

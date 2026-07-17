@@ -7,7 +7,10 @@ cover the 21 published stable releases from `2.0.0` through `2.5.5`. During
 the 2.1.0 development cycle, `main` also contains a generated 2.6.0 candidate
 profile. Its evidence is staged and checksum-anchored, but it is not part of
 the stable support matrix until all pending 2.6 operations, field rules,
-fixtures, and exact-image results are promoted atomically.
+fixtures, and exact-image results are promoted atomically. Candidate profiles
+are visible through capability introspection only. Strict detection rejects
+them, explicit exact/assumed/range policies cannot select them, and unverified
+or acknowledged-newer routing continues to use the latest promoted profile.
 
 The recommended policy for new applications is strict automatic detection:
 
@@ -186,7 +189,9 @@ development commits. Candidate-only operation identities remain explicitly
 pending and are omitted from the public operation iterator until their typed
 implementation lands. The generator rejects gaps, overlaps, unknown operation
 IDs, historical cell drift, and any candidate output whose anchored checksum
-changes unexpectedly.
+changes unexpectedly. It separately generates the runtime-approved profile
+inventory from the active registry so staged evidence cannot silently widen
+the policy or dispatch trust boundary.
 
 Rendered current documentation is only a secondary cross-check. Exact tagged
 source, locked artifacts, reviewed diffs, fixtures, and live evidence remain
