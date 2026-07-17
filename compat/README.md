@@ -33,6 +33,14 @@ Repository tags `v2.3.0` and `v2.4.2` are intentionally absent: the GitHub
 Releases API has no published release for either tag. A repository tag alone
 does not enter the supported stable-release inventory.
 
+New releases are first recorded outside the active inventory under
+`onboarding/<version>/`. The separately checksummed and validator-anchored
+`onboarding/2.6.0/release-evidence.json` locks the 2.6.0 source release, image,
+signature topology, and embedded provenance while its API and live evidence
+remain incomplete. Staging prevents a newly published release from changing
+the active profile count or invalidating historical snapshot, capability, and
+test matrices before the complete evidence set can be promoted atomically.
+
 OpenBao's OCI indexes and `linux/amd64` manifests were verified with Cosign
 `3.1.1`, built from module tag `v3.1.1` at peeled source commit
 `7914231b348c4057891edeb321772aad3ed04fce`. Verification constrained the
@@ -48,6 +56,15 @@ validated the image claims, certificate chain, and transparency-log inclusion.
 Sigstore bundle streams for both locked digests. The bundles are not copied
 into this repository; their fingerprints make later registry-evidence changes
 visible without adding roughly two MiB of duplicated certificate material.
+
+OpenBao 2.6.0 changed its release-image topology: the multi-platform index is
+signed by the exact `release-images.yml` workflow identity, while its
+`linux/amd64` child manifest has no separate Cosign signature. The staged
+record says so explicitly. Integrity for that child comes from its descriptor
+inside the verified signed index; it is never reported as independently
+signed. The same index includes a BuildKit SLSA provenance manifest whose
+subject and source revision were checked and locked. This does not turn the
+staged release into an active compatibility claim.
 
 No Cosign `.att` OCI tags were present for this repository, and the GitHub
 attestations API returned no SLSA provenance attestation for the checked image
@@ -82,6 +99,11 @@ reordered records, changed historical identifiers, and verification-status
 downgrades. The release and signature locks each have a sidecar SHA-256 plus a
 hard-coded validator anchor, so changing historical evidence requires an
 explicit multi-file review.
+
+The same validator checks the staged 2.6.0 onboarding evidence and rejects
+signer substitution, an overclaim that the amd64 child was independently
+signed, provenance-subject substitution, checksum replacement, and all common
+input-file attacks covered by the shared bounded reader.
 
 ## API Snapshot Lock
 

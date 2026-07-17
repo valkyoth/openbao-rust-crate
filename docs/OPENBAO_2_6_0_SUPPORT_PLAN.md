@@ -2,8 +2,8 @@
 
 ## Status
 
-- Planning baseline: crate `2.0.2`, commit
-  `a7908596919bdd840f67f4b992c69ac814436add`.
+- Planning baseline: crate `2.0.2`, toolchain checkpoint
+  `5dcf81a787905d3f93812cd4b4ec64505049ad72`.
 - Upstream target: OpenBao `v2.6.0`, released July 14, 2026.
 - Recommended crate release: `2.1.0`. The server support and public API additions
   are semver-minor changes; they do not require another crate major release.
@@ -28,6 +28,10 @@ artifacts are accepted:
 | Source commit | `03e3a243b6f07d17c60ce0a182adee7cf4c424eb` |
 | OCI index digest | `sha256:900bb64d0671cd1d82b693c56206f7263b582445f3a3bb6ba6e5213f524a6653` |
 | OCI linux/amd64 manifest | `sha256:80b71b06de94d9b11da83fd1cdb70cbd84b375739620c18b12d76b4f5ffe95ab` |
+| Index signer | `release-images.yml@refs/tags/v2.6.0` |
+| Index signature bundle | `sha256:ecb4a011104c0e7bd5a7f3456ac924ddf03f48e0bd2fe662de567063bcca431c` |
+| linux/amd64 signature | Not separately published; bound by the verified signed index |
+| Embedded provenance manifest | `sha256:a8195dad5e1b38bb9fbdf1c25b7bd89ec3f3623101ecd0ffc90875586057772e` |
 | Tagged API documentation | 117 files, 688 extracted rows |
 | Runtime OpenAPI | 526 paths, 760 operations, 551 schemas |
 
@@ -35,6 +39,12 @@ The prior `2.5.5` runtime OpenAPI has 516 paths, 739 operations, and 530
 schemas. The exact runtime comparison reports 21 added operations and no
 removed operations. Improved OpenAPI reporting accounts for several of those
 additions, so operation counts alone must not be treated as new functionality.
+
+The active release, snapshot, capability, contract, and live-test locks are
+cryptographically cross-bound. A release cannot be appended to only one of
+them while keeping CI honest. Therefore 2.6.0 is staged under
+`compat/onboarding/2.6.0/` until the complete evidence set is ready for atomic
+promotion into the active 22-profile inventory.
 
 ## Investigation Findings
 
@@ -167,23 +177,27 @@ questions.
 
 Each pentest range starts at the prior accepted commit and ends at the new
 commit produced by that checkpoint. For the first checkpoint, use
-`a7908596919bdd840f67f4b992c69ac814436add..<commit-01>`.
+`5dcf81a787905d3f93812cd4b4ec64505049ad72..<commit-01>`.
 
-### Commit 01: Lock OpenBao 2.6.0 release evidence
+### Commit 01: Stage OpenBao 2.6.0 release evidence
 
-Suggested title: `Lock OpenBao 2.6.0 release evidence`
+Suggested title: `Stage OpenBao 2.6.0 release evidence`
 
-- Append 2.6.0 to `compat/releases.lock.json` and its detached hash/signature
-  material.
+- Add a separately checksummed, validator-anchored onboarding record without
+  changing the active 21-release inventory.
 - Verify the source commit, GitHub release state, OCI index, and amd64 manifest.
-- Update validator anchors and self-tests from 21 to 22 records.
+- Record that the index signer moved to `release-images.yml`, that the amd64
+  child is index-bound but not independently signed, and that embedded BuildKit
+  provenance is present.
+- Add fail-closed self-tests for signer, child-signature, provenance-subject,
+  and checksum substitution.
 - Do not alter generated capabilities or runtime code in this commit.
 
 Pentest focus: lock-file substitution, duplicate/reordered release entries,
 digest confusion, symlink/FIFO handling, and immutable historical-record
 preservation.
 
-Pentest range: `a790859..<commit-01>`.
+Pentest range: `5dcf81a..<commit-01>`.
 
 ### Commit 02: Capture exact 2.6.0 API evidence
 
@@ -195,6 +209,8 @@ Suggested title: `Capture OpenBao 2.6.0 API snapshots`
 - Store the JWT CEL, Kubernetes provider, workflow, and method-reporting
   discrepancies as reviewed evidence.
 - Prove every prior snapshot and diff hash remains unchanged.
+- Keep these artifacts in the staged onboarding set; do not mutate the active
+  21-profile snapshot lock yet.
 
 Pentest focus: untrusted upstream JSON/docs parsing, archive traversal, image
 identity, response-size bounds, generated-file determinism, and historical hash
@@ -352,7 +368,9 @@ Pentest range: `<commit-09>..<commit-10>`.
 The 2.1.0 release candidate is ready only when all of the following are true:
 
 1. The exact 2.6.0 release, source, image, docs, and OpenAPI evidence are locked.
-2. All 22 exact profiles validate and all 21 historical profiles are unchanged.
+2. The staged evidence is promoted atomically across release, snapshot,
+   capability, contract, CI, and live-test locks; all 22 exact profiles then
+   validate and all 21 historical profiles are unchanged.
 3. Every 2.6.0 tagged/runtime operation is typed, typed-gated, or explicitly
    security-blocked with a documented reason.
 4. Changed request fields fail locally outside their supported exact profiles.

@@ -30,6 +30,8 @@ check_file compat/releases.lock.json
 check_file compat/releases.lock.sha256
 check_file compat/image-signatures.lock.json
 check_file compat/image-signatures.lock.sha256
+check_file compat/onboarding/2.6.0/release-evidence.json
+check_file compat/onboarding/2.6.0/release-evidence.sha256
 check_file compat/api-snapshots.lock.json
 check_file compat/api-snapshots.lock.sha256
 check_file compat/api-contracts/2.5.5-tagged-contract.json

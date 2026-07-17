@@ -19,8 +19,15 @@ LOCK_PATH = ROOT / "compat" / "releases.lock.json"
 CHECKSUM_PATH = ROOT / "compat" / "releases.lock.sha256"
 SIGNATURE_LOCK_PATH = ROOT / "compat" / "image-signatures.lock.json"
 SIGNATURE_CHECKSUM_PATH = ROOT / "compat" / "image-signatures.lock.sha256"
+ONBOARDING_LOCK_PATH = ROOT / "compat" / "onboarding" / "2.6.0" / "release-evidence.json"
+ONBOARDING_CHECKSUM_PATH = (
+    ROOT / "compat" / "onboarding" / "2.6.0" / "release-evidence.sha256"
+)
 EXPECTED_LOCK_SHA256 = "028dfa5cf562816b3a51d894aaf723ba06354dd422b606e60546ac2eb236f136"
 EXPECTED_SIGNATURE_LOCK_SHA256 = "5b7f471f6bcbbf040251fab695c18a2d9de707ee96f25182660626a449c1c3d5"
+EXPECTED_ONBOARDING_LOCK_SHA256 = (
+    "4deb3988ea9693e0412445bcb7e9ba6d8669ff6e024586bed55e06f5628219ba"
+)
 MAX_LOCK_BYTES = 512 * 1024
 MAX_JSON_DEPTH = 16
 MAX_JSON_NODES = 16_384
@@ -126,6 +133,72 @@ SIGNATURE_RECORD_KEYS = {
     "version",
     "index_bundle_sha256",
     "linux_amd64_bundle_sha256",
+}
+ONBOARDING_TOP_LEVEL_KEYS = {
+    "schema",
+    "observed_on",
+    "version",
+    "state",
+    "source",
+    "image",
+    "documentation",
+    "verification",
+    "security_notes",
+}
+ONBOARDING_SOURCE_KEYS = {
+    "repository",
+    "tag",
+    "tag_kind",
+    "tag_object_sha1",
+    "peeled_commit_sha1",
+    "commit_timestamp",
+    "github_release_published_at",
+    "github_release_draft",
+    "github_release_prerelease",
+    "tag_signature_status",
+}
+ONBOARDING_IMAGE_KEYS = {
+    "repository",
+    "tag",
+    "index_digest",
+    "linux_amd64_digest",
+    "index_signature_status",
+    "index_signature_bundle_sha256",
+    "linux_amd64_signature_status",
+    "certificate_identity",
+    "certificate_oidc_issuer",
+    "transparency_log_verified",
+    "embedded_provenance",
+}
+ONBOARDING_PROVENANCE_KEYS = {
+    "status",
+    "manifest_digest",
+    "statement_digest",
+    "predicate_type",
+    "subject_linux_amd64_digest",
+    "source_commit_sha1",
+    "builder_id",
+    "legacy_attestation_tag_status",
+    "github_attestations_api_status",
+}
+ONBOARDING_DOCUMENTATION_KEYS = {
+    "source_commit_sha1",
+    "source_path",
+    "normalized_openapi_status",
+}
+ONBOARDING_VERIFICATION_KEYS = {
+    "git_version",
+    "go_version",
+    "skopeo_version",
+    "github_cli_version",
+    "cosign_version",
+    "cosign_source_commit_sha1",
+    "github_release_api_checked",
+    "oci_index_descriptor_checked",
+    "cosign_claims_validated",
+    "certificate_chain_verified",
+    "transparency_log_verified",
+    "embedded_provenance_subject_checked",
 }
 
 
@@ -389,6 +462,133 @@ def validate_signature_document(document: dict[str, Any]) -> None:
         seen_bundle_hashes.update((index_hash, amd64_hash))
 
 
+def validate_onboarding_document(document: dict[str, Any]) -> None:
+    require_exact_keys(document, ONBOARDING_TOP_LEVEL_KEYS, "onboarding evidence")
+    if (
+        document["schema"] != "openbao-release-onboarding/v1"
+        or document["observed_on"] != "2026-07-17"
+        or document["version"] != "2.6.0"
+        or document["state"] != "artifact_locked_api_pending"
+    ):
+        raise LockValidationError("OpenBao 2.6.0 onboarding identity changed")
+
+    source = require_exact_keys(
+        document["source"], ONBOARDING_SOURCE_KEYS, "onboarding source"
+    )
+    expected_source = "03e3a243b6f07d17c60ce0a182adee7cf4c424eb"
+    if (
+        source["repository"] != "https://github.com/openbao/openbao.git"
+        or source["tag"] != "v2.6.0"
+        or source["tag_kind"] != "lightweight"
+        or require_sha1(source["tag_object_sha1"], "onboarding tag object")
+        != expected_source
+        or require_sha1(source["peeled_commit_sha1"], "onboarding peeled commit")
+        != expected_source
+        or source["commit_timestamp"] != "2026-07-14T11:34:01-05:00"
+        or source["github_release_published_at"] != "2026-07-14T17:06:32Z"
+        or source["github_release_draft"] is not False
+        or source["github_release_prerelease"] is not False
+        or source["tag_signature_status"] != "not_available_lightweight_tag"
+    ):
+        raise LockValidationError("OpenBao 2.6.0 source evidence changed")
+
+    image = require_exact_keys(
+        document["image"], ONBOARDING_IMAGE_KEYS, "onboarding image"
+    )
+    expected_index = (
+        "sha256:900bb64d0671cd1d82b693c56206f7263b582445f3a3bb6ba6e5213f524a6653"
+    )
+    expected_amd64 = (
+        "sha256:80b71b06de94d9b11da83fd1cdb70cbd84b375739620c18b12d76b4f5ffe95ab"
+    )
+    if (
+        image["repository"] != "docker.io/openbao/openbao"
+        or image["tag"] != "2.6.0"
+        or require_sha256_digest(image["index_digest"], "onboarding image index")
+        != expected_index
+        or require_sha256_digest(
+            image["linux_amd64_digest"], "onboarding amd64 image"
+        )
+        != expected_amd64
+        or image["index_signature_status"] != "verified_cosign_keyless"
+        or require_sha256_digest(
+            image["index_signature_bundle_sha256"],
+            "onboarding index signature bundle",
+        )
+        != "sha256:ecb4a011104c0e7bd5a7f3456ac924ddf03f48e0bd2fe662de567063bcca431c"
+        or image["linux_amd64_signature_status"]
+        != "not_published_bound_by_verified_index"
+        or image["certificate_identity"]
+        != "https://github.com/openbao/openbao/.github/workflows/release-images.yml@refs/tags/v2.6.0"
+        or image["certificate_oidc_issuer"]
+        != "https://token.actions.githubusercontent.com"
+        or image["transparency_log_verified"] is not True
+    ):
+        raise LockValidationError("OpenBao 2.6.0 image evidence changed")
+
+    provenance = require_exact_keys(
+        image["embedded_provenance"],
+        ONBOARDING_PROVENANCE_KEYS,
+        "onboarding provenance",
+    )
+    if (
+        provenance["status"] != "present_bound_by_verified_index"
+        or require_sha256_digest(
+            provenance["manifest_digest"], "onboarding provenance manifest"
+        )
+        != "sha256:a8195dad5e1b38bb9fbdf1c25b7bd89ec3f3623101ecd0ffc90875586057772e"
+        or require_sha256_digest(
+            provenance["statement_digest"], "onboarding provenance statement"
+        )
+        != "sha256:a9ee5f430c368dcd8cb58ff55107478b1d71e452cc17a9ce1666ad66bab46772"
+        or provenance["predicate_type"] != "https://slsa.dev/provenance/v1"
+        or provenance["subject_linux_amd64_digest"] != expected_amd64
+        or provenance["source_commit_sha1"] != expected_source
+        or provenance["builder_id"]
+        != "https://github.com/openbao/openbao/actions/runs/29352401071/attempts/1"
+        or provenance["legacy_attestation_tag_status"] != "not_published"
+        or provenance["github_attestations_api_status"] != "not_published"
+    ):
+        raise LockValidationError("OpenBao 2.6.0 provenance evidence changed")
+
+    documentation = require_exact_keys(
+        document["documentation"],
+        ONBOARDING_DOCUMENTATION_KEYS,
+        "onboarding documentation",
+    )
+    if (
+        documentation["source_commit_sha1"] != expected_source
+        or documentation["source_path"] != "website/content/api-docs"
+        or documentation["normalized_openapi_status"] != "pending_commit_02"
+    ):
+        raise LockValidationError("OpenBao 2.6.0 documentation state changed")
+
+    verification = require_exact_keys(
+        document["verification"],
+        ONBOARDING_VERIFICATION_KEYS,
+        "onboarding verification",
+    )
+    expected_tools = {
+        "git_version": "2.54.0",
+        "go_version": "1.26.4",
+        "skopeo_version": "1.22.2",
+        "github_cli_version": "2.95.0",
+        "cosign_version": "3.1.1",
+        "cosign_source_commit_sha1": "7914231b348c4057891edeb321772aad3ed04fce",
+    }
+    if any(verification[key] != value for key, value in expected_tools.items()):
+        raise LockValidationError("OpenBao 2.6.0 verification tools changed")
+    for key in ONBOARDING_VERIFICATION_KEYS - expected_tools.keys():
+        if verification[key] is not True:
+            raise LockValidationError("OpenBao 2.6.0 verification was downgraded")
+
+    notes = document["security_notes"]
+    if not isinstance(notes, list) or len(notes) != 3:
+        raise LockValidationError("OpenBao 2.6.0 security notes changed")
+    for note in notes:
+        require_string(note, "onboarding security note")
+
+
 def read_regular_file(path: Path, maximum: int) -> bytes:
     no_follow = getattr(os, "O_NOFOLLOW", None)
     non_block = getattr(os, "O_NONBLOCK", None)
@@ -436,6 +636,8 @@ def validate_lock_files() -> dict[str, Any]:
     checksum_data = read_regular_file(CHECKSUM_PATH, 256)
     signature_data = read_regular_file(SIGNATURE_LOCK_PATH, MAX_LOCK_BYTES)
     signature_checksum_data = read_regular_file(SIGNATURE_CHECKSUM_PATH, 256)
+    onboarding_data = read_regular_file(ONBOARDING_LOCK_PATH, MAX_LOCK_BYTES)
+    onboarding_checksum_data = read_regular_file(ONBOARDING_CHECKSUM_PATH, 256)
     try:
         checksum_text = checksum_data.decode("ascii")
     except UnicodeDecodeError as error:
@@ -461,6 +663,24 @@ def validate_lock_files() -> dict[str, Any]:
     document = parse_json(lock_data)
     validate_document(document)
     validate_signature_document(parse_json(signature_data))
+    try:
+        onboarding_checksum_text = onboarding_checksum_data.decode("ascii")
+    except UnicodeDecodeError as error:
+        raise LockValidationError("onboarding checksum is not ASCII") from error
+    onboarding_match = re.fullmatch(
+        r"([0-9a-f]{64})  release-evidence\.json\n", onboarding_checksum_text
+    )
+    if (
+        onboarding_match is None
+        or onboarding_match.group(1) != EXPECTED_ONBOARDING_LOCK_SHA256
+    ):
+        raise LockValidationError("onboarding checksum anchor changed")
+    require_content_digest(
+        onboarding_data,
+        EXPECTED_ONBOARDING_LOCK_SHA256,
+        "onboarding evidence content",
+    )
+    validate_onboarding_document(parse_json(onboarding_data))
     return document
 
 
@@ -477,8 +697,11 @@ def run_self_tests() -> None:
     signature_data = read_regular_file(SIGNATURE_LOCK_PATH, MAX_LOCK_BYTES)
     document = parse_json(lock_data)
     signature_document = parse_json(signature_data)
+    onboarding_data = read_regular_file(ONBOARDING_LOCK_PATH, MAX_LOCK_BYTES)
+    onboarding_document = parse_json(onboarding_data)
     validate_document(document)
     validate_signature_document(signature_document)
+    validate_onboarding_document(onboarding_document)
 
     expect_rejected("duplicate JSON keys", lambda: parse_json(b'{"schema":1,"schema":2}'))
 
@@ -558,6 +781,33 @@ def run_self_tests() -> None:
         lambda: validate_signature_document(duplicate_bundle),
     )
 
+    onboarding_signer = copy.deepcopy(onboarding_document)
+    onboarding_signer["image"]["certificate_identity"] = (
+        "https://github.com/openbao/openbao/.github/workflows/release.yml@refs/tags/v2.6.0"
+    )
+    expect_rejected(
+        "onboarding signer substitution",
+        lambda: validate_onboarding_document(onboarding_signer),
+    )
+
+    onboarding_child_signature = copy.deepcopy(onboarding_document)
+    onboarding_child_signature["image"]["linux_amd64_signature_status"] = (
+        "verified_cosign_keyless"
+    )
+    expect_rejected(
+        "onboarding child-signature overclaim",
+        lambda: validate_onboarding_document(onboarding_child_signature),
+    )
+
+    onboarding_subject = copy.deepcopy(onboarding_document)
+    onboarding_subject["image"]["embedded_provenance"][
+        "subject_linux_amd64_digest"
+    ] = onboarding_subject["image"]["index_digest"]
+    expect_rejected(
+        "onboarding provenance subject substitution",
+        lambda: validate_onboarding_document(onboarding_subject),
+    )
+
     modified = lock_data.replace(b'"version": "2.0.0"', b'"version": "2.0.9"', 1)
     expect_rejected(
         "release lock checksum substitution",
@@ -576,6 +826,16 @@ def run_self_tests() -> None:
         ),
     )
 
+    modified_onboarding = onboarding_data.replace(b'"version": "2.6.0"', b'"version": "2.6.1"', 1)
+    expect_rejected(
+        "onboarding checksum substitution",
+        lambda: require_content_digest(
+            modified_onboarding,
+            EXPECTED_ONBOARDING_LOCK_SHA256,
+            "mutated onboarding evidence",
+        ),
+    )
+
 
 def main() -> int:
     try:
@@ -586,7 +846,9 @@ def main() -> int:
         elif sys.argv[1:]:
             raise LockValidationError("unsupported validator argument")
         else:
-            print("OpenBao release lock: 21 immutable release artifacts verified")
+            print(
+                "OpenBao release lock: 21 active artifacts and staged 2.6.0 evidence verified"
+            )
         return 0
     except (LockValidationError, OSError) as error:
         print(f"OpenBao release lock validation failed: {error}", file=sys.stderr)
