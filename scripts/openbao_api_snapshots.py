@@ -77,6 +77,20 @@ MAX_OPERATIONS = 4_096
 MAX_FIELDS_PER_SECTION = 1_024
 MAX_RENDERED_PAGES = 512
 MAX_DIFF_CHANGES = 250_000
+CONTAINER_RESOURCE_OPTIONS = (
+    "--pids-limit",
+    "256",
+    "--stop-timeout",
+    "5",
+    "--ulimit",
+    "data=1073741824:1073741824",
+    "--ulimit",
+    "cpu=300:300",
+    "--ulimit",
+    "nofile=1024:1024",
+    "--ulimit",
+    "nproc=256:256",
+)
 
 DOC_PREFIX = "website/content/api-docs"
 HTTP_METHODS = frozenset(("delete", "get", "head", "options", "patch", "post", "put", "trace"))
@@ -84,6 +98,20 @@ DOCUMENTED_METHODS = frozenset(
     ("ACME", "DELETE", "GET", "HEAD", "LIST", "PATCH", "POST", "PUT", "SCAN")
 )
 ANNOTATION_KEYS = frozenset(("description", "example", "examples", "externalDocs", "summary", "tags"))
+NAMED_OPENAPI_MAPS = frozenset(
+    (
+        "callbacks",
+        "headers",
+        "links",
+        "parameters",
+        "paths",
+        "properties",
+        "requestBodies",
+        "responses",
+        "schemas",
+        "securitySchemes",
+    )
+)
 METHOD_ROW = re.compile(
     r"^\|\s*`?([A-Z]+(?:/[A-Z]+)*)`?\s*\|\s*`([^`]+)`",
     re.ASCII,
@@ -584,13 +612,31 @@ def extract_documentation(repository: Path, release: dict[str, Any]) -> dict[str
     }
 
 
-def contract_only(value: Any) -> Any:
+def contract_only_legacy(value: Any) -> Any:
+    """Reproduce the immutable v1 snapshots, including annotation-name collisions."""
     if isinstance(value, dict):
         return {
-            key: contract_only(item)
+            key: contract_only_legacy(item)
             for key, item in sorted(value.items())
             if key not in ANNOTATION_KEYS
         }
+    if isinstance(value, list):
+        return [contract_only_legacy(item) for item in value]
+    return value
+
+
+def contract_only(value: Any, *, names_are_data: bool = False) -> Any:
+    """Remove annotations while preserving identifiers in named OpenAPI maps."""
+    if isinstance(value, dict):
+        result: dict[str, Any] = {}
+        for key, item in sorted(value.items()):
+            if not names_are_data and key in ANNOTATION_KEYS:
+                continue
+            result[key] = contract_only(
+                item,
+                names_are_data=not names_are_data and key in NAMED_OPENAPI_MAPS,
+            )
+        return result
     if isinstance(value, list):
         return [contract_only(item) for item in value]
     return value
@@ -650,7 +696,28 @@ def bao_command(container: str, token: str, arguments: list[str], maximum: int =
     return output
 
 
-def capture_openapi(release: dict[str, Any]) -> dict[str, Any]:
+def ensure_container_removed(container: str) -> None:
+    run_bounded(
+        ["podman", "rm", "--force", container],
+        4 * 1024,
+        timeout=60,
+        accepted_codes=(0, 1),
+    )
+    exists_code, _ = run_bounded(
+        ["podman", "container", "exists", container],
+        256,
+        timeout=15,
+        accepted_codes=(0, 1),
+    )
+    if exists_code == 0:
+        raise SnapshotError("API evidence container survived cleanup")
+
+
+def capture_openapi(
+    release: dict[str, Any],
+    *,
+    legacy_annotation_collisions: bool = False,
+) -> dict[str, Any]:
     version = release["version"]
     index_digest = release["image"]["index_digest"]
     amd64_digest = release["image"]["linux_amd64_digest"]
@@ -714,12 +781,7 @@ def capture_openapi(release: dict[str, Any]) -> dict[str, Any]:
         "all",
         "--security-opt",
         "no-new-privileges",
-        "--pids-limit",
-        "256",
-        "--ulimit",
-        "nofile=1024:1024",
-        "--ulimit",
-        "nproc=256:256",
+        *CONTAINER_RESOURCE_OPTIONS,
         "--tmpfs",
         "/tmp:rw,noexec,nosuid,nodev,size=32m,mode=700",
         "--env",
@@ -785,7 +847,12 @@ def capture_openapi(release: dict[str, Any]) -> dict[str, Any]:
         components = document.get("components")
         if not isinstance(paths, dict) or not isinstance(components, dict):
             raise SnapshotError("OpenAPI document is missing paths or components")
-        normalized = contract_only(document)
+        if legacy_annotation_collisions:
+            normalized = contract_only_legacy(document)
+            normalized_schema = "openbao-normalized-openapi/v1"
+        else:
+            normalized = contract_only(document)
+            normalized_schema = "openbao-normalized-openapi/v2"
         operation_count = sum(
             1
             for path_item in paths.values()
@@ -797,7 +864,7 @@ def capture_openapi(release: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(schemas, dict):
             raise SnapshotError("OpenAPI components.schemas is not an object")
         return {
-            "schema": "openbao-normalized-openapi/v1",
+            "schema": normalized_schema,
             "generator_version": GENERATOR_VERSION,
             "version": version,
             "image_index_digest": index_digest,
@@ -809,19 +876,12 @@ def capture_openapi(release: dict[str, Any]) -> dict[str, Any]:
             "document": normalized,
         }
     finally:
-        token = ""
         try:
-            subprocess.run(
-                ["podman", "rm", "-f", container],
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=60,
-                check=False,
-                close_fds=True,
-            )
-        except subprocess.TimeoutExpired:
-            pass
+            ensure_container_removed(container)
+        finally:
+            token = ""
+            environment["BAO_DEV_ROOT_TOKEN_ID"] = ""
+            environment["BAO_TOKEN"] = ""
 
 
 def rendered_line(version: str) -> tuple[str, tuple[str, ...]] | None:
@@ -1086,7 +1146,9 @@ def generate(source_repository: str) -> None:
         version = release["version"]
         documentation = extract_documentation(repository, release)
         documentation_data = canonical_json(documentation)
-        openapi = capture_openapi(release)
+        # The active lock contains immutable v1-normalized evidence. Keep its
+        # historical regeneration byte-identical while onboarding uses v2.
+        openapi = capture_openapi(release, legacy_annotation_collisions=True)
         openapi_data = canonical_json(openapi)
         write_immutable(SNAPSHOT_ROOT / version / "documentation.json", documentation_data)
         write_immutable(SNAPSHOT_ROOT / version / "openapi.json", openapi_data)
@@ -1299,7 +1361,13 @@ def validate_documentation_snapshot(
         raise SnapshotError("documentation operations are not canonically ordered")
 
 
-def validate_openapi_snapshot(document: dict[str, Any], data: bytes, record: dict[str, Any]) -> None:
+def validate_openapi_snapshot(
+    document: dict[str, Any],
+    data: bytes,
+    record: dict[str, Any],
+    *,
+    expected_schema: str = "openbao-normalized-openapi/v1",
+) -> None:
     require_keys(
         document,
         {
@@ -1332,7 +1400,7 @@ def validate_openapi_snapshot(document: dict[str, Any], data: bytes, record: dic
     paths = openapi["paths"]
     components = openapi["components"]
     if (
-        document["schema"] != "openbao-normalized-openapi/v1"
+        document["schema"] != expected_schema
         or document["generator_version"] != GENERATOR_VERSION
         or document["version"] != record["version"]
         or document["image_index_digest"] != record["image_index_digest"]
@@ -1675,6 +1743,50 @@ def self_test() -> None:
         "long JSON string",
         lambda: parse_json(b'{"a":"' + (b"x" * (MAX_JSON_STRING_BYTES + 1)) + b'"}', MAX_OPENAPI_BYTES),
     )
+    collision = {
+        "components": {
+            "schemas": {
+                "Collision": {
+                    "description": "annotation to remove",
+                    "properties": {
+                        "description": {"type": "string"},
+                        "tags": {
+                            "description": "nested annotation to remove",
+                            "type": "string",
+                        },
+                    },
+                    "type": "object",
+                }
+            }
+        }
+    }
+    normalized_collision = contract_only(collision)
+    collision_schema = normalized_collision["components"]["schemas"]["Collision"]
+    collision_properties = collision_schema["properties"]
+    if set(collision_properties) != {"description", "tags"}:
+        raise SnapshotError("annotation-named OpenAPI properties were removed")
+    if "description" in collision_schema or "description" in collision_properties["tags"]:
+        raise SnapshotError("OpenAPI annotation was retained outside a named map")
+    legacy_properties = contract_only_legacy(collision)["components"]["schemas"]["Collision"][
+        "properties"
+    ]
+    if legacy_properties:
+        raise SnapshotError("legacy OpenAPI normalization changed historical behavior")
+    if CONTAINER_RESOURCE_OPTIONS != (
+        "--pids-limit",
+        "256",
+        "--stop-timeout",
+        "5",
+        "--ulimit",
+        "data=1073741824:1073741824",
+        "--ulimit",
+        "cpu=300:300",
+        "--ulimit",
+        "nofile=1024:1024",
+        "--ulimit",
+        "nproc=256:256",
+    ):
+        raise SnapshotError("API evidence container resource limits changed")
     normalization_seed = canonical_json(
         {
             "components": {"schemas": {"Example": {"type": "object"}}},

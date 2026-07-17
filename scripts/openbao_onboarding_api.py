@@ -23,10 +23,11 @@ PREDECESSOR = "2.5.5"
 SOURCE_COMMIT = "03e3a243b6f07d17c60ce0a182adee7cf4c424eb"
 RENDERED_LINE = "2.6.x-current"
 RENDERED_ROOTS = ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/")
-EXPECTED_LOCK_SHA256 = "69b301f91d00d154dcd852dbba99edffb51a486e67811692431a1f8760615345"
+EXPECTED_LOCK_SHA256 = "4f1a16777ef9c74bd6e5e131c9fa501121ea0d18e01ee490aed44d36dd7f0f6e"
 MAX_REVIEWED_DISCREPANCIES = 32
 
 ARTIFACT_PATHS = {
+    "predecessor_openapi_v2": "compat/onboarding/2.6.0/predecessor-2.5.5-openapi-v2.json",
     "documentation": "compat/onboarding/2.6.0/documentation.json",
     "openapi": "compat/onboarding/2.6.0/openapi.json",
     "diff_from_2_5_5": "compat/onboarding/2.6.0/2.5.5--2.6.0.json",
@@ -81,6 +82,13 @@ def active_predecessor() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]
         documentation_data,
         openapi_data,
     )
+
+
+def active_predecessor_release() -> dict[str, Any]:
+    records = snapshots.release_records()
+    if not records or records[-1].get("version") != PREDECESSOR:
+        raise OnboardingError("active release predecessor changed")
+    return records[-1]
 
 
 def reviewed_discrepancies() -> dict[str, Any]:
@@ -157,6 +165,7 @@ def generate(source_repository: str) -> None:
     predecessor, predecessor_docs, predecessor_openapi, predecessor_docs_data, predecessor_openapi_data = (
         active_predecessor()
     )
+    predecessor_release = active_predecessor_release()
     if release["version"] != VERSION or release["source"]["peeled_commit_sha1"] != SOURCE_COMMIT:
         raise OnboardingError("candidate release identity changed")
 
@@ -164,19 +173,25 @@ def generate(source_repository: str) -> None:
     documentation_data = snapshots.canonical_json(documentation)
     openapi = snapshots.capture_openapi(release)
     openapi_data = snapshots.canonical_json(openapi)
+    predecessor_openapi_v2 = snapshots.capture_openapi(predecessor_release)
+    predecessor_openapi_v2_data = snapshots.canonical_json(predecessor_openapi_v2)
+    snapshots.write_immutable(
+        ROOT / ARTIFACT_PATHS["predecessor_openapi_v2"],
+        predecessor_openapi_v2_data,
+    )
     snapshots.write_immutable(ROOT / ARTIFACT_PATHS["documentation"], documentation_data)
     snapshots.write_immutable(ROOT / ARTIFACT_PATHS["openapi"], openapi_data)
 
     diff = snapshots.build_diff(
         PREDECESSOR,
         predecessor_docs,
-        predecessor_openapi,
+        predecessor_openapi_v2,
         VERSION,
         documentation,
         openapi,
         {
             "documentation": snapshots.sha256(predecessor_docs_data),
-            "openapi": snapshots.sha256(predecessor_openapi_data),
+            "openapi": snapshots.sha256(predecessor_openapi_v2_data),
         },
         {
             "documentation": snapshots.sha256(documentation_data),
@@ -207,10 +222,17 @@ def generate(source_repository: str) -> None:
         "active_snapshot_lock_sha256": snapshots.EXPECTED_SNAPSHOT_LOCK_SHA256,
         "predecessor": {
             "version": PREDECESSOR,
-            "documentation_sha256": predecessor["documentation"]["sha256"],
-            "openapi_sha256": predecessor["openapi"]["sha256"],
+            "active_documentation_sha256": predecessor["documentation"]["sha256"],
+            "active_openapi_v1_sha256": predecessor["openapi"]["sha256"],
         },
         "artifacts": {
+            "predecessor_openapi_v2": artifact_record(
+                ARTIFACT_PATHS["predecessor_openapi_v2"],
+                predecessor_openapi_v2_data,
+                path_count=predecessor_openapi_v2["path_count"],
+                operation_count=predecessor_openapi_v2["operation_count"],
+                schema_count=predecessor_openapi_v2["schema_count"],
+            ),
             "documentation": artifact_record(
                 ARTIFACT_PATHS["documentation"],
                 documentation_data,
@@ -305,14 +327,23 @@ def validate_lock_document(lock: dict[str, Any], lock_data: bytes) -> None:
         raise OnboardingError("onboarding release evidence binding changed")
     predecessor = snapshots.require_keys(
         lock["predecessor"],
-        {"version", "documentation_sha256", "openapi_sha256"},
+        {"version", "active_documentation_sha256", "active_openapi_v1_sha256"},
         "onboarding predecessor",
     )
     if predecessor["version"] != PREDECESSOR:
         raise OnboardingError("onboarding predecessor version changed")
-    snapshots.require_hash(predecessor["documentation_sha256"], "predecessor documentation")
-    snapshots.require_hash(predecessor["openapi_sha256"], "predecessor OpenAPI")
+    snapshots.require_hash(
+        predecessor["active_documentation_sha256"], "active predecessor documentation"
+    )
+    snapshots.require_hash(
+        predecessor["active_openapi_v1_sha256"], "active predecessor OpenAPI"
+    )
     artifacts = snapshots.require_keys(lock["artifacts"], set(ARTIFACT_PATHS), "onboarding artifacts")
+    require_artifact_record(
+        artifacts["predecessor_openapi_v2"],
+        "predecessor_openapi_v2",
+        {"path_count", "operation_count", "schema_count"},
+    )
     require_artifact_record(artifacts["documentation"], "documentation", {"file_count", "operation_count"})
     require_artifact_record(
         artifacts["openapi"], "openapi", {"path_count", "operation_count", "schema_count"}
@@ -356,12 +387,17 @@ def verify() -> dict[str, Any]:
     if lock["release_evidence"]["sha256"] != snapshots.sha256(release_data):
         raise OnboardingError("candidate release evidence content changed")
     if (
-        lock["predecessor"]["documentation_sha256"] != predecessor["documentation"]["sha256"]
-        or lock["predecessor"]["openapi_sha256"] != predecessor["openapi"]["sha256"]
+        lock["predecessor"]["active_documentation_sha256"]
+        != predecessor["documentation"]["sha256"]
+        or lock["predecessor"]["active_openapi_v1_sha256"]
+        != predecessor["openapi"]["sha256"]
     ):
         raise OnboardingError("active predecessor binding changed")
 
     artifacts = lock["artifacts"]
+    predecessor_openapi_v2, predecessor_openapi_v2_data = verify_artifact(
+        artifacts["predecessor_openapi_v2"], snapshots.MAX_OPENAPI_BYTES
+    )
     documentation, documentation_data = verify_artifact(
         artifacts["documentation"], snapshots.MAX_SNAPSHOT_BYTES
     )
@@ -383,7 +419,25 @@ def verify() -> dict[str, Any]:
     snapshots.validate_documentation_snapshot(
         documentation, documentation_data, VERSION, SOURCE_COMMIT
     )
-    snapshots.validate_openapi_snapshot(openapi, openapi_data, snapshot_record)
+    snapshots.validate_openapi_snapshot(
+        openapi,
+        openapi_data,
+        snapshot_record,
+        expected_schema="openbao-normalized-openapi/v2",
+    )
+    predecessor_release = active_predecessor_release()
+    predecessor_snapshot_record = {
+        "version": PREDECESSOR,
+        "source_commit_sha1": predecessor_release["source"]["peeled_commit_sha1"],
+        "image_index_digest": predecessor_release["image"]["index_digest"],
+        "image_linux_amd64_digest": predecessor_release["image"]["linux_amd64_digest"],
+    }
+    snapshots.validate_openapi_snapshot(
+        predecessor_openapi_v2,
+        predecessor_openapi_v2_data,
+        predecessor_snapshot_record,
+        expected_schema="openbao-normalized-openapi/v2",
+    )
     snapshots.validate_diff_snapshot(diff, diff_data, PREDECESSOR, VERSION)
     snapshots.validate_rendered_snapshot(
         rendered, rendered_data, RENDERED_LINE, observed_on=OBSERVED_ON
@@ -409,6 +463,12 @@ def verify() -> dict[str, Any]:
         or artifacts["openapi"]["path_count"] != openapi["path_count"]
         or artifacts["openapi"]["operation_count"] != openapi["operation_count"]
         or artifacts["openapi"]["schema_count"] != openapi["schema_count"]
+        or artifacts["predecessor_openapi_v2"]["path_count"]
+        != predecessor_openapi_v2["path_count"]
+        or artifacts["predecessor_openapi_v2"]["operation_count"]
+        != predecessor_openapi_v2["operation_count"]
+        or artifacts["predecessor_openapi_v2"]["schema_count"]
+        != predecessor_openapi_v2["schema_count"]
         or artifacts["diff_from_2_5_5"]["change_count"] != diff["change_count"]
         or artifacts["rendered_cross_check"]["page_count"] != len(rendered["pages"])
         or artifacts["rendered_cross_check"]["operation_count"] != len(rendered["operations"])
@@ -417,7 +477,7 @@ def verify() -> dict[str, Any]:
         raise OnboardingError("staged API evidence counts changed")
     if diff["from_snapshot_sha256"] != {
         "documentation": predecessor["documentation"]["sha256"],
-        "openapi": predecessor["openapi"]["sha256"],
+        "openapi": artifacts["predecessor_openapi_v2"]["sha256"],
     } or diff["to_snapshot_sha256"] != {
         "documentation": artifacts["documentation"]["sha256"],
         "openapi": artifacts["openapi"]["sha256"],
