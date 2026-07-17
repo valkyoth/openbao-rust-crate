@@ -41,7 +41,7 @@ use openbao::Client;
 
 The current stable line is `2.0.x`. It provides explicit, fail-closed OpenBao
 server-version compatibility for every published stable release from `2.0.0`
-through `2.5.5`. Rust `1.97.0` is the primary checked toolchain; Rust `1.90.0`
+through `2.5.5`. Rust `1.97.1` is the primary checked toolchain; Rust `1.90.0`
 remains the compatibility floor.
 
 The crate is dual-licensed under MIT or Apache-2.0.
@@ -174,7 +174,7 @@ for the stable support policy.
 | --- | --- |
 | License | `MIT OR Apache-2.0` |
 | Rust edition | 2024 |
-| Primary Rust toolchain | Rust `1.97.0` |
+| Primary Rust toolchain | Rust `1.97.1` |
 | MSRV | Rust `1.90.0` |
 | Async runtime | Runtime-agnostic client; examples use Tokio |
 | HTTP transport | `reqwest` with redirects disabled |
@@ -199,7 +199,7 @@ and
 
 ## Rust Version Support
 
-The primary checked Rust toolchain is Rust `1.97.0`. The minimum supported
+The primary checked Rust toolchain is Rust `1.97.1`. The minimum supported
 Rust version remains Rust `1.90.0`. CI runs the full release gate on the
 primary toolchain and a locked all-target, all-feature compilation check on
 the MSRV.
@@ -208,7 +208,7 @@ The SDK tracks compatibility evidence across this supported range:
 
 | Rust | Required Evidence |
 | --- | --- |
-| `1.97.0` | Primary release gate: fmt, clippy, tests, docs, deny, audit, SBOM, optional Kani proof harnesses, and real OpenBao integration. |
+| `1.97.1` | Primary release gate: fmt, clippy, tests, docs, deny, audit, SBOM, optional Kani proof harnesses, and real OpenBao integration. |
 | `1.96.1` | `cargo check --all-features`. |
 | `1.95.0` | `cargo check --all-features`. |
 | `1.94.0` | `cargo check --all-features`. |

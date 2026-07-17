@@ -17,6 +17,9 @@ This document is the implementation contract for making one crate release
 support multiple OpenBao server versions without allowing a newer OpenBao API
 change to overwrite the behavior required by an older server.
 
+The follow-up plan for appending the exact OpenBao 2.6.0 profile is
+[`OPENBAO_2_6_0_SUPPORT_PLAN.md`](OPENBAO_2_6_0_SUPPORT_PLAN.md).
+
 The companion
 [`OPENBAO_2_5_FULL_SUPPORT_AUDIT.md`](OPENBAO_2_5_FULL_SUPPORT_AUDIT.md)
 records the baseline audit that found the existing endpoint inventory complete

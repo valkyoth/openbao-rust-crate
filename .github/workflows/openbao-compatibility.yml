@@ -71,8 +71,8 @@ jobs:
 
       - name: Install primary Rust toolchain
         run: |
-          rustup toolchain install 1.97.0 --profile minimal
-          rustup default 1.97.0
+          rustup toolchain install 1.97.1 --profile minimal
+          rustup default 1.97.1
           rustc --version
 
       - name: Run locked OpenBao core flow
