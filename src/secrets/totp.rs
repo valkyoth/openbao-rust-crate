@@ -308,6 +308,15 @@ impl ListEntries for TotpKeyList {
 pub struct TotpCode {
     /// Generated TOTP code. Treat as secret material.
     pub code: SecretString,
+    /// Unix timestamp at which OpenBao generated the code (OpenBao 2.6+).
+    #[serde(default)]
+    pub generated: Option<i64>,
+    /// Unix timestamp at which the code expires (OpenBao 2.6+).
+    #[serde(default)]
+    pub expire_time: Option<i64>,
+    /// Generation period returned by OpenBao 2.6+.
+    #[serde(default, deserialize_with = "deserialize_optional_generated_period")]
+    pub period: Option<TotpPeriod>,
 }
 
 impl fmt::Debug for TotpCode {
@@ -315,8 +324,25 @@ impl fmt::Debug for TotpCode {
         formatter
             .debug_struct("TotpCode")
             .field("code", &"<redacted>")
+            .field("generated", &self.generated)
+            .field("expire_time", &self.expire_time)
+            .field("period", &self.period)
             .finish()
     }
+}
+
+fn deserialize_optional_generated_period<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<TotpPeriod>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let period = Option::<TotpPeriod>::deserialize(deserializer)?;
+    if let Some(TotpPeriod::Duration(duration)) = period.as_ref() {
+        crate::validation::validate_duration_parameter(duration, "TOTP response period")
+            .map_err(D::Error::custom)?;
+    }
+    Ok(period)
 }
 
 /// TOTP code validation request.
@@ -591,7 +617,10 @@ mod tests {
 
     use crate::{Client, OpenBaoConfig};
 
-    use super::{TotpKeyCreateRequest, TotpKeyCreateResponse, TotpKeyList, TotpValidateRequest};
+    use super::{
+        TotpCode, TotpKeyCreateRequest, TotpKeyCreateResponse, TotpKeyList, TotpPeriod,
+        TotpValidateRequest,
+    };
 
     #[test]
     fn totp_paths_are_validated() {
@@ -646,5 +675,22 @@ mod tests {
         assert!(!response_debug.contains("png-secret"));
         assert!(!response_debug.contains("url-secret"));
         assert!(response_debug.contains("redacted"));
+
+        let code: TotpCode = serde_json::from_value(serde_json::json!({
+            "code": "654321",
+            "generated": 1_752_749_200_i64,
+            "expire_time": 1_752_749_230_i64,
+            "period": "30s"
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(code.period, Some(TotpPeriod::Duration("30s".to_owned())));
+        assert!(!format!("{code:?}").contains("654321"));
+        assert!(
+            serde_json::from_value::<TotpCode>(serde_json::json!({
+                "code": "654321",
+                "period": "invalid\nperiod"
+            }))
+            .is_err()
+        );
     }
 }

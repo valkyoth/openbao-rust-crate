@@ -1,0 +1,74 @@
+{
+  "seal_2_5_5": {
+    "type": "shamir",
+    "initialized": true,
+    "sealed": false,
+    "version": "2.5.5",
+    "build_date": "2026-05-01T00:00:00Z"
+  },
+  "seal_2_6_0": {
+    "type": "awskms",
+    "initialized": true,
+    "sealed": false,
+    "version": "2.6.0",
+    "commit_date": "2026-07-01T00:00:00Z",
+    "recovery_seal_type": "shamir"
+  },
+  "unseal_2_5_5": {
+    "sealed": false,
+    "version": "2.5.5",
+    "build_date": "2026-05-01T00:00:00Z"
+  },
+  "unseal_2_6_0": {
+    "sealed": false,
+    "version": "2.6.0",
+    "commit_date": "2026-07-01T00:00:00Z"
+  },
+  "lease_2_5_5": {
+    "id": "database/creds/readonly/legacy-lease",
+    "issue_time": "2026-07-17T10:00:00Z",
+    "expire_time": "2026-07-17T11:00:00Z",
+    "renewable": true,
+    "ttl": 3600
+  },
+  "lease_2_6_0": {
+    "id": "database/creds/readonly/current-lease",
+    "issue_time": "2026-07-17T10:00:00Z",
+    "expire_time": "2026-07-17T11:00:00Z",
+    "renewable": true,
+    "ttl": 3600,
+    "namespace_path": "team/payments/",
+    "path": "database/creds/readonly",
+    "revoke_error": ""
+  },
+  "cors_2_5_5": {
+    "enabled": true,
+    "allowed_origins": ["https://legacy.example.com"],
+    "allowed_headers": ["X-OpenBao-Namespace"]
+  },
+  "cors_2_6_0": {
+    "enabled": true,
+    "allowed_origins": ["https://current.example.com"],
+    "allowed_headers": ["X-OpenBao-Namespace"],
+    "allow_credentials": true
+  },
+  "totp_2_5_5": {
+    "code": "123456"
+  },
+  "totp_2_6_0": {
+    "code": "654321",
+    "generated": 1752749200,
+    "expire_time": 1752749230,
+    "period": "30s"
+  },
+  "version_2_5_5": {
+    "build_date": "2026-05-01T00:00:00Z",
+    "previous_version": "2.5.4",
+    "timestamp_installed": "2026-05-02T00:00:00Z"
+  },
+  "version_2_6_0": {
+    "commit_date": "2026-07-01T00:00:00Z",
+    "previous_version": "2.5.5",
+    "timestamp_installed": "2026-07-02T00:00:00Z"
+  }
+}

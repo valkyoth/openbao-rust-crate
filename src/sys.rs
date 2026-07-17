@@ -714,6 +714,9 @@ pub struct CorsConfig {
     /// Additional headers allowed on cross-origin requests.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub allowed_headers: Vec<String>,
+    /// Whether cross-origin requests may include credentials (OpenBao 2.6+).
+    #[serde(default)]
+    pub allow_credentials: bool,
 }
 
 /// Request for configuring `/sys/config/cors`.
@@ -724,6 +727,9 @@ pub struct CorsConfigRequest {
     /// Additional headers allowed on cross-origin requests.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub allowed_headers: Vec<String>,
+    /// Whether cross-origin requests may include credentials (OpenBao 2.6+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_credentials: Option<bool>,
 }
 
 impl CorsConfigRequest {
@@ -737,6 +743,7 @@ impl CorsConfigRequest {
         Self {
             allowed_origins: allowed_origins.into_iter().map(Into::into).collect(),
             allowed_headers: Vec::new(),
+            allow_credentials: None,
         }
     }
 
@@ -744,6 +751,15 @@ impl CorsConfigRequest {
     #[must_use]
     pub fn with_allowed_header(mut self, header: impl Into<String>) -> Self {
         self.allowed_headers.push(header.into());
+        self
+    }
+
+    /// Controls whether cross-origin requests may include credentials.
+    ///
+    /// This field is available only with the OpenBao 2.6.0 profile or newer.
+    #[must_use]
+    pub const fn with_allow_credentials(mut self, allow_credentials: bool) -> Self {
+        self.allow_credentials = Some(allow_credentials);
         self
     }
 
@@ -1124,6 +1140,9 @@ pub struct VersionHistoryEntry {
     /// Build timestamp, when OpenBao returned one.
     #[serde(default)]
     pub build_date: Option<String>,
+    /// Source commit timestamp, returned by OpenBao 2.6+.
+    #[serde(default)]
+    pub commit_date: Option<String>,
     /// Previous installed version, when known.
     #[serde(default)]
     pub previous_version: Option<String>,
@@ -1782,6 +1801,15 @@ pub struct SealStatus {
     pub progress: Option<u64>,
     /// Server version.
     pub version: String,
+    /// Legacy build timestamp returned through OpenBao 2.5.x.
+    #[serde(default)]
+    pub build_date: Option<String>,
+    /// Source commit timestamp returned by OpenBao 2.6+.
+    #[serde(default)]
+    pub commit_date: Option<String>,
+    /// Recovery seal type, when OpenBao 2.6+ configures one.
+    #[serde(default)]
+    pub recovery_seal_type: Option<String>,
 }
 
 /// OpenBao unseal progress response.
@@ -1806,6 +1834,12 @@ pub struct UnsealStatus {
     /// Cluster identifier when OpenBao is unsealed.
     #[serde(default)]
     pub cluster_id: Option<String>,
+    /// Legacy build timestamp returned through OpenBao 2.5.x.
+    #[serde(default)]
+    pub build_date: Option<String>,
+    /// Source commit timestamp returned by OpenBao 2.6+.
+    #[serde(default)]
+    pub commit_date: Option<String>,
 }
 
 /// Production initialization request for `/sys/init`.
@@ -3914,6 +3948,24 @@ pub struct LeaseLookup {
     /// Remaining lease TTL in seconds.
     #[serde(default)]
     pub ttl: u64,
+    /// Namespace containing the lease, returned by OpenBao 2.6+.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
+    pub namespace_path: Option<String>,
+    /// Backend path that issued the lease, returned by OpenBao 2.6+.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
+    pub path: Option<String>,
+    /// Revocation error retained by OpenBao, returned by OpenBao 2.6+.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
+    pub revoke_error: Option<String>,
 }
 
 impl fmt::Debug for LeaseLookup {
@@ -3926,6 +3978,15 @@ impl fmt::Debug for LeaseLookup {
             .field("last_renewal", &self.last_renewal)
             .field("renewable", &self.renewable)
             .field("ttl", &self.ttl)
+            .field(
+                "namespace_path",
+                &self.namespace_path.as_ref().map(|_| "<redacted>"),
+            )
+            .field("path", &self.path.as_ref().map(|_| "<redacted>"))
+            .field(
+                "revoke_error",
+                &self.revoke_error.as_ref().map(|_| "<redacted>"),
+            )
             .finish()
     }
 }
@@ -4718,6 +4779,12 @@ impl Sys<'_, Unauthenticated> {
             validate_key_share_options(shares, threshold)?;
         }
         self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::OPERATOR_INIT_STORED_SHARES,
+                request.stored_shares.is_some(),
+            )])
+            .await?;
+        self.client
             .request_sys_json_internal(Method::POST, "sys/init", Some(request))
             .await
     }
@@ -4832,6 +4899,49 @@ impl Sys<'_, Unauthenticated> {
 }
 
 impl Sys<'_, Authenticated> {
+    #[cfg(feature = "operator-ops")]
+    async fn request_generate_root_json<T, B>(
+        &self,
+        endpoint: crate::compatibility::OpenBaoEndpointSpec,
+        body: Option<&B>,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let (resolved, path) = self
+            .client
+            .resolve_openbao_literal_endpoint(endpoint)
+            .await?;
+        match path.as_str() {
+            "sys/generate-root/attempt" | "sys/generate-root/update" => {
+                self.client
+                    .request_resolved_literal_endpoint_json_accepting(
+                        &resolved,
+                        &path,
+                        body,
+                        &[StatusCode::OK],
+                    )
+                    .await
+            }
+            "sys/generate-root-token/attempt" | "sys/generate-root-token/update" => {
+                let envelope: ResponseEnvelope<T> = self
+                    .client
+                    .request_resolved_literal_endpoint_json_accepting(
+                        &resolved,
+                        &path,
+                        body,
+                        &[StatusCode::OK],
+                    )
+                    .await?;
+                Ok(envelope.data)
+            }
+            _ => Err(Error::Internal(
+                "root generation selected an unreviewed route",
+            )),
+        }
+    }
+
     /// Streams bounded frames from `/sys/monitor`.
     ///
     /// This diagnostic endpoint can expose request paths, identifiers, and
@@ -4961,6 +5071,12 @@ impl Sys<'_, Authenticated> {
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
         self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::OPERATOR_REKEY_STORED_SHARES,
+                request.stored_shares.is_some(),
+            )])
+            .await?;
+        self.client
             .request_sys_json_internal(Method::POST, "sys/rekey/init", Some(request))
             .await
     }
@@ -5072,6 +5188,12 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeySharesRequest,
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::OPERATOR_REKEY_STORED_SHARES,
+                request.stored_shares.is_some(),
+            )])
+            .await?;
         self.client
             .request_sys_json_internal(Method::POST, &rotate_init_path(target), Some(request))
             .await
@@ -5262,21 +5384,23 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
-    /// Reads generate-root progress from `/sys/generate-root/attempt`.
+    /// Reads root-token generation progress from the exact-profile route.
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
     #[cfg(feature = "operator-ops")]
     pub async fn operator_generate_root_status(&self) -> Result<OperatorTokenGenerationStatus> {
-        self.client
-            .request_sys_json_internal(
-                Method::GET,
-                "sys/generate-root/attempt",
-                Option::<&Empty>::None,
-            )
-            .await
+        self.request_generate_root_json(
+            crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_STATUS,
+            Option::<&Empty>::None,
+        )
+        .await
     }
 
-    /// Starts root token generation through `/sys/generate-root/attempt`.
+    /// Starts root token generation through the exact-profile route.
+    ///
+    /// Profiles through 2.5.5 use `/sys/generate-root/attempt`; OpenBao 2.6+
+    /// uses `/sys/generate-root-token/attempt`. The client never probes or
+    /// falls back between these operator endpoints.
     ///
     /// The returned OTP, when present, is returned only once by OpenBao and
     /// must be kept as root-level operator ceremony material.
@@ -5286,26 +5410,29 @@ impl Sys<'_, Authenticated> {
         &self,
         request: &OperatorTokenGenerationStartRequest,
     ) -> Result<OperatorTokenGenerationStart> {
-        self.client
-            .request_sys_json_internal(Method::POST, "sys/generate-root/attempt", Some(request))
-            .await
+        self.request_generate_root_json(
+            crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_START,
+            Some(request),
+        )
+        .await
     }
 
-    /// Cancels root token generation through `/sys/generate-root/attempt`.
+    /// Cancels root token generation through the exact-profile route.
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
     #[cfg(feature = "operator-ops")]
     pub async fn operator_generate_root_cancel(&self) -> Result<Empty> {
         self.client
-            .request_sys_json_internal(
-                Method::DELETE,
-                "sys/generate-root/attempt",
+            .request_literal_endpoint_json_accepting(
+                crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_CANCEL,
                 Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
             .await
     }
 
-    /// Submits one key share to root token generation.
+    /// Submits one key share to root token generation through the
+    /// exact-profile route.
     ///
     /// The completed response contains an encoded root token that must be
     /// decoded with [`Sys::operator_decode_token`] and the OTP from the start
@@ -5316,16 +5443,14 @@ impl Sys<'_, Authenticated> {
         &self,
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorTokenGenerationStatus> {
-        self.client
-            .request_sys_json_internal(
-                Method::POST,
-                "sys/generate-root/update",
-                Some(&OperatorKeyShareUpdatePayload {
-                    key: request.key.expose_secret(),
-                    nonce: &request.nonce,
-                }),
-            )
-            .await
+        self.request_generate_root_json(
+            crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_UPDATE,
+            Some(&OperatorKeyShareUpdatePayload {
+                key: request.key.expose_secret(),
+                nonce: &request.nonce,
+            }),
+        )
+        .await
     }
 
     /// Reads recovery-token generation progress from
@@ -5441,6 +5566,12 @@ impl Sys<'_, Authenticated> {
         request: &OperatorKeySharesRequest,
     ) -> Result<OperatorKeySharesStatus> {
         validate_key_share_options(request.secret_shares, request.secret_threshold)?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::OPERATOR_REKEY_STORED_SHARES,
+                request.stored_shares.is_some(),
+            )])
+            .await?;
         self.client
             .request_sys_json_internal(Method::POST, "sys/rekey-recovery-key/init", Some(request))
             .await
@@ -6702,6 +6833,12 @@ impl Sys<'_, Authenticated> {
     /// explicit string arrays so commas are not ambiguously parsed by callers.
     pub async fn write_cors_config(&self, request: &CorsConfigRequest) -> Result<Empty> {
         request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::CORS_ALLOW_CREDENTIALS,
+                request.allow_credentials.is_some(),
+            )])
+            .await?;
         self.client
             .request_sys_json_internal(Method::POST, "sys/config/cors", Some(request))
             .await
@@ -8030,6 +8167,30 @@ where
     Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
 }
 
+fn deserialize_optional_safe_metadata_string<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    const MAX_METADATA_BYTES: usize = 4096;
+
+    let value = Option::<String>::deserialize(deserializer)?;
+    if let Some(value) = value.as_deref() {
+        if value.len() > MAX_METADATA_BYTES {
+            return Err(D::Error::custom(
+                "system response metadata exceeds byte limit",
+            ));
+        }
+        if value.chars().any(char::is_control) {
+            return Err(D::Error::custom(
+                "system response metadata contains control characters",
+            ));
+        }
+    }
+    Ok(value)
+}
+
 fn deserialize_bounded_plugin_detail_vec<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Vec<PluginDetail>, D::Error>
@@ -9161,12 +9322,77 @@ mod tests {
         assert!(update_debug.contains("keys_count"));
     }
 
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn root_generation_responses_decode_legacy_and_enveloped_shapes() {
+        let legacy: OperatorTokenGenerationStatus = serde_json::from_value(serde_json::json!({
+            "started": true,
+            "nonce": "legacy-nonce",
+            "encoded_token": "legacy-encoded-token"
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(legacy.nonce.as_deref(), Some("legacy-nonce"));
+        assert!(!format!("{legacy:?}").contains("legacy-encoded-token"));
+
+        let current: super::ResponseEnvelope<OperatorTokenGenerationStart> =
+            serde_json::from_value(serde_json::json!({
+                "data": {
+                    "started": true,
+                    "nonce": "current-nonce",
+                    "otp": "current-root-otp"
+                }
+            }))
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(current.data.status.nonce.as_deref(), Some("current-nonce"));
+        assert!(!format!("{current:?}").contains("current-root-otp"));
+    }
+
     #[test]
     fn lease_ids_are_validated_for_json_body_use() {
         assert!(validate_lease_id(&SecretString::from("database/creds/ro/abc")).is_ok());
         assert!(validate_lease_id(&SecretString::from("")).is_err());
         assert!(validate_lease_id(&SecretString::from("database/creds/ro\nabc")).is_err());
         assert!(validate_lease_id(&SecretString::from("x".repeat(513))).is_err());
+    }
+
+    #[test]
+    fn lease_lookup_topology_metadata_is_bounded_and_log_safe() {
+        let lease: super::LeaseLookup = serde_json::from_value(serde_json::json!({
+            "id": "database/creds/readonly/lease-id",
+            "issue_time": "2026-07-17T10:00:00Z",
+            "expire_time": "2026-07-17T11:00:00Z",
+            "namespace_path": "team/payments/",
+            "path": "database/creds/readonly",
+            "revoke_error": "backend unavailable"
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(lease.namespace_path.as_deref(), Some("team/payments/"));
+        let debug = format!("{lease:?}");
+        assert!(!debug.contains("lease-id"));
+        assert!(!debug.contains("team/payments"));
+        assert!(!debug.contains("database/creds"));
+        assert!(!debug.contains("backend unavailable"));
+
+        for unsafe_value in ["database/creds/readonly\nforged", "\u{0000}"] {
+            assert!(
+                serde_json::from_value::<super::LeaseLookup>(serde_json::json!({
+                    "id": "lease-id",
+                    "issue_time": "2026-07-17T10:00:00Z",
+                    "expire_time": "2026-07-17T11:00:00Z",
+                    "path": unsafe_value
+                }))
+                .is_err()
+            );
+        }
+        assert!(
+            serde_json::from_value::<super::LeaseLookup>(serde_json::json!({
+                "id": "lease-id",
+                "issue_time": "2026-07-17T10:00:00Z",
+                "expire_time": "2026-07-17T11:00:00Z",
+                "path": "x".repeat(4097)
+            }))
+            .is_err()
+        );
     }
 
     #[test]

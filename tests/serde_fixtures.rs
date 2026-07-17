@@ -4,7 +4,8 @@
     feature = "pki",
     feature = "ssh",
     feature = "sys",
-    feature = "token"
+    feature = "token",
+    feature = "totp"
 ))]
 #![allow(missing_docs)]
 
@@ -18,8 +19,10 @@ use openbao::secrets::kv2::Kv2Secret;
 use openbao::secrets::pki::PkiCertificateBundle;
 use openbao::secrets::pki::PkiRole;
 use openbao::secrets::ssh::SshRoleKeyType;
+use openbao::secrets::totp::{TotpCode, TotpPeriod};
 use openbao::sys::{
-    Health, PluginInfo, PolicyInfo, PolicyList, RateLimitQuotaInfo, RateLimitQuotaList,
+    CorsConfig, Health, LeaseLookup, PluginInfo, PolicyInfo, PolicyList, RateLimitQuotaInfo,
+    RateLimitQuotaList, SealStatus, UnsealStatus, VersionHistoryEntry,
 };
 use openbao::{ExposeSecret, ResponseEnvelope, SecretString};
 use serde::Deserialize;
@@ -51,6 +54,22 @@ struct VersionedResponseProfile {
     plugin: serde_json::Value,
     policy: serde_json::Value,
     quota: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenBao26SystemFixtures {
+    seal_2_5_5: serde_json::Value,
+    seal_2_6_0: serde_json::Value,
+    unseal_2_5_5: serde_json::Value,
+    unseal_2_6_0: serde_json::Value,
+    lease_2_5_5: serde_json::Value,
+    lease_2_6_0: serde_json::Value,
+    cors_2_5_5: serde_json::Value,
+    cors_2_6_0: serde_json::Value,
+    totp_2_5_5: serde_json::Value,
+    totp_2_6_0: serde_json::Value,
+    version_2_5_5: serde_json::Value,
+    version_2_6_0: serde_json::Value,
 }
 
 #[test]
@@ -140,6 +159,50 @@ fn locked_openbao_response_profiles_deserialize() -> Result<(), Box<dyn Error>> 
 
         assert!(fixture.version.starts_with("2."));
     }
+    Ok(())
+}
+
+#[test]
+fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), Box<dyn Error>> {
+    let fixtures: OpenBao26SystemFixtures =
+        serde_json::from_str(include_str!("fixtures/openbao_2_6_system_responses.json"))?;
+
+    let old_seal: SealStatus = serde_json::from_value(fixtures.seal_2_5_5)?;
+    let new_seal: SealStatus = serde_json::from_value(fixtures.seal_2_6_0)?;
+    assert!(old_seal.build_date.is_some());
+    assert!(old_seal.commit_date.is_none());
+    assert_eq!(new_seal.recovery_seal_type.as_deref(), Some("shamir"));
+    assert!(new_seal.commit_date.is_some());
+
+    let old_unseal: UnsealStatus = serde_json::from_value(fixtures.unseal_2_5_5)?;
+    let new_unseal: UnsealStatus = serde_json::from_value(fixtures.unseal_2_6_0)?;
+    assert!(old_unseal.build_date.is_some());
+    assert!(new_unseal.commit_date.is_some());
+
+    let old_lease: LeaseLookup = serde_json::from_value(fixtures.lease_2_5_5)?;
+    let new_lease: LeaseLookup = serde_json::from_value(fixtures.lease_2_6_0)?;
+    assert!(old_lease.namespace_path.is_none());
+    assert_eq!(new_lease.namespace_path.as_deref(), Some("team/payments/"));
+    assert!(!format!("{new_lease:?}").contains("current-lease"));
+
+    let old_cors: CorsConfig = serde_json::from_value(fixtures.cors_2_5_5)?;
+    let new_cors: CorsConfig = serde_json::from_value(fixtures.cors_2_6_0)?;
+    assert!(!old_cors.allow_credentials);
+    assert!(new_cors.allow_credentials);
+
+    let old_totp: TotpCode = serde_json::from_value(fixtures.totp_2_5_5)?;
+    let new_totp: TotpCode = serde_json::from_value(fixtures.totp_2_6_0)?;
+    assert!(old_totp.generated.is_none());
+    assert_eq!(
+        new_totp.period,
+        Some(TotpPeriod::Duration("30s".to_owned()))
+    );
+    assert!(!format!("{new_totp:?}").contains("654321"));
+
+    let old_version: VersionHistoryEntry = serde_json::from_value(fixtures.version_2_5_5)?;
+    let new_version: VersionHistoryEntry = serde_json::from_value(fixtures.version_2_6_0)?;
+    assert!(old_version.build_date.is_some());
+    assert!(new_version.commit_date.is_some());
     Ok(())
 }
 

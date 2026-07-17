@@ -25,6 +25,21 @@ impl VersionedRequestField {
         }
     }
 
+    #[cfg(any(feature = "operator-ops", test))]
+    pub(crate) const fn between(
+        endpoint: &'static str,
+        field: &'static str,
+        minimum: OpenBaoVersion,
+        maximum: OpenBaoVersion,
+    ) -> Self {
+        Self {
+            endpoint,
+            field,
+            minimum,
+            maximum: Some(maximum),
+        }
+    }
+
     fn supports(self, version: OpenBaoVersion) -> bool {
         version >= self.minimum && self.maximum.is_none_or(|maximum| version <= maximum)
     }
@@ -46,6 +61,8 @@ pub(crate) fn validate_request_fields(
     Ok(())
 }
 
+#[cfg(any(feature = "operator-ops", test))]
+const V2_0_0: OpenBaoVersion = OpenBaoVersion::new(2, 0, 0);
 const V2_0_2: OpenBaoVersion = OpenBaoVersion::new(2, 0, 2);
 const V2_1_0: OpenBaoVersion = OpenBaoVersion::new(2, 1, 0);
 const V2_2_0: OpenBaoVersion = OpenBaoVersion::new(2, 2, 0);
@@ -53,6 +70,9 @@ const V2_3_1: OpenBaoVersion = OpenBaoVersion::new(2, 3, 1);
 const V2_4_0: OpenBaoVersion = OpenBaoVersion::new(2, 4, 0);
 const V2_5_0: OpenBaoVersion = OpenBaoVersion::new(2, 5, 0);
 const V2_5_2: OpenBaoVersion = OpenBaoVersion::new(2, 5, 2);
+#[cfg(any(feature = "operator-ops", test))]
+const V2_5_5: OpenBaoVersion = OpenBaoVersion::new(2, 5, 5);
+const V2_6_0: OpenBaoVersion = OpenBaoVersion::new(2, 6, 0);
 
 pub(crate) mod fields {
     use super::*;
@@ -86,6 +106,14 @@ pub(crate) mod fields {
         VersionedRequestField::since("sys.policy.write", "cas", V2_3_1);
     pub(crate) const POLICY_CAS_REQUIRED: VersionedRequestField =
         VersionedRequestField::since("sys.policy.write", "cas_required", V2_3_1);
+    #[cfg(any(feature = "operator-ops", test))]
+    pub(crate) const OPERATOR_INIT_STORED_SHARES: VersionedRequestField =
+        VersionedRequestField::between("sys.init", "stored_shares", V2_0_0, V2_5_5);
+    #[cfg(any(feature = "operator-ops", test))]
+    pub(crate) const OPERATOR_REKEY_STORED_SHARES: VersionedRequestField =
+        VersionedRequestField::between("sys.rekey", "stored_shares", V2_0_0, V2_5_5);
+    pub(crate) const CORS_ALLOW_CREDENTIALS: VersionedRequestField =
+        VersionedRequestField::since("sys.config.cors", "allow_credentials", V2_6_0);
     pub(crate) const RAFT_JOIN_NON_VOTER: VersionedRequestField =
         VersionedRequestField::since("sys.storage.raft.join", "non_voter", V2_2_0);
     #[cfg(any(feature = "operator-ops", test))]
@@ -136,6 +164,9 @@ pub(crate) mod fields {
         POLICY_TTL,
         POLICY_CAS,
         POLICY_CAS_REQUIRED,
+        OPERATOR_INIT_STORED_SHARES,
+        OPERATOR_REKEY_STORED_SHARES,
+        CORS_ALLOW_CREDENTIALS,
         RAFT_JOIN_NON_VOTER,
         ROTATION_INTERVAL,
         PLUGIN_OCI,
@@ -188,6 +219,28 @@ mod tests {
     }
 
     #[test]
+    fn selected_fields_fail_after_their_reviewed_range() {
+        assert!(
+            validate_request_fields(
+                OpenBaoVersion::new(2, 5, 5),
+                &[(&fields::OPERATOR_INIT_STORED_SHARES, true)],
+            )
+            .is_ok()
+        );
+        assert!(matches!(
+            validate_request_fields(
+                OpenBaoVersion::new(2, 6, 0),
+                &[(&fields::OPERATOR_INIT_STORED_SHARES, true)],
+            ),
+            Err(Error::UnsupportedOpenBaoRequestField {
+                endpoint: "sys.init",
+                field: "stored_shares",
+                version
+            }) if version == OpenBaoVersion::new(2, 6, 0)
+        ));
+    }
+
+    #[test]
     fn unset_fields_preserve_old_profile_compatibility() {
         assert!(
             validate_request_fields(
@@ -208,8 +261,11 @@ mod tests {
         let mut identities = std::collections::BTreeSet::new();
         for rule in fields::ALL {
             assert!(identities.insert((rule.endpoint, rule.field)));
+            let maximum = rule
+                .maximum
+                .map_or_else(|| "-".to_owned(), |version| version.to_string());
             let documented_row = format!(
-                "| `{}` | `{}` | `{}` |",
+                "| `{}` | `{}` | `{}` | `{maximum}` |",
                 rule.endpoint, rule.field, rule.minimum
             );
             assert!(documentation.contains(&documented_row));
@@ -217,18 +273,30 @@ mod tests {
                 .iter()
                 .position(|version| *version == rule.minimum)
                 .unwrap_or_else(|| panic!("request-field minimum lacks a locked profile"));
-            assert!(minimum_index > 0);
             assert!(
                 validate_request_fields(rule.minimum, &[(rule, true)]).is_ok(),
                 "minimum profile rejected {}.{}",
                 rule.endpoint,
                 rule.field
             );
-            assert!(matches!(
-                validate_request_fields(profiles[minimum_index - 1], &[(rule, true)]),
-                Err(Error::UnsupportedOpenBaoRequestField { .. })
-            ));
+            if minimum_index > 0 {
+                assert!(matches!(
+                    validate_request_fields(profiles[minimum_index - 1], &[(rule, true)]),
+                    Err(Error::UnsupportedOpenBaoRequestField { .. })
+                ));
+            }
+            if let Some(maximum) = rule.maximum {
+                let maximum_index = profiles
+                    .iter()
+                    .position(|version| *version == maximum)
+                    .unwrap_or_else(|| panic!("request-field maximum lacks a locked profile"));
+                assert!(maximum_index + 1 < profiles.len());
+                assert!(matches!(
+                    validate_request_fields(profiles[maximum_index + 1], &[(rule, true)]),
+                    Err(Error::UnsupportedOpenBaoRequestField { .. })
+                ));
+            }
         }
-        assert_eq!(identities.len(), 28);
+        assert_eq!(identities.len(), 31);
     }
 }

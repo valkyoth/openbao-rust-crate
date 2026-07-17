@@ -1313,57 +1313,113 @@ impl<State> Client<State> {
             return Err(Error::UnsupportedOpenBaoVersion(version));
         }
 
-        let mut selected = endpoint
-            .variants()
-            .iter()
-            .copied()
-            .filter(|variant| variant.contains(version));
-        let Some(variant) = selected.next() else {
-            return Err(Error::UnsupportedOpenBaoCapability {
-                endpoint: endpoint.id(),
-                version,
-            });
-        };
-        if selected.next().is_some() {
-            return Err(Error::Internal(
-                "OpenBao endpoint variants overlap for the selected profile",
-            ));
-        }
-        let operation = openbao_operation(variant.operation_id()).ok_or(Error::Internal(
-            "OpenBao endpoint references an unknown registry operation",
-        ))?;
-        match operation.availability(version) {
-            Some(OpenBaoCapabilityAvailability::DocumentedRoute) => {}
-            Some(
-                OpenBaoCapabilityAvailability::NotDocumented
-                | OpenBaoCapabilityAvailability::SecurityBlocked,
-            ) => {
-                return Err(Error::UnsupportedOpenBaoCapability {
-                    endpoint: endpoint.id(),
-                    version,
-                });
-            }
-            None => return Err(Error::UnsupportedOpenBaoVersion(version)),
-        }
-        if !matches!(
-            operation.disposition(),
-            OpenBaoOperationDisposition::Typed | OpenBaoOperationDisposition::TypedGated
-        ) {
-            return Err(Error::UnsupportedOpenBaoCapability {
-                endpoint: endpoint.id(),
-                version,
-            });
-        }
+        let resolved = resolve_openbao_endpoint_for_profile(endpoint, version)?;
+        let operation = resolved.operation();
         if !route_template_matches(operation.path_template(), &path_segments, query)? {
             return Err(Error::InvalidPath(
                 "request path or query does not match the selected OpenBao endpoint".into(),
             ));
         }
-        Ok(ResolvedOpenBaoEndpoint {
-            endpoint: endpoint.id(),
-            operation,
-            method: reqwest_method(operation.method())?,
-        })
+        Ok(resolved)
+    }
+
+    #[allow(dead_code)]
+    pub(crate) async fn resolve_openbao_literal_endpoint(
+        &self,
+        endpoint: OpenBaoEndpointSpec,
+    ) -> Result<(ResolvedOpenBaoEndpoint, String)> {
+        validate_endpoint_spec(endpoint)?;
+        let report = self.ensure_compatibility().await?;
+        let version = match report.profile_version() {
+            Some(version) => version,
+            None if report.status()
+                == crate::compatibility::OpenBaoCompatibilityStatus::Unverified =>
+            {
+                latest_routable_profile().ok_or(Error::Internal(
+                    "OpenBao compatibility profile inventory is empty",
+                ))?
+            }
+            None => {
+                return Err(Error::Internal(
+                    "OpenBao compatibility report has no routing profile",
+                ));
+            }
+        };
+        if !is_routable_profile(version) {
+            return Err(Error::UnsupportedOpenBaoVersion(version));
+        }
+        let resolved = resolve_openbao_endpoint_for_profile(endpoint, version)?;
+        let template = resolved.operation().path_template();
+        let path = template.strip_prefix('/').ok_or(Error::Internal(
+            "literal OpenBao endpoint template must be absolute",
+        ))?;
+        let segments = validate_endpoint_path(path)?;
+        if segments.iter().any(|segment| {
+            segment.starts_with(':')
+                || segment.contains('{')
+                || segment.contains('(')
+                || segment.contains('*')
+        }) {
+            return Err(Error::Internal(
+                "literal OpenBao endpoint contains a route placeholder",
+            ));
+        }
+        Ok((resolved, path.to_owned()))
+    }
+
+    #[allow(dead_code)]
+    pub(crate) async fn request_literal_endpoint_json_accepting<T, B>(
+        &self,
+        endpoint: OpenBaoEndpointSpec,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let (resolved, path) = self.resolve_openbao_literal_endpoint(endpoint).await?;
+        self.request_resolved_literal_endpoint_json_accepting(
+            &resolved,
+            &path,
+            body,
+            accepted_statuses,
+        )
+        .await
+    }
+
+    pub(crate) async fn request_resolved_literal_endpoint_json_accepting<T, B>(
+        &self,
+        resolved: &ResolvedOpenBaoEndpoint,
+        path: &str,
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let expected_path = resolved
+            .operation()
+            .path_template()
+            .strip_prefix('/')
+            .ok_or(Error::Internal(
+                "literal OpenBao endpoint template must be absolute",
+            ))?;
+        if path != expected_path {
+            return Err(Error::Internal(
+                "resolved literal OpenBao endpoint path changed before dispatch",
+            ));
+        }
+        self.request_json_query_headers_accepting(
+            resolved.method(),
+            path,
+            &[] as &[(&str, &str)],
+            &[],
+            body,
+            accepted_statuses,
+        )
+        .await
     }
 
     #[allow(dead_code)]
@@ -2807,6 +2863,59 @@ fn validate_endpoint_spec(endpoint: OpenBaoEndpointSpec) -> Result<()> {
     Ok(())
 }
 
+fn resolve_openbao_endpoint_for_profile(
+    endpoint: OpenBaoEndpointSpec,
+    version: OpenBaoVersion,
+) -> Result<ResolvedOpenBaoEndpoint> {
+    validate_endpoint_spec(endpoint)?;
+    let mut selected = endpoint
+        .variants()
+        .iter()
+        .copied()
+        .filter(|variant| variant.contains(version));
+    let Some(variant) = selected.next() else {
+        return Err(Error::UnsupportedOpenBaoCapability {
+            endpoint: endpoint.id(),
+            version,
+        });
+    };
+    if selected.next().is_some() {
+        return Err(Error::Internal(
+            "OpenBao endpoint variants overlap for the selected profile",
+        ));
+    }
+    let operation = openbao_operation(variant.operation_id()).ok_or(Error::Internal(
+        "OpenBao endpoint references an unknown registry operation",
+    ))?;
+    match operation.availability(version) {
+        Some(OpenBaoCapabilityAvailability::DocumentedRoute) => {}
+        Some(
+            OpenBaoCapabilityAvailability::NotDocumented
+            | OpenBaoCapabilityAvailability::SecurityBlocked,
+        ) => {
+            return Err(Error::UnsupportedOpenBaoCapability {
+                endpoint: endpoint.id(),
+                version,
+            });
+        }
+        None => return Err(Error::UnsupportedOpenBaoVersion(version)),
+    }
+    if !matches!(
+        operation.disposition(),
+        OpenBaoOperationDisposition::Typed | OpenBaoOperationDisposition::TypedGated
+    ) {
+        return Err(Error::UnsupportedOpenBaoCapability {
+            endpoint: endpoint.id(),
+            version,
+        });
+    }
+    Ok(ResolvedOpenBaoEndpoint {
+        endpoint: endpoint.id(),
+        operation,
+        method: reqwest_method(operation.method())?,
+    })
+}
+
 fn reqwest_method(method: OpenBaoHttpMethod) -> Result<Method> {
     match method {
         OpenBaoHttpMethod::Delete => Ok(Method::DELETE),
@@ -3501,8 +3610,8 @@ mod tests {
 
     use super::{
         Client, OpenBaoConfig, env_bool, is_cleartext_url, openbao_config_from_env_lookup,
-        openbao_token_from_env_lookup, route_template_matches, validate_token_for_header,
-        validate_user_agent,
+        openbao_token_from_env_lookup, resolve_openbao_endpoint_for_profile,
+        route_template_matches, validate_token_for_header, validate_user_agent,
     };
     use crate::compatibility::{OpenBaoEndpointSpec, OpenBaoEndpointVariant};
 
@@ -3514,6 +3623,56 @@ mod tests {
             OpenBaoVersion::new(2, 6, 0),
         )],
     );
+
+    #[test]
+    fn root_token_route_selection_is_exact_and_does_not_fallback() {
+        for (endpoint, method, legacy_path, current_path) in [
+            (
+                crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_STATUS,
+                reqwest::Method::GET,
+                "/sys/generate-root/attempt",
+                "/sys/generate-root-token/attempt",
+            ),
+            (
+                crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_START,
+                reqwest::Method::POST,
+                "/sys/generate-root/attempt",
+                "/sys/generate-root-token/attempt",
+            ),
+            (
+                crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_UPDATE,
+                reqwest::Method::POST,
+                "/sys/generate-root/update",
+                "/sys/generate-root-token/update",
+            ),
+            (
+                crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_CANCEL,
+                reqwest::Method::DELETE,
+                "/sys/generate-root/attempt",
+                "/sys/generate-root-token/attempt",
+            ),
+        ] {
+            let legacy =
+                resolve_openbao_endpoint_for_profile(endpoint, OpenBaoVersion::new(2, 5, 5))
+                    .unwrap_or_else(|error| panic!("{error}"));
+            assert_eq!(legacy.method(), method);
+            assert_eq!(legacy.operation().path_template(), legacy_path);
+
+            let current =
+                resolve_openbao_endpoint_for_profile(endpoint, OpenBaoVersion::new(2, 6, 0))
+                    .unwrap_or_else(|error| panic!("{error}"));
+            assert_eq!(current.method(), method);
+            assert_eq!(current.operation().path_template(), current_path);
+        }
+
+        assert!(matches!(
+            resolve_openbao_endpoint_for_profile(
+                crate::compatibility::generated::GENERATED_SYS_GENERATE_ROOT_STATUS,
+                OpenBaoVersion::new(2, 5, 6),
+            ),
+            Err(Error::UnsupportedOpenBaoCapability { .. })
+        ));
+    }
 
     #[cfg(feature = "raft-stream")]
     struct TestByteStream {
