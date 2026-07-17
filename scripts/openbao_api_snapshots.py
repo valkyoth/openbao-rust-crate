@@ -77,7 +77,17 @@ MAX_OPERATIONS = 4_096
 MAX_FIELDS_PER_SECTION = 1_024
 MAX_RENDERED_PAGES = 512
 MAX_DIFF_CHANGES = 250_000
+CONTAINER_MEMORY_BYTES = 1024 * 1024 * 1024
+CONTAINER_MEMORY_SWAP_BYTES = 2 * CONTAINER_MEMORY_BYTES
+CONTAINER_NANO_CPUS = 1_000_000_000
+CONTAINER_PIDS_LIMIT = 256
 CONTAINER_RESOURCE_OPTIONS = (
+    "--memory",
+    "1g",
+    "--memory-swap",
+    "2g",
+    "--cpus",
+    "1",
     "--pids-limit",
     "256",
     "--stop-timeout",
@@ -100,18 +110,31 @@ DOCUMENTED_METHODS = frozenset(
 ANNOTATION_KEYS = frozenset(("description", "example", "examples", "externalDocs", "summary", "tags"))
 NAMED_OPENAPI_MAPS = frozenset(
     (
-        "callbacks",
+        "$defs",
+        "content",
+        "definitions",
+        "dependentRequired",
+        "dependentSchemas",
+        "encoding",
         "headers",
         "links",
+        "mapping",
         "parameters",
+        "pathItems",
         "paths",
+        "patternProperties",
         "properties",
         "requestBodies",
         "responses",
         "schemas",
+        "scopes",
         "securitySchemes",
+        "variables",
+        "webhooks",
     )
 )
+NESTED_NAMED_OPENAPI_MAPS = frozenset(("callbacks",))
+NAMED_OPENAPI_MAP_ARRAYS = frozenset(("security",))
 METHOD_ROW = re.compile(
     r"^\|\s*`?([A-Z]+(?:/[A-Z]+)*)`?\s*\|\s*`([^`]+)`",
     re.ASCII,
@@ -625,20 +648,49 @@ def contract_only_legacy(value: Any) -> Any:
     return value
 
 
-def contract_only(value: Any, *, names_are_data: bool = False) -> Any:
+def contract_only(
+    value: Any,
+    *,
+    names_are_data: bool = False,
+    map_values_are_named_maps: bool = False,
+    array_items_are_named_maps: bool = False,
+) -> Any:
     """Remove annotations while preserving identifiers in named OpenAPI maps."""
     if isinstance(value, dict):
         result: dict[str, Any] = {}
         for key, item in sorted(value.items()):
             if not names_are_data and key in ANNOTATION_KEYS:
                 continue
+            item_is_map = isinstance(item, dict)
+            item_is_reference = item_is_map and "$ref" in item
+            if names_are_data:
+                child_names_are_data = (
+                    map_values_are_named_maps and item_is_map and not item_is_reference
+                )
+                child_map_values_are_named_maps = False
+                child_array_items_are_named_maps = False
+            else:
+                child_names_are_data = item_is_map and (
+                    key in NAMED_OPENAPI_MAPS or key in NESTED_NAMED_OPENAPI_MAPS
+                )
+                child_map_values_are_named_maps = (
+                    item_is_map and key in NESTED_NAMED_OPENAPI_MAPS
+                )
+                child_array_items_are_named_maps = (
+                    isinstance(item, list) and key in NAMED_OPENAPI_MAP_ARRAYS
+                )
             result[key] = contract_only(
                 item,
-                names_are_data=not names_are_data and key in NAMED_OPENAPI_MAPS,
+                names_are_data=child_names_are_data,
+                map_values_are_named_maps=child_map_values_are_named_maps,
+                array_items_are_named_maps=child_array_items_are_named_maps,
             )
         return result
     if isinstance(value, list):
-        return [contract_only(item) for item in value]
+        return [
+            contract_only(item, names_are_data=array_items_are_named_maps)
+            for item in value
+        ]
     return value
 
 
@@ -711,6 +763,28 @@ def ensure_container_removed(container: str) -> None:
     )
     if exists_code == 0:
         raise SnapshotError("API evidence container survived cleanup")
+
+
+def validate_container_resource_config(config: Any) -> None:
+    if not isinstance(config, dict):
+        raise SnapshotError("API evidence container resource configuration is malformed")
+    expected = {
+        "Memory": CONTAINER_MEMORY_BYTES,
+        "MemorySwap": CONTAINER_MEMORY_SWAP_BYTES,
+        "NanoCpus": CONTAINER_NANO_CPUS,
+        "PidsLimit": CONTAINER_PIDS_LIMIT,
+    }
+    if any(config.get(key) != value for key, value in expected.items()):
+        raise SnapshotError("API evidence container aggregate resource limits were not applied")
+
+
+def verify_container_resource_limits(container: str) -> None:
+    _, output = run_bounded(
+        ["podman", "inspect", "--format", "{{json .HostConfig}}", container],
+        64 * 1024,
+        timeout=30,
+    )
+    validate_container_resource_config(parse_json(output, 64 * 1024))
 
 
 def capture_openapi(
@@ -799,6 +873,7 @@ def capture_openapi(
     ]
     try:
         run_bounded(run_command, 1_024, timeout=120, environment=environment)
+        verify_container_resource_limits(container)
         status: dict[str, Any] | None = None
         for _ in range(120):
             try:
@@ -1772,7 +1847,79 @@ def self_test() -> None:
     ]
     if legacy_properties:
         raise SnapshotError("legacy OpenAPI normalization changed historical behavior")
+    for map_name in NAMED_OPENAPI_MAPS:
+        normalized_map = contract_only(
+            {
+                map_name: {
+                    "description": {
+                        "description": "annotation to remove",
+                        "type": "string",
+                    },
+                    "tags": {"type": "string"},
+                }
+            }
+        )[map_name]
+        if set(normalized_map) != {"description", "tags"}:
+            raise SnapshotError(f"OpenAPI named-map identifiers were removed from {map_name}")
+        if "description" in normalized_map["description"]:
+            raise SnapshotError(f"OpenAPI annotation was retained within {map_name}")
+    normalized_callbacks = contract_only(
+        {
+            "callbacks": {
+                "description": {
+                    "tags": {
+                        "description": "annotation to remove",
+                        "get": {"responses": {"200": {"description": "annotation to remove"}}},
+                    }
+                },
+                "tags": {"$ref": "#/components/callbacks/example", "description": "remove"},
+            }
+        }
+    )["callbacks"]
+    if set(normalized_callbacks) != {"description", "tags"}:
+        raise SnapshotError("OpenAPI callback identifiers were removed")
+    if set(normalized_callbacks["description"]) != {"tags"}:
+        raise SnapshotError("OpenAPI callback expression identifiers were removed")
+    if "description" in normalized_callbacks["description"]["tags"]:
+        raise SnapshotError("OpenAPI callback annotation was retained")
+    if "description" in normalized_callbacks["tags"]:
+        raise SnapshotError("OpenAPI callback reference annotation was retained")
+    normalized_security = contract_only(
+        {"security": [{"description": [], "tags": []}]}
+    )["security"]
+    if set(normalized_security[0]) != {"description", "tags"}:
+        raise SnapshotError("OpenAPI security requirement identifiers were removed")
+    normalized_parameters = contract_only(
+        {"parameters": [{"description": "remove", "name": "description"}]}
+    )["parameters"]
+    if normalized_parameters != [{"name": "description"}]:
+        raise SnapshotError("OpenAPI parameter annotations were treated as identifiers")
+    validate_container_resource_config(
+        {
+            "Memory": CONTAINER_MEMORY_BYTES,
+            "MemorySwap": CONTAINER_MEMORY_SWAP_BYTES,
+            "NanoCpus": CONTAINER_NANO_CPUS,
+            "PidsLimit": CONTAINER_PIDS_LIMIT,
+        }
+    )
+    expect_rejected(
+        "missing aggregate container limit",
+        lambda: validate_container_resource_config(
+            {
+                "Memory": CONTAINER_MEMORY_BYTES,
+                "MemorySwap": CONTAINER_MEMORY_SWAP_BYTES,
+                "NanoCpus": 0,
+                "PidsLimit": CONTAINER_PIDS_LIMIT,
+            }
+        ),
+    )
     if CONTAINER_RESOURCE_OPTIONS != (
+        "--memory",
+        "1g",
+        "--memory-swap",
+        "2g",
+        "--cpus",
+        "1",
         "--pids-limit",
         "256",
         "--stop-timeout",

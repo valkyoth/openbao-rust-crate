@@ -124,9 +124,15 @@ release:
   server runs without a network, host port, writable root filesystem, Linux
   capabilities, or root privileges. One instance of every documented built-in
   auth method and secrets engine is mounted before requesting generic mount
-  paths. Capture containers also have hard data-segment, CPU-time, open-file,
-  and process-count limits. Cleanup is verified; generation fails if the
-  container still exists.
+  paths. Capture containers are restricted to 1 GiB of memory, 2 GiB of
+  combined memory and swap, one CPU, and 256 tasks. Per-process data-segment,
+  CPU-time, open-file, and process-count limits provide additional containment.
+  The generator verifies the recorded aggregate limits after startup and fails
+  closed when the host cannot apply them. Evidence generation therefore needs
+  aggregate memory, CPU, and process cgroup controls; rootless generation
+  normally requires cgroup v2 with those controllers delegated. Snapshot
+  verification does not require those controllers. Cleanup is also verified,
+  and generation fails if the container still exists.
 
 Descriptions, examples, summaries, external links, and tags are excluded from
 the normalized OpenAPI contract. Paths, methods, operation identifiers,
@@ -162,11 +168,11 @@ for atomic promotion.
 Historical normalized OpenAPI snapshots use the immutable v1 normalizer. That
 normalizer removed identifiers named like annotation keys when they occurred
 inside OpenAPI named maps. New onboarding evidence uses the v2 normalizer,
-which removes annotations contextually while preserving schema property and
-component identifiers. The staged lock therefore includes a separately
-captured v2-normalized 2.5.5 predecessor; the adjacent 2.5.5-to-2.6.0 diff
-compares the same normalization schema on both sides without rewriting any
-historical artifact.
+which removes annotations contextually while preserving identifiers in OpenAPI
+and JSON Schema named maps, nested callback maps, and security requirement
+objects. The staged lock therefore includes a separately captured v2-normalized
+2.5.5 predecessor; the adjacent 2.5.5-to-2.6.0 diff compares the same
+normalization schema on both sides without rewriting any historical artifact.
 
 `tests/fixtures/openbao_response_profiles.json` is generated from these locked
 OpenAPI documents. It carries the exact source digest for each release and
