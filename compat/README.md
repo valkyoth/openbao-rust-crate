@@ -91,9 +91,11 @@ python3 -B scripts/openbao_ci_matrix.py self-test
 ```
 
 The validator uses only the Python standard library and performs no network
-access. It opens inputs in no-follow, non-blocking mode, rejects non-regular
-files before reading, and reads at most the configured byte limit plus one
-byte. It rejects oversized or deeply nested JSON, duplicate keys, unknown or
+access. It opens every path component with descriptor-relative, no-follow,
+non-blocking file operations, rejects non-regular files before reading, and
+reads at most the configured byte limit plus one byte. A bounded structural
+scan rejects deeply nested or oversized JSON before `json.loads` can recurse
+or allocate the parsed tree. It also rejects duplicate keys, unknown or
 missing fields, path traversal, mutable tags, malformed or duplicate hashes,
 reordered records, changed historical identifiers, and verification-status
 downgrades. The release and signature locks each have a sidecar SHA-256 plus a

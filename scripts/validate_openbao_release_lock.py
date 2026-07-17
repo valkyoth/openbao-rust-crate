@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline fail-closed validation for compat/releases.lock.json."""
+"""Offline fail-closed validation for active and onboarding release evidence."""
 
 from __future__ import annotations
 
@@ -215,16 +215,59 @@ def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def parse_json(data: bytes) -> dict[str, Any]:
+def scan_json_bounds(data: bytes) -> None:
     if len(data) > MAX_LOCK_BYTES:
         raise LockValidationError("release lock exceeds the byte limit")
+    depth = 0
+    structural_nodes = 0
+    string_bytes = 0
+    in_string = False
+    escaped = False
+    for byte in data:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif byte == 0x5C:
+                escaped = True
+            elif byte == 0x22:
+                in_string = False
+                string_bytes = 0
+            else:
+                string_bytes += 1
+                if string_bytes > MAX_STRING_BYTES:
+                    raise LockValidationError(
+                        "release lock string exceeds the byte limit"
+                    )
+            continue
+        if byte == 0x22:
+            in_string = True
+            string_bytes = 0
+        elif byte in (0x7B, 0x5B):
+            depth += 1
+            structural_nodes += 1
+            if depth > MAX_JSON_DEPTH:
+                raise LockValidationError("release lock exceeds the depth limit")
+        elif byte in (0x7D, 0x5D):
+            depth -= 1
+            if depth < 0:
+                raise LockValidationError("release lock has unbalanced delimiters")
+        elif byte in (0x2C, 0x3A):
+            structural_nodes += 1
+        if structural_nodes > MAX_JSON_NODES:
+            raise LockValidationError("release lock exceeds the node limit")
+    if in_string or depth != 0:
+        raise LockValidationError("release lock is structurally incomplete")
+
+
+def parse_json(data: bytes) -> dict[str, Any]:
+    scan_json_bounds(data)
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError as error:
         raise LockValidationError("release lock is not valid UTF-8") from error
     try:
         document = json.loads(text, object_pairs_hook=reject_duplicate_keys)
-    except (json.JSONDecodeError, LockValidationError) as error:
+    except (json.JSONDecodeError, LockValidationError, RecursionError) as error:
         raise LockValidationError("release lock is not valid duplicate-free JSON") from error
     if not isinstance(document, dict):
         raise LockValidationError("release lock root must be an object")
@@ -589,17 +632,68 @@ def validate_onboarding_document(document: dict[str, Any]) -> None:
         require_string(note, "onboarding security note")
 
 
-def read_regular_file(path: Path, maximum: int) -> bytes:
+def open_repository_file(path: Path, trusted_root: Path) -> int:
     no_follow = getattr(os, "O_NOFOLLOW", None)
     non_block = getattr(os, "O_NONBLOCK", None)
-    if no_follow is None or non_block is None:
-        raise LockValidationError("secure non-blocking no-follow file reads are unavailable")
-
-    flags = os.O_RDONLY | no_follow | non_block | getattr(os, "O_CLOEXEC", 0)
+    directory_only = getattr(os, "O_DIRECTORY", None)
+    if (
+        no_follow is None
+        or non_block is None
+        or directory_only is None
+        or os.open not in os.supports_dir_fd
+    ):
+        raise LockValidationError(
+            "secure descriptor-relative no-follow file reads are unavailable"
+        )
+    if not path.is_absolute() or not trusted_root.is_absolute():
+        raise LockValidationError("release lock path is not absolute")
     try:
-        descriptor = os.open(path, flags)
+        relative = path.relative_to(trusted_root)
+    except ValueError as error:
+        raise LockValidationError("release lock path escapes its trusted root") from error
+    parts = relative.parts
+    if not parts or any(part in ("", ".", "..") for part in parts):
+        raise LockValidationError("release lock path is not canonical")
+
+    common_flags = no_follow | non_block | getattr(os, "O_CLOEXEC", 0)
+    directory_flags = os.O_RDONLY | common_flags | directory_only
+    try:
+        directory_descriptor = os.open(trusted_root, directory_flags)
     except OSError as error:
-        raise LockValidationError("release lock input could not be opened securely") from error
+        raise LockValidationError("release lock root could not be opened securely") from error
+
+    try:
+        for component in parts[:-1]:
+            try:
+                next_descriptor = os.open(
+                    component,
+                    directory_flags,
+                    dir_fd=directory_descriptor,
+                )
+            except OSError as error:
+                raise LockValidationError(
+                    "release lock parent could not be opened securely"
+                ) from error
+            os.close(directory_descriptor)
+            directory_descriptor = next_descriptor
+        try:
+            return os.open(
+                parts[-1],
+                os.O_RDONLY | common_flags,
+                dir_fd=directory_descriptor,
+            )
+        except OSError as error:
+            raise LockValidationError(
+                "release lock input could not be opened securely"
+            ) from error
+    finally:
+        os.close(directory_descriptor)
+
+
+def read_regular_file(
+    path: Path, maximum: int, *, trusted_root: Path = ROOT
+) -> bytes:
+    descriptor = open_repository_file(path, trusted_root)
 
     try:
         metadata = os.fstat(descriptor)
@@ -704,6 +798,10 @@ def run_self_tests() -> None:
     validate_onboarding_document(onboarding_document)
 
     expect_rejected("duplicate JSON keys", lambda: parse_json(b'{"schema":1,"schema":2}'))
+    expect_rejected(
+        "deeply nested JSON before parser recursion",
+        lambda: parse_json((b"[" * 20_000) + (b"]" * 20_000)),
+    )
 
     with tempfile.TemporaryDirectory(prefix="openbao-release-lock-") as directory:
         temporary_root = Path(directory)
@@ -711,7 +809,9 @@ def run_self_tests() -> None:
         bounded_file.write_bytes(b"x" * 17)
         expect_rejected(
             "oversized input before allocation",
-            lambda: read_regular_file(bounded_file, 16),
+            lambda: read_regular_file(
+                bounded_file, 16, trusted_root=temporary_root
+            ),
         )
 
         target_file = temporary_root / "target.json"
@@ -720,14 +820,37 @@ def run_self_tests() -> None:
         symlink_file.symlink_to(target_file)
         expect_rejected(
             "symbolic-link input",
-            lambda: read_regular_file(symlink_file, MAX_LOCK_BYTES),
+            lambda: read_regular_file(
+                symlink_file,
+                MAX_LOCK_BYTES,
+                trusted_root=temporary_root,
+            ),
+        )
+
+        real_parent = temporary_root / "real-parent"
+        real_parent.mkdir()
+        nested_target = real_parent / "target.json"
+        nested_target.write_bytes(b"{}")
+        symlink_parent = temporary_root / "symlink-parent"
+        symlink_parent.symlink_to(real_parent, target_is_directory=True)
+        expect_rejected(
+            "symbolic-link parent",
+            lambda: read_regular_file(
+                symlink_parent / "target.json",
+                MAX_LOCK_BYTES,
+                trusted_root=temporary_root,
+            ),
         )
 
         fifo_file = temporary_root / "input.fifo"
         os.mkfifo(fifo_file)
         expect_rejected(
             "FIFO input",
-            lambda: read_regular_file(fifo_file, MAX_LOCK_BYTES),
+            lambda: read_regular_file(
+                fifo_file,
+                MAX_LOCK_BYTES,
+                trusted_root=temporary_root,
+            ),
         )
 
     reordered = copy.deepcopy(document)
