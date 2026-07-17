@@ -1282,11 +1282,15 @@ impl SealableNamespaceRequest {
         })
     }
 
-    /// Adds one caller-defined namespace metadata entry.
-    #[must_use]
-    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+    /// Adds one validated caller-defined namespace metadata entry.
+    pub fn with_metadata(
+        mut self,
+        key: impl Into<String>,
+        value: impl Into<String>,
+    ) -> Result<Self> {
         self.custom_metadata.insert(key.into(), value.into());
-        self
+        validate_namespace_metadata(&self.custom_metadata)?;
+        Ok(self)
     }
 
     /// Configures base64-encoded OpenPGP public keys for encrypting shares.
@@ -10156,8 +10160,8 @@ mod tests {
             .and_then(|request| {
                 request.with_pgp_keys(["cGdwLWtleS0x", "cGdwLWtleS0y", "cGdwLWtleS0z"])
             })
-            .unwrap_or_else(|error| panic!("{error}"))
-            .with_metadata("owner", "security");
+            .and_then(|request| request.with_metadata("owner", "security"))
+            .unwrap_or_else(|error| panic!("{error}"));
         let debug = format!("{request:?}");
         assert!(debug.contains("pgp_keys_count: 3"));
         assert!(!debug.contains("cGdwLWtleS0x"));
@@ -10183,6 +10187,11 @@ mod tests {
         assert!(
             SealableNamespaceRequest::new(1, 1)
                 .and_then(|request| request.with_pgp_keys(["not-base64"]))
+                .is_err()
+        );
+        assert!(
+            SealableNamespaceRequest::new(1, 1)
+                .and_then(|request| request.with_metadata("owner", "security\nforged"))
                 .is_err()
         );
 
