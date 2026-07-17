@@ -36,10 +36,13 @@ does not enter the supported stable-release inventory.
 New releases are first recorded outside the active inventory under
 `onboarding/<version>/`. The separately checksummed and validator-anchored
 `onboarding/2.6.0/release-evidence.json` locks the 2.6.0 source release, image,
-signature topology, and embedded provenance while its API and live evidence
-remain incomplete. Staging prevents a newly published release from changing
-the active profile count or invalidating historical snapshot, capability, and
-test matrices before the complete evidence set can be promoted atomically.
+signature topology, and embedded provenance. Its separately anchored
+`api-evidence.lock.json` binds the tagged documentation, normalized runtime
+OpenAPI, `2.5.5--2.6.0` diff, current rendered-doc observation, and reviewed
+source/runtime discrepancies. Capability, contract, and live evidence remain
+incomplete. Staging prevents a newly published release from changing the
+active profile count or invalidating historical snapshot, capability, and test
+matrices before the complete evidence set can be promoted atomically.
 
 OpenBao's OCI indexes and `linux/amd64` manifests were verified with Cosign
 `3.1.1`, built from module tag `v3.1.1` at peeled source commit
@@ -147,6 +150,13 @@ reads, and no-follow/non-blocking file opens. It verifies every source commit,
 OCI digest, artifact size/hash, internal version, count, predecessor diff, and
 rendered-observation identity against the release inventory.
 
+The staged 2.6.0 API lock applies the same controls without extending the
+active 21-profile lock. It additionally binds the unchanged 2.5.5 predecessor
+hashes and records reviewed JWT CEL, Kubernetes provider, workflow, and
+non-standard method discrepancies in `onboarding/2.6.0/`. This separation is
+intentional: 2.6.0 is not selectable until all cross-bound evidence is ready
+for atomic promotion.
+
 `tests/fixtures/openbao_response_profiles.json` is generated from these locked
 OpenAPI documents. It carries the exact source digest for each release and
 provides serde fixtures for reviewed response-shape transitions. CI regenerates
@@ -170,6 +180,16 @@ python3 scripts/openbao_api_snapshots.py \
 
 Generation requires `git`, `skopeo`, and rootless `podman`. Existing committed
 artifacts are never overwritten with different bytes.
+
+To reproduce only the staged 2.6.0 evidence from its exact source clone:
+
+```sh
+python3 scripts/openbao_onboarding_api.py \
+  --generate \
+  --source-repository /path/to/openbao-v2.6.0
+python3 scripts/openbao_onboarding_api.py --verify
+python3 scripts/openbao_onboarding_api.py --self-test
+```
 
 ## Reproducing Online Evidence
 

@@ -865,7 +865,12 @@ def fetch_rendered_page(path: str) -> bytes:
     return data
 
 
-def capture_rendered_cross_check(label: str, roots: tuple[str, ...]) -> dict[str, Any]:
+def capture_rendered_cross_check(
+    label: str,
+    roots: tuple[str, ...],
+    *,
+    observed_on: str = OBSERVED_ON,
+) -> dict[str, Any]:
     base_prefix = roots[0].removesuffix("auth/")
     link_pattern = re.compile(
         rb'href=(?:"|\')?(' + re.escape(base_prefix.encode()) + rb'(?:auth|secret|system)/[^"\' >#?]+/)(?:"|\')?'
@@ -914,7 +919,7 @@ def capture_rendered_cross_check(label: str, roots: tuple[str, ...]) -> dict[str
     return {
         "schema": "openbao-rendered-api-cross-check/v1",
         "generator_version": GENERATOR_VERSION,
-        "observed_on": OBSERVED_ON,
+        "observed_on": observed_on,
         "line": label,
         "authority": "secondary-only; tagged source remains primary",
         "roots": list(roots),
@@ -1356,7 +1361,13 @@ def validate_openapi_snapshot(document: dict[str, Any], data: bytes, record: dic
         raise SnapshotError("OpenAPI snapshot counts changed")
 
 
-def validate_rendered_snapshot(document: dict[str, Any], data: bytes, line: str) -> None:
+def validate_rendered_snapshot(
+    document: dict[str, Any],
+    data: bytes,
+    line: str,
+    *,
+    observed_on: str = OBSERVED_ON,
+) -> None:
     require_keys(
         document,
         {"schema", "generator_version", "observed_on", "line", "authority", "roots", "pages", "operations"},
@@ -1365,7 +1376,7 @@ def validate_rendered_snapshot(document: dict[str, Any], data: bytes, line: str)
     if (
         document["schema"] != "openbao-rendered-api-cross-check/v1"
         or document["generator_version"] != GENERATOR_VERSION
-        or document["observed_on"] != OBSERVED_ON
+        or document["observed_on"] != observed_on
         or document["line"] != line
         or document["authority"] != "secondary-only; tagged source remains primary"
         or canonical_json(document) != data

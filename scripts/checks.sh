@@ -21,6 +21,10 @@ echo "checks: OpenBao API snapshots"
 python3 scripts/openbao_api_snapshots.py --verify
 python3 scripts/openbao_api_snapshots.py --self-test
 
+echo "checks: staged OpenBao 2.6.0 API evidence"
+python3 scripts/openbao_onboarding_api.py --verify
+python3 scripts/openbao_onboarding_api.py --self-test
+
 echo "checks: OpenBao 2.5.5 contract matrix"
 python3 scripts/generate_openbao_contract_matrix.py --verify
 python3 scripts/generate_openbao_contract_matrix.py --self-test
