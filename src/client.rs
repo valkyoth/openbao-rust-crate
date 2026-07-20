@@ -1632,17 +1632,18 @@ impl<State> Client<State> {
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            let errors =
-                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
-                    .await
-                    .map(|envelope| envelope.errors)
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(|error| crate::error::sanitize_api_error(&error))
-                    .collect();
-            return Err(Error::Api { status, errors });
+            // Workflow and other explicitly secret response bodies can echo
+            // tokens, definitions, inputs, or intermediate values. Never
+            // deserialize their error text into ordinary loggable strings.
+            drop(response);
+            return Err(Error::Api {
+                status,
+                errors: Vec::new(),
+            });
         }
-        validate_json_content_type(&response)?;
+        if status != StatusCode::NO_CONTENT {
+            validate_json_content_type(&response)?;
+        }
         read_response_bytes(response, self.config.max_response_bytes).await
     }
 
@@ -3931,6 +3932,70 @@ mod tests {
             .await;
         server.join().unwrap_or_else(|error| panic!("{error:?}"));
         result
+    }
+
+    #[cfg(feature = "sensitive-http-test-only")]
+    #[tokio::test]
+    async fn registered_secret_response_errors_discard_server_messages() {
+        const LEAKED_VALUE: &str = "fixture-workflow-token-must-not-survive";
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut request = [0_u8; 2048];
+            let count = stream
+                .read(&mut request)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&request[..count]);
+            assert!(request.starts_with("POST /v1/sys/leases/lookup HTTP/1.1"));
+            let body = format!(r#"{{"errors":["workflow failed with {LEAKED_VALUE}"]}}"#);
+            let response = format!(
+                "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        });
+        let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 5, 5))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(OpenBaoConfig::allow_sensitive_local_http_for_tests)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .try_with_token(SecretString::from("fixture-client-token"))
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        let result = client
+            .request_registered_secret_json_accepting(
+                "/sys/",
+                Method::POST,
+                "sys/leases/lookup",
+                "sys/leases/lookup",
+                &[] as &[(&str, &str)],
+                Some(&Empty {}),
+                &[reqwest::StatusCode::OK],
+            )
+            .await;
+        let error = match result {
+            Ok(_) => panic!("secret-bearing API failure was accepted"),
+            Err(error) => error,
+        };
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
+
+        assert!(matches!(
+            &error,
+            Error::Api { status, errors }
+                if *status == reqwest::StatusCode::BAD_REQUEST && errors.is_empty()
+        ));
+        assert!(!format!("{error}").contains(LEAKED_VALUE));
+        assert!(!format!("{error:?}").contains(LEAKED_VALUE));
     }
 
     #[test]

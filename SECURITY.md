@@ -160,7 +160,10 @@ Workflow definitions and arbitrary execution input/output are treated as
 secret material. `WorkflowWriteRequest`, `WorkflowInfo`, `WorkflowList`, and
 `WorkflowData` redact definitions or values from `Debug`; arbitrary JSON is
 restricted to an object and capped at 8 MiB in sanitizing storage. Workflow
-paths use the same structured validation as other typed endpoints.
+paths use the same structured validation as other typed endpoints. Failed
+workflow response bodies are discarded without deserializing server error text
+because errors may echo tokens, definitions, inputs, or intermediate values;
+public errors retain only the HTTP status.
 
 Trace execution is not a normal observability API. OpenBao 2.6 trace responses
 can contain the caller token, generated request and response bodies, and every

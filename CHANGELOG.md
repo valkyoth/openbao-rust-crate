@@ -18,6 +18,9 @@ All notable changes to this project are documented here.
 - Classified broken prefixed workflow LIST/SCAN routes as security-blocked for
   exact OpenBao 2.6.0 and documented the upstream workflow CAS propagation
   defect. Workflow writes are never retried.
+- Workflow API failures discard server-provided error bodies so echoed tokens,
+  definitions, inputs, and intermediate values cannot enter loggable public
+  error strings.
 
 ## 2.0.2 - 2026-07-12
 

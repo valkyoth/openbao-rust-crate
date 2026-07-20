@@ -5479,21 +5479,20 @@ impl Sys<'_, Authenticated> {
     pub async fn list_workflows(&self) -> Result<WorkflowList> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
-        let result: Result<ResponseEnvelope<WorkflowList>> = self
+        let result = self
             .client
-            .request_registered_json_query_headers_accepting(
+            .request_registered_secret_json_accepting(
                 "/sys/",
                 method,
                 "sys/workflows/manage",
                 "sys/workflows/manage",
                 &[] as &[(&str, &str)],
-                &[],
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
             .await;
         match result {
-            Ok(envelope) => Ok(envelope.data),
+            Ok(body) => workflow_typed_data_from_envelope(body),
             Err(Error::Api { status, .. }) if status == StatusCode::NOT_FOUND => {
                 Ok(WorkflowList::default())
             }
@@ -5506,39 +5505,37 @@ impl Sys<'_, Authenticated> {
         let method =
             Method::from_bytes(b"SCAN").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         let query = options.query_pairs();
-        let envelope: ResponseEnvelope<WorkflowList> = self
+        let body = self
             .client
-            .request_registered_json_query_headers_accepting(
+            .request_registered_secret_json_accepting(
                 "/sys/",
                 method,
                 "sys/workflows/manage",
                 "sys/workflows/manage",
                 &query,
-                &[],
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
             .await?;
-        Ok(envelope.data)
+        workflow_typed_data_from_envelope(body)
     }
 
     /// Reads one stored workflow and its sensitive definition.
     pub async fn read_workflow(&self, path: &str) -> Result<WorkflowInfo> {
         let path = workflow_path("sys/workflows/manage", path)?;
-        let envelope: ResponseEnvelope<WorkflowInfo> = self
+        let body = self
             .client
-            .request_registered_json_query_headers_accepting(
+            .request_registered_secret_json_accepting(
                 "/sys/",
                 Method::GET,
                 &path,
                 &path,
                 &[] as &[(&str, &str)],
-                &[],
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
             .await?;
-        Ok(envelope.data)
+        workflow_typed_data_from_envelope(body)
     }
 
     /// Creates or updates one workflow without automatic retry.
@@ -5561,37 +5558,36 @@ impl Sys<'_, Authenticated> {
             cas_required: request.cas_required,
             allow_unauthenticated: request.allow_unauthenticated,
         };
-        let envelope: ResponseEnvelope<WorkflowInfo> = self
+        let body = self
             .client
-            .request_registered_json_query_headers_accepting(
+            .request_registered_secret_json_accepting(
                 "/sys/",
                 Method::POST,
                 &path,
                 &path,
                 &[] as &[(&str, &str)],
-                &[],
                 Some(&payload),
                 &[StatusCode::OK],
             )
             .await?;
-        Ok(envelope.data)
+        workflow_typed_data_from_envelope(body)
     }
 
     /// Deletes one workflow. OpenBao does not apply CAS to deletion.
     pub async fn delete_workflow(&self, path: &str) -> Result<Empty> {
         let path = workflow_path("sys/workflows/manage", path)?;
         self.client
-            .request_registered_json_query_headers_accepting(
+            .request_registered_secret_json_accepting(
                 "/sys/",
                 Method::DELETE,
                 &path,
                 &path,
                 &[] as &[(&str, &str)],
-                &[],
                 Option::<&Empty>::None,
                 &[StatusCode::NO_CONTENT],
             )
-            .await
+            .await?;
+        Ok(Empty {})
     }
 
     /// Executes an authenticated workflow with bounded arbitrary JSON input.
@@ -9170,6 +9166,24 @@ fn workflow_data_from_envelope(body: SecretVec) -> Result<WorkflowData> {
             return Ok(WorkflowData::empty());
         };
         WorkflowData::from_json_bytes(SecretVec::from_slice(data.get().as_bytes()))
+    })
+}
+
+fn workflow_typed_data_from_envelope<T>(body: SecretVec) -> Result<T>
+where
+    T: DeserializeOwned,
+{
+    body.with_secret(|bytes| {
+        #[derive(Deserialize)]
+        struct WorkflowEnvelope<'a> {
+            #[serde(borrow)]
+            data: &'a RawValue,
+        }
+
+        let envelope: WorkflowEnvelope<'_> = serde_json::from_slice(bytes)
+            .map_err(|_| Error::Decode("OpenBao workflow response did not match schema".into()))?;
+        serde_json::from_str(envelope.data.get())
+            .map_err(|_| Error::Decode("OpenBao workflow data did not match schema".into()))
     })
 }
 
