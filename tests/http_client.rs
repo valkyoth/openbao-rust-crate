@@ -3555,6 +3555,73 @@ async fn sealable_namespace_operations_reject_pre_2_6_profiles_before_transport(
 }
 
 #[tokio::test]
+async fn workflow_operations_reject_pre_2_6_profiles_before_transport() {
+    let version = OpenBaoVersion::new(2, 5, 5);
+    let policy =
+        OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+    let config = OpenBaoConfig::new("https://127.0.0.1:1")
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let unauthenticated =
+        Client::from_config(config.clone()).unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .try_with_token(SecretString::from("workflow-operator-token"))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let input = openbao::sys::WorkflowData::from_serializable(&serde_json::json!({
+        "credential": "workflow-input-secret"
+    }))
+    .unwrap_or_else(|error| panic!("{error}"));
+    let write = openbao::sys::WorkflowWriteRequest::new(SecretString::from(
+        "flow \"read\" { request \"health\" { operation = \"read\" path = \"sys/health\" } }",
+    ))
+    .unwrap_or_else(|error| panic!("{error}"));
+
+    assert!(matches!(
+        client.sys().list_workflows().await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client
+            .sys()
+            .scan_workflows(&openbao::ListPageOptions::new())
+            .await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client.sys().read_workflow("team/rotate").await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client.sys().write_workflow("team/rotate", &write).await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client.sys().delete_workflow("team/rotate").await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        client.sys().execute_workflow("team/rotate", &input).await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+
+    #[cfg(feature = "workflow-trace")]
+    assert!(matches!(
+        client.sys().trace_workflow("team/rotate", &input).await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+
+    #[cfg(feature = "unauthenticated-workflows")]
+    assert!(matches!(
+        unauthenticated
+            .sys()
+            .execute_unauthenticated_workflow("team/rotate", &input)
+            .await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+}
+
+#[tokio::test]
 async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

@@ -95,5 +95,30 @@
     "t": 2,
     "progress": 1,
     "nonce": "fixture-unseal-nonce"
+  },
+  "workflow_info_2_6_0": {
+    "path": "team/rotate",
+    "workflow": "flow \"rotate\" { request \"read\" { operation = \"read\" path = \"sys/health\" } } # fixture-workflow-secret",
+    "description": "Rotate a service credential",
+    "version": 2,
+    "cas_required": false,
+    "allow_unauthenticated": false
+  },
+  "workflow_list_2_6_0": {
+    "keys": ["team/rotate"],
+    "key_info": {
+      "team/rotate": {
+        "path": "team/rotate",
+        "workflow": "flow \"rotate\" { request \"read\" { operation = \"read\" path = \"sys/health\" } } # fixture-workflow-secret",
+        "description": "Rotate a service credential",
+        "version": 2,
+        "cas_required": false,
+        "allow_unauthenticated": false
+      }
+    }
+  },
+  "workflow_output_2_6_0": {
+    "credential": "fixture-output-token",
+    "status": "rotated"
   }
 }

@@ -21,4 +21,14 @@ fn main() {
             "cargo:warning=OIDC GET protocol support is enabled. Credentials or correlation values enter URL and HTTP-stack buffers; enforce query-free access logging."
         );
     }
+    if std::env::var_os("CARGO_FEATURE_WORKFLOW_TRACE").is_some() {
+        println!(
+            "cargo:warning=DANGER: workflow-trace can return the OpenBao token and complete intermediate workflow values. Never log trace responses."
+        );
+    }
+    if std::env::var_os("CARGO_FEATURE_UNAUTHENTICATED_WORKFLOWS").is_some() {
+        println!(
+            "cargo:warning=Unauthenticated workflow execution is enabled. Audit server configuration, every exposed workflow, and rate limiting before deployment."
+        );
+    }
 }

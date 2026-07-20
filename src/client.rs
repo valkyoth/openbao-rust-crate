@@ -1602,6 +1602,51 @@ impl<State> Client<State> {
     }
 
     #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_registered_secret_json_accepting<B, Q, K>(
+        &self,
+        scope_prefix: &'static str,
+        method: Method,
+        registry_path: &str,
+        path: &str,
+        query: &[(K, Q)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<SecretVec>
+    where
+        B: Serialize + ?Sized,
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        let resolved = self
+            .resolve_registered_openbao_endpoint(scope_prefix, &method, registry_path, query)
+            .await?;
+        let mut url = self.url_for_path(path)?;
+        if !query.is_empty() {
+            let mut pairs = url.query_pairs_mut();
+            for (key, value) in query {
+                pairs.append_pair(key.as_ref(), value.as_ref());
+            }
+        }
+        let response = self
+            .send_sensitive_json_request(resolved.method(), url, &[], body)
+            .await?;
+        let status = response.status();
+        if !accepted_statuses.contains(&status) {
+            let errors =
+                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
+                    .await
+                    .map(|envelope| envelope.errors)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|error| crate::error::sanitize_api_error(&error))
+                    .collect();
+            return Err(Error::Api { status, errors });
+        }
+        validate_json_content_type(&response)?;
+        read_response_bytes(response, self.config.max_response_bytes).await
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn request_registered_form_json_headers_accepting<T>(
         &self,
         scope_prefix: &'static str,
@@ -3484,7 +3529,7 @@ impl Write for BoundedSecretWriter {
     }
 }
 
-fn encode_bounded_json<T>(payload: &T, limit: usize) -> Result<SecretVec>
+pub(crate) fn encode_bounded_json<T>(payload: &T, limit: usize) -> Result<SecretVec>
 where
     T: Serialize + ?Sized,
 {
@@ -3606,7 +3651,7 @@ mod tests {
         task::{Context, Poll},
     };
 
-    use crate::{Empty, Error, OpenBaoCompatibilityPolicy, OpenBaoVersion};
+    use crate::{Empty, Error, Method, OpenBaoCompatibilityPolicy, OpenBaoVersion};
 
     use super::{
         Client, OpenBaoConfig, env_bool, is_cleartext_url, openbao_config_from_env_lookup,
@@ -3967,6 +4012,23 @@ mod tests {
                 endpoint: "pki.cel.role.delete",
                 version
             }) if version == OpenBaoVersion::new(2, 0, 0)
+        ));
+        assert!(!serialized.load(Ordering::SeqCst));
+
+        let result = client
+            .request_registered_secret_json_accepting(
+                "/sys/",
+                Method::POST,
+                "sys/workflows/execute/example",
+                "sys/workflows/execute/example",
+                &[] as &[(&str, &str)],
+                Some(&payload),
+                &[reqwest::StatusCode::OK],
+            )
+            .await;
+        assert!(matches!(
+            result,
+            Err(Error::UnsupportedOpenBaoCapability { .. })
         ));
         assert!(!serialized.load(Ordering::SeqCst));
     }

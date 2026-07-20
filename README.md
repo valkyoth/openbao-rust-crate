@@ -45,8 +45,9 @@ through `2.5.5`. Rust `1.97.1` is the primary checked toolchain; Rust `1.90.0`
 remains the compatibility floor.
 
 Development on `main` is onboarding OpenBao `2.6.0` for crate `2.1.0`. Its
-22-profile candidate capability registry is staged and checksum-anchored, but
-the candidate profile is introspection-only and cannot drive compatibility
+22-profile candidate capability registry is staged and checksum-anchored, with
+684 operations resolved and 6 authentication operations still pending. The
+candidate profile is introspection-only and cannot drive compatibility
 policies or request routing. The stable support claim remains `2.0.0` through
 `2.5.5` until the remaining 2.6 APIs, field rules, fixtures, and exact-image
 tests are promoted together.
@@ -164,7 +165,7 @@ Implemented now:
 - Generated read-only capability profiles with 666 stable, secret-free
   operation identities and complete exact-release range coverage.
 - On `main`, a staged 2.6.0 registry with 690 stable operation identities,
-  explicit pending dispositions, reviewed root-token route variants, and a
+  684 resolved operations, reviewed workflow and root-token routes, and a
   byte-identical projection of all 21 historical profiles.
 
 `2.0.2` keeps the stable `2.0.x` API and publishes a focused source package.
@@ -373,15 +374,15 @@ infrastructure failure, not a passing compatibility result.
 ```toml
 [dependencies]
 openbao = "2"
-serde = { version = "1.0.228", features = ["derive"] }
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "time"] }
+serde = { version = "1.0.229", features = ["derive"] }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "time"] }
 ```
 
 Some advanced examples below use JSON helper types directly:
 
 ```toml
 [dependencies]
-serde_json = "1.0.150"
+serde_json = "1.0.151"
 ```
 
 ## Quick Start
@@ -467,6 +468,10 @@ openbao = { version = "2", features = ["time"] }
 | `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Requires `transit-import-acknowledged`; uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, post-quantum, or security-boundary claim. Do not use it for classified or high-assurance key wrapping. |
 | `transit-import-acknowledged` | no | Explicit acknowledgment that Transit BYOK software wrapping passes key material through software memory and OpenSSL-managed heap. |
 | `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
+| `workflow-trace` | no | Enables OpenBao workflow diagnostic traces. Requires `workflow-trace-acknowledged`; traces can contain the caller token, request/response bodies, and complete intermediate values. Never log them. Implies `sys`. |
+| `workflow-trace-acknowledged` | no | Explicit acknowledgment for audited workflow trace builds. |
+| `unauthenticated-workflows` | no | Enables configuring and invoking token-free workflows. Requires `unauthenticated-workflows-acknowledged`; OpenBao must separately enable the conditional route and each workflow must opt in. Implies `sys`. |
+| `unauthenticated-workflows-acknowledged` | no | Explicit acknowledgment that every token-free workflow, server policy, exposure path, and rate limit was audited. |
 | `monitor-stream` | no | Enables typed `/sys/monitor` streaming. Frames are sanitizing, line-delimited, and capped at 1 MiB; direct body polling provides consumer back-pressure and dropping the stream cancels the request. Log bytes remain untrusted and are redacted from `Debug`. Implies `sys`. |
 | `raft-stream` | no | Enables exact-length streaming restore and force-restore for Raft snapshots up to 256 MiB. Overflow, truncation, and stream errors fail the request without first copying the complete snapshot. Implies `sys`. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
@@ -616,7 +621,7 @@ Selected unsupported fields fail locally and are never silently omitted.
 | Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, count, tidy, and `RenewalHint` timing helpers for caller-owned renewal loops. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate, token ceremonies, in-flight diagnostics, PKI root deletion | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. PKI root deletion also requires `PkiRootDeletion::confirm()` at the call site. |
-| System backend closure | Yes | Modern ACL, auth-mount reads, lease listings, barrier/key-share rotation, password policies, root/recovery token ceremonies, local token decoding, resultant ACL, legacy recovery-key rekey, and in-flight inspection are typed. UI headers and internal counter/request/router inspection require `unstable-internal-ops`; bounded system-log streaming requires `monitor-stream`. |
+| System backend closure | Yes | Modern ACL, auth-mount reads, lease listings, barrier/key-share rotation, password policies, root/recovery token ceremonies, local token decoding, resultant ACL, legacy recovery-key rekey, in-flight inspection, and staged OpenBao 2.6 workflow management/execution are typed. Workflow trace and token-free execution require separate acknowledgment features. UI headers and internal counter/request/router inspection require `unstable-internal-ops`; bounded system-log streaming requires `monitor-stream`. |
 
 ## Examples
 
@@ -1919,6 +1924,48 @@ async fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+Manage and execute an OpenBao 2.6 workflow while keeping its definition and
+arbitrary data out of `Debug` output:
+
+```rust,no_run
+use std::collections::BTreeMap;
+use openbao::sys::{WorkflowData, WorkflowWriteRequest};
+use openbao::{Client, Result, SecretString};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
+    let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
+    let definition = SecretString::from(
+        r#"flow "health" {
+  request "read" {
+    operation = "read"
+    path = "sys/health"
+  }
+}"#,
+    );
+    let request = WorkflowWriteRequest::new(definition)?
+        .with_description("Read server health")?;
+    let stored = client.sys().write_workflow("operations/health", &request).await?;
+    assert_eq!(stored.version, 1);
+
+    let input = WorkflowData::from_serializable(&BTreeMap::from([
+        ("request_id", "deployment-42"),
+    ]))?;
+    let output = client
+        .sys()
+        .execute_workflow("operations/health", &input)
+        .await?;
+    output.with_json_bytes(|bytes| assert!(!bytes.is_empty()));
+    Ok(())
+}
+```
+
+OpenBao `2.6.0` itself discards workflow CAS before storage. The SDK therefore
+rejects writes selecting `WorkflowWriteRequest::with_cas` or `cas_required`
+before transport while `2.6.0` is the only workflow-capable profile. Trace and
+token-free execution additionally require their paired acknowledgment features.
 
 Discover OpenBao's OpenAPI document:
 

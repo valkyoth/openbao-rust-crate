@@ -13,8 +13,11 @@
   are staged and independently validator-anchored. Commit 03 generates the
   22-profile candidate registry with 690 stable operation identities. Commit
   04 implements the changed system contracts and authenticated root-generation
-  routing. Commit 05 adds the typed sealable-namespace lifecycle and resolves
-  its four candidate operation dispositions. The historical projection remains
+  routing. Commit 05 adds the typed sealable-namespace lifecycle. Commit 06
+  adds workflow CRUD, pagination, bounded secret-aware execution, and separately
+  acknowledged trace and unauthenticated execution. The staged registry now
+  has 684 resolved operations and 6 pending authentication operations. The
+  historical projection remains
   byte-identical to the active 21-profile registry. The candidate is explicitly
   introspection-only: runtime policies and dispatch remain capped at 2.5.5
   until final cross-lock promotion in Commit 09.
@@ -128,6 +131,13 @@ promotion into the active 22-profile inventory.
    SCAN as security-blocked for the exact 2.6.0 profile, test that the SDK does
    not transmit them, and revisit only after an exact patched release fixes the
    server. Unprefixed LIST and SCAN remain supported.
+7. Exact source and image review confirmed a second OpenBao 2.6.0 workflow
+   defect: `handleWorkflowsUpdate` shadows the parsed `cas` pointer, so storage
+   always receives no CAS value. Strict create/update cannot be guaranteed and
+   setting `cas_required` can make later writes fail. Preserve the body field
+   for fixed releases, reject CAS-selected writes locally while 2.6.0 is the
+   only workflow profile, never retry, and document that exact 2.6.0 cannot
+   provide workflow CAS semantics.
 
 ## Security Decisions
 
@@ -283,6 +293,8 @@ Pentest range: `<commit-04>..<commit-05>`.
 
 Suggested title: `Add OpenBao 2.6 workflow APIs`
 
+Status: complete in this commit.
+
 - Add bounded unprefixed LIST and SCAN support, read/write/delete, CAS, and
   pagination.
 - Add authenticated execution with arbitrary but bounded secret-aware input and
@@ -292,6 +304,8 @@ Suggested title: `Add OpenBao 2.6 workflow APIs`
   fallback.
 - Represent prefixed LIST and SCAN in the capability registry but block their
   transmission for exact 2.6.0 due to the confirmed upstream panic.
+- Preserve documented body CAS without retry, and record the exact 2.6.0
+  handler defect that prevents the server from honoring it.
 
 Pentest focus: secret serialization and Debug output, trace disclosure,
 unauthenticated dispatch, path injection, unbounded JSON/HCL, CAS races,

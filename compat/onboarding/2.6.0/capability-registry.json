@@ -1444,7 +1444,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.delete.sys.workflows.manage.path.fd97c0ceb762216b",
       "method": "DELETE",
       "path_template": "/sys/workflows/manage/:path",
@@ -4598,7 +4598,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.get.sys.workflows.manage.path.ee87180627af3b4d",
       "method": "GET",
       "path_template": "/sys/workflows/manage/:path",
@@ -5750,7 +5750,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.list.sys.workflows.manage.d56f5bd597e7c057",
       "method": "LIST",
       "path_template": "/sys/workflows/manage",
@@ -5770,7 +5770,7 @@
       ]
     },
     {
-      "disposition": "pending-security-blocked",
+      "disposition": "security-blocked",
       "id": "openbao.list.sys.workflows.manage.prefix.2b17eda2604cf4c0",
       "method": "LIST",
       "path_template": "/sys/workflows/manage/:prefix",
@@ -9574,7 +9574,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.post.sys.workflows.execute.path.9e8bcd870f5aab46",
       "method": "POST",
       "path_template": "/sys/workflows/execute/:path",
@@ -9594,7 +9594,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.post.sys.workflows.manage.path.29df718cd566e007",
       "method": "POST",
       "path_template": "/sys/workflows/manage/:path",
@@ -9614,7 +9614,7 @@
       ]
     },
     {
-      "disposition": "pending-typed-gated",
+      "disposition": "typed-gated",
       "id": "openbao.post.sys.workflows.trace.path.d78214d7c5cca3f0",
       "method": "POST",
       "path_template": "/sys/workflows/trace/:path",
@@ -9634,7 +9634,7 @@
       ]
     },
     {
-      "disposition": "pending-typed-gated",
+      "disposition": "typed-gated",
       "id": "openbao.post.sys.workflows.unauthed.execute.path.2ec46f5f4df00d3d",
       "method": "POST",
       "path_template": "/sys/workflows/unauthed-execute/:path",
@@ -10118,7 +10118,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.scan.sys.workflows.manage.9dbce60d125357c9",
       "method": "SCAN",
       "path_template": "/sys/workflows/manage",
@@ -10138,7 +10138,7 @@
       ]
     },
     {
-      "disposition": "pending-security-blocked",
+      "disposition": "security-blocked",
       "id": "openbao.scan.sys.workflows.manage.prefix.af0298ec32a1b50b",
       "method": "SCAN",
       "path_template": "/sys/workflows/manage/:prefix",
@@ -10161,16 +10161,15 @@
   "schema": "openbao-staged-capability-registry/v1",
   "summary": {
     "dispositions": {
-      "pending-security-blocked": 2,
-      "pending-typed": 12,
-      "pending-typed-gated": 2,
-      "typed": 581,
-      "typed-gated": 93
+      "pending-typed": 6,
+      "security-blocked": 2,
+      "typed": 587,
+      "typed-gated": 95
     },
     "operation_count": 690,
-    "pending_operation_count": 16,
+    "pending_operation_count": 6,
     "profile_count": 22,
-    "public_operation_count": 674
+    "public_operation_count": 684
   },
   "versions": [
     "2.0.0",

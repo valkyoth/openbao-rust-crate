@@ -22,20 +22,24 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{DeserializeOwned, Error as DeError, IgnoredAny, MapAccess, SeqAccess, Visitor},
+    ser::Error as SerError,
 };
+use serde_json::value::RawValue;
 
 use crate::{
     Authenticated, Client, Error, JsonValue, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ListEntries, ResponseEnvelope, WrapInfo, deserialize_bounded_secret_string_vec,
-        deserialize_bounded_string_map, deserialize_bounded_string_map_or_default,
-        deserialize_bounded_string_vec, deserialize_optional_bounded_string_map,
-        deserialize_optional_bounded_string_vec,
+        Empty, ListEntries, MAX_RESPONSE_STRINGS, ResponseEnvelope, WrapInfo,
+        deserialize_bounded_secret_string_vec, deserialize_bounded_string_map,
+        deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
+        deserialize_optional_bounded_string_map, deserialize_optional_bounded_string_vec,
     },
 };
 
 const MAX_SYS_RANDOM_BYTES: u64 = 1_048_576;
+const MAX_WORKFLOW_DEFINITION_BYTES: usize = 1024 * 1024;
+const MAX_WORKFLOW_DATA_BYTES: usize = 8 * 1024 * 1024;
 const MAX_RAFT_SNAPSHOT_BYTES: u64 = 256 * 1024 * 1024;
 #[cfg(feature = "monitor-stream")]
 const DEFAULT_MONITOR_FRAME_BYTES: usize = 64 * 1024;
@@ -3262,6 +3266,291 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
     }
 }
 
+/// Create or update parameters for an OpenBao workflow.
+///
+/// Workflow definitions can embed request templates and literal values, so
+/// `Debug` always redacts the definition. OpenBao 2.6.0 contains an upstream
+/// handler defect that discards the `cas` field. The SDK models the wire field
+/// but rejects CAS-selected writes locally while 2.6.0 is the only workflow
+/// profile, and never retries workflow writes.
+pub struct WorkflowWriteRequest {
+    workflow: SecretString,
+    description: Option<String>,
+    cas: Option<i64>,
+    cas_required: bool,
+    allow_unauthenticated: bool,
+}
+
+impl WorkflowWriteRequest {
+    /// Creates a request from an HCL or JSON workflow definition.
+    pub fn new(workflow: SecretString) -> Result<Self> {
+        validate_workflow_definition(workflow.expose_secret())?;
+        Ok(Self {
+            workflow,
+            description: None,
+            cas: None,
+            cas_required: false,
+            allow_unauthenticated: false,
+        })
+    }
+
+    /// Sets a bounded, control-character-free description.
+    pub fn with_description(mut self, description: impl Into<String>) -> Result<Self> {
+        let description = description.into();
+        validate_system_response_metadata::<serde::de::value::Error>(&description)
+            .map_err(|_| Error::InvalidParameter("workflow description is invalid".into()))?;
+        self.description = Some(description);
+        Ok(self)
+    }
+
+    /// Sets the expected workflow version. Use `-1` for strict creation.
+    pub fn with_cas(mut self, version: i64) -> Result<Self> {
+        if version < -1 {
+            return Err(Error::InvalidParameter(
+                "workflow cas must be -1 or a non-negative version".into(),
+            ));
+        }
+        self.cas = Some(version);
+        Ok(self)
+    }
+
+    /// Requires CAS on this and future updates.
+    #[must_use]
+    pub fn require_cas(mut self, required: bool) -> Self {
+        self.cas_required = required;
+        self
+    }
+
+    /// Allows token-free execution when the server explicitly enables the
+    /// unauthenticated workflow route.
+    ///
+    /// This builder is available only with `unauthenticated-workflows` plus
+    /// `unauthenticated-workflows-acknowledged`.
+    #[cfg(feature = "unauthenticated-workflows")]
+    #[must_use]
+    pub fn allow_unauthenticated(mut self, allowed: bool) -> Self {
+        self.allow_unauthenticated = allowed;
+        self
+    }
+}
+
+impl fmt::Debug for WorkflowWriteRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("WorkflowWriteRequest")
+            .field("workflow", &"<redacted>")
+            .field("description", &self.description)
+            .field("cas", &self.cas)
+            .field("cas_required", &self.cas_required)
+            .field("allow_unauthenticated", &self.allow_unauthenticated)
+            .finish()
+    }
+}
+
+#[derive(Serialize)]
+struct WorkflowWritePayload<'a> {
+    workflow: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cas: Option<i64>,
+    cas_required: bool,
+    allow_unauthenticated: bool,
+}
+
+/// Stored OpenBao workflow metadata and definition.
+pub struct WorkflowInfo {
+    /// Canonical workflow path.
+    pub path: String,
+    /// HCL or JSON workflow definition. Treat as secret material.
+    pub workflow: SecretString,
+    /// Operator description.
+    pub description: String,
+    /// Monotonic workflow version.
+    pub version: u64,
+    /// Whether updates require check-and-set.
+    pub cas_required: bool,
+    /// Whether token-free execution is permitted by this workflow.
+    pub allow_unauthenticated: bool,
+}
+
+impl fmt::Debug for WorkflowInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("WorkflowInfo")
+            .field("path", &self.path)
+            .field("workflow", &"<redacted>")
+            .field("description", &self.description)
+            .field("version", &self.version)
+            .field("cas_required", &self.cas_required)
+            .field("allow_unauthenticated", &self.allow_unauthenticated)
+            .finish()
+    }
+}
+
+impl<'de> Deserialize<'de> for WorkflowInfo {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawWorkflowInfo {
+            #[serde(default)]
+            path: String,
+            workflow: SecretString,
+            #[serde(default)]
+            description: String,
+            version: u64,
+            #[serde(default)]
+            cas_required: bool,
+            #[serde(default)]
+            allow_unauthenticated: bool,
+        }
+
+        let raw = RawWorkflowInfo::deserialize(deserializer)?;
+        if !raw.path.is_empty() {
+            let segments = validate_endpoint_path(&raw.path).map_err(D::Error::custom)?;
+            if segments.is_empty() {
+                return Err(D::Error::custom("workflow path must not be empty"));
+            }
+        }
+        validate_workflow_definition(raw.workflow.expose_secret()).map_err(D::Error::custom)?;
+        validate_system_response_metadata::<D::Error>(&raw.description)?;
+        Ok(Self {
+            path: raw.path,
+            workflow: raw.workflow,
+            description: raw.description,
+            version: raw.version,
+            cas_required: raw.cas_required,
+            allow_unauthenticated: raw.allow_unauthenticated,
+        })
+    }
+}
+
+/// Bounded workflow list or recursive scan response.
+#[derive(Default)]
+pub struct WorkflowList {
+    /// Workflow paths in server order.
+    pub keys: Vec<String>,
+    /// Sensitive workflow definitions keyed by path.
+    pub key_info: BTreeMap<String, WorkflowInfo>,
+}
+
+impl fmt::Debug for WorkflowList {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("WorkflowList")
+            .field("key_count", &self.keys.len())
+            .field("key_info_count", &self.key_info.len())
+            .finish()
+    }
+}
+
+impl ListEntries for WorkflowList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+impl<'de> Deserialize<'de> for WorkflowList {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawWorkflowList {
+            #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+            keys: Vec<String>,
+            #[serde(default, deserialize_with = "deserialize_bounded_workflow_map")]
+            key_info: BTreeMap<String, WorkflowInfo>,
+        }
+        let raw = RawWorkflowList::deserialize(deserializer)?;
+        for key in &raw.keys {
+            validate_workflow_path_for_serde::<D::Error>(key)?;
+        }
+        Ok(Self {
+            keys: raw.keys,
+            key_info: raw.key_info,
+        })
+    }
+}
+
+/// Bounded arbitrary JSON object used for workflow input, output, and traces.
+///
+/// The bytes live in sanitizing storage and `Debug` never reveals their
+/// contents. The object is capped at 8 MiB independently of client transport
+/// limits.
+pub struct WorkflowData {
+    contents: SecretVec,
+}
+
+impl WorkflowData {
+    /// Creates workflow data from a JSON object in sanitizing storage.
+    pub fn from_json_bytes(contents: SecretVec) -> Result<Self> {
+        validate_workflow_json(&contents)?;
+        Ok(Self { contents })
+    }
+
+    /// Serializes a value into a bounded sanitizing JSON object.
+    pub fn from_serializable<T>(value: &T) -> Result<Self>
+    where
+        T: Serialize + ?Sized,
+    {
+        Self::from_json_bytes(crate::client::encode_bounded_json(
+            value,
+            MAX_WORKFLOW_DATA_BYTES,
+        )?)
+    }
+
+    /// Creates an empty workflow input object.
+    #[must_use]
+    pub fn empty() -> Self {
+        Self {
+            contents: SecretVec::from_slice(b"{}"),
+        }
+    }
+
+    /// Borrows the validated JSON bytes for explicit secret-aware handling.
+    pub fn with_json_bytes<T>(&self, inspect: impl FnOnce(&[u8]) -> T) -> T {
+        self.contents.with_secret(inspect)
+    }
+
+    /// Returns the encoded byte length without exposing contents.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.contents.len()
+    }
+
+    /// Returns whether the encoded object is empty. Valid workflow data is
+    /// never byte-empty, so this normally returns `false`.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.contents.is_empty()
+    }
+}
+
+impl fmt::Debug for WorkflowData {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("WorkflowData")
+            .field("contents", &"<redacted>")
+            .field("encoded_len", &self.contents.len())
+            .finish()
+    }
+}
+
+impl Serialize for WorkflowData {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.contents.with_secret(|bytes| {
+            let raw = serde_json::from_slice::<&RawValue>(bytes).map_err(S::Error::custom)?;
+            raw.serialize(serializer)
+        })
+    }
+}
+
 /// ACL policy list response.
 #[derive(Clone, Debug, Serialize)]
 pub struct PolicyList {
@@ -5015,6 +5304,35 @@ impl<State> Sys<'_, State> {
 }
 
 impl Sys<'_, Unauthenticated> {
+    /// Executes a workflow without a token when OpenBao was configured with
+    /// `allow_unauthenticated_workflows` and the stored workflow opts in.
+    ///
+    /// Available only with `unauthenticated-workflows` plus
+    /// `unauthenticated-workflows-acknowledged`. The route is conditionally
+    /// registered by OpenBao; this method never probes or falls back to an
+    /// authenticated route.
+    #[cfg(feature = "unauthenticated-workflows")]
+    pub async fn execute_unauthenticated_workflow(
+        &self,
+        path: &str,
+        input: &WorkflowData,
+    ) -> Result<WorkflowData> {
+        let path = workflow_path("sys/workflows/unauthed-execute", path)?;
+        let body = self
+            .client
+            .request_registered_secret_json_accepting(
+                "/sys/",
+                Method::POST,
+                &path,
+                &path,
+                &[] as &[(&str, &str)],
+                Some(input),
+                &[StatusCode::OK],
+            )
+            .await?;
+        workflow_data_from_envelope(body)
+    }
+
     /// Initializes a production OpenBao instance.
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
@@ -5154,6 +5472,169 @@ impl Sys<'_, Unauthenticated> {
 }
 
 impl Sys<'_, Authenticated> {
+    /// Lists top-level workflow paths.
+    ///
+    /// OpenBao 2.6.0 returns `404` when no workflows exist; this method
+    /// normalizes that state to an empty list.
+    pub async fn list_workflows(&self) -> Result<WorkflowList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let result: Result<ResponseEnvelope<WorkflowList>> = self
+            .client
+            .request_registered_json_query_headers_accepting(
+                "/sys/",
+                method,
+                "sys/workflows/manage",
+                "sys/workflows/manage",
+                &[] as &[(&str, &str)],
+                &[],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await;
+        match result {
+            Ok(envelope) => Ok(envelope.data),
+            Err(Error::Api { status, .. }) if status == StatusCode::NOT_FOUND => {
+                Ok(WorkflowList::default())
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Recursively scans workflow paths with bounded pagination options.
+    pub async fn scan_workflows(&self, options: &crate::ListPageOptions) -> Result<WorkflowList> {
+        let method =
+            Method::from_bytes(b"SCAN").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        let query = options.query_pairs();
+        let envelope: ResponseEnvelope<WorkflowList> = self
+            .client
+            .request_registered_json_query_headers_accepting(
+                "/sys/",
+                method,
+                "sys/workflows/manage",
+                "sys/workflows/manage",
+                &query,
+                &[],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads one stored workflow and its sensitive definition.
+    pub async fn read_workflow(&self, path: &str) -> Result<WorkflowInfo> {
+        let path = workflow_path("sys/workflows/manage", path)?;
+        let envelope: ResponseEnvelope<WorkflowInfo> = self
+            .client
+            .request_registered_json_query_headers_accepting(
+                "/sys/",
+                Method::GET,
+                &path,
+                &path,
+                &[] as &[(&str, &str)],
+                &[],
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Creates or updates one workflow without automatic retry.
+    ///
+    /// OpenBao 2.6.0 has a server-side CAS propagation defect. CAS-selected
+    /// writes are rejected before transport while that release is the only
+    /// workflow-capable profile. A future fixed profile can safely enable the
+    /// already-modelled body field without changing this request type.
+    pub async fn write_workflow(
+        &self,
+        path: &str,
+        request: &WorkflowWriteRequest,
+    ) -> Result<WorkflowInfo> {
+        validate_workflow_write_request(request)?;
+        let path = workflow_path("sys/workflows/manage", path)?;
+        let payload = WorkflowWritePayload {
+            workflow: request.workflow.expose_secret(),
+            description: request.description.as_deref(),
+            cas: request.cas,
+            cas_required: request.cas_required,
+            allow_unauthenticated: request.allow_unauthenticated,
+        };
+        let envelope: ResponseEnvelope<WorkflowInfo> = self
+            .client
+            .request_registered_json_query_headers_accepting(
+                "/sys/",
+                Method::POST,
+                &path,
+                &path,
+                &[] as &[(&str, &str)],
+                &[],
+                Some(&payload),
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Deletes one workflow. OpenBao does not apply CAS to deletion.
+    pub async fn delete_workflow(&self, path: &str) -> Result<Empty> {
+        let path = workflow_path("sys/workflows/manage", path)?;
+        self.client
+            .request_registered_json_query_headers_accepting(
+                "/sys/",
+                Method::DELETE,
+                &path,
+                &path,
+                &[] as &[(&str, &str)],
+                &[],
+                Option::<&Empty>::None,
+                &[StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Executes an authenticated workflow with bounded arbitrary JSON input.
+    pub async fn execute_workflow(&self, path: &str, input: &WorkflowData) -> Result<WorkflowData> {
+        let path = workflow_path("sys/workflows/execute", path)?;
+        let body = self
+            .client
+            .request_registered_secret_json_accepting(
+                "/sys/",
+                Method::POST,
+                &path,
+                &path,
+                &[] as &[(&str, &str)],
+                Some(input),
+                &[StatusCode::OK],
+            )
+            .await?;
+        workflow_data_from_envelope(body)
+    }
+
+    /// Executes a workflow in diagnostic trace mode.
+    ///
+    /// Trace output can contain the caller's OpenBao token, generated request
+    /// bodies, response bodies, and all intermediate values. It remains in
+    /// [`WorkflowData`] sanitizing storage and must never be logged.
+    #[cfg(feature = "workflow-trace")]
+    pub async fn trace_workflow(&self, path: &str, input: &WorkflowData) -> Result<WorkflowData> {
+        let path = workflow_path("sys/workflows/trace", path)?;
+        let body = self
+            .client
+            .request_registered_secret_json_accepting(
+                "/sys/",
+                Method::POST,
+                &path,
+                &path,
+                &[] as &[(&str, &str)],
+                Some(input),
+                &[StatusCode::OK],
+            )
+            .await?;
+        workflow_data_from_envelope(body)
+    }
+
     #[cfg(feature = "operator-ops")]
     async fn request_generate_root_json<T, B>(
         &self,
@@ -8619,6 +9100,138 @@ fn validate_query_string_value(value: &str, kind: &'static str) -> Result<()> {
     Ok(())
 }
 
+fn workflow_path(prefix: &str, path: &str) -> Result<String> {
+    let segments = validate_endpoint_path(path)?;
+    if segments.is_empty() {
+        return Err(Error::InvalidPath("workflow path must not be empty".into()));
+    }
+    Ok(format!("{prefix}/{}", segments.join("/")))
+}
+
+fn validate_workflow_definition(workflow: &str) -> Result<()> {
+    if workflow.is_empty() {
+        return Err(Error::InvalidParameter(
+            "workflow definition must not be empty".into(),
+        ));
+    }
+    if workflow.len() > MAX_WORKFLOW_DEFINITION_BYTES {
+        return Err(Error::InvalidParameter(
+            "workflow definition exceeds byte limit".into(),
+        ));
+    }
+    if workflow.contains('\0') {
+        return Err(Error::InvalidParameter(
+            "workflow definition must not contain NUL".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_workflow_write_request(request: &WorkflowWriteRequest) -> Result<()> {
+    validate_workflow_definition(request.workflow.expose_secret())?;
+    if request.cas.is_some() || request.cas_required {
+        return Err(Error::InvalidParameter(
+            "workflow CAS is unsafe on OpenBao 2.6.0 because the server discards the cas field"
+                .into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_workflow_json(contents: &SecretVec) -> Result<()> {
+    if contents.len() > MAX_WORKFLOW_DATA_BYTES {
+        return Err(Error::InvalidParameter(
+            "workflow JSON exceeds byte limit".into(),
+        ));
+    }
+    contents.with_secret(|bytes| {
+        let raw = serde_json::from_slice::<&RawValue>(bytes)
+            .map_err(|_| Error::InvalidParameter("workflow data must be valid JSON".into()))?;
+        if !raw.get().trim_start().starts_with('{') {
+            return Err(Error::InvalidParameter(
+                "workflow data must be a JSON object".into(),
+            ));
+        }
+        Ok(())
+    })
+}
+
+fn workflow_data_from_envelope(body: SecretVec) -> Result<WorkflowData> {
+    body.with_secret(|bytes| {
+        #[derive(Deserialize)]
+        struct WorkflowEnvelope<'a> {
+            #[serde(default, borrow)]
+            data: Option<&'a RawValue>,
+        }
+
+        let envelope: WorkflowEnvelope<'_> = serde_json::from_slice(bytes)
+            .map_err(|_| Error::Decode("OpenBao workflow response did not match schema".into()))?;
+        let Some(data) = envelope.data.filter(|value| value.get() != "null") else {
+            return Ok(WorkflowData::empty());
+        };
+        WorkflowData::from_json_bytes(SecretVec::from_slice(data.get().as_bytes()))
+    })
+}
+
+fn validate_workflow_path_for_serde<E>(path: &str) -> core::result::Result<(), E>
+where
+    E: serde::de::Error,
+{
+    let segments = validate_endpoint_path(path).map_err(E::custom)?;
+    if segments.is_empty() {
+        return Err(E::custom("workflow path must not be empty"));
+    }
+    Ok(())
+}
+
+fn deserialize_bounded_workflow_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, WorkflowInfo>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct WorkflowMapVisitor;
+
+    impl<'de> Visitor<'de> for WorkflowMapVisitor {
+        type Value = BTreeMap<String, WorkflowInfo>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                formatter,
+                "a map of at most {MAX_RESPONSE_STRINGS} workflow definitions"
+            )
+        }
+
+        fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut values = BTreeMap::new();
+            let mut entries = 0_usize;
+            while let Some(key) = map.next_key::<String>()? {
+                if entries >= MAX_RESPONSE_STRINGS {
+                    let _ignored = map.next_value::<IgnoredAny>()?;
+                    return Err(A::Error::custom("workflow map exceeds item limit"));
+                }
+                validate_workflow_path_for_serde::<A::Error>(&key)?;
+                let value = map.next_value::<WorkflowInfo>()?;
+                if value.path != key {
+                    return Err(A::Error::custom(
+                        "workflow map key does not match response path",
+                    ));
+                }
+                if values.insert(key, value).is_some() {
+                    return Err(A::Error::custom("workflow map contains a duplicate path"));
+                }
+                entries += 1;
+            }
+            Ok(values)
+        }
+    }
+
+    deserializer.deserialize_map(WorkflowMapVisitor)
+}
+
 fn deserialize_null_default<'de, D, T>(deserializer: D) -> core::result::Result<T, D::Error>
 where
     D: Deserializer<'de>,
@@ -9375,7 +9988,8 @@ mod tests {
         RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest,
         ResultantAcl, SealStatus, SysHashAlgorithm, SysHashRequest, SysRandomRequest,
         SysRandomResponse, SysRandomSource, UiMounts, UiNamespaces, UnsealStatus, VersionHistory,
-        VersionHistoryEntry, audited_request_header_path, internal_ui_mount_path,
+        VersionHistoryEntry, WorkflowData, WorkflowInfo, WorkflowList, WorkflowWritePayload,
+        WorkflowWriteRequest, audited_request_header_path, internal_ui_mount_path,
         locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
         sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
         validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
@@ -9440,6 +10054,123 @@ mod tests {
         assert!(super::validate_query_string_value("service", "lease type").is_ok());
         assert!(super::validate_query_string_value("", "lease type").is_err());
         assert!(super::validate_query_string_value("service\n", "lease type").is_err());
+    }
+
+    #[test]
+    fn workflow_paths_payloads_and_debug_are_secret_aware() {
+        assert_eq!(
+            super::workflow_path("sys/workflows/manage", "team/rotate")
+                .unwrap_or_else(|error| panic!("{error}")),
+            "sys/workflows/manage/team/rotate"
+        );
+        assert!(super::workflow_path("sys/workflows/manage", "../rotate").is_err());
+        assert!(super::workflow_path("sys/workflows/manage", "").is_err());
+
+        let request = WorkflowWriteRequest::new(SecretString::from("secret-workflow-hcl"))
+            .and_then(|request| request.with_description("rotation workflow"))
+            .and_then(|request| request.with_cas(7))
+            .unwrap_or_else(|error| panic!("{error}"))
+            .require_cas(true);
+        #[cfg(feature = "unauthenticated-workflows")]
+        let request = request.allow_unauthenticated(true);
+        let debug = format!("{request:?}");
+        assert!(!debug.contains("secret-workflow-hcl"));
+        let payload = WorkflowWritePayload {
+            workflow: request.workflow.expose_secret(),
+            description: request.description.as_deref(),
+            cas: request.cas,
+            cas_required: request.cas_required,
+            allow_unauthenticated: request.allow_unauthenticated,
+        };
+        let encoded = serde_json::to_value(payload)
+            .unwrap_or_else(|error| panic!("workflow payload did not serialize: {error}"));
+        assert_eq!(encoded["cas"], 7);
+        assert_eq!(encoded["cas_required"], true);
+        assert_eq!(
+            encoded["allow_unauthenticated"],
+            cfg!(feature = "unauthenticated-workflows")
+        );
+        assert!(WorkflowWriteRequest::new(SecretString::from("")).is_err());
+        assert!(
+            WorkflowWriteRequest::new(SecretString::from("flow {}"))
+                .and_then(|request| request.with_cas(-2))
+                .is_err()
+        );
+        assert!(super::validate_workflow_write_request(&request).is_err());
+    }
+
+    #[test]
+    fn workflow_data_is_bounded_object_json_and_redacted() {
+        let data = WorkflowData::from_json_bytes(sanitization::SecretVec::from_slice(
+            br#"{"password":"fixture-workflow-secret"}"#,
+        ))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(!data.is_empty());
+        assert!(!format!("{data:?}").contains("fixture-workflow-secret"));
+        data.with_json_bytes(|bytes| assert!(bytes.ends_with(b"}")));
+        assert!(WorkflowData::from_json_bytes(sanitization::SecretVec::from_slice(b"[]")).is_err());
+        assert!(
+            WorkflowData::from_json_bytes(sanitization::SecretVec::from_slice(b"not-json"))
+                .is_err()
+        );
+
+        let envelope = sanitization::SecretVec::from_slice(
+            br#"{"data":{"token":"trace-token-value"},"warnings":null}"#,
+        );
+        let response =
+            super::workflow_data_from_envelope(envelope).unwrap_or_else(|error| panic!("{error}"));
+        assert!(!format!("{response:?}").contains("trace-token-value"));
+        response.with_json_bytes(|bytes| assert!(bytes.windows(11).any(|v| v == b"trace-token")));
+    }
+
+    #[test]
+    fn workflow_response_types_bound_and_redact_definitions() {
+        let info: WorkflowInfo = serde_json::from_value(serde_json::json!({
+            "path": "team/rotate",
+            "workflow": "fixture-private-workflow-definition",
+            "description": "rotation workflow",
+            "version": 3,
+            "cas_required": true,
+            "allow_unauthenticated": false
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            info.workflow.expose_secret(),
+            "fixture-private-workflow-definition"
+        );
+        assert!(!format!("{info:?}").contains("fixture-private-workflow-definition"));
+
+        let list: WorkflowList = serde_json::from_value(serde_json::json!({
+            "keys": ["team/rotate"],
+            "key_info": {
+                "team/rotate": {
+                    "path": "team/rotate",
+                    "workflow": "fixture-private-workflow-definition",
+                    "description": "rotation workflow",
+                    "version": 3
+                }
+            }
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(list.keys, ["team/rotate"]);
+        assert!(!format!("{list:?}").contains("fixture-private-workflow-definition"));
+
+        let duplicate = r#"{
+            "keys": ["team/rotate"],
+            "key_info": {
+                "team/rotate": {
+                    "path": "team/rotate",
+                    "workflow": "first",
+                    "version": 1
+                },
+                "team/rotate": {
+                    "path": "team/rotate",
+                    "workflow": "second",
+                    "version": 2
+                }
+            }
+        }"#;
+        assert!(serde_json::from_str::<WorkflowList>(duplicate).is_err());
     }
 
     #[tokio::test]

@@ -1180,7 +1180,7 @@ mod tests {
         let operations = openbao_operations();
         let versions = openbao_profile_versions();
 
-        assert_eq!(operations.len(), 674);
+        assert_eq!(operations.len(), 684);
         assert_eq!(versions.len(), 22);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));

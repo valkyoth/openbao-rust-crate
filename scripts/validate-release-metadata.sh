@@ -120,6 +120,8 @@ check_grep 'version = "=2.0.2"' fuzz/Cargo.toml
 check_grep 'version = "=2.0.2"' tests/fixtures/reqwest-native-unification/Cargo.toml
 check_grep 'Unique documented rows: `644`' docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
 check_grep 'oidc-get-callback-acknowledged = \[\]' Cargo.toml
+check_grep 'workflow-trace-acknowledged = \[\]' Cargo.toml
+check_grep 'unauthenticated-workflows-acknowledged = \[\]' Cargo.toml
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
 check_grep 'unsafe_code = "forbid"' Cargo.toml
 check_grep '0.1.0 - Secure Core And KV v2' docs/RELEASE_PLAN.md
@@ -183,6 +185,11 @@ fi
 
 if sed -n '/^default = \[/,/^\]/p' Cargo.toml | grep -q 'oidc-get-callback-acknowledged'; then
   echo "OIDC GET callback acknowledgment must not be in default features" >&2
+  exit 1
+fi
+
+if sed -n '/^default = \[/,/^\]/p' Cargo.toml | grep -Eq 'workflow-trace|unauthenticated-workflows'; then
+  echo "dangerous workflow features must not be in default features" >&2
   exit 1
 fi
 

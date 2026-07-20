@@ -25,6 +25,7 @@ use openbao::sys::SealableNamespaceCreation;
 use openbao::sys::{
     CorsConfig, Health, LeaseLookup, NamespaceSealStatus, PluginInfo, PolicyInfo, PolicyList,
     RateLimitQuotaInfo, RateLimitQuotaList, SealStatus, UnsealStatus, VersionHistoryEntry,
+    WorkflowData, WorkflowInfo, WorkflowList,
 };
 use openbao::{ExposeSecret, ResponseEnvelope, SecretString};
 use serde::Deserialize;
@@ -75,6 +76,9 @@ struct OpenBao26SystemFixtures {
     #[cfg(feature = "operator-ops")]
     namespace_creation_2_6_0: serde_json::Value,
     namespace_seal_status_2_6_0: serde_json::Value,
+    workflow_info_2_6_0: serde_json::Value,
+    workflow_list_2_6_0: serde_json::Value,
+    workflow_output_2_6_0: serde_json::Value,
 }
 
 #[test]
@@ -213,6 +217,15 @@ fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), B
         serde_json::from_value(fixtures.namespace_seal_status_2_6_0)?;
     assert!(namespace_status.sealed);
     assert_eq!(namespace_status.progress, 1);
+
+    let workflow: WorkflowInfo = serde_json::from_value(fixtures.workflow_info_2_6_0)?;
+    assert_eq!(workflow.version, 2);
+    assert!(!format!("{workflow:?}").contains("fixture-workflow-secret"));
+    let workflows: WorkflowList = serde_json::from_value(fixtures.workflow_list_2_6_0)?;
+    assert_eq!(workflows.keys, ["team/rotate"]);
+    assert!(!format!("{workflows:?}").contains("fixture-workflow-secret"));
+    let output = WorkflowData::from_serializable(&fixtures.workflow_output_2_6_0)?;
+    assert!(!format!("{output:?}").contains("fixture-output-token"));
 
     #[cfg(feature = "operator-ops")]
     {

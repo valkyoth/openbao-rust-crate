@@ -1309,6 +1309,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
+        "openbao.delete.sys.workflows.manage.path.fd97c0ceb762216b",
+        OpenBaoHttpMethod::Delete,
+        "/sys/workflows/manage/:path",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
         "openbao.delete.totp.keys.name.85cbaeca13de7af7",
         OpenBaoHttpMethod::Delete,
         "/totp/keys/:name",
@@ -4192,6 +4210,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
+        "openbao.get.sys.workflows.manage.path.ee87180627af3b4d",
+        OpenBaoHttpMethod::Get,
+        "/sys/workflows/manage/:path",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
         "openbao.get.totp.code.name.77c951fc7971c2c3",
         OpenBaoHttpMethod::Get,
         "/totp/code/:name",
@@ -5214,6 +5250,42 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.list.sys.workflows.manage.d56f5bd597e7c057",
+        OpenBaoHttpMethod::List,
+        "/sys/workflows/manage",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.list.sys.workflows.manage.prefix.2b17eda2604cf4c0",
+        OpenBaoHttpMethod::List,
+        "/sys/workflows/manage/:prefix",
+        OpenBaoOperationDisposition::SecurityBlocked,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
                 OpenBaoVersion::new(2, 6, 0),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
             ),
@@ -8666,6 +8738,78 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
+        "openbao.post.sys.workflows.execute.path.9e8bcd870f5aab46",
+        OpenBaoHttpMethod::Post,
+        "/sys/workflows/execute/:path",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.post.sys.workflows.manage.path.29df718cd566e007",
+        OpenBaoHttpMethod::Post,
+        "/sys/workflows/manage/:path",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.post.sys.workflows.trace.path.d78214d7c5cca3f0",
+        OpenBaoHttpMethod::Post,
+        "/sys/workflows/trace/:path",
+        OpenBaoOperationDisposition::TypedGated,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.post.sys.workflows.unauthed.execute.path.2ec46f5f4df00d3d",
+        OpenBaoHttpMethod::Post,
+        "/sys/workflows/unauthed-execute/:path",
+        OpenBaoOperationDisposition::TypedGated,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
         "openbao.post.sys.wrapping.lookup.02c8da1b0aba6490",
         OpenBaoHttpMethod::Post,
         "/sys/wrapping/lookup",
@@ -9088,6 +9232,42 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.scan.sys.workflows.manage.9dbce60d125357c9",
+        OpenBaoHttpMethod::Scan,
+        "/sys/workflows/manage",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.scan.sys.workflows.manage.prefix.af0298ec32a1b50b",
+        OpenBaoHttpMethod::Scan,
+        "/sys/workflows/manage/:prefix",
+        OpenBaoOperationDisposition::SecurityBlocked,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
                 OpenBaoVersion::new(2, 6, 0),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
             ),

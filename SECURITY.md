@@ -154,6 +154,30 @@ without a producer task or channel, so consumer polling supplies back-pressure.
 Dropping the stream drops the response body and cancels the request. Transport-
 owned receive chunks remain subject to the residual-memory boundary below.
 
+## OpenBao 2.6 Workflows
+
+Workflow definitions and arbitrary execution input/output are treated as
+secret material. `WorkflowWriteRequest`, `WorkflowInfo`, `WorkflowList`, and
+`WorkflowData` redact definitions or values from `Debug`; arbitrary JSON is
+restricted to an object and capped at 8 MiB in sanitizing storage. Workflow
+paths use the same structured validation as other typed endpoints.
+
+Trace execution is not a normal observability API. OpenBao 2.6 trace responses
+can contain the caller token, generated request and response bodies, and every
+intermediate value. It requires both `workflow-trace` and
+`workflow-trace-acknowledged`. Token-free execution and the builder that opts a
+workflow into it require both `unauthenticated-workflows` and
+`unauthenticated-workflows-acknowledged`; the client calls only the conditional
+unauthenticated route and never probes or falls back to authenticated dispatch.
+
+OpenBao 2.6.0 has two confirmed upstream workflow defects. Its update handler
+discards the supplied `cas` value before storage, so strict creation and update
+CAS cannot be relied upon and enabling `cas_required` can make a workflow
+unwritable. Its prefixed LIST and SCAN handlers panic. The SDK models body CAS
+but rejects CAS-selected workflow writes before transport while 2.6.0 is the
+only workflow profile, never retries writes, and classifies prefixed LIST/SCAN
+as security-blocked for exact 2.6.0.
+
 ## Residual Secret Memory
 
 After a JSON request body is handed to `reqwest`, the transport stack, TLS

@@ -17,7 +17,11 @@
 //! bootstrap, mount management, audit devices, exact and prefix lease helpers,
 //! password policies, resultant ACL inspection, operator-gated root/recovery
 //! token ceremonies, in-flight request diagnostics, plugin catalog operations,
-//! SSH, TOTP, and raw JSON calls for advanced users.
+//! OpenBao 2.6 workflow management and bounded secret-aware execution, SSH,
+//! TOTP, and raw JSON calls for advanced users. Workflow trace and token-free
+//! execution require separate acknowledgment feature pairs because traces can
+//! expose the caller token and unauthenticated routes expand public attack
+//! surface.
 //! Public raw JSON, byte, and response-wrapping transports require the
 //! non-default `raw-api` plus `raw-api-acknowledged` features because they
 //! bypass typed endpoint validation and operation-specific feature gates.
@@ -120,6 +124,22 @@ compile_error!(
 );
 
 #[cfg(all(
+    feature = "workflow-trace",
+    not(feature = "workflow-trace-acknowledged")
+))]
+compile_error!(
+    "The workflow-trace feature can return the caller token and complete intermediate workflow values. Add feature \"workflow-trace-acknowledged\" only for an audited diagnostic build."
+);
+
+#[cfg(all(
+    feature = "unauthenticated-workflows",
+    not(feature = "unauthenticated-workflows-acknowledged")
+))]
+compile_error!(
+    "The unauthenticated-workflows feature exposes token-free workflow execution when the OpenBao server enables that route. Add feature \"unauthenticated-workflows-acknowledged\" only after auditing every exposed workflow and server policy."
+);
+
+#[cfg(all(
     feature = "sensitive-http-test-only",
     not(feature = "sensitive-http-test-only-acknowledged")
 ))]
@@ -214,7 +234,7 @@ pub use response::{
     BoundedStringList, Empty, ListEntries, ListPageOptions, MAX_RESPONSE_STRINGS, ResponseEnvelope,
     deserialize_bounded_string_vec,
 };
-pub use sanitization::{self, SecretVec, SecureSanitize, sanitize_bytes};
+pub use sanitization::{self, SecretVec, SecureSanitize, wipe::bytes as sanitize_bytes};
 pub use secrecy::{self, ExposeSecret, SecretString};
 pub use serde_json::{self, Value as JsonValue};
 #[cfg(feature = "time")]

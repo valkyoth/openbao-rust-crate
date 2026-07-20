@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Added
+
+- Added staged OpenBao 2.6 workflow list/scan, read/write/delete, and
+  authenticated execution APIs with bounded sanitizing definitions and JSON
+  input/output.
+- Added separately acknowledged `workflow-trace` and
+  `unauthenticated-workflows` feature pairs, redacted trace handling, and
+  conditional token-free dispatch without route probing or fallback.
+
+### Security
+
+- Classified broken prefixed workflow LIST/SCAN routes as security-blocked for
+  exact OpenBao 2.6.0 and documented the upstream workflow CAS propagation
+  defect. Workflow writes are never retried.
+
 ## 2.0.2 - 2026-07-12
 
 ### Changed
