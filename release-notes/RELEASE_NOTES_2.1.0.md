@@ -58,12 +58,14 @@ deferred operation in the profile.
 - Sensitive request failures drop the response without downloading or parsing
   server-provided text. Bootstrap preserves race convergence by re-reading and
   validating authoritative typed state after ambiguous create responses,
-  rather than classifying reflected error text. Successful warnings are
-  omitted from envelope debug output. Schema-free system JSON plus Identity
-  and PKI extension values enforce shared recursive depth, node, string-byte,
-  duplicate-key, and item bounds; excess entries are rejected before their
-  contents are parsed, and primitive PKI maps reject containers before
-  retaining their contents.
+  rather than classifying reflected error text. For sensitive failures,
+  `Error::is_permission_denied` and `Error::is_conflict` therefore classify
+  only HTTP 403 and 409 respectively; textual HTTP 400 detection is limited to
+  retained public diagnostics. Successful warnings are omitted from envelope
+  debug output. Schema-free system JSON plus Identity and PKI extension values
+  enforce shared recursive depth, node, string-byte, duplicate-key, and item
+  bounds; excess entries are rejected before their contents are parsed, and
+  primitive PKI maps reject containers before retaining their contents.
 - Added cancellation-safe `WrappedResponse::try_unwrap(&mut self)`. Cancellation
   preserves the local token; transport and decode failures remain
   outcome-unknown and must not be retried automatically.

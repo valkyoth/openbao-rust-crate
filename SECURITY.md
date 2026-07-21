@@ -100,8 +100,11 @@ Please include:
   credentials cannot enter loggable `Error` strings or consume the configured
   response-body budget. Bootstrap create races are resolved by re-reading and
   validating authoritative typed server state rather than classifying error
-  text. Successful response warnings remain explicitly accessible but are
-  omitted from `ResponseEnvelope` debug output.
+  text. Consequently, `Error::is_permission_denied` and `Error::is_conflict`
+  classify sensitive failures from HTTP 403 and 409 respectively; their
+  textual HTTP 400 detection applies only to retained public diagnostics.
+  Successful response warnings remain explicitly accessible but are omitted
+  from `ResponseEnvelope` debug output.
 - Public raw JSON, byte, retry, and response-wrapping transports are disabled
   unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
   bypass typed capability selection, endpoint validation, and

@@ -76,6 +76,8 @@ All notable changes to this project are documented here.
   sensitive failure responses are dropped without downloading or parsing their
   bodies, and ambiguous mount, auth-method, or Transit-key create responses are
   resolved by re-reading authoritative typed server state. Extended the
+  `Error::is_permission_denied` and `Error::is_conflict` documentation to make
+  their status-only behavior for sensitive failures explicit. Extended the
   recursive JSON budget to Identity OIDC/JWKS extension values and PKI
   extension metadata, with one aggregate budget per container, rejection of
   excess entries before their contents are parsed, and allocation-free

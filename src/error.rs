@@ -270,6 +270,11 @@ impl Error {
     /// message contains `permission denied`, which OpenBao can return outside
     /// HTTP 403 in some policy-check paths. It is a superset of
     /// [`Self::is_forbidden`].
+    ///
+    /// Sensitive request failures discard the server response body and
+    /// diagnostics. For those errors, this method can identify permission
+    /// denial only from HTTP 403. Textual detection applies only when public,
+    /// non-sensitive diagnostics were retained.
     pub fn is_permission_denied(&self) -> bool {
         self.status() == Some(StatusCode::FORBIDDEN)
             || matches!(
@@ -285,6 +290,10 @@ impl Error {
     ///
     /// OpenBao sometimes reports duplicate mounts and keys as HTTP 400 with
     /// textual `already exists`/`already in use` messages rather than HTTP 409.
+    /// Sensitive request failures discard the server response body and
+    /// diagnostics, so this method identifies those failures as conflicts only
+    /// when OpenBao returns HTTP 409. Textual HTTP 400 detection applies only
+    /// when public, non-sensitive diagnostics were retained.
     pub fn is_conflict(&self) -> bool {
         match self {
             Self::Api { status, .. } if *status == StatusCode::CONFLICT => true,
