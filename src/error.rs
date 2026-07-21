@@ -69,6 +69,9 @@ pub enum Error {
     /// Bootstrap convergence detected that a concurrent writer changed the
     /// target during read-compare-write.
     BootstrapContention(&'static str),
+    /// Bootstrap found an existing security-sensitive configuration that it
+    /// cannot safely replace while preserving unmanaged fields.
+    UnsafeBootstrapConfiguration(&'static str),
     /// The request failed before an OpenBao response could be decoded.
     ///
     /// Transport errors intentionally avoid retaining the underlying HTTP
@@ -157,6 +160,12 @@ impl fmt::Display for Error {
                     "OpenBao bootstrap contention detected: {message}"
                 )
             }
+            Self::UnsafeBootstrapConfiguration(message) => {
+                write!(
+                    formatter,
+                    "unsafe OpenBao bootstrap configuration: {message}"
+                )
+            }
             Self::Transport(message) => write!(formatter, "OpenBao transport error: {message}"),
             Self::Decode(error) => write!(formatter, "OpenBao decode error: {error}"),
             Self::Api { status, errors } if errors.is_empty() => {
@@ -210,6 +219,12 @@ impl Error {
     /// Returns true when bootstrap convergence detected a concurrent writer.
     pub fn is_bootstrap_contention(&self) -> bool {
         matches!(self, Self::BootstrapContention(_))
+    }
+
+    /// Returns true when bootstrap refused to replace an existing security
+    /// configuration because doing so could discard unmanaged fields.
+    pub fn is_unsafe_bootstrap_configuration(&self) -> bool {
+        matches!(self, Self::UnsafeBootstrapConfiguration(_))
     }
 
     /// Returns true when OpenBao rate-limited the request.
@@ -376,6 +391,21 @@ mod tests {
         assert_eq!(error.status(), Some(StatusCode::NOT_FOUND));
         assert!(error.is_not_found());
         assert!(!Error::MissingToken.is_not_found());
+    }
+
+    #[test]
+    fn unsafe_bootstrap_configuration_has_a_dedicated_helper() {
+        let error = Error::UnsafeBootstrapConfiguration(
+            "state-preserving remediation is required before bootstrap",
+        );
+
+        assert!(error.is_unsafe_bootstrap_configuration());
+        assert!(!error.is_bootstrap_contention());
+        assert!(
+            error
+                .to_string()
+                .starts_with("unsafe OpenBao bootstrap configuration:")
+        );
     }
 
     #[test]

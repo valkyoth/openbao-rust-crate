@@ -618,7 +618,9 @@ impl AdminBootstrap {
     /// Policy convergence is not atomic: a concurrent writer can modify the
     /// policy after the read phase and before the write phase. This method is
     /// safe only when bootstrap runs are serialized externally for the target
-    /// OpenBao cluster.
+    /// OpenBao cluster. If an OpenBao 2.6 identity-template delimiter override
+    /// is already enabled, [`Self::run`] fails before writing because replacing
+    /// the policy could discard expiration, version, or CAS controls.
     pub fn ensure_policy_document(
         &mut self,
         name: impl AsRef<str>,
@@ -656,6 +658,9 @@ impl AdminBootstrap {
     /// This only converges role configuration. It intentionally does not
     /// generate or import CA material, sign intermediates, or manage trust
     /// stores; those are operator ceremonies outside application bootstrap.
+    /// If `allow_globs_in_identity_templates` is already enabled,
+    /// [`Self::run`] fails before writing so a partial desired role cannot
+    /// reset unmanaged issuance restrictions.
     #[cfg(feature = "pki")]
     pub fn ensure_pki_role(
         &mut self,
@@ -707,7 +712,10 @@ impl AdminBootstrap {
     /// Ensures an SSH role exists and matches desired readable fields.
     ///
     /// This converges role configuration only. SSH CA key setup remains an
-    /// operator ceremony outside this bootstrap helper.
+    /// operator ceremony outside this bootstrap helper. If
+    /// `allow_commas_in_identity_templates` is already enabled,
+    /// [`Self::run`] fails before writing so a partial desired role cannot
+    /// reset unmanaged SSH restrictions.
     #[cfg(feature = "ssh")]
     pub fn ensure_ssh_role(
         &mut self,
@@ -1224,6 +1232,11 @@ impl AdminBootstrap {
                 }
                 BootstrapOperation::Policy { name, policy } => {
                     let status = match client.sys().read_policy(name).await {
+                        Ok(existing) if policy_has_unsafe_template_overrides(&existing) => {
+                            return Err(Error::UnsafeBootstrapConfiguration(
+                                "ACL policy has identity-template delimiter overrides enabled; disable them with a state-preserving operation before bootstrap",
+                            ));
+                        }
                         Ok(existing) if policy_matches_desired(&existing, policy) => {
                             BootstrapStepStatus::Unchanged
                         }
@@ -1307,6 +1320,11 @@ impl AdminBootstrap {
                 BootstrapOperation::PkiRole { mount, name, role } => {
                     let pki = client.pki(mount)?;
                     let status = match pki.read_role(name).await {
+                        Ok(existing) if pki_role_has_unsafe_template_override(&existing) => {
+                            return Err(Error::UnsafeBootstrapConfiguration(
+                                "PKI role has allow_globs_in_identity_templates enabled; disable it with a state-preserving operation before bootstrap",
+                            ));
+                        }
                         Ok(existing) if pki_role_matches_desired(&existing, role) => {
                             BootstrapStepStatus::Unchanged
                         }
@@ -1404,6 +1422,11 @@ impl AdminBootstrap {
                 } => {
                     let ssh = client.ssh(mount)?;
                     let status = match ssh.read_role(name).await {
+                        Ok(existing) if ssh_role_has_unsafe_template_override(&existing) => {
+                            return Err(Error::UnsafeBootstrapConfiguration(
+                                "SSH role has allow_commas_in_identity_templates enabled; disable it with a state-preserving operation before bootstrap",
+                            ));
+                        }
                         Ok(existing) if ssh_role_matches_desired(&existing, request) => {
                             BootstrapStepStatus::Unchanged
                         }
@@ -1823,15 +1846,22 @@ fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<Str
         .collect()
 }
 
+fn policy_has_unsafe_template_overrides(existing: &crate::sys::PolicyInfo) -> bool {
+    existing.allow_slashes_in_identity_templates || existing.allow_wildcards_in_identity_templates
+}
+
 fn policy_matches_desired(existing: &crate::sys::PolicyInfo, desired: &str) -> bool {
-    policy_rules_equal(&existing.rules, desired)
-        && !existing.allow_slashes_in_identity_templates
-        && !existing.allow_wildcards_in_identity_templates
+    policy_rules_equal(&existing.rules, desired) && !policy_has_unsafe_template_overrides(existing)
+}
+
+#[cfg(feature = "pki")]
+fn pki_role_has_unsafe_template_override(existing: &PkiRole) -> bool {
+    existing.allow_globs_in_identity_templates
 }
 
 #[cfg(feature = "pki")]
 fn pki_role_matches_desired(existing: &PkiRole, desired: &PkiRole) -> bool {
-    !existing.allow_globs_in_identity_templates
+    !pki_role_has_unsafe_template_override(existing)
         && desired
             .issuer_ref
             .as_ref()
@@ -1902,8 +1932,13 @@ fn database_static_role_matches_desired(
 }
 
 #[cfg(feature = "ssh")]
+fn ssh_role_has_unsafe_template_override(existing: &SshRoleInfo) -> bool {
+    existing.allow_commas_in_identity_templates
+}
+
+#[cfg(feature = "ssh")]
 fn ssh_role_matches_desired(existing: &SshRoleInfo, desired: &SshRoleRequest) -> bool {
-    !existing.allow_commas_in_identity_templates
+    !ssh_role_has_unsafe_template_override(existing)
         && desired
             .default_user
             .as_ref()

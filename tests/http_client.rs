@@ -12327,7 +12327,7 @@ async fn admin_bootstrap_preview_is_read_only() {
 }
 
 #[tokio::test]
-async fn admin_bootstrap_preview_marks_identity_template_overrides_for_safe_update() {
+async fn admin_bootstrap_preview_marks_identity_template_overrides_as_unsafe_drift() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
         .local_addr()
@@ -12401,34 +12401,21 @@ async fn admin_bootstrap_preview_marks_identity_template_overrides_for_safe_upda
 }
 
 #[tokio::test]
-async fn admin_bootstrap_rejects_persisted_policy_template_override_after_safe_write() {
+async fn admin_bootstrap_refuses_policy_template_override_without_mutation() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
         .local_addr()
         .unwrap_or_else(|error| panic!("{error}"));
 
     let server = thread::spawn(move || {
-        for step in 0..3 {
-            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
-            let request = read_http_request(&mut stream);
-            match step {
-                0 | 2 => {
-                    assert!(request.starts_with("GET /v1/sys/policies/acl/app-read HTTP/1.1"));
-                    write_json_response(
-                        &mut stream,
-                        "200 OK",
-                        r#"{"data":{"name":"app-read","policy":"path \"secret/data/app\" {}","allow_wildcards_in_identity_templates":true}}"#,
-                    );
-                }
-                1 => {
-                    assert!(request.starts_with("POST /v1/sys/policies/acl/app-read HTTP/1.1"));
-                    assert!(!request.contains("allow_slashes_in_identity_templates"));
-                    assert!(!request.contains("allow_wildcards_in_identity_templates"));
-                    write_json_response(&mut stream, "204 No Content", "");
-                }
-                _ => unreachable!(),
-            }
-        }
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/policies/acl/app-read HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"data":{"name":"app-read","policy":"path \"secret/data/app\" {}","expiration":"2030-01-01T00:00:00Z","version":7,"cas_required":true,"allow_wildcards_in_identity_templates":true}}"#,
+        );
     });
 
     let config = OpenBaoConfig::new(format!("http://{addr}"))
@@ -12444,7 +12431,90 @@ async fn admin_bootstrap_rejects_persisted_policy_template_override_after_safe_w
 
     assert!(matches!(
         bootstrap.run(&client).await,
-        Err(Error::BootstrapContention(_))
+        Err(error) if error.is_unsafe_bootstrap_configuration()
+    ));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn admin_bootstrap_refuses_pki_template_override_without_mutation() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/pki/roles/web HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"data":{"allowed_domains":["example.com"],"max_ttl":"24h","allow_ip_sans":false,"allow_localhost":false,"allow_wildcard_certificates":false,"key_usage":["DigitalSignature"],"allow_globs_in_identity_templates":true}}"#,
+        );
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_pki_role(
+            "pki",
+            "web",
+            openbao::secrets::pki::PkiRole {
+                allowed_domains: vec!["example.com".to_owned()],
+                ..Default::default()
+            },
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert!(matches!(
+        bootstrap.run(&client).await,
+        Err(error) if error.is_unsafe_bootstrap_configuration()
+    ));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn admin_bootstrap_refuses_ssh_template_override_without_mutation() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/ssh/roles/operators HTTP/1.1"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"data":{"key_type":"ca","allowed_users":"service","ttl":"30m","max_ttl":"1h","allowed_domains":"example.com","allow_commas_in_identity_templates":true}}"#,
+        );
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_ssh_role(
+            "ssh",
+            "operators",
+            openbao::secrets::ssh::SshRoleRequest::ca("service"),
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert!(matches!(
+        bootstrap.run(&client).await,
+        Err(error) if error.is_unsafe_bootstrap_configuration()
     ));
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

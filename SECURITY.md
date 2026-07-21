@@ -227,12 +227,15 @@ client rejects these fields against every older exact profile before building
 or sending the HTTP request. Use them only when all referenced identity
 metadata is trusted and constrained independently of the rendered template.
 
-`AdminBootstrap` never opts into these overrides. ACL policy, PKI role, and SSH
-role convergence treats a matching resource with the corresponding override
-enabled as drift, writes through the ordinary safe method, and verifies the
-readback flag is disabled. If OpenBao or a concurrent writer leaves the flag
-enabled, bootstrap returns `Error::BootstrapContention` rather than reporting
-successful convergence.
+`AdminBootstrap` never opts into these overrides. Preview treats a matching ACL
+policy, PKI role, or SSH role with the corresponding override enabled as drift.
+Apply fails with `Error::UnsafeBootstrapConfiguration` before mutation because
+the ordinary write APIs replace configuration and a partial desired state could
+discard unmanaged expiration, CAS, issuance, or SSH restrictions. Operators
+must disable the override with a state-preserving administrative operation
+before rerunning bootstrap. Post-write verification still returns
+`Error::BootstrapContention` if a concurrent writer enables an override during
+ordinary convergence.
 
 ## Residual Secret Memory
 

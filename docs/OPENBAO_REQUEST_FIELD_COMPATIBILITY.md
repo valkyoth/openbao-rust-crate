@@ -94,7 +94,10 @@ proof when tagged documentation or live behavior contradicts it.
   SSH permits `,` in templated users and domains. Each can expand the resource
   selected by untrusted metadata. Typed writes require the non-default
   `identity-template-overrides-acknowledged` feature and an explicit marker.
-  Ordinary request serialization cannot emit these flags.
+  Ordinary request serialization cannot emit these flags. Bootstrap preview
+  reports enabled flags as drift, but apply returns
+  `Error::UnsafeBootstrapConfiguration` before replacing partial ACL, PKI, or
+  SSH configuration; disable the flag with a state-preserving operation first.
 - Plugin `oci` changes plugin execution mode. It is never omitted as a
   compatibility fallback.
 - System `stored_shares` is retained for old profiles but is rejected for

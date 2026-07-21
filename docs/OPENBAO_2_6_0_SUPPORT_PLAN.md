@@ -347,9 +347,11 @@ Suggested title: `Gate OpenBao 2.6 identity template overrides`
 Status: complete in this commit. Ordinary policy and role serialization omits
 all four override fields; explicit feature-gated constructors and methods are
 required to send `true`, and older profiles reject the fields before
-transport. Bootstrap preview, apply, and post-write verification also require
-the relevant overrides to be disabled, so pre-existing unsafe state cannot be
-reported as converged.
+transport. Bootstrap preview reports enabled overrides as drift, while apply
+fails before replacing ACL, PKI, or SSH configuration so partial desired state
+cannot discard unmanaged controls. Post-write verification also requires the
+relevant overrides to remain disabled, so unsafe state cannot be reported as
+converged.
 
 - Add ACL slash/wildcard, PKI glob, and SSH comma override response fields.
 - Add explicit acknowledged constructors for sending `true`.

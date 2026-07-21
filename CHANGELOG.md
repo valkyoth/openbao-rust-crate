@@ -36,9 +36,10 @@ All notable changes to this project are documented here.
   `identity-template-overrides-acknowledged` feature and an unforgeable
   per-surface acknowledgment value; older selected profiles fail locally.
 - Made bootstrap ACL, PKI, and SSH convergence require all corresponding
-  identity-template delimiter overrides to be disabled. Preview reports an
-  update for unsafe readback state, and post-write verification fails with
-  bootstrap contention if OpenBao does not clear it.
+  identity-template delimiter overrides to be disabled. Preview reports unsafe
+  readback as drift, while apply fails before replacement so partial desired
+  configuration cannot discard unmanaged security controls. Post-write
+  verification still detects concurrently enabled overrides as contention.
 
 ## 2.0.2 - 2026-07-12
 
