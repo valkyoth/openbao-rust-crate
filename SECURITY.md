@@ -195,6 +195,14 @@ from `Debug`. These structural limits do not prove that a valid CEL program is
 cheap to compile or execute. Restrict CEL role administration to trusted
 operators and enforce OpenBao process CPU, memory, and request limits.
 
+OpenBao 2.6 does not reject a JWT that omits `aud` merely because a CEL role
+sets `bound_audiences`. The list filters audiences only when the claim is
+present. Every `JwtCelRoleRequest` therefore requires an explicit
+`JwtCelClaimValidationAcknowledgement` before `write_cel_role` sends it. The
+acknowledgement confirms that the CEL program itself requires and constrains
+`aud`, `sub`, and every other authorization-relevant claim. It does not parse
+or prove CEL; substring and regular-expression inspection would be bypassable.
+
 Exact OpenBao 2.6.0 JWT CEL PATCH is security-blocked. Tagged runtime source
 constructs a replacement entry without preserving `bound_audiences` or the
 three leeway fields, which can silently weaken a patched role. Use full POST

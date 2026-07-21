@@ -807,6 +807,13 @@ async fn main() -> Result<()> {
 }
 ```
 
+OpenBao 2.6 JWT CEL roles are operator-supplied authorization programs.
+`bound_audiences` does not reject a signed JWT that omits `aud`, so role writes
+require `JwtCelClaimValidationAcknowledgement`. The acknowledgement confirms
+that the CEL program itself requires and constrains `aud`, `sub`, and every
+other authorization-relevant claim; the SDK does not attempt bypassable CEL
+source inspection. See [`SECURITY.md`](SECURITY.md#openbao-26-authentication-contracts).
+
 Start an OIDC browser login and handle the callback without logging returned
 token material. Callback redemption and direct/device polling require the non-default
 `oidc-get-callback-acknowledged` feature. Before enabling it, configure OpenBao,

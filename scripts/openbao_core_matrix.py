@@ -35,7 +35,7 @@ HISTORICAL_RESULTS_PATH = ROOT / "compat/core-flow-history/through-2.5.5.json"
 HISTORICAL_CHECKSUM_PATH = ROOT / "compat/core-flow-history/through-2.5.5.sha256"
 HARNESS_PATH = ROOT / "scripts/openbao_test_harness.py"
 TEST_PATH = ROOT / "tests/openbao_integration.rs"
-EXPECTED_RESULTS_SHA256 = "f398edd6e1371fdc18dfdedff86821d926fcb434955308862cccc6e036318375"
+EXPECTED_RESULTS_SHA256 = "a2a66ac8c9e6481f23a2667c4083c57e428b62a12590a1c0cf63913623f65d73"
 HISTORICAL_RESULTS_SHA256 = "d7aa0b1f07d535ae8b762587ae8221cefb073ff5acba12fec3d7d5b03e1e3d8c"
 MAX_RESULTS_BYTES = 512 * 1024
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
@@ -113,6 +113,16 @@ def build_matrix() -> dict[str, Any]:
             result = run_integration(version)
         except (HarnessError, OSError) as error:
             result = failure_record(release, error)
+            diagnostic = (
+                str(error)
+                if isinstance(error, HarnessError)
+                else "local operating system failure"
+            )
+            print(
+                f"OpenBao core matrix: locked {version} failed "
+                f"({result['failure_reason_code']}): {diagnostic}",
+                flush=True,
+            )
         results.append(result)
     passed = sum(record["outcome"] == "passed" for record in results)
     failed = sum(record["outcome"] == "failed" for record in results)

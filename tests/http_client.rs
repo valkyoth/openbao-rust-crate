@@ -3650,7 +3650,9 @@ async fn authentication_2_6_contracts_reject_old_profiles_before_transport() {
 
     let program =
         openbao::auth::jwt::JwtCelProgram::new("false").unwrap_or_else(|error| panic!("{error}"));
-    let role = openbao::auth::jwt::JwtCelRoleRequest::new(program);
+    let role = openbao::auth::jwt::JwtCelRoleRequest::new(program).acknowledge_claim_validation(
+        openbao::auth::jwt::JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel(),
+    );
     assert!(matches!(
         jwt_admin.write_cel_role("service", &role).await,
         Err(Error::UnsupportedOpenBaoCapability { .. })

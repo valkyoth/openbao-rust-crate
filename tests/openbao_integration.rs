@@ -15,6 +15,8 @@ use std::{
 };
 
 use openbao::{Client, OpenBaoCompatibilityPolicy, OpenBaoConfig, OpenBaoVersion};
+#[cfg(feature = "operator-ops")]
+use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa, sign::Signer};
 use reqwest::Certificate;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -60,13 +62,23 @@ impl IntegrationEnv {
         }))
     }
 
-    fn client(self) -> Result<openbao::Client<openbao::Authenticated>, openbao::Error> {
+    fn clients(
+        self,
+    ) -> Result<
+        (
+            openbao::Client<openbao::Authenticated>,
+            openbao::Client<openbao::Unauthenticated>,
+        ),
+        openbao::Error,
+    > {
         let version = self.expected_version.parse::<OpenBaoVersion>()?;
         let policy = OpenBaoCompatibilityPolicy::exact(version)?;
         let config = OpenBaoConfig::new(self.addr)?
             .only_root_certificates(vec![self.ca_cert])?
             .compatibility_policy(policy);
-        Client::from_config(config)?.try_with_token(self.token)
+        let unauthenticated = Client::from_config(config.clone())?;
+        let authenticated = Client::from_config(config)?.try_with_token(self.token)?;
+        Ok((authenticated, unauthenticated))
     }
 }
 
@@ -77,7 +89,9 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     };
     let expected_version = env.expected_version.clone();
     let result_file = env.result_file.clone();
-    let client = env.client()?;
+    let (client, unauthenticated) = env.clients()?;
+    #[cfg(not(feature = "operator-ops"))]
+    let _ = &unauthenticated;
     eprintln!("OpenBao integration stage: health");
     assert_eq!(client.sys().health().await?.version, expected_version);
     let suffix = unique_suffix()?;
@@ -98,7 +112,7 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     #[cfg(feature = "operator-ops")]
     let latest_result = if result.is_ok() && expected_version == "2.6.0" {
         run_2_6_flow(
-            &client,
+            (&client, &unauthenticated),
             &kv1_mount,
             &auth_mount,
             &jwt_mount,
@@ -219,7 +233,10 @@ fn write_core_flow_attestation(
 
 #[cfg(feature = "operator-ops")]
 async fn run_2_6_flow(
-    client: &Client<openbao::Authenticated>,
+    clients: (
+        &Client<openbao::Authenticated>,
+        &Client<openbao::Unauthenticated>,
+    ),
     kv1_mount: &str,
     userpass_mount: &str,
     jwt_mount: &str,
@@ -227,6 +244,7 @@ async fn run_2_6_flow(
     workflow: &str,
     hashed_user: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let (client, unauthenticated) = clients;
     eprintln!("OpenBao integration stage: root-generation-routing");
     assert!(!client.sys().operator_generate_root_status().await?.started);
     let started = client
@@ -301,10 +319,26 @@ async fn run_2_6_flow(
         )
         .await?;
     let jwt = client.jwt_admin_at(jwt_mount)?;
+    let (public_key, accepted_jwt, missing_audience_jwt) = signed_integration_jwts()?;
+    eprintln!("OpenBao integration stage: jwt-cel-configure");
+    jwt.configure(&openbao::auth::jwt::JwtConfig {
+        jwt_validation_pubkeys: vec![public_key],
+        bound_issuer: Some("openbao-rust-integration".to_owned()),
+        jwt_supported_algs: vec!["RS256".to_owned()],
+        ..openbao::auth::jwt::JwtConfig::default()
+    })
+    .await?;
     let role = openbao::auth::jwt::JwtCelRoleRequest::new(openbao::auth::jwt::JwtCelProgram::new(
-        "false",
-    )?);
+        "claims.iss == 'openbao-rust-integration' && claims.sub == 'integration-client' && 'openbao-rust-integration' in claims.aud ? pb.Auth{display_name: 'integration-client'} : false",
+    )?)
+    .acknowledge_claim_validation(
+        openbao::auth::jwt::JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel(),
+    );
+    let mut role = role;
+    role.bound_audiences = vec!["openbao-rust-integration".to_owned()];
+    eprintln!("OpenBao integration stage: jwt-cel-write");
     assert_eq!(jwt.write_cel_role("service", &role).await?.name, "service");
+    eprintln!("OpenBao integration stage: jwt-cel-read-list");
     assert_eq!(jwt.read_cel_role("service").await?.name, "service");
     assert!(
         jwt.list_cel_roles()
@@ -312,6 +346,22 @@ async fn run_2_6_flow(
             .keys
             .iter()
             .any(|name| name == "service")
+    );
+    eprintln!("OpenBao integration stage: jwt-cel-positive-login");
+    let _ = unauthenticated
+        .jwt_at(jwt_mount)?
+        .login_cel(Some("service"), accepted_jwt)
+        .await?;
+    eprintln!("OpenBao integration stage: jwt-cel-missing-audience-login");
+    let rejected = unauthenticated
+        .jwt_at(jwt_mount)?
+        .login_cel(Some("service"), missing_audience_jwt)
+        .await;
+    assert!(
+        rejected
+            .as_ref()
+            .is_err_and(|error| error.is_bad_request() || error.is_permission_denied()),
+        "JWT CEL login unexpectedly accepted a validly signed JWT without aud: {rejected:?}"
     );
 
     eprintln!("OpenBao integration stage: userpass-password-hash");
@@ -338,6 +388,47 @@ async fn run_2_6_flow(
     assert_eq!(seal.version, "2.6.0");
     assert!(seal.commit_date.is_some());
     Ok(())
+}
+
+#[cfg(feature = "operator-ops")]
+fn signed_integration_jwts()
+-> Result<(String, SecretString, SecretString), Box<dyn std::error::Error>> {
+    let rsa = Rsa::generate(2048)?;
+    let public_key = String::from_utf8(rsa.public_key_to_pem()?)?;
+    let signing_key = PKey::from_rsa(rsa)?;
+    let accepted = sign_integration_jwt(&signing_key, true)?;
+    let missing_audience = sign_integration_jwt(&signing_key, false)?;
+    Ok((public_key, accepted, missing_audience))
+}
+
+#[cfg(feature = "operator-ops")]
+fn sign_integration_jwt(
+    signing_key: &PKey<openssl::pkey::Private>,
+    include_audience: bool,
+) -> Result<SecretString, Box<dyn std::error::Error>> {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    let mut claims = serde_json::Map::from_iter([
+        ("iss".to_owned(), json!("openbao-rust-integration")),
+        ("sub".to_owned(), json!("integration-client")),
+        ("iat".to_owned(), json!(now)),
+        ("exp".to_owned(), json!(now.saturating_add(300))),
+    ]);
+    if include_audience {
+        claims.insert("aud".to_owned(), json!(["openbao-rust-integration"]));
+    }
+
+    let encode = |bytes: &[u8]| {
+        base64_ng::URL_SAFE_NO_PAD
+            .encode_string(bytes)
+            .map_err(|error| io::Error::other(format!("JWT base64 encoding failed: {error:?}")))
+    };
+    let header = encode(br#"{"alg":"RS256","typ":"JWT"}"#)?;
+    let payload = encode(&serde_json::to_vec(&claims)?)?;
+    let signing_input = format!("{header}.{payload}");
+    let mut signer = Signer::new(MessageDigest::sha256(), signing_key)?;
+    signer.update(signing_input.as_bytes())?;
+    let signature = encode(&signer.sign_to_vec()?)?;
+    Ok(SecretString::from(format!("{signing_input}.{signature}")))
 }
 
 #[cfg(feature = "operator-ops")]

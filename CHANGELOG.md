@@ -29,6 +29,10 @@ All notable changes to this project are documented here.
 
 ### Security
 
+- Required a named `JwtCelClaimValidationAcknowledgement` before writing an
+  OpenBao 2.6 JWT CEL role. Documented that `bound_audiences` does not reject a
+  JWT that omits `aud`, and added a live positive control plus a negative
+  valid-signature login test for a missing audience claim.
 - Classified broken prefixed workflow LIST/SCAN routes as security-blocked for
   exact OpenBao 2.6.0 and documented the upstream workflow CAS propagation
   defect. Workflow writes are never retried.

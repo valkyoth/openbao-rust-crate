@@ -529,6 +529,30 @@ impl fmt::Debug for JwtCelProgram {
     }
 }
 
+/// Explicit acknowledgement required before writing a JWT CEL role.
+///
+/// OpenBao validates a JWT signature but delegates authorization-claim
+/// validation to the operator-provided CEL program. In particular,
+/// `bound_audiences` filters an `aud` claim when present but does not reject a
+/// JWT that omits `aud`. Constructing this value confirms that the CEL program
+/// explicitly requires and constrains `aud`, `sub`, and every other claim used
+/// to authorize the resulting OpenBao token.
+///
+/// This acknowledgement does not parse or prove the CEL program. Restrict CEL
+/// role administration to trusted operators and review the program itself.
+#[derive(Clone, Copy, Debug)]
+pub struct JwtCelClaimValidationAcknowledgement {
+    _private: (),
+}
+
+impl JwtCelClaimValidationAcknowledgement {
+    /// Confirms that the CEL program constrains every authorization claim.
+    #[must_use]
+    pub const fn all_authorization_claims_are_constrained_in_cel() -> Self {
+        Self { _private: () }
+    }
+}
+
 /// Request for creating or replacing a JWT CEL role.
 #[derive(Clone, Serialize)]
 pub struct JwtCelRoleRequest {
@@ -546,9 +570,15 @@ pub struct JwtCelRoleRequest {
     /// Not-before validation leeway.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub not_before_leeway: Option<JwtLeeway>,
-    /// Audiences accepted from the JWT `aud` claim.
+    /// Audiences accepted when the JWT contains an `aud` claim.
+    ///
+    /// OpenBao 2.6 does not reject a JWT that omits `aud` when this list is
+    /// populated. The CEL program must explicitly require and constrain the
+    /// claim.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bound_audiences: Vec<String>,
+    #[serde(skip)]
+    claim_validation_acknowledged: bool,
 }
 
 impl JwtCelRoleRequest {
@@ -561,10 +591,30 @@ impl JwtCelRoleRequest {
             expiration_leeway: None,
             not_before_leeway: None,
             bound_audiences: Vec::new(),
+            claim_validation_acknowledged: false,
         }
     }
 
+    /// Acknowledges that the CEL program validates every authorization claim.
+    ///
+    /// OpenBao does not reject a missing `aud` claim merely because
+    /// [`Self::bound_audiences`] is populated. This method is intentionally
+    /// required before [`JwtAuthAdmin::write_cel_role`] will send the request.
+    /// The SDK does not inspect CEL source because substring or regular-
+    /// expression checks would be bypassable.
+    #[must_use]
+    pub fn acknowledge_claim_validation(mut self, _: JwtCelClaimValidationAcknowledgement) -> Self {
+        self.claim_validation_acknowledged = true;
+        self
+    }
+
     fn validate(&self) -> Result<()> {
+        if !self.claim_validation_acknowledged {
+            return Err(Error::InvalidParameter(
+                "OpenBao JWT CEL roles require explicit acknowledgement that the CEL program constrains aud, sub, and every authorization-relevant claim; bound_audiences does not reject a missing aud claim"
+                    .into(),
+            ));
+        }
         self.cel_program.validate()?;
         validate_cel_audiences(&self.bound_audiences)?;
         if self
@@ -1266,7 +1316,10 @@ pub struct JwtLoginMetadata {
     ///
     /// With `oauth2_metadata`, values can include OAuth access, ID, and
     /// refresh tokens. `Debug` therefore reports only the number of entries.
-    #[serde(default, deserialize_with = "deserialize_bounded_secret_metadata")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_secret_metadata_or_default"
+    )]
     pub metadata: BTreeMap<String, SecretString>,
 }
 
@@ -1341,8 +1394,28 @@ struct JwtLoginAuth {
     lease_duration: u64,
     #[serde(default)]
     renewable: bool,
-    #[serde(default, deserialize_with = "deserialize_bounded_secret_metadata")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_secret_metadata_or_default"
+    )]
     metadata: BTreeMap<String, SecretString>,
+}
+
+#[derive(Deserialize)]
+struct BoundedSecretMetadata(
+    #[serde(deserialize_with = "deserialize_bounded_secret_metadata")]
+    BTreeMap<String, SecretString>,
+);
+
+fn deserialize_bounded_secret_metadata_or_default<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Option::<BoundedSecretMetadata>::deserialize(deserializer)?
+        .map(|metadata| metadata.0)
+        .unwrap_or_default())
 }
 
 fn deserialize_bounded_secret_metadata<'de, D>(
@@ -1811,7 +1884,10 @@ impl JwtAuthAdmin<'_> {
     ///
     /// CEL program source is redacted from `Debug` but is sent to OpenBao as
     /// secret-adjacent policy material. Grant this endpoint only to trusted
-    /// administrators and enforce server-side CPU and request limits.
+    /// administrators and enforce server-side CPU and request limits. The
+    /// request must explicitly acknowledge that its CEL program requires and
+    /// constrains every authorization claim; `bound_audiences` alone does not
+    /// reject JWTs that omit `aud`.
     pub async fn write_cel_role(&self, name: &str, role: &JwtCelRoleRequest) -> Result<JwtCelRole> {
         role.validate()?;
         let name = validate_mount_path(name)?.join("/");
@@ -1945,8 +2021,8 @@ mod tests {
     use secrecy::{ExposeSecret, SecretString};
 
     use super::{
-        JwtCelProgram, JwtCelRole, JwtCelRolePatch, JwtCelRoleRequest, JwtConfig, JwtLeeway,
-        JwtLoginResponse, JwtRole, JwtRoleList,
+        JwtCelClaimValidationAcknowledgement, JwtCelProgram, JwtCelRole, JwtCelRolePatch,
+        JwtCelRoleRequest, JwtConfig, JwtLeeway, JwtLoginResponse, JwtRole, JwtRoleList,
     };
 
     #[test]
@@ -1962,6 +2038,18 @@ mod tests {
         assert_eq!(
             auth.metadata.get("role").map(SecretString::expose_secret),
             Some("web")
+        );
+
+        let null_metadata: JwtLoginResponse = serde_json::from_str(
+            r#"{"auth":{"client_token":"token-value","accessor":"accessor-value","metadata":null}}"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(
+            null_metadata
+                .auth
+                .unwrap_or_else(|| panic!("auth missing"))
+                .metadata
+                .is_empty()
         );
     }
 
@@ -2020,12 +2108,17 @@ mod tests {
         let program = JwtCelProgram::new("claims.secret == 'cel-secret-literal'")
             .and_then(|program| program.with_variable("has_group", "claims.groups.size() > 0"))
             .unwrap_or_else(|error| panic!("{error}"));
-        let request = JwtCelRoleRequest::new(program.clone());
+        let unacknowledged = JwtCelRoleRequest::new(program.clone());
+        assert!(unacknowledged.validate().is_err());
+        let request = unacknowledged.acknowledge_claim_validation(
+            JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel(),
+        );
         let debug = format!("{request:?}");
         assert!(!debug.contains("cel-secret-literal"));
         assert!(request.validate().is_ok());
 
         let value = serde_json::to_value(&request).unwrap_or_else(|error| panic!("{error}"));
+        assert!(value.get("claim_validation_acknowledged").is_none());
         assert_eq!(value["cel_program"]["variables"][0]["name"], "has_group");
         assert_eq!(
             value["cel_program"]["expression"],
@@ -2098,6 +2191,9 @@ mod tests {
 
         let mut request = JwtCelRoleRequest::new(
             JwtCelProgram::new("true").unwrap_or_else(|error| panic!("{error}")),
+        )
+        .acknowledge_claim_validation(
+            JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel(),
         );
         request.bound_audiences = (0..=super::MAX_CEL_AUDIENCES)
             .map(|index| format!("audience-{index}"))
