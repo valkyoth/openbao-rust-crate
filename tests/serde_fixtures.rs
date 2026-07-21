@@ -1,5 +1,7 @@
 #![cfg(all(
     feature = "identity",
+    feature = "jwt-auth",
+    feature = "kerberos-auth",
     feature = "kv2",
     feature = "pki",
     feature = "ssh",
@@ -14,6 +16,7 @@ use std::error::Error;
 use std::io;
 
 use openbao::auth::token::TokenAuth;
+use openbao::auth::{jwt::JwtCelRole, kerberos::KerberosConfig};
 use openbao::secrets::identity::IdentityEntityInfo;
 use openbao::secrets::kv2::Kv2Secret;
 use openbao::secrets::pki::PkiCertificateBundle;
@@ -79,6 +82,8 @@ struct OpenBao26SystemFixtures {
     workflow_info_2_6_0: serde_json::Value,
     workflow_list_2_6_0: serde_json::Value,
     workflow_output_2_6_0: serde_json::Value,
+    jwt_cel_role_2_6_0: serde_json::Value,
+    kerberos_config_2_6_0: serde_json::Value,
 }
 
 #[test]
@@ -226,6 +231,15 @@ fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), B
     assert!(!format!("{workflows:?}").contains("fixture-workflow-secret"));
     let output = WorkflowData::from_serializable(&fixtures.workflow_output_2_6_0)?;
     assert!(!format!("{output:?}").contains("fixture-output-token"));
+
+    let cel_role: JwtCelRole = serde_json::from_value(fixtures.jwt_cel_role_2_6_0)?;
+    assert_eq!(cel_role.name, "service");
+    assert_eq!(cel_role.bound_audiences, ["payments"]);
+    assert!(!format!("{cel_role:?}").contains("fixture-cel-literal"));
+
+    let kerberos: KerberosConfig = serde_json::from_value(fixtures.kerberos_config_2_6_0)?;
+    assert_eq!(kerberos.decode_pac, Some(true));
+    assert!(kerberos.keytab.is_none());
 
     #[cfg(feature = "operator-ops")]
     {

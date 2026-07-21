@@ -12,6 +12,9 @@ All notable changes to this project are documented here.
 - Added separately acknowledged `workflow-trace` and
   `unauthenticated-workflows` feature pairs, redacted trace handling, and
   conditional token-free dispatch without route probing or fallback.
+- Added staged OpenBao 2.6 JWT CEL role/login APIs, Kubernetes JWT provider
+  configuration, validated userpass bcrypt-hash creation/reset helpers, and
+  Kerberos PAC-decoding configuration with exact-version request-field rules.
 
 ### Security
 
@@ -21,6 +24,10 @@ All notable changes to this project are documented here.
 - Workflow API failures discard server-provided error bodies so echoed tokens,
   definitions, inputs, and intermediate values cannot enter loggable public
   error strings.
+- Bounded and redacted JWT CEL programs, made userpass bcrypt hashes distinct
+  secret types, rejected ambiguous Kubernetes signing-key configuration, and
+  security-blocked exact OpenBao 2.6.0 JWT CEL PATCH because the upstream
+  handler drops audience and leeway constraints.
 
 ## 2.0.2 - 2026-07-12
 

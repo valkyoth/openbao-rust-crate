@@ -3622,6 +3622,94 @@ async fn workflow_operations_reject_pre_2_6_profiles_before_transport() {
 }
 
 #[tokio::test]
+async fn authentication_2_6_contracts_reject_old_profiles_before_transport() {
+    let version = OpenBaoVersion::new(2, 5, 5);
+    let policy =
+        OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+    let config = OpenBaoConfig::new("https://127.0.0.1:1")
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let unauthenticated =
+        Client::from_config(config.clone()).unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .try_with_token(SecretString::from("auth-contract-operator-token"))
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let jwt_admin = client.jwt_admin().unwrap_or_else(|error| panic!("{error}"));
+    assert!(matches!(
+        jwt_admin
+            .configure(&openbao::auth::jwt::JwtConfig::kubernetes_provider())
+            .await,
+        Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "auth.jwt.config",
+            field: "provider_config.kubernetes",
+            version: rejected,
+        }) if rejected == version
+    ));
+
+    let program =
+        openbao::auth::jwt::JwtCelProgram::new("false").unwrap_or_else(|error| panic!("{error}"));
+    let role = openbao::auth::jwt::JwtCelRoleRequest::new(program);
+    assert!(matches!(
+        jwt_admin.write_cel_role("service", &role).await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    assert!(matches!(
+        unauthenticated
+            .jwt()
+            .unwrap_or_else(|error| panic!("{error}"))
+            .login_cel(Some("service"), SecretString::from("signed-jwt"))
+            .await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+
+    let hash = openbao::auth::userpass::UserpassPasswordHash::bcrypt(SecretString::from(format!(
+        "$2b$10${}",
+        "A".repeat(53)
+    )))
+    .unwrap_or_else(|error| panic!("{error}"));
+    let hashed_user = openbao::auth::userpass::UserpassHashedUserRequest::new(hash.clone());
+    let userpass = client
+        .userpass_admin()
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(matches!(
+        userpass.write_hashed_user("alice", &hashed_user).await,
+        Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "auth.userpass.user",
+            field: "password_hash",
+            version: rejected,
+        }) if rejected == version
+    ));
+    assert!(matches!(
+        userpass.update_password_hash("alice", &hash).await,
+        Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "auth.userpass.password",
+            field: "password_hash",
+            version: rejected,
+        }) if rejected == version
+    ));
+
+    let kerberos = openbao::auth::kerberos::KerberosConfig::new(
+        "openbao/service",
+        SecretString::from("base64-keytab"),
+    )
+    .decode_pac(true);
+    assert!(matches!(
+        client
+            .kerberos_auth_admin()
+            .unwrap_or_else(|error| panic!("{error}"))
+            .configure(&kerberos)
+            .await,
+        Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "auth.kerberos.config",
+            field: "decode_pac",
+            version: rejected,
+        }) if rejected == version
+    ));
+}
+
+#[tokio::test]
 async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

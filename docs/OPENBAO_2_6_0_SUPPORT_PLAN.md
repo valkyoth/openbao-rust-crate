@@ -15,9 +15,11 @@
   04 implements the changed system contracts and authenticated root-generation
   routing. Commit 05 adds the typed sealable-namespace lifecycle. Commit 06
   adds workflow CRUD, pagination, bounded secret-aware execution, and separately
-  acknowledged trace and unauthenticated execution. The staged registry now
-  has 684 resolved operations and 6 pending authentication operations. The
-  historical projection remains
+  acknowledged trace and unauthenticated execution. Commit 07 adds JWT CEL,
+  Kubernetes JWT provider, userpass bcrypt-hash, and Kerberos PAC contracts.
+  The staged registry now has all 690 operations resolved; exact 2.6.0 JWT CEL
+  PATCH is security-blocked because upstream drops audience and leeway
+  constraints. The historical projection remains
   byte-identical to the active 21-profile registry. The candidate is explicitly
   introspection-only: runtime policies and dispatch remain capped at 2.5.5
   until final cross-lock promotion in Commit 09.
@@ -317,6 +319,8 @@ Pentest range: `<commit-05>..<commit-06>`.
 
 Suggested title: `Add OpenBao 2.6 authentication contracts`
 
+Status: complete in this commit.
+
 - Add typed JWT CEL role list/read/write/patch/delete and CEL login.
 - Add the Kubernetes JWT provider constructor following runtime source
   behavior, not the contradictory guide example.
@@ -324,6 +328,9 @@ Suggested title: `Add OpenBao 2.6 authentication contracts`
   mutual-exclusion checks.
 - Add Kerberos `decode_pac`.
 - Apply exact 2.6.0 request-field rules and old-profile rejection tests.
+- Security-block exact 2.6.0 JWT CEL PATCH after tagged-source review showed
+  that its handler does not preserve audience or leeway constraints. Full POST
+  replacement remains the safe update path.
 
 Pentest focus: JWT/CEL validation bypass, CEL resource exhaustion guidance,
 password/hash ambiguity, bcrypt hash logging, provider map confusion, and

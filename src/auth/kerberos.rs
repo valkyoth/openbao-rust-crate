@@ -50,6 +50,9 @@ pub struct KerberosConfig {
     /// Adds LDAP groups found for the user as group aliases.
     #[serde(default)]
     pub add_group_aliases: Option<bool>,
+    /// Decodes the PAC from Kerberos tickets (OpenBao 2.6+).
+    #[serde(default)]
+    pub decode_pac: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -60,6 +63,8 @@ struct KerberosConfigPayload<'a> {
     remove_instance_name: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     add_group_aliases: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    decode_pac: Option<bool>,
 }
 
 impl KerberosConfig {
@@ -83,6 +88,13 @@ impl KerberosConfig {
     #[must_use]
     pub fn add_group_aliases(mut self, enabled: bool) -> Self {
         self.add_group_aliases = Some(enabled);
+        self
+    }
+
+    /// Sets whether OpenBao decodes Kerberos PAC authorization data.
+    #[must_use]
+    pub fn decode_pac(mut self, enabled: bool) -> Self {
+        self.decode_pac = Some(enabled);
         self
     }
 
@@ -114,6 +126,7 @@ impl fmt::Debug for KerberosConfig {
             .field("service_account", &self.service_account)
             .field("remove_instance_name", &self.remove_instance_name)
             .field("add_group_aliases", &self.add_group_aliases)
+            .field("decode_pac", &self.decode_pac)
             .finish()
     }
 }
@@ -542,6 +555,12 @@ impl KerberosAuthAdmin<'_> {
     /// Configures the Kerberos service account and keytab.
     pub async fn configure(&self, config: &KerberosConfig) -> Result<Empty> {
         config.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::KERBEROS_CONFIG_DECODE_PAC,
+                config.decode_pac.is_some(),
+            )])
+            .await?;
         let keytab = config
             .keytab
             .as_ref()
@@ -552,6 +571,7 @@ impl KerberosAuthAdmin<'_> {
             service_account: &config.service_account,
             remove_instance_name: config.remove_instance_name,
             add_group_aliases: config.add_group_aliases,
+            decode_pac: config.decode_pac,
         };
         self.client
             .request_auth_json_internal(
@@ -959,11 +979,12 @@ mod tests {
     #[test]
     fn kerberos_config_read_accepts_missing_keytab() {
         let config: KerberosConfig = serde_json::from_str(
-            r#"{"service_account":"openbao_svc","remove_instance_name":false,"add_group_aliases":true}"#,
+            r#"{"service_account":"openbao_svc","remove_instance_name":false,"add_group_aliases":true,"decode_pac":true}"#,
         )
         .unwrap_or_else(|error| panic!("{error}"));
         assert!(config.keytab.is_none());
         assert_eq!(config.service_account, "openbao_svc");
+        assert_eq!(config.decode_pac, Some(true));
     }
 
     #[test]

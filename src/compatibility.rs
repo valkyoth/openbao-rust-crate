@@ -1180,7 +1180,7 @@ mod tests {
         let operations = openbao_operations();
         let versions = openbao_profile_versions();
 
-        assert_eq!(operations.len(), 684);
+        assert_eq!(operations.len(), 690);
         assert_eq!(versions.len(), 22);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
@@ -1224,6 +1224,36 @@ mod tests {
         for (method, path, disposition) in [
             (
                 OpenBaoHttpMethod::Delete,
+                "/auth/jwt/cel/role/:name",
+                OpenBaoOperationDisposition::Typed,
+            ),
+            (
+                OpenBaoHttpMethod::Get,
+                "/auth/jwt/cel/role/:name",
+                OpenBaoOperationDisposition::Typed,
+            ),
+            (
+                OpenBaoHttpMethod::List,
+                "/auth/jwt/cel/role",
+                OpenBaoOperationDisposition::Typed,
+            ),
+            (
+                OpenBaoHttpMethod::Patch,
+                "/auth/jwt/cel/role/:name",
+                OpenBaoOperationDisposition::SecurityBlocked,
+            ),
+            (
+                OpenBaoHttpMethod::Post,
+                "/auth/jwt/cel/login",
+                OpenBaoOperationDisposition::Typed,
+            ),
+            (
+                OpenBaoHttpMethod::Post,
+                "/auth/jwt/cel/role/:name",
+                OpenBaoOperationDisposition::Typed,
+            ),
+            (
+                OpenBaoHttpMethod::Delete,
                 "/sys/namespaces/:path/delete-sealed",
                 OpenBaoOperationDisposition::TypedGated,
             ),
@@ -1248,16 +1278,21 @@ mod tests {
                 .copied()
                 .find(|operation| operation.method() == method && operation.path_template() == path)
                 .unwrap_or_else(|| {
-                    panic!("missing sealable namespace operation {method:?} {path}")
+                    panic!("missing staged OpenBao 2.6 operation {method:?} {path}")
                 });
             assert_eq!(operation.disposition(), disposition);
             assert_eq!(
                 operation.availability(OpenBaoVersion::new(2, 5, 5)),
                 Some(OpenBaoCapabilityAvailability::NotDocumented)
             );
+            let expected = if disposition == OpenBaoOperationDisposition::SecurityBlocked {
+                OpenBaoCapabilityAvailability::SecurityBlocked
+            } else {
+                OpenBaoCapabilityAvailability::DocumentedRoute
+            };
             assert_eq!(
                 operation.availability(OpenBaoVersion::new(2, 6, 0)),
-                Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+                Some(expected)
             );
         }
     }

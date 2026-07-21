@@ -29,6 +29,106 @@ pub struct UserpassAuthAdmin<'a> {
     mount: String,
 }
 
+/// Validated pre-hashed bcrypt credential for OpenBao 2.6 userpass APIs.
+///
+/// The value is always treated as secret material. Accepted hashes use a
+/// modern bcrypt marker and OpenBao's reviewed cost range of 5 through 12.
+#[derive(Clone)]
+pub struct UserpassPasswordHash(SecretString);
+
+impl UserpassPasswordHash {
+    /// Validates and wraps a pre-computed bcrypt hash.
+    pub fn bcrypt(hash: SecretString) -> Result<Self> {
+        validate_bcrypt_hash(hash.expose_secret())?;
+        Ok(Self(hash))
+    }
+
+    fn expose_secret(&self) -> &str {
+        self.0.expose_secret()
+    }
+}
+
+impl core::fmt::Debug for UserpassPasswordHash {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter.write_str("UserpassPasswordHash(<redacted>)")
+    }
+}
+
+/// Token settings used when creating a userpass user from a bcrypt hash.
+#[derive(Clone, Debug, Default)]
+pub struct UserpassUserSettings {
+    /// Policies attached to generated tokens.
+    pub token_policies: Vec<String>,
+    /// Deprecated policy field retained for older OpenBao compatibility.
+    pub policies: Vec<String>,
+    /// Token TTL such as `30m`.
+    pub token_ttl: Option<String>,
+    /// Token max TTL such as `2h`.
+    pub token_max_ttl: Option<String>,
+    /// Periodic token period.
+    pub token_period: Option<String>,
+    /// Token explicit max TTL.
+    pub token_explicit_max_ttl: Option<String>,
+    /// Generated token type.
+    pub token_type: Option<String>,
+    /// CIDR restrictions for generated tokens.
+    pub token_bound_cidrs: Vec<String>,
+    /// Number of allowed token uses.
+    pub token_num_uses: Option<u64>,
+    /// Whether to omit the default policy.
+    pub token_no_default_policy: Option<bool>,
+}
+
+impl UserpassUserSettings {
+    /// Adds a token policy.
+    #[must_use]
+    pub fn with_policy(mut self, policy: impl Into<String>) -> Self {
+        self.token_policies.push(policy.into());
+        self
+    }
+
+    /// Adds a generated-token CIDR restriction.
+    pub fn with_token_bound_cidr(mut self, cidr: impl Into<String>) -> Result<Self> {
+        let cidr = cidr.into();
+        crate::validation::validate_cidr(&cidr, "userpass token_bound_cidrs")?;
+        self.token_bound_cidrs.push(cidr);
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        crate::validation::validate_cidr_list(&self.token_bound_cidrs, "userpass token_bound_cidrs")
+    }
+}
+
+/// Userpass user creation request containing a pre-hashed bcrypt credential.
+#[derive(Clone)]
+pub struct UserpassHashedUserRequest {
+    /// Validated pre-hashed bcrypt credential.
+    pub password_hash: UserpassPasswordHash,
+    /// Token settings stored for this user.
+    pub settings: UserpassUserSettings,
+}
+
+impl UserpassHashedUserRequest {
+    /// Creates a hashed user request with default token settings.
+    pub fn new(password_hash: UserpassPasswordHash) -> Self {
+        Self {
+            password_hash,
+            settings: UserpassUserSettings::default(),
+        }
+    }
+}
+
+impl core::fmt::Debug for UserpassHashedUserRequest {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("UserpassHashedUserRequest")
+            .field("password_hash", &"<redacted>")
+            .field("settings", &self.settings)
+            .finish()
+    }
+}
+
 /// Userpass user create/update request.
 #[derive(Clone, Default)]
 pub struct UserpassUserRequest {
@@ -58,7 +158,10 @@ pub struct UserpassUserRequest {
 
 #[derive(Serialize)]
 struct UserpassUserPayload<'a> {
-    password: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    password: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    password_hash: Option<&'a str>,
     #[serde(skip_serializing_if = "is_empty_string_slice")]
     token_policies: &'a [String],
     #[serde(skip_serializing_if = "is_empty_string_slice")]
@@ -106,6 +209,11 @@ impl UserpassUserRequest {
     }
 
     fn validate(&self) -> Result<()> {
+        if self.password.expose_secret().is_empty() {
+            return Err(Error::InvalidParameter(
+                "userpass password must not be empty".into(),
+            ));
+        }
         crate::validation::validate_cidr_list(&self.token_bound_cidrs, "userpass token_bound_cidrs")
     }
 }
@@ -204,7 +312,10 @@ struct UserpassLoginRequest<'a> {
 
 #[derive(Serialize)]
 struct UserpassPasswordRequest<'a> {
-    password: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    password: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    password_hash: Option<&'a str>,
 }
 
 #[derive(Serialize)]
@@ -319,7 +430,8 @@ impl UserpassAuthAdmin<'_> {
         user.validate()?;
         let username = validate_username(username)?;
         let payload = UserpassUserPayload {
-            password: user.password.expose_secret(),
+            password: Some(user.password.expose_secret()),
+            password_hash: None,
             token_policies: &user.token_policies,
             policies: &user.policies,
             token_ttl: user.token_ttl.as_deref(),
@@ -330,6 +442,51 @@ impl UserpassAuthAdmin<'_> {
             token_bound_cidrs: &user.token_bound_cidrs,
             token_num_uses: user.token_num_uses,
             token_no_default_policy: user.token_no_default_policy,
+        };
+        self.client
+            .request_auth_json_internal(
+                "userpass",
+                &self.mount,
+                Method::POST,
+                &format!("auth/{}/users/{username}", self.mount),
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Creates or updates a user using a pre-hashed bcrypt credential.
+    ///
+    /// This OpenBao 2.6 helper sends only `password_hash`; the distinct request
+    /// type makes it impossible to combine that field with plaintext
+    /// `password`. The bcrypt hash remains secret and is redacted from debug
+    /// output.
+    pub async fn write_hashed_user(
+        &self,
+        username: &str,
+        user: &UserpassHashedUserRequest,
+    ) -> Result<Empty> {
+        user.settings.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::USERPASS_USER_PASSWORD_HASH,
+                true,
+            )])
+            .await?;
+        let username = validate_username(username)?;
+        let settings = &user.settings;
+        let payload = UserpassUserPayload {
+            password: None,
+            password_hash: Some(user.password_hash.expose_secret()),
+            token_policies: &settings.token_policies,
+            policies: &settings.policies,
+            token_ttl: settings.token_ttl.as_deref(),
+            token_max_ttl: settings.token_max_ttl.as_deref(),
+            token_period: settings.token_period.as_deref(),
+            token_explicit_max_ttl: settings.token_explicit_max_ttl.as_deref(),
+            token_type: settings.token_type.as_deref(),
+            token_bound_cidrs: &settings.token_bound_cidrs,
+            token_num_uses: settings.token_num_uses,
+            token_no_default_policy: settings.token_no_default_policy,
         };
         self.client
             .request_auth_json_internal(
@@ -375,9 +532,43 @@ impl UserpassAuthAdmin<'_> {
 
     /// Updates only a userpass user's password.
     pub async fn update_password(&self, username: &str, password: &SecretString) -> Result<Empty> {
+        if password.expose_secret().is_empty() {
+            return Err(Error::InvalidParameter(
+                "userpass password must not be empty".into(),
+            ));
+        }
         let username = validate_username(username)?;
         let request = UserpassPasswordRequest {
-            password: password.expose_secret(),
+            password: Some(password.expose_secret()),
+            password_hash: None,
+        };
+        self.client
+            .request_auth_json_internal(
+                "userpass",
+                &self.mount,
+                Method::POST,
+                &format!("auth/{}/users/{username}/password", self.mount),
+                Some(&request),
+            )
+            .await
+    }
+
+    /// Updates only a user's password using a validated pre-hashed bcrypt value.
+    pub async fn update_password_hash(
+        &self,
+        username: &str,
+        password_hash: &UserpassPasswordHash,
+    ) -> Result<Empty> {
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::USERPASS_PASSWORD_PASSWORD_HASH,
+                true,
+            )])
+            .await?;
+        let username = validate_username(username)?;
+        let request = UserpassPasswordRequest {
+            password: None,
+            password_hash: Some(password_hash.expose_secret()),
         };
         self.client
             .request_auth_json_internal(
@@ -471,13 +662,44 @@ fn validate_username(username: &str) -> Result<&str> {
     Ok(username)
 }
 
+fn validate_bcrypt_hash(hash: &str) -> Result<()> {
+    let bytes = hash.as_bytes();
+    let valid_prefix = bytes.len() == 60
+        && bytes[0] == b'$'
+        && bytes[1] == b'2'
+        && matches!(bytes[2], b'a' | b'b' | b'y')
+        && bytes[3] == b'$'
+        && bytes[4].is_ascii_digit()
+        && bytes[5].is_ascii_digit()
+        && bytes[6] == b'$';
+    if !valid_prefix
+        || !bytes[7..]
+            .iter()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'/'))
+    {
+        return Err(Error::InvalidParameter(
+            "userpass password_hash must be a valid bcrypt hash".into(),
+        ));
+    }
+    let cost = u16::from(bytes[4] - b'0') * 10 + u16::from(bytes[5] - b'0');
+    if !(5..=12).contains(&cost) {
+        return Err(Error::InvalidParameter(
+            "userpass bcrypt cost must be between 5 and 12".into(),
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
 
     use secrecy::{ExposeSecret, SecretString};
 
-    use super::{UserpassLoginResponse, UserpassUserList, UserpassUserRequest, validate_username};
+    use super::{
+        UserpassHashedUserRequest, UserpassLoginResponse, UserpassPasswordHash, UserpassUserList,
+        UserpassUserRequest, validate_bcrypt_hash, validate_username,
+    };
 
     fn test_secret(parts: &[&str]) -> SecretString {
         SecretString::from(parts.concat())
@@ -511,6 +733,21 @@ mod tests {
             Err(error) => error,
         };
         assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
+    fn userpass_bcrypt_hashes_are_validated_and_redacted() {
+        let hash_text = format!("$2b$10${}", "A".repeat(53));
+        let hash = UserpassPasswordHash::bcrypt(SecretString::from(hash_text.clone()))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = UserpassHashedUserRequest::new(hash.clone());
+        assert!(!format!("{hash:?}").contains(&hash_text));
+        assert!(!format!("{request:?}").contains(&hash_text));
+        assert_eq!(hash.expose_secret(), hash_text);
+
+        assert!(validate_bcrypt_hash(&format!("$2b$04${}", "A".repeat(53))).is_err());
+        assert!(validate_bcrypt_hash(&format!("$2b$13${}", "A".repeat(53))).is_err());
+        assert!(validate_bcrypt_hash("plaintext-password").is_err());
     }
 
     #[test]

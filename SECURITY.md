@@ -181,6 +181,34 @@ but rejects CAS-selected workflow writes before transport while 2.6.0 is the
 only workflow profile, never retries writes, and classifies prefixed LIST/SCAN
 as security-blocked for exact 2.6.0.
 
+## OpenBao 2.6 Authentication Contracts
+
+JWT CEL programs are caller-controlled authorization code. The SDK bounds the
+number of variables, each expression, failure messages, and total program
+size, validates variable identifiers and uniqueness, and redacts program text
+from `Debug`. These structural limits do not prove that a valid CEL program is
+cheap to compile or execute. Restrict CEL role administration to trusted
+operators and enforce OpenBao process CPU, memory, and request limits.
+
+Exact OpenBao 2.6.0 JWT CEL PATCH is security-blocked. Tagged runtime source
+constructs a replacement entry without preserving `bound_audiences` or the
+three leeway fields, which can silently weaken a patched role. Use full POST
+replacement through `write_cel_role` for that release.
+
+`JwtConfig::kubernetes_provider` sets only
+`provider_config.provider = "kubernetes"`. The typed configuration validator
+rejects OIDC discovery, JWKS, static validation keys, and extra provider-map
+entries in this mode. OpenBao derives the API endpoint and credentials from
+the pod service-account environment; the contradictory discovery-URL guide
+shape is intentionally not reproduced.
+
+Userpass bcrypt hashes use `UserpassPasswordHash`, which validates the encoded
+shape and OpenBao's accepted cost range of 5 through 12 and redacts the hash
+from `Debug`. Separate create/reset helpers serialize only `password_hash`, so
+typed callers cannot send it together with plaintext `password`. The hash is
+still credential material and remains subject to the transport residual-memory
+boundary below.
+
 ## Residual Secret Memory
 
 After a JSON request body is handed to `reqwest`, the transport stack, TLS

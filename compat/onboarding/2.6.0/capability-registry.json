@@ -290,7 +290,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.delete.auth.jwt.cel.role.name.2e0fa69cee9fad5b",
       "method": "DELETE",
       "path_template": "/auth/jwt/cel/role/:name",
@@ -1688,7 +1688,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.get.auth.jwt.cel.role.name.d0f4d4a402ab3b3b",
       "method": "GET",
       "path_template": "/auth/jwt/cel/role/:name",
@@ -4814,7 +4814,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.list.auth.jwt.cel.role.0bbe5af5dd0ea683",
       "method": "LIST",
       "path_template": "/auth/jwt/cel/role",
@@ -5818,7 +5818,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "security-blocked",
       "id": "openbao.patch.auth.jwt.cel.role.name.c4134af7e81e8027",
       "method": "PATCH",
       "path_template": "/auth/jwt/cel/role/:name",
@@ -6250,7 +6250,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.post.auth.jwt.cel.login.caa38122603912b8",
       "method": "POST",
       "path_template": "/auth/jwt/cel/login",
@@ -6270,7 +6270,7 @@
       ]
     },
     {
-      "disposition": "pending-typed",
+      "disposition": "typed",
       "id": "openbao.post.auth.jwt.cel.role.name.abfb03ca1d2e0d25",
       "method": "POST",
       "path_template": "/auth/jwt/cel/role/:name",
@@ -10161,15 +10161,14 @@
   "schema": "openbao-staged-capability-registry/v1",
   "summary": {
     "dispositions": {
-      "pending-typed": 6,
-      "security-blocked": 2,
-      "typed": 587,
+      "security-blocked": 3,
+      "typed": 592,
       "typed-gated": 95
     },
     "operation_count": 690,
-    "pending_operation_count": 6,
+    "pending_operation_count": 0,
     "profile_count": 22,
-    "public_operation_count": 684
+    "public_operation_count": 690
   },
   "versions": [
     "2.0.0",

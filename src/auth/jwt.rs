@@ -1,13 +1,16 @@
 //! JWT/OIDC authentication support.
 
 use core::fmt;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-use reqwest::Method;
+use reqwest::{
+    Method, StatusCode,
+    header::{CONTENT_TYPE, HeaderValue},
+};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
-    de::{IgnoredAny, MapAccess, Visitor},
+    de::{IgnoredAny, MapAccess, SeqAccess, Visitor},
     ser::SerializeMap,
 };
 
@@ -15,10 +18,17 @@ use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
     path::validate_mount_path,
     response::{
-        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
-        deserialize_bounded_string_vec,
+        Empty, ListEntries, ListPageOptions, ResponseEnvelope,
+        deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
     },
 };
+
+const MAX_CEL_VARIABLES: usize = 128;
+const MAX_CEL_AUDIENCES: usize = crate::MAX_RESPONSE_STRINGS;
+const MAX_CEL_IDENTIFIER_BYTES: usize = 256;
+const MAX_CEL_EXPRESSION_BYTES: usize = 256 * 1024;
+const MAX_CEL_PROGRAM_BYTES: usize = 1024 * 1024;
+const MAX_CEL_MESSAGE_BYTES: usize = 64 * 1024;
 
 /// Handle for JWT auth login at a configured mount.
 #[derive(Debug)]
@@ -117,6 +127,48 @@ impl core::fmt::Debug for JwtConfig {
             .field("skip_jwks_validation", &self.skip_jwks_validation)
             .field("namespace_in_state", &self.namespace_in_state)
             .finish()
+    }
+}
+
+impl JwtConfig {
+    /// Creates a JWT configuration that discovers signing keys from the local
+    /// Kubernetes API server service-account environment.
+    ///
+    /// OpenBao derives the API address from `KUBERNETES_SERVICE_HOST` and
+    /// `KUBERNETES_SERVICE_PORT`, then reads the pod service-account token and
+    /// CA from their standard mounted paths. OIDC discovery, JWKS, and static
+    /// validation keys must not be combined with this provider.
+    pub fn kubernetes_provider() -> Self {
+        Self {
+            provider_config: BTreeMap::from([("provider".into(), "kubernetes".into())]),
+            ..Self::default()
+        }
+    }
+
+    fn uses_kubernetes_provider(&self) -> bool {
+        self.provider_config.get("provider").map(String::as_str) == Some("kubernetes")
+    }
+
+    fn validate(&self) -> Result<()> {
+        if !self.uses_kubernetes_provider() {
+            return Ok(());
+        }
+        if self.provider_config.len() != 1 {
+            return Err(Error::InvalidParameter(
+                "JWT Kubernetes provider_config accepts only provider=kubernetes".into(),
+            ));
+        }
+        if self.oidc_discovery_url.is_some()
+            || self.oidc_discovery_ca_pem.is_some()
+            || self.jwks_url.is_some()
+            || self.jwks_ca_pem.is_some()
+            || !self.jwt_validation_pubkeys.is_empty()
+        {
+            return Err(Error::InvalidParameter(
+                "JWT Kubernetes provider must be the sole signing-key source".into(),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -352,6 +404,473 @@ pub struct JwtRoleList {
     /// Role names.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub keys: Vec<String>,
+}
+
+/// One ordered variable in an OpenBao JWT CEL program.
+#[derive(Clone, Deserialize, Serialize)]
+pub struct JwtCelVariable {
+    /// CEL identifier assigned by this variable.
+    pub name: String,
+    /// CEL expression evaluated to produce the variable value.
+    pub expression: String,
+}
+
+impl fmt::Debug for JwtCelVariable {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("JwtCelVariable")
+            .field("name", &self.name)
+            .field("expression", &"<redacted>")
+            .finish()
+    }
+}
+
+/// Bounded CEL program used by a JWT CEL role.
+///
+/// The SDK validates structural limits only. OpenBao remains responsible for
+/// parsing, type-checking, and executing CEL. Restrict CEL role administration
+/// to trusted operators because a syntactically valid program can still be
+/// computationally expensive.
+#[derive(Clone, Serialize)]
+pub struct JwtCelProgram {
+    /// Ordered variables evaluated before the final expression.
+    #[serde(default, deserialize_with = "deserialize_bounded_cel_variables")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub variables: Vec<JwtCelVariable>,
+    /// Final CEL expression. A successful auth program returns OpenBao auth data.
+    pub expression: String,
+}
+
+impl<'de> Deserialize<'de> for JwtCelProgram {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct ProgramData {
+            #[serde(default, deserialize_with = "deserialize_bounded_cel_variables")]
+            variables: Vec<JwtCelVariable>,
+            expression: String,
+        }
+
+        let data = ProgramData::deserialize(deserializer)?;
+        let program = Self {
+            variables: data.variables,
+            expression: data.expression,
+        };
+        program.validate().map_err(serde::de::Error::custom)?;
+        Ok(program)
+    }
+}
+
+impl JwtCelProgram {
+    /// Creates a CEL program with no intermediate variables.
+    pub fn new(expression: impl Into<String>) -> Result<Self> {
+        let program = Self {
+            variables: Vec::new(),
+            expression: expression.into(),
+        };
+        program.validate()?;
+        Ok(program)
+    }
+
+    /// Adds one ordered CEL variable.
+    pub fn with_variable(
+        mut self,
+        name: impl Into<String>,
+        expression: impl Into<String>,
+    ) -> Result<Self> {
+        self.variables.push(JwtCelVariable {
+            name: name.into(),
+            expression: expression.into(),
+        });
+        self.validate()?;
+        Ok(self)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.variables.len() > MAX_CEL_VARIABLES {
+            return Err(Error::InvalidParameter(
+                "JWT CEL program exceeds variable limit".into(),
+            ));
+        }
+        validate_cel_expression(&self.expression)?;
+        let mut total = self.expression.len();
+        let mut names = BTreeSet::new();
+        for variable in &self.variables {
+            validate_cel_identifier(&variable.name)?;
+            validate_cel_expression(&variable.expression)?;
+            if !names.insert(variable.name.as_str()) {
+                return Err(Error::InvalidParameter(
+                    "JWT CEL variable names must be unique".into(),
+                ));
+            }
+            total = total
+                .checked_add(variable.name.len())
+                .and_then(|total| total.checked_add(variable.expression.len()))
+                .ok_or_else(|| Error::InvalidParameter("JWT CEL program is too large".into()))?;
+            if total > MAX_CEL_PROGRAM_BYTES {
+                return Err(Error::InvalidParameter(
+                    "JWT CEL program exceeds total size limit".into(),
+                ));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for JwtCelProgram {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("JwtCelProgram")
+            .field("variable_count", &self.variables.len())
+            .field("expression", &"<redacted>")
+            .finish()
+    }
+}
+
+/// Request for creating or replacing a JWT CEL role.
+#[derive(Clone, Serialize)]
+pub struct JwtCelRoleRequest {
+    /// CEL program evaluated after JWT signature and claim-time validation.
+    pub cel_program: JwtCelProgram,
+    /// Static authentication failure message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Clock-skew validation leeway.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clock_skew_leeway: Option<JwtLeeway>,
+    /// Expiration validation leeway.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expiration_leeway: Option<JwtLeeway>,
+    /// Not-before validation leeway.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_before_leeway: Option<JwtLeeway>,
+    /// Audiences accepted from the JWT `aud` claim.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bound_audiences: Vec<String>,
+}
+
+impl JwtCelRoleRequest {
+    /// Creates a JWT CEL role request with its required program.
+    pub fn new(cel_program: JwtCelProgram) -> Self {
+        Self {
+            cel_program,
+            message: None,
+            clock_skew_leeway: None,
+            expiration_leeway: None,
+            not_before_leeway: None,
+            bound_audiences: Vec::new(),
+        }
+    }
+
+    fn validate(&self) -> Result<()> {
+        self.cel_program.validate()?;
+        validate_cel_audiences(&self.bound_audiences)?;
+        if self
+            .message
+            .as_ref()
+            .is_some_and(|message| message.len() > MAX_CEL_MESSAGE_BYTES)
+        {
+            return Err(Error::InvalidParameter(
+                "JWT CEL role message exceeds size limit".into(),
+            ));
+        }
+        for leeway in [
+            &self.clock_skew_leeway,
+            &self.expiration_leeway,
+            &self.not_before_leeway,
+        ] {
+            validate_cel_leeway(leeway.as_ref())?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for JwtCelRoleRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("JwtCelRoleRequest")
+            .field("cel_program", &self.cel_program)
+            .field("message", &self.message)
+            .field("clock_skew_leeway", &self.clock_skew_leeway)
+            .field("expiration_leeway", &self.expiration_leeway)
+            .field("not_before_leeway", &self.not_before_leeway)
+            .field("bound_audiences", &self.bound_audiences)
+            .finish()
+    }
+}
+
+/// Partial JWT CEL role update.
+///
+/// OpenBao 2.6.0 does not preserve audience and leeway constraints in its
+/// PATCH handler. The SDK therefore reports this operation as security-blocked
+/// for that exact profile; use [`JwtAuthAdmin::write_cel_role`] instead.
+#[derive(Clone, Default, Serialize)]
+pub struct JwtCelRolePatch {
+    /// Replacement CEL program.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cel_program: Option<JwtCelProgram>,
+    /// Replacement static failure message.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// Replacement clock-skew validation leeway.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clock_skew_leeway: Option<JwtLeeway>,
+    /// Replacement expiration validation leeway.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expiration_leeway: Option<JwtLeeway>,
+    /// Replacement not-before validation leeway.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_before_leeway: Option<JwtLeeway>,
+    /// Replacement audiences accepted from the JWT `aud` claim.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bound_audiences: Option<Vec<String>>,
+}
+
+impl fmt::Debug for JwtCelRolePatch {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("JwtCelRolePatch")
+            .field("has_cel_program", &self.cel_program.is_some())
+            .field("message", &self.message)
+            .field("clock_skew_leeway", &self.clock_skew_leeway)
+            .field("expiration_leeway", &self.expiration_leeway)
+            .field("not_before_leeway", &self.not_before_leeway)
+            .field("bound_audiences", &self.bound_audiences)
+            .finish()
+    }
+}
+
+impl JwtCelRolePatch {
+    fn validate(&self) -> Result<()> {
+        if self.cel_program.is_none()
+            && self.message.is_none()
+            && self.clock_skew_leeway.is_none()
+            && self.expiration_leeway.is_none()
+            && self.not_before_leeway.is_none()
+            && self.bound_audiences.is_none()
+        {
+            return Err(Error::InvalidParameter(
+                "JWT CEL role patch must select at least one field".into(),
+            ));
+        }
+        if let Some(program) = &self.cel_program {
+            program.validate()?;
+        }
+        if self
+            .message
+            .as_ref()
+            .is_some_and(|message| message.len() > MAX_CEL_MESSAGE_BYTES)
+        {
+            return Err(Error::InvalidParameter(
+                "JWT CEL role message exceeds size limit".into(),
+            ));
+        }
+        for leeway in [
+            &self.clock_skew_leeway,
+            &self.expiration_leeway,
+            &self.not_before_leeway,
+        ] {
+            validate_cel_leeway(leeway.as_ref())?;
+        }
+        if let Some(audiences) = &self.bound_audiences {
+            validate_cel_audiences(audiences)?;
+        }
+        Ok(())
+    }
+}
+
+/// JWT CEL role returned by OpenBao.
+#[derive(Clone)]
+pub struct JwtCelRole {
+    /// Role name.
+    pub name: String,
+    /// CEL program evaluated by the role.
+    pub cel_program: JwtCelProgram,
+    /// Static authentication failure message.
+    pub message: Option<String>,
+    /// Clock-skew validation leeway.
+    pub clock_skew_leeway: Option<JwtLeeway>,
+    /// Expiration validation leeway.
+    pub expiration_leeway: Option<JwtLeeway>,
+    /// Not-before validation leeway.
+    pub not_before_leeway: Option<JwtLeeway>,
+    /// Audiences accepted from the JWT `aud` claim.
+    pub bound_audiences: Vec<String>,
+}
+
+impl<'de> Deserialize<'de> for JwtCelRole {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RoleData {
+            #[serde(default)]
+            name: String,
+            cel_program: JwtCelProgram,
+            #[serde(default)]
+            message: Option<String>,
+            #[serde(default)]
+            clock_skew_leeway: Option<JwtLeeway>,
+            #[serde(default)]
+            expiration_leeway: Option<JwtLeeway>,
+            #[serde(default)]
+            not_before_leeway: Option<JwtLeeway>,
+            #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+            bound_audiences: Vec<String>,
+        }
+
+        let data = RoleData::deserialize(deserializer)?;
+        let role = Self {
+            name: data.name,
+            cel_program: data.cel_program,
+            message: data.message,
+            clock_skew_leeway: data.clock_skew_leeway,
+            expiration_leeway: data.expiration_leeway,
+            not_before_leeway: data.not_before_leeway,
+            bound_audiences: data.bound_audiences,
+        };
+        role.validate().map_err(serde::de::Error::custom)?;
+        Ok(role)
+    }
+}
+
+impl JwtCelRole {
+    fn validate(&self) -> Result<()> {
+        self.cel_program.validate()?;
+        if self
+            .message
+            .as_ref()
+            .is_some_and(|message| message.len() > MAX_CEL_MESSAGE_BYTES)
+        {
+            return Err(Error::InvalidParameter(
+                "JWT CEL role message exceeds size limit".into(),
+            ));
+        }
+        for leeway in [
+            &self.clock_skew_leeway,
+            &self.expiration_leeway,
+            &self.not_before_leeway,
+        ] {
+            validate_cel_leeway(leeway.as_ref())?;
+        }
+        validate_cel_audiences(&self.bound_audiences)
+    }
+}
+
+impl fmt::Debug for JwtCelRole {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("JwtCelRole")
+            .field("name", &self.name)
+            .field("cel_program", &self.cel_program)
+            .field("message", &self.message)
+            .field("clock_skew_leeway", &self.clock_skew_leeway)
+            .field("expiration_leeway", &self.expiration_leeway)
+            .field("not_before_leeway", &self.not_before_leeway)
+            .field("bound_audiences", &self.bound_audiences)
+            .finish()
+    }
+}
+
+/// JWT CEL role list.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct JwtCelRoleList {
+    /// CEL role names.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+}
+
+impl ListEntries for JwtCelRoleList {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+fn deserialize_bounded_cel_variables<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<JwtCelVariable>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_seq(BoundedCelVariablesVisitor)
+}
+
+struct BoundedCelVariablesVisitor;
+
+impl<'de> Visitor<'de> for BoundedCelVariablesVisitor {
+    type Value = Vec<JwtCelVariable>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a bounded list of JWT CEL variables")
+    }
+
+    fn visit_seq<A>(self, mut sequence: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while values.len() < MAX_CEL_VARIABLES {
+            let Some(value) = sequence.next_element::<JwtCelVariable>()? else {
+                return Ok(values);
+            };
+            values.push(value);
+        }
+        if sequence.next_element::<IgnoredAny>()?.is_some() {
+            return Err(serde::de::Error::custom(
+                "JWT CEL variables exceed item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
+fn validate_cel_identifier(value: &str) -> Result<()> {
+    let bytes = value.as_bytes();
+    if bytes.is_empty()
+        || bytes.len() > MAX_CEL_IDENTIFIER_BYTES
+        || !(bytes[0].is_ascii_alphabetic() || bytes[0] == b'_')
+        || !bytes[1..]
+            .iter()
+            .all(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+    {
+        return Err(Error::InvalidParameter(
+            "JWT CEL variable name must be a bounded ASCII identifier".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_cel_expression(value: &str) -> Result<()> {
+    if value.trim().is_empty() {
+        return Err(Error::InvalidParameter(
+            "JWT CEL expression must not be empty".into(),
+        ));
+    }
+    if value.len() > MAX_CEL_EXPRESSION_BYTES {
+        return Err(Error::InvalidParameter(
+            "JWT CEL expression exceeds size limit".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_cel_leeway(leeway: Option<&JwtLeeway>) -> Result<()> {
+    if let Some(JwtLeeway::Duration(duration)) = leeway {
+        crate::validation::validate_duration_parameter(duration, "JWT CEL leeway")?;
+    }
+    Ok(())
+}
+
+fn validate_cel_audiences(audiences: &[String]) -> Result<()> {
+    if audiences.len() > MAX_CEL_AUDIENCES {
+        return Err(Error::InvalidParameter(
+            "JWT CEL bound_audiences exceeds item limit".into(),
+        ));
+    }
+    Ok(())
 }
 
 impl ListEntries for JwtRoleList {
@@ -894,6 +1413,17 @@ impl Client<Unauthenticated> {
         let (token, metadata) = split_login_auth(response);
         Ok((self.try_with_token(token)?, metadata))
     }
+
+    /// Logs in with an OpenBao 2.6 JWT CEL role at `auth/jwt`.
+    pub async fn login_jwt_cel(
+        self,
+        role: Option<&str>,
+        jwt: SecretString,
+    ) -> Result<(Client<Authenticated>, JwtLoginMetadata)> {
+        let response = self.jwt()?.login_cel_response(role, &jwt).await?;
+        let (token, metadata) = split_login_auth(response);
+        Ok((self.try_with_token(token)?, metadata))
+    }
 }
 
 impl Client<Authenticated> {
@@ -981,6 +1511,24 @@ impl JwtAuth<'_> {
         ))
     }
 
+    /// Logs in against an OpenBao 2.6 JWT CEL role.
+    ///
+    /// CEL is evaluated by OpenBao after JWT validation. Restrict role
+    /// administration separately; this login helper only submits the signed
+    /// JWT and optional role name.
+    pub async fn login_cel(
+        self,
+        role: Option<&str>,
+        jwt: SecretString,
+    ) -> Result<(Client<Authenticated>, JwtLoginMetadata)> {
+        let response = self.login_cel_response(role, &jwt).await?;
+        let (token, metadata) = split_login_auth(response);
+        Ok((
+            self.client.clone_without_state().try_with_token(token)?,
+            metadata,
+        ))
+    }
+
     async fn login_response(&self, role: Option<&str>, jwt: &SecretString) -> Result<JwtLoginAuth> {
         let role = role
             .map(|role| validate_mount_path(role).map(|segments| segments.join("/")))
@@ -996,6 +1544,31 @@ impl JwtAuth<'_> {
                 &self.mount,
                 Method::POST,
                 &format!("auth/{}/login", self.mount),
+                Some(&request),
+            )
+            .await?;
+        response.auth.ok_or(Error::MissingField("auth"))
+    }
+
+    async fn login_cel_response(
+        &self,
+        role: Option<&str>,
+        jwt: &SecretString,
+    ) -> Result<JwtLoginAuth> {
+        let role = role
+            .map(|role| validate_mount_path(role).map(|segments| segments.join("/")))
+            .transpose()?;
+        let request = JwtLoginRequest {
+            role: role.as_deref(),
+            jwt: jwt.expose_secret(),
+        };
+        let response: JwtLoginResponse = self
+            .client
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
+                Method::POST,
+                &format!("auth/{}/cel/login", self.mount),
                 Some(&request),
             )
             .await?;
@@ -1071,6 +1644,7 @@ impl JwtAuth<'_> {
 impl JwtAuthAdmin<'_> {
     /// Configures the JWT/OIDC auth method.
     pub async fn configure(&self, config: &JwtConfig) -> Result<Empty> {
+        config.validate()?;
         self.client
             .validate_versioned_request_fields(&[
                 (
@@ -1080,6 +1654,10 @@ impl JwtAuthAdmin<'_> {
                 (
                     &crate::request_compatibility::fields::JWT_CONFIG_OVERRIDE_ALLOWED_SERVER_NAMES,
                     !config.override_allowed_server_names.is_empty(),
+                ),
+                (
+                    &crate::request_compatibility::fields::JWT_CONFIG_KUBERNETES_PROVIDER,
+                    config.uses_kubernetes_provider(),
                 ),
             ])
             .await?;
@@ -1228,6 +1806,115 @@ impl JwtAuthAdmin<'_> {
             )
             .await
     }
+
+    /// Creates or replaces an OpenBao 2.6 JWT CEL role.
+    ///
+    /// CEL program source is redacted from `Debug` but is sent to OpenBao as
+    /// secret-adjacent policy material. Grant this endpoint only to trusted
+    /// administrators and enforce server-side CPU and request limits.
+    pub async fn write_cel_role(&self, name: &str, role: &JwtCelRoleRequest) -> Result<JwtCelRole> {
+        role.validate()?;
+        let name = validate_mount_path(name)?.join("/");
+        let envelope: ResponseEnvelope<JwtCelRole> = self
+            .client
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
+                Method::POST,
+                &format!("auth/{}/cel/role/{name}", self.mount),
+                Some(role),
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Patches an OpenBao JWT CEL role when the selected exact profile is safe.
+    ///
+    /// Exact OpenBao 2.6.0 is security-blocked because its PATCH handler drops
+    /// audience and leeway constraints. Use [`Self::write_cel_role`] for 2.6.0.
+    pub async fn patch_cel_role(&self, name: &str, patch: &JwtCelRolePatch) -> Result<JwtCelRole> {
+        patch.validate()?;
+        let name = validate_mount_path(name)?.join("/");
+        let envelope: ResponseEnvelope<JwtCelRole> = self
+            .client
+            .request_auth_json_headers_accepting(
+                "jwt",
+                &self.mount,
+                Method::PATCH,
+                &format!("auth/{}/cel/role/{name}", self.mount),
+                &[(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/merge-patch+json"),
+                )],
+                Some(patch),
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads an OpenBao 2.6 JWT CEL role.
+    pub async fn read_cel_role(&self, name: &str) -> Result<JwtCelRole> {
+        let name = validate_mount_path(name)?.join("/");
+        let envelope: ResponseEnvelope<JwtCelRole> = self
+            .client
+            .request_auth_json_internal(
+                "jwt",
+                &self.mount,
+                Method::GET,
+                &format!("auth/{}/cel/role/{name}", self.mount),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Lists OpenBao 2.6 JWT CEL role names.
+    pub async fn list_cel_roles(&self) -> Result<JwtCelRoleList> {
+        self.list_cel_roles_page(None, None).await
+    }
+
+    /// Lists OpenBao 2.6 JWT CEL role names with bounded pagination.
+    pub async fn list_cel_roles_page(
+        &self,
+        after: Option<&str>,
+        limit: Option<u64>,
+    ) -> Result<JwtCelRoleList> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        if let Some(after) = after {
+            validate_mount_path(after)?;
+        }
+        let query = ListPageOptions::from_after_limit(after, limit)?.query_pairs();
+        let envelope: ResponseEnvelope<JwtCelRoleList> = self
+            .client
+            .request_auth_json_query_accepting(
+                "jwt",
+                &self.mount,
+                method,
+                &format!("auth/{}/cel/role", self.mount),
+                &query,
+                Option::<&Empty>::None,
+                &[StatusCode::OK],
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Deletes an OpenBao 2.6 JWT CEL role.
+    pub async fn delete_cel_role(&self, name: &str) -> Result<Empty> {
+        let name = validate_mount_path(name)?.join("/");
+        self.client
+            .request_auth_json_accepting(
+                "jwt",
+                &self.mount,
+                Method::DELETE,
+                &format!("auth/{}/cel/role/{name}", self.mount),
+                Option::<&Empty>::None,
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
 }
 
 fn split_login_auth(auth: JwtLoginAuth) -> (SecretString, JwtLoginMetadata) {
@@ -1253,9 +1940,14 @@ fn split_login_auth(auth: JwtLoginAuth) -> (SecretString, JwtLoginMetadata) {
 mod tests {
     #![allow(clippy::panic)]
 
+    use std::collections::BTreeMap;
+
     use secrecy::{ExposeSecret, SecretString};
 
-    use super::{JwtConfig, JwtLeeway, JwtLoginResponse, JwtRole, JwtRoleList};
+    use super::{
+        JwtCelProgram, JwtCelRole, JwtCelRolePatch, JwtCelRoleRequest, JwtConfig, JwtLeeway,
+        JwtLoginResponse, JwtRole, JwtRoleList,
+    };
 
     #[test]
     fn jwt_login_auth_deserializes_secret_token_fields() {
@@ -1296,6 +1988,121 @@ mod tests {
         let debug = format!("{config:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("client-secret"));
+    }
+
+    #[test]
+    fn kubernetes_provider_is_exclusive_and_version_identifiable() {
+        let config = JwtConfig::kubernetes_provider();
+        assert_eq!(
+            config.provider_config.get("provider").map(String::as_str),
+            Some("kubernetes")
+        );
+        assert!(config.validate().is_ok());
+
+        let conflicting = JwtConfig {
+            jwks_url: Some("https://keys.example.test/jwks".into()),
+            ..JwtConfig::kubernetes_provider()
+        };
+        assert!(conflicting.validate().is_err());
+
+        let extra = JwtConfig {
+            provider_config: BTreeMap::from([
+                ("provider".into(), "kubernetes".into()),
+                ("unexpected".into(), "value".into()),
+            ]),
+            ..JwtConfig::default()
+        };
+        assert!(extra.validate().is_err());
+    }
+
+    #[test]
+    fn jwt_cel_programs_are_bounded_typed_and_debug_redacted() {
+        let program = JwtCelProgram::new("claims.secret == 'cel-secret-literal'")
+            .and_then(|program| program.with_variable("has_group", "claims.groups.size() > 0"))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let request = JwtCelRoleRequest::new(program.clone());
+        let debug = format!("{request:?}");
+        assert!(!debug.contains("cel-secret-literal"));
+        assert!(request.validate().is_ok());
+
+        let value = serde_json::to_value(&request).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["cel_program"]["variables"][0]["name"], "has_group");
+        assert_eq!(
+            value["cel_program"]["expression"],
+            "claims.secret == 'cel-secret-literal'"
+        );
+
+        let response: JwtCelRole = serde_json::from_value(serde_json::json!({
+            "name": "service",
+            "cel_program": value["cel_program"].clone(),
+            "bound_audiences": ["service"]
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(response.name, "service");
+        assert!(!format!("{response:?}").contains("cel-secret-literal"));
+
+        let duplicate = JwtCelProgram {
+            variables: vec![
+                super::JwtCelVariable {
+                    name: "same".into(),
+                    expression: "true".into(),
+                },
+                super::JwtCelVariable {
+                    name: "same".into(),
+                    expression: "false".into(),
+                },
+            ],
+            expression: "same".into(),
+        };
+        assert!(duplicate.validate().is_err());
+        assert!(JwtCelProgram::new(" ").is_err());
+        assert!(JwtCelRolePatch::default().validate().is_err());
+
+        let patch = JwtCelRolePatch {
+            bound_audiences: Some(vec!["service".into()]),
+            expiration_leeway: Some(JwtLeeway::seconds(30)),
+            ..JwtCelRolePatch::default()
+        };
+        let patch_value = serde_json::to_value(&patch).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(patch_value["bound_audiences"][0], "service");
+        assert_eq!(patch_value["expiration_leeway"], 30);
+    }
+
+    #[test]
+    fn jwt_cel_variable_lists_reject_overflow() {
+        let variables = (0..=super::MAX_CEL_VARIABLES)
+            .map(|index| serde_json::json!({"name": format!("v{index}"), "expression": "true"}))
+            .collect::<Vec<_>>();
+        let result = serde_json::from_value::<JwtCelProgram>(serde_json::json!({
+            "variables": variables,
+            "expression": "true"
+        }));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn jwt_cel_roles_reject_oversized_enclosing_fields() {
+        let oversized_message = serde_json::json!({
+            "cel_program": {"expression": "true"},
+            "message": "m".repeat(super::MAX_CEL_MESSAGE_BYTES + 1)
+        });
+        assert!(serde_json::from_value::<JwtCelRole>(oversized_message).is_err());
+
+        let oversized_audiences = serde_json::json!({
+            "cel_program": {"expression": "true"},
+            "bound_audiences": (0..=super::MAX_CEL_AUDIENCES)
+                .map(|index| format!("audience-{index}"))
+                .collect::<Vec<_>>()
+        });
+        assert!(serde_json::from_value::<JwtCelRole>(oversized_audiences).is_err());
+
+        let mut request = JwtCelRoleRequest::new(
+            JwtCelProgram::new("true").unwrap_or_else(|error| panic!("{error}")),
+        );
+        request.bound_audiences = (0..=super::MAX_CEL_AUDIENCES)
+            .map(|index| format!("audience-{index}"))
+            .collect();
+        assert!(request.validate().is_err());
     }
 
     #[test]

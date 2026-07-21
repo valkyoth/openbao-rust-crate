@@ -81,6 +81,8 @@ pub(crate) mod fields {
         VersionedRequestField::since("auth.jwt.config", "skip_jwks_validation", V2_3_1);
     pub(crate) const JWT_CONFIG_OVERRIDE_ALLOWED_SERVER_NAMES: VersionedRequestField =
         VersionedRequestField::since("auth.jwt.config", "override_allowed_server_names", V2_4_0);
+    pub(crate) const JWT_CONFIG_KUBERNETES_PROVIDER: VersionedRequestField =
+        VersionedRequestField::since("auth.jwt.config", "provider_config.kubernetes", V2_6_0);
     pub(crate) const JWT_ROLE_CALLBACK_MODE: VersionedRequestField =
         VersionedRequestField::since("auth.jwt.role", "callback_mode", V2_1_0);
     pub(crate) const JWT_ROLE_POLL_INTERVAL: VersionedRequestField =
@@ -89,6 +91,13 @@ pub(crate) mod fields {
         VersionedRequestField::since("auth.jwt.role", "token_policies_template_claims", V2_1_0);
     pub(crate) const JWT_ROLE_DISABLE_CONFIRMATION: VersionedRequestField =
         VersionedRequestField::since("auth.jwt.role", "oidc_disable_confirmation", V2_5_2);
+
+    pub(crate) const USERPASS_USER_PASSWORD_HASH: VersionedRequestField =
+        VersionedRequestField::since("auth.userpass.user", "password_hash", V2_6_0);
+    pub(crate) const USERPASS_PASSWORD_PASSWORD_HASH: VersionedRequestField =
+        VersionedRequestField::since("auth.userpass.password", "password_hash", V2_6_0);
+    pub(crate) const KERBEROS_CONFIG_DECODE_PAC: VersionedRequestField =
+        VersionedRequestField::since("auth.kerberos.config", "decode_pac", V2_6_0);
 
     pub(crate) const IDENTITY_PROVIDER_TOKEN_SCOPE: VersionedRequestField =
         VersionedRequestField::since("identity.oidc.provider.token", "scope", V2_5_0);
@@ -156,10 +165,14 @@ pub(crate) mod fields {
     pub(crate) const ALL: &[VersionedRequestField] = &[
         JWT_CONFIG_SKIP_JWKS_VALIDATION,
         JWT_CONFIG_OVERRIDE_ALLOWED_SERVER_NAMES,
+        JWT_CONFIG_KUBERNETES_PROVIDER,
         JWT_ROLE_CALLBACK_MODE,
         JWT_ROLE_POLL_INTERVAL,
         JWT_ROLE_TOKEN_POLICY_TEMPLATES,
         JWT_ROLE_DISABLE_CONFIRMATION,
+        USERPASS_USER_PASSWORD_HASH,
+        USERPASS_PASSWORD_PASSWORD_HASH,
+        KERBEROS_CONFIG_DECODE_PAC,
         IDENTITY_PROVIDER_TOKEN_SCOPE,
         SSH_ROLE_ALLOW_EMPTY_PRINCIPALS,
         SSH_ROLE_ISSUER_REF,
@@ -301,6 +314,6 @@ mod tests {
                 ));
             }
         }
-        assert_eq!(identities.len(), 32);
+        assert_eq!(identities.len(), 36);
     }
 }

@@ -120,5 +120,28 @@
   "workflow_output_2_6_0": {
     "credential": "fixture-output-token",
     "status": "rotated"
+  },
+  "jwt_cel_role_2_6_0": {
+    "name": "service",
+    "cel_program": {
+      "variables": [
+        {
+          "name": "allowed",
+          "expression": "claims.environment == 'production'"
+        }
+      ],
+      "expression": "allowed ? pb.Auth{Alias: 'fixture-cel-literal'} : false"
+    },
+    "message": "JWT CEL validation failed",
+    "clock_skew_leeway": 60,
+    "expiration_leeway": 150,
+    "not_before_leeway": 150,
+    "bound_audiences": ["payments"]
+  },
+  "kerberos_config_2_6_0": {
+    "service_account": "openbao/service",
+    "remove_instance_name": false,
+    "add_group_aliases": true,
+    "decode_pac": true
   }
 }

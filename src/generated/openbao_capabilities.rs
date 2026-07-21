@@ -260,6 +260,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
+        "openbao.delete.auth.jwt.cel.role.name.2e0fa69cee9fad5b",
+        OpenBaoHttpMethod::Delete,
+        "/auth/jwt/cel/role/:name",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
         "openbao.delete.auth.jwt.role.name.530cda69c55a7224",
         OpenBaoHttpMethod::Delete,
         "/auth/jwt/role/:name",
@@ -1531,6 +1549,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
                 OpenBaoVersion::new(2, 0, 0),
                 OpenBaoVersion::new(2, 6, 0),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.get.auth.jwt.cel.role.name.d0f4d4a402ab3b3b",
+        OpenBaoHttpMethod::Get,
+        "/auth/jwt/cel/role/:name",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
             ),
         ],
     ),
@@ -4410,6 +4446,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
+        "openbao.list.auth.jwt.cel.role.0bbe5af5dd0ea683",
+        OpenBaoHttpMethod::List,
+        "/auth/jwt/cel/role",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
         "openbao.list.auth.jwt.role.f00fd8f2433a2fca",
         OpenBaoHttpMethod::List,
         "/auth/jwt/role",
@@ -5318,6 +5372,24 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         ],
     ),
     OpenBaoOperation::generated(
+        "openbao.patch.auth.jwt.cel.role.name.c4134af7e81e8027",
+        OpenBaoHttpMethod::Patch,
+        "/auth/jwt/cel/role/:name",
+        OpenBaoOperationDisposition::SecurityBlocked,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
         "openbao.patch.pki.cel.roles.name.854c5d8bc322ab20",
         OpenBaoHttpMethod::Patch,
         "/pki/cel/roles/:name",
@@ -5696,6 +5768,42 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
                 OpenBaoVersion::new(2, 0, 0),
                 OpenBaoVersion::new(2, 6, 0),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.post.auth.jwt.cel.login.caa38122603912b8",
+        OpenBaoHttpMethod::Post,
+        "/auth/jwt/cel/login",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::TaggedDocumentation,
+            ),
+        ],
+    ),
+    OpenBaoOperation::generated(
+        "openbao.post.auth.jwt.cel.role.name.abfb03ca1d2e0d25",
+        OpenBaoHttpMethod::Post,
+        "/auth/jwt/cel/role/:name",
+        OpenBaoOperationDisposition::Typed,
+        &[
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 0, 0),
+                OpenBaoVersion::new(2, 5, 5),
+                OpenBaoCapabilityEvidence::None,
+            ),
+            OpenBaoCapabilityRange::generated(
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoVersion::new(2, 6, 0),
+                OpenBaoCapabilityEvidence::LockedOpenApi,
             ),
         ],
     ),

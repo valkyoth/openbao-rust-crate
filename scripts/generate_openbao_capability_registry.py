@@ -49,8 +49,8 @@ MAX_PATH_BYTES = 4096
 EXPECTED_OPERATION_COUNT = 666
 EXPECTED_STAGED_OPERATION_COUNT = 690
 EXPECTED_REGISTRY_SHA256 = "16e80a6e668f3de027ade450f3820f559e1c76eaa0e3064d693bd378af1146f2"
-EXPECTED_STAGED_REGISTRY_SHA256 = "e05c1e256e4fc54bbf1282d1591f658b31f9be7f936086285590116592ed974a"
-EXPECTED_RUST_SHA256 = "5f819b5cc296bb23c6b8a9c310878bbc6fe3f6dac4c276c96916cd8bbe27774c"
+EXPECTED_STAGED_REGISTRY_SHA256 = "397f94126d3756d51cd779bbbef91aa8f993287f85561d4330a3734902f2a87e"
+EXPECTED_RUST_SHA256 = "b0e659d675d92e2034939c82d6c19f265c6fad2a71fcac64efcc8ac531d4ef0a"
 EXPECTED_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -98,12 +98,12 @@ HISTORICAL_DISPOSITIONS = {
 # exception: Commit 03 adds its reviewed route variants for the existing
 # operator ceremony API, so those four operations are already typed-gated.
 STAGED_DISPOSITIONS = {
-    ("DELETE", "/auth/jwt/cel/role/:name"): "pending-typed",
-    ("GET", "/auth/jwt/cel/role/:name"): "pending-typed",
-    ("LIST", "/auth/jwt/cel/role"): "pending-typed",
-    ("PATCH", "/auth/jwt/cel/role/:name"): "pending-typed",
-    ("POST", "/auth/jwt/cel/login"): "pending-typed",
-    ("POST", "/auth/jwt/cel/role/:name"): "pending-typed",
+    ("DELETE", "/auth/jwt/cel/role/:name"): "typed",
+    ("GET", "/auth/jwt/cel/role/:name"): "typed",
+    ("LIST", "/auth/jwt/cel/role"): "typed",
+    ("PATCH", "/auth/jwt/cel/role/:name"): "security-blocked",
+    ("POST", "/auth/jwt/cel/login"): "typed",
+    ("POST", "/auth/jwt/cel/role/:name"): "typed",
     ("DELETE", "/sys/generate-root-token/attempt"): "typed-gated",
     ("GET", "/sys/generate-root-token/attempt"): "typed-gated",
     ("POST", "/sys/generate-root-token/attempt"): "typed-gated",

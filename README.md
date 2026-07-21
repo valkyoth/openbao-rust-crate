@@ -46,10 +46,11 @@ remains the compatibility floor.
 
 Development on `main` is onboarding OpenBao `2.6.0` for crate `2.1.0`. Its
 22-profile candidate capability registry is staged and checksum-anchored, with
-684 operations resolved and 6 authentication operations still pending. The
+all 690 operations resolved. JWT CEL PATCH is security-blocked for exact
+`2.6.0` because the upstream handler drops audience and leeway constraints. The
 candidate profile is introspection-only and cannot drive compatibility
 policies or request routing. The stable support claim remains `2.0.0` through
-`2.5.5` until the remaining 2.6 APIs, field rules, fixtures, and exact-image
+`2.5.5` until the remaining 2.6 security gates, fixtures, and exact-image
 tests are promoted together.
 
 The crate is dual-licensed under MIT or Apache-2.0.
@@ -67,13 +68,14 @@ Implemented now:
   helpers.
 - JWT login plus JWT/OIDC auth method config, role administration, browser
   authorization URL and direct/device polling helpers, plus explicitly
-  acknowledged GET callback redemption.
+  acknowledged GET callback redemption and staged 2.6 CEL/Kubernetes-provider
+  contracts.
 - LDAP auth login plus config and user/group policy mapping helpers.
 - RADIUS login plus config and user policy mapping helpers.
 - Kerberos login plus service-account, LDAP config, and group policy mapping
-  helpers.
+  helpers, including staged 2.6 PAC-decoding configuration.
 - Userpass login plus user create/read/list/delete, password update, and
-  policy update helpers.
+  policy update helpers, including staged 2.6 validated bcrypt hashes.
 - Token create, create-orphan, role create/read/list/delete, lookup, accessor
   lookup/list/renew/revoke, renew, revoke, revoke-orphan, revoke-self, and tidy
   helpers.
@@ -446,9 +448,9 @@ openbao = { version = "2", features = ["time"] }
 | `cubbyhole` | yes | Token-scoped Cubbyhole read/write/delete/list helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
 | `identity` | yes | Identity entity/group administration plus OIDC provider administration and typed authorize/token/userinfo protocol helpers. |
-| `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, and direct/device poll helpers. |
+| `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, direct/device poll, and staged 2.6 CEL role/login and Kubernetes provider helpers. |
 | `oidc-get-callback-acknowledged` | no | Enables JWT/OIDC callback and poll GET operations plus the Identity provider GET authorize variant. Credentials, state, and nonce values necessarily enter URL and HTTP-stack buffers; enforce query-free access logging on OpenBao and every intermediary. |
-| `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, and group mapping helpers. |
+| `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, group mapping, and staged 2.6 PAC decoding. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
 | `radius-auth` | no | RADIUS login/config/user mapping helpers. Legacy RADIUS uses MD5-based authenticators and requires `radius-auth-acknowledged`; do not use it for classified networks or new high-assurance deployments. |
@@ -456,7 +458,7 @@ openbao = { version = "2", features = ["time"] }
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
 | `rabbitmq` | yes | RabbitMQ secrets engine connection, lease, role, and credential helpers. |
-| `userpass` | yes | Userpass login and user administration helpers. |
+| `userpass` | yes | Userpass login, user administration, and staged 2.6 validated bcrypt-hash helpers. |
 | `token` | yes | Token lifecycle, create-orphan, accessor renewal/revocation, token role, tidy, and revoke-orphan helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
@@ -554,11 +556,11 @@ Selected unsupported fields fail locally and are never silently omitted.
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, create/create-orphan, renew/renew-accessor, revoke, revoke-self, and revoke-accessor helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
-| JWT/OIDC | Gated GET flows | JWT login plus JWT/OIDC auth method config, role administration, and browser auth URL helpers. GET callback redemption and direct/device polling require `oidc-get-callback-acknowledged` because credentials or correlation values enter URL query strings. |
+| JWT/OIDC | Gated GET flows | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL helpers, and staged 2.6 CEL role/login and Kubernetes provider support. Exact 2.6.0 CEL PATCH is security-blocked because it drops constraints. GET callback redemption and direct/device polling require `oidc-get-callback-acknowledged` because credentials or correlation values enter URL query strings. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
 | RADIUS auth | Gated | Login, method config, user create/read/list/delete, paginated user list helpers. Available only with `radius-auth` plus `radius-auth-acknowledged` because legacy RADIUS uses MD5-based authenticators. |
-| Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, and group create/read/list/delete mapping helpers. |
-| Userpass auth | Yes | Login and user create/read/list/delete, password update, and policy update helpers. |
+| Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, group create/read/list/delete mappings, and staged 2.6 `decode_pac`. |
+| Userpass auth | Yes | Login and user create/read/list/delete, password/policy updates, and staged 2.6 validated pre-hashed bcrypt creation/reset helpers. |
 
 ### Secret Engines
 

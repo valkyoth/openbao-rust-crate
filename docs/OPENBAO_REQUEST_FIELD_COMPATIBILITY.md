@@ -19,10 +19,14 @@ field to make a request appear compatible.
 | --- | --- | --- | --- |
 | `auth.jwt.config` | `skip_jwks_validation` | `2.3.1` | `-` |
 | `auth.jwt.config` | `override_allowed_server_names` | `2.4.0` | `-` |
+| `auth.jwt.config` | `provider_config.kubernetes` | `2.6.0` | `-` |
 | `auth.jwt.role` | `callback_mode` | `2.1.0` | `-` |
 | `auth.jwt.role` | `poll_interval` | `2.1.0` | `-` |
 | `auth.jwt.role` | `token_policies_template_claims` | `2.1.0` | `-` |
 | `auth.jwt.role` | `oidc_disable_confirmation` | `2.5.2` | `-` |
+| `auth.userpass.user` | `password_hash` | `2.6.0` | `-` |
+| `auth.userpass.password` | `password_hash` | `2.6.0` | `-` |
+| `auth.kerberos.config` | `decode_pac` | `2.6.0` | `-` |
 | `identity.oidc.provider.token` | `scope` | `2.5.0` | `-` |
 | `ssh.role` | `allow_empty_principals` | `2.0.2` | `-` |
 | `ssh.role` | `issuer_ref` | `2.3.1` | `-` |
@@ -68,6 +72,15 @@ proof when tagged documentation or live behavior contradicts it.
 - JWT `skip_jwks_validation` changes save-time validation behavior. Selecting
   it on a profile that predates the field fails locally rather than silently
   restoring strict validation or sending an ignored security option.
+- JWT `provider_config.kubernetes` is available from `2.6.0`. The typed
+  constructor rejects OIDC discovery, JWKS, and static validation-key sources
+  because the runtime Kubernetes provider derives its only key source from
+  the pod service-account environment.
+- Userpass `password_hash` is accepted from `2.6.0`. Typed helpers require a
+  validated, redacted bcrypt value with cost 5 through 12 and never serialize
+  it together with plaintext `password`.
+- Kerberos `decode_pac` is rejected before `2.6.0`; leaving it unset preserves
+  the historical request body.
 - SSH `issuer_ref` changes which CA signs certificates in a multi-issuer
   mount. Omitting it preserves the server's default-issuer behavior.
 - ACL `cas`, `cas_required`, `expiration`, and `ttl` are policy lifecycle and
