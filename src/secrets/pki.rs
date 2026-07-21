@@ -19,7 +19,7 @@ use crate::{
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         BoundedJsonValueSeed, BoundedPrimitiveJsonValueSeed, Empty, JsonValueBudget, ListEntries,
-        ListPageOptions, ResponseEnvelope, deserialize_bounded_string_map,
+        ListPageOptions, RejectOverflow, ResponseEnvelope, deserialize_bounded_string_map,
         deserialize_bounded_string_vec,
     },
 };
@@ -3557,9 +3557,14 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedJsonMapVisitor<MAX> {
                 ));
             }
         }
-        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
-            return Err(serde::de::Error::custom(
+        if map
+            .next_key_seed(RejectOverflow::new(
                 "OpenBao JSON metadata map exceeds item limit",
+            ))?
+            .is_some()
+        {
+            return Err(serde::de::Error::custom(
+                "overflow rejection seed unexpectedly accepted a key",
             ));
         }
         Ok(values)
@@ -3597,9 +3602,14 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedPrimitiveJsonMapVisitor<MAX>
                 ));
             }
         }
-        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
-            return Err(serde::de::Error::custom(
+        if map
+            .next_key_seed(RejectOverflow::new(
                 "OpenBao JSON metadata map exceeds item limit",
+            ))?
+            .is_some()
+        {
+            return Err(serde::de::Error::custom(
+                "overflow rejection seed unexpectedly accepted a key",
             ));
         }
         Ok(values)
@@ -3976,6 +3986,32 @@ mod tests {
             error
                 .to_string()
                 .contains("OpenBao JSON metadata values must be primitive")
+        );
+    }
+
+    #[test]
+    fn pki_metadata_map_rejects_overflow_before_parsing_value() {
+        let mut payload = String::from("{\"keys\":[\"0000\"],\"key_info\":{");
+        for index in 0..crate::response::MAX_RESPONSE_STRINGS {
+            if index != 0 {
+                payload.push(',');
+            }
+            payload.push_str(&format!("\"{index:04x}\":1893456000"));
+        }
+        payload.push_str(",\"overflow\":");
+        payload.push_str(&"[".repeat(66));
+        payload.push_str("null");
+        payload.push_str(&"]".repeat(66));
+        payload.push_str("}}");
+
+        let error = match serde_json::from_str::<PkiDetailedCertificateList>(&payload) {
+            Ok(_) => panic!("an excess PKI metadata value was accepted"),
+            Err(error) => error,
+        };
+        assert!(
+            error
+                .to_string()
+                .contains("OpenBao JSON metadata map exceeds item limit")
         );
     }
 

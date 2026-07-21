@@ -247,6 +247,26 @@ pub(crate) struct BoundedJsonValueSeed<'a> {
     depth: usize,
 }
 
+/// Seed that rejects an excess collection entry before parsing its contents.
+pub(crate) struct RejectOverflow(&'static str);
+
+impl RejectOverflow {
+    pub(crate) const fn new(message: &'static str) -> Self {
+        Self(message)
+    }
+}
+
+impl<'de> DeserializeSeed<'de> for RejectOverflow {
+    type Value = ();
+
+    fn deserialize<D>(self, _deserializer: D) -> core::result::Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Err(D::Error::custom(self.0))
+    }
+}
+
 impl<'a> BoundedJsonValueSeed<'a> {
     pub(crate) fn new(budget: &'a mut JsonValueBudget, depth: usize) -> Self {
         Self { budget, depth }

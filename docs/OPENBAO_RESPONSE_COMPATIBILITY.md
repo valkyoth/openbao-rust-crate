@@ -20,8 +20,10 @@ OpenAPI snapshots show the shape.
 - Server-controlled enums reject unknown values. They do not map future values
   to a permissive default.
 - Lists and maps use bounded visitors before reading beyond the configured item
-  limit. Bounded maps reject duplicate keys rather than overwriting an earlier
-  value or allowing duplicates to evade a unique-key count.
+  limit. Schema-free collection overflow is rejected before parsing the excess
+  key or value content. Bounded maps reject duplicate keys rather than
+  overwriting an earlier value or allowing duplicates to evade a unique-key
+  count.
 - Schema-free system JSON and Identity/PKI extension values use a recursive
   decoder with depth, total-node, and aggregate string-byte budgets. One shared
   budget covers each complete extension map or vector. These limits apply in

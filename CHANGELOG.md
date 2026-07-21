@@ -73,10 +73,13 @@ All notable changes to this project are documented here.
   schema-free system JSON, sensitive error-body suppression, warning redaction
   in envelope debug output, and a release-enforced panic policy.
 - Restored bootstrap race convergence without retaining sensitive diagnostics:
-  authenticated failures now expose only fixed conflict or permission markers.
-  Extended the recursive JSON budget to Identity OIDC/JWKS extension values and
-  PKI extension metadata, with one aggregate budget per container and
-  allocation-free rejection of non-primitive PKI metadata containers.
+  sensitive failure responses are dropped without downloading or parsing their
+  bodies, and ambiguous mount, auth-method, or Transit-key create responses are
+  resolved by re-reading authoritative typed server state. Extended the
+  recursive JSON budget to Identity OIDC/JWKS extension values and PKI
+  extension metadata, with one aggregate budget per container, rejection of
+  excess entries before their contents are parsed, and allocation-free
+  rejection of non-primitive PKI metadata containers.
 - Limited monitor transport work to 64 chunks per executor poll so an
   always-ready stream of empty or partial chunks cannot monopolize one task.
 - Bounded and redacted JWT CEL programs, made userpass bcrypt hashes distinct

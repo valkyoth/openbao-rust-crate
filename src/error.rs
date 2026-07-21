@@ -6,9 +6,6 @@ use reqwest::StatusCode;
 
 use crate::compatibility::{OpenBaoVersion, OpenBaoVersionRequirement};
 
-pub(crate) const REDACTED_CONFLICT_MARKER: &str = "resource conflict";
-pub(crate) const REDACTED_PERMISSION_DENIED_MARKER: &str = "permission denied";
-
 /// Result alias used by this crate.
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -278,12 +275,9 @@ impl Error {
             || matches!(
                 self,
                 Self::Api { errors, .. }
-                    if errors.iter().any(|message| {
-                        message == REDACTED_PERMISSION_DENIED_MARKER
-                            || message
-                                .to_ascii_lowercase()
-                                .contains("permission denied")
-                    })
+                    if errors.iter().any(|message| message
+                        .to_ascii_lowercase()
+                        .contains("permission denied"))
             )
     }
 
@@ -296,9 +290,6 @@ impl Error {
             Self::Api { status, .. } if *status == StatusCode::CONFLICT => true,
             Self::Api { status, errors } if *status == StatusCode::BAD_REQUEST => {
                 errors.iter().any(|message| {
-                    if message == REDACTED_CONFLICT_MARKER {
-                        return true;
-                    }
                     let message = message.to_ascii_lowercase();
                     message.contains("already in use")
                         || message.contains("already exists")

@@ -55,12 +55,15 @@ deferred operation in the profile.
 - Development initialization requires the non-default `dev-bootstrap` and
   `dev-bootstrap-acknowledged` features plus a named acknowledgement. The
   legacy `bootstrap_dev` method remains source-visible but fails closed.
-- Sensitive request failures discard server-provided text while retaining only
-  fixed conflict or permission markers, preserving bootstrap race convergence
-  without reflecting secrets. Successful warnings are omitted from envelope
-  debug output. Schema-free system JSON plus Identity and PKI extension values
-  enforce shared recursive depth, node, string-byte, and duplicate-key bounds;
-  primitive PKI maps reject containers before retaining their contents.
+- Sensitive request failures drop the response without downloading or parsing
+  server-provided text. Bootstrap preserves race convergence by re-reading and
+  validating authoritative typed state after ambiguous create responses,
+  rather than classifying reflected error text. Successful warnings are
+  omitted from envelope debug output. Schema-free system JSON plus Identity
+  and PKI extension values enforce shared recursive depth, node, string-byte,
+  duplicate-key, and item bounds; excess entries are rejected before their
+  contents are parsed, and primitive PKI maps reject containers before
+  retaining their contents.
 - Added cancellation-safe `WrappedResponse::try_unwrap(&mut self)`. Cancellation
   preserves the local token; transport and decode failures remain
   outcome-unknown and must not be retried automatically.

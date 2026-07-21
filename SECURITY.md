@@ -96,11 +96,12 @@ Please include:
   helper, whose type permits GET, HEAD, and LIST but no write method.
 - Error bodies are retained only for public requests carrying no token,
   namespace, query, custom header, or request body. Sensitive request failures
-  parse diagnostics only into zeroizing values and retain fixed `resource
-  conflict` or `permission denied` markers needed by typed error helpers; the
-  server text is discarded so reflected credentials cannot enter loggable
-  `Error` strings. Successful response warnings remain explicitly accessible
-  but are omitted from `ResponseEnvelope` debug output.
+  are dropped without downloading or parsing the response body, so reflected
+  credentials cannot enter loggable `Error` strings or consume the configured
+  response-body budget. Bootstrap create races are resolved by re-reading and
+  validating authoritative typed server state rather than classifying error
+  text. Successful response warnings remain explicitly accessible but are
+  omitted from `ResponseEnvelope` debug output.
 - Public raw JSON, byte, retry, and response-wrapping transports are disabled
   unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
   bypass typed capability selection, endpoint validation, and
@@ -422,9 +423,10 @@ that requires an operator key ceremony.
 Unstructured system JSON and typed Identity/PKI extension JSON are decoded
 under fixed recursion, node, and aggregate string-byte budgets in addition to
 the response wire-size cap. One shared budget covers each complete extension
-map or vector; primitive-only PKI metadata rejects containers before retaining
-their contents. Typed lists and maps retain their endpoint-specific item
-bounds. Response-wrapping callers should use
+map or vector. Collection overflow is rejected through a deserialization seed
+before the excess key or value content is parsed; primitive-only PKI metadata
+rejects containers before retaining their contents. Typed lists and maps retain
+their endpoint-specific item bounds. Response-wrapping callers should use
 `WrappedResponse::try_unwrap(&mut self)`: cancellation preserves the local
 token, while any transport or decode failure remains outcome-unknown and must
 not be retried automatically. The deprecated consuming `unwrap(self)` remains

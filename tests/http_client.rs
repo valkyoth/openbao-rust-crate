@@ -12702,6 +12702,151 @@ async fn admin_bootstrap_can_provision_approle_auth() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[tokio::test]
+async fn admin_bootstrap_rechecks_auth_state_after_redacted_bad_request() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            match index {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/auth HTTP/1.1"));
+                    write_json_response(&mut stream, "200 OK", r#"{"data":{}}"#);
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/auth/approle HTTP/1.1"));
+                    write_json_response(
+                        &mut stream,
+                        "400 Bad Request",
+                        r#"{"errors":["path is already in use: reflected-sensitive-input"]}"#,
+                    );
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/sys/auth HTTP/1.1"));
+                    write_json_response(
+                        &mut stream,
+                        "200 OK",
+                        r#"{"data":{"approle/":{"type":"approle"}}}"#,
+                    );
+                }
+                _ => unreachable!(),
+            }
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_approle_auth_method("approle", None)
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let report = bootstrap
+        .run(&client)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(report.steps.len(), 1);
+    assert_eq!(
+        report.steps[0].status,
+        openbao::bootstrap::BootstrapStepStatus::Unchanged
+    );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn admin_bootstrap_rechecks_mount_and_transit_key_after_redacted_bad_request() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for index in 0..6 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let (status, body) = match index {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/mounts/secret HTTP/1.1"));
+                    ("404 Not Found", r#"{"errors":["missing"]}"#)
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/mounts/secret HTTP/1.1"));
+                    (
+                        "400 Bad Request",
+                        r#"{"errors":["mount already exists: reflected-sensitive-input"]}"#,
+                    )
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/sys/mounts/secret HTTP/1.1"));
+                    (
+                        "200 OK",
+                        r#"{"data":{"type":"kv","options":{"version":"2"}}}"#,
+                    )
+                }
+                3 => {
+                    assert!(request.starts_with("GET /v1/transit/keys/app-key HTTP/1.1"));
+                    ("404 Not Found", r#"{"errors":["missing"]}"#)
+                }
+                4 => {
+                    assert!(request.starts_with("POST /v1/transit/keys/app-key HTTP/1.1"));
+                    (
+                        "400 Bad Request",
+                        r#"{"errors":["key already exists: reflected-sensitive-input"]}"#,
+                    )
+                }
+                5 => {
+                    assert!(request.starts_with("GET /v1/transit/keys/app-key HTTP/1.1"));
+                    ("200 OK", r#"{"data":{"type":"aes256-gcm96"}}"#)
+                }
+                _ => unreachable!(),
+            };
+            write_json_response(&mut stream, status, body);
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_kv2_mount("secret", None)
+        .and_then(|builder| {
+            builder.ensure_transit_key(
+                "transit",
+                "app-key",
+                openbao::secrets::transit::TransitCreateKeyRequest::default(),
+            )
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let report = bootstrap
+        .run(&client)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(report.steps.len(), 2);
+    assert!(
+        report
+            .steps
+            .iter()
+            .all(|step| step.status == openbao::bootstrap::BootstrapStepStatus::Unchanged)
+    );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[cfg(feature = "operator-ops")]
 #[tokio::test]
 async fn raw_storage_helpers_use_documented_paths_and_redact_values() {

@@ -21,8 +21,9 @@ use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        BoundedJsonValueSeed, Empty, JsonValueBudget, ListEntries, ResponseEnvelope,
-        deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
+        BoundedJsonValueSeed, Empty, JsonValueBudget, ListEntries, RejectOverflow,
+        ResponseEnvelope, deserialize_bounded_string_map_or_default,
+        deserialize_bounded_string_vec,
     },
     validation::validate_duration_parameter,
 };
@@ -4080,9 +4081,14 @@ where
                 };
                 values.push(value);
             }
-            if seq.next_element::<serde::de::IgnoredAny>()?.is_some() {
-                return Err(serde::de::Error::custom(
+            if seq
+                .next_element_seed(RejectOverflow::new(
                     "identity OIDC JWKS key list exceeds item limit",
+                ))?
+                .is_some()
+            {
+                return Err(serde::de::Error::custom(
+                    "overflow rejection seed unexpectedly accepted a value",
                 ));
             }
             Ok(values)
@@ -4127,11 +4133,13 @@ where
                 }
             }
             if map
-                .next_entry::<serde::de::IgnoredAny, serde::de::IgnoredAny>()?
+                .next_key_seed(RejectOverflow::new(
+                    "identity OIDC JSON object exceeds item limit",
+                ))?
                 .is_some()
             {
                 return Err(serde::de::Error::custom(
-                    "identity OIDC JSON object exceeds item limit",
+                    "overflow rejection seed unexpectedly accepted a key",
                 ));
             }
             Ok(values)
@@ -4577,6 +4585,32 @@ mod tests {
                 "keys": [nested]
             }))
             .is_err()
+        );
+    }
+
+    #[test]
+    fn identity_oidc_jwks_rejects_overflow_before_parsing_value() {
+        let mut payload = String::from("{\"keys\":[");
+        for index in 0..crate::response::MAX_RESPONSE_STRINGS {
+            if index != 0 {
+                payload.push(',');
+            }
+            payload.push_str("null");
+        }
+        payload.push(',');
+        payload.push_str(&"[".repeat(66));
+        payload.push_str("null");
+        payload.push_str(&"]".repeat(66));
+        payload.push_str("]}");
+
+        let error = match serde_json::from_str::<IdentityOidcJwks>(&payload) {
+            Ok(_) => panic!("an excess JWKS value was accepted"),
+            Err(error) => error,
+        };
+        assert!(
+            error
+                .to_string()
+                .contains("identity OIDC JWKS key list exceeds item limit")
         );
     }
 

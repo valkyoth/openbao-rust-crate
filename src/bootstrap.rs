@@ -1216,8 +1216,14 @@ impl AdminBootstrap {
                         Err(error) if error.is_not_found() => {
                             match client.transit(mount)?.create_key(name, request).await {
                                 Ok(_) => BootstrapStepStatus::Created,
-                                Err(error) if is_already_exists_error(&error) => {
-                                    BootstrapStepStatus::Unchanged
+                                Err(error) if is_creation_race_response(&error) => {
+                                    match client.transit(mount)?.read_key(name).await {
+                                        Ok(_) => BootstrapStepStatus::Unchanged,
+                                        Err(read_error) if read_error.is_not_found() => {
+                                            return Err(error);
+                                        }
+                                        Err(read_error) => return Err(read_error),
+                                    }
                                 }
                                 Err(error) => return Err(error),
                             }
@@ -1651,7 +1657,15 @@ where
                 }
                 Ok(BootstrapStepStatus::Created)
             }
-            Err(error) if is_already_exists_error(&error) => Ok(BootstrapStepStatus::Unchanged),
+            Err(error) if is_creation_race_response(&error) => {
+                let auth_methods = client.sys().list_auth_methods().await?;
+                match auth_methods.get(&key).or_else(|| auth_methods.get(path)) {
+                    Some(auth) if auth.backend_type == expected_type => {
+                        Ok(BootstrapStepStatus::Unchanged)
+                    }
+                    _ => Err(error),
+                }
+            }
             Err(error) => Err(error),
         },
     }
@@ -1729,7 +1743,26 @@ where
                     }
                     Ok(BootstrapStepStatus::Created)
                 }
-                Err(error) if is_already_exists_error(&error) => Ok(BootstrapStepStatus::Unchanged),
+                Err(error) if is_creation_race_response(&error) => {
+                    match client.sys().read_mount(path).await {
+                        Ok(mount)
+                            if mount.backend_type == expected_type
+                                && expected_option.is_none_or(|(key, value)| {
+                                    mount
+                                        .options
+                                        .as_ref()
+                                        .and_then(|options| options.get(key))
+                                        .map(String::as_str)
+                                        == Some(value)
+                                }) =>
+                        {
+                            Ok(BootstrapStepStatus::Unchanged)
+                        }
+                        Ok(_) => Err(error),
+                        Err(read_error) if read_error.is_not_found() => Err(error),
+                        Err(read_error) => Err(read_error),
+                    }
+                }
                 Err(error) => Err(error),
             }
         }
@@ -1770,8 +1803,11 @@ async fn preview_mount(
     }
 }
 
-fn is_already_exists_error(error: &Error) -> bool {
-    error.is_conflict()
+fn is_creation_race_response(error: &Error) -> bool {
+    matches!(
+        error.status(),
+        Some(reqwest::StatusCode::BAD_REQUEST) | Some(reqwest::StatusCode::CONFLICT)
+    )
 }
 
 fn bootstrap_contention_error() -> Error {
@@ -2106,7 +2142,7 @@ mod tests {
         auth::token::TokenCreateRequest,
         bootstrap::{
             AdminBootstrap, BootstrapPreviewReport, BootstrapPreviewStatus, BootstrapPreviewStep,
-            BootstrapStepStatus, MAX_BOOTSTRAP_OPERATIONS, is_already_exists_error,
+            BootstrapStepStatus, MAX_BOOTSTRAP_OPERATIONS, is_creation_race_response,
             policy_matches_desired, policy_rules_equal, secret_values_equal,
         },
         secrets::transit::TransitCreateKeyRequest,
@@ -2301,13 +2337,18 @@ mod tests {
             status: StatusCode::BAD_REQUEST,
             errors: vec!["path is already in use".to_owned()],
         };
-        assert!(is_already_exists_error(&duplicate));
+        assert!(is_creation_race_response(&duplicate));
 
         let unrelated = Error::Api {
             status: StatusCode::BAD_REQUEST,
             errors: vec!["permission denied".to_owned()],
         };
-        assert!(!is_already_exists_error(&unrelated));
+        assert!(is_creation_race_response(&unrelated));
+        let forbidden = Error::Api {
+            status: StatusCode::FORBIDDEN,
+            errors: Vec::new(),
+        };
+        assert!(!is_creation_race_response(&forbidden));
     }
 
     #[test]
