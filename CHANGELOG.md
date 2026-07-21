@@ -56,6 +56,15 @@ All notable changes to this project are documented here.
 - Workflow API failures discard server-provided error bodies so echoed tokens,
   definitions, inputs, and intermediate values cannot enter loggable public
   error strings.
+- Stored JWT CEL expressions in `SecretString` and routed CEL login and role
+  responses through sanitizing buffers. CEL failures discard server error
+  bodies so compilation or evaluation errors cannot echo policy source into
+  public loggable errors.
+- Bound registered capability resolution and the validated wire path into one
+  internal route value, rejecting mismatched capability/wire dispatch before
+  transport.
+- Limited monitor transport work to 64 chunks per executor poll so an
+  always-ready stream of empty or partial chunks cannot monopolize one task.
 - Bounded and redacted JWT CEL programs, made userpass bcrypt hashes distinct
   secret types, rejected ambiguous Kubernetes signing-key configuration, and
   security-blocked exact OpenBao 2.6.0 JWT CEL PATCH because the upstream

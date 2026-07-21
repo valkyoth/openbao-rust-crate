@@ -44,6 +44,13 @@ deferred operation in the profile.
   authorization-relevant claim.
 - JWT CEL PATCH is blocked for exact `2.6.0` because the server drops audience
   and leeway constraints. Use full role replacement.
+- CEL expressions use `SecretString` storage and explicit accessors. CEL login
+  and role operations decode successful bodies from sanitizing storage and
+  discard failure bodies because OpenBao errors can echo policy source.
+- Capability resolution is bound to its validated wire route before dispatch;
+  mismatched registry and wire paths fail locally.
+- Monitor streaming yields after at most 64 immediately ready transport chunks
+  per executor poll, including empty chunks.
 - Prefixed workflow LIST and SCAN are blocked because exact `2.6.0` can panic
   while processing those routes. Unprefixed listing remains supported.
 - Workflow CAS-selected writes fail locally because exact `2.6.0` does not

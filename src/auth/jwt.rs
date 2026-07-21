@@ -412,7 +412,19 @@ pub struct JwtCelVariable {
     /// CEL identifier assigned by this variable.
     pub name: String,
     /// CEL expression evaluated to produce the variable value.
-    pub expression: String,
+    #[serde(
+        deserialize_with = "deserialize_cel_secret",
+        serialize_with = "serialize_cel_secret"
+    )]
+    expression: SecretString,
+}
+
+impl JwtCelVariable {
+    /// Returns the secret-adjacent CEL expression.
+    #[must_use]
+    pub const fn expression(&self) -> &SecretString {
+        &self.expression
+    }
 }
 
 impl fmt::Debug for JwtCelVariable {
@@ -438,7 +450,8 @@ pub struct JwtCelProgram {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub variables: Vec<JwtCelVariable>,
     /// Final CEL expression. A successful auth program returns OpenBao auth data.
-    pub expression: String,
+    #[serde(serialize_with = "serialize_cel_secret")]
+    expression: SecretString,
 }
 
 impl<'de> Deserialize<'de> for JwtCelProgram {
@@ -450,7 +463,8 @@ impl<'de> Deserialize<'de> for JwtCelProgram {
         struct ProgramData {
             #[serde(default, deserialize_with = "deserialize_bounded_cel_variables")]
             variables: Vec<JwtCelVariable>,
-            expression: String,
+            #[serde(deserialize_with = "deserialize_cel_secret")]
+            expression: SecretString,
         }
 
         let data = ProgramData::deserialize(deserializer)?;
@@ -465,7 +479,7 @@ impl<'de> Deserialize<'de> for JwtCelProgram {
 
 impl JwtCelProgram {
     /// Creates a CEL program with no intermediate variables.
-    pub fn new(expression: impl Into<String>) -> Result<Self> {
+    pub fn new(expression: impl Into<SecretString>) -> Result<Self> {
         let program = Self {
             variables: Vec::new(),
             expression: expression.into(),
@@ -478,7 +492,7 @@ impl JwtCelProgram {
     pub fn with_variable(
         mut self,
         name: impl Into<String>,
-        expression: impl Into<String>,
+        expression: impl Into<SecretString>,
     ) -> Result<Self> {
         self.variables.push(JwtCelVariable {
             name: name.into(),
@@ -488,18 +502,24 @@ impl JwtCelProgram {
         Ok(self)
     }
 
+    /// Returns the secret-adjacent final CEL expression.
+    #[must_use]
+    pub const fn expression(&self) -> &SecretString {
+        &self.expression
+    }
+
     fn validate(&self) -> Result<()> {
         if self.variables.len() > MAX_CEL_VARIABLES {
             return Err(Error::InvalidParameter(
                 "JWT CEL program exceeds variable limit".into(),
             ));
         }
-        validate_cel_expression(&self.expression)?;
-        let mut total = self.expression.len();
+        validate_cel_expression(self.expression.expose_secret())?;
+        let mut total = self.expression.expose_secret().len();
         let mut names = BTreeSet::new();
         for variable in &self.variables {
             validate_cel_identifier(&variable.name)?;
-            validate_cel_expression(&variable.expression)?;
+            validate_cel_expression(variable.expression.expose_secret())?;
             if !names.insert(variable.name.as_str()) {
                 return Err(Error::InvalidParameter(
                     "JWT CEL variable names must be unique".into(),
@@ -507,7 +527,7 @@ impl JwtCelProgram {
             }
             total = total
                 .checked_add(variable.name.len())
-                .and_then(|total| total.checked_add(variable.expression.len()))
+                .and_then(|total| total.checked_add(variable.expression.expose_secret().len()))
                 .ok_or_else(|| Error::InvalidParameter("JWT CEL program is too large".into()))?;
             if total > MAX_CEL_PROGRAM_BYTES {
                 return Err(Error::InvalidParameter(
@@ -875,6 +895,23 @@ impl<'de> Visitor<'de> for BoundedCelVariablesVisitor {
         }
         Ok(values)
     }
+}
+
+fn deserialize_cel_secret<'de, D>(deserializer: D) -> core::result::Result<SecretString, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    String::deserialize(deserializer).map(SecretString::from)
+}
+
+fn serialize_cel_secret<S>(
+    value: &SecretString,
+    serializer: S,
+) -> core::result::Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(value.expose_secret())
 }
 
 fn validate_cel_identifier(value: &str) -> Result<()> {
@@ -1637,7 +1674,7 @@ impl JwtAuth<'_> {
         };
         let response: JwtLoginResponse = self
             .client
-            .request_auth_json_internal(
+            .request_auth_secret_json_internal(
                 "jwt",
                 &self.mount,
                 Method::POST,
@@ -1893,7 +1930,7 @@ impl JwtAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<JwtCelRole> = self
             .client
-            .request_auth_json_internal(
+            .request_auth_secret_json_internal(
                 "jwt",
                 &self.mount,
                 Method::POST,
@@ -1913,7 +1950,7 @@ impl JwtAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<JwtCelRole> = self
             .client
-            .request_auth_json_headers_accepting(
+            .request_auth_secret_json_headers_accepting(
                 "jwt",
                 &self.mount,
                 Method::PATCH,
@@ -1934,7 +1971,7 @@ impl JwtAuthAdmin<'_> {
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<JwtCelRole> = self
             .client
-            .request_auth_json_internal(
+            .request_auth_secret_json_internal(
                 "jwt",
                 &self.mount,
                 Method::GET,
@@ -2132,6 +2169,16 @@ mod tests {
         }))
         .unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(response.name, "service");
+        assert_eq!(
+            response.cel_program.expression().expose_secret(),
+            "claims.secret == 'cel-secret-literal'"
+        );
+        assert_eq!(
+            response.cel_program.variables[0]
+                .expression()
+                .expose_secret(),
+            "claims.groups.size() > 0"
+        );
         assert!(!format!("{response:?}").contains("cel-secret-literal"));
 
         let duplicate = JwtCelProgram {

@@ -890,6 +890,21 @@ pub(crate) struct ResolvedOpenBaoEndpoint {
     method: Method,
 }
 
+struct RegisteredOpenBaoRoute {
+    resolved: ResolvedOpenBaoEndpoint,
+    wire_path: String,
+}
+
+impl RegisteredOpenBaoRoute {
+    fn method(&self) -> Method {
+        self.resolved.method()
+    }
+
+    fn wire_path(&self) -> &str {
+        &self.wire_path
+    }
+}
+
 #[allow(dead_code)]
 impl ResolvedOpenBaoEndpoint {
     pub(crate) const fn endpoint(&self) -> &'static str {
@@ -1565,6 +1580,33 @@ impl<State> Client<State> {
         })
     }
 
+    async fn resolve_registered_openbao_route<Q, K>(
+        &self,
+        scope_prefix: &'static str,
+        requested_method: &Method,
+        registry_path: &str,
+        wire_path: &str,
+        query: &[(K, Q)],
+    ) -> Result<RegisteredOpenBaoRoute>
+    where
+        Q: AsRef<str>,
+        K: AsRef<str>,
+    {
+        validate_endpoint_path(wire_path)?;
+        let resolved = self
+            .resolve_registered_openbao_endpoint(
+                scope_prefix,
+                requested_method,
+                registry_path,
+                query,
+            )
+            .await?;
+        Ok(RegisteredOpenBaoRoute {
+            resolved,
+            wire_path: wire_path.to_owned(),
+        })
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) async fn request_registered_json_query_headers_accepting<T, B, Q, K>(
         &self,
@@ -1583,16 +1625,17 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        let resolved = self
-            .resolve_registered_openbao_endpoint(scope_prefix, &method, registry_path, query)
+        validate_registered_wire_binding(scope_prefix, registry_path, path)?;
+        let route = self
+            .resolve_registered_openbao_route(scope_prefix, &method, registry_path, path, query)
             .await?;
         let normalized_query = query
             .iter()
             .map(|(key, value)| (key.as_ref(), value.as_ref()))
             .collect::<Vec<_>>();
         self.request_json_query_headers_accepting(
-            resolved.method(),
-            path,
+            route.method(),
+            route.wire_path(),
             &normalized_query,
             headers,
             body,
@@ -1617,10 +1660,11 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        let resolved = self
-            .resolve_registered_openbao_endpoint(scope_prefix, &method, registry_path, query)
+        validate_registered_wire_binding(scope_prefix, registry_path, path)?;
+        let route = self
+            .resolve_registered_openbao_route(scope_prefix, &method, registry_path, path, query)
             .await?;
-        let mut url = self.url_for_path(path)?;
+        let mut url = self.url_for_path(route.wire_path())?;
         if !query.is_empty() {
             let mut pairs = url.query_pairs_mut();
             for (key, value) in query {
@@ -1628,7 +1672,7 @@ impl<State> Client<State> {
             }
         }
         let response = self
-            .send_sensitive_json_request(resolved.method(), url, &[], body)
+            .send_sensitive_json_request(route.method(), url, &[], body)
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
@@ -1661,11 +1705,13 @@ impl<State> Client<State> {
     where
         T: DeserializeOwned,
     {
-        let resolved = self
-            .resolve_registered_openbao_endpoint(
+        validate_registered_wire_binding(scope_prefix, registry_path, path)?;
+        let route = self
+            .resolve_registered_openbao_route(
                 scope_prefix,
                 &method,
                 registry_path,
+                path,
                 &[] as &[(&str, &str)],
             )
             .await?;
@@ -1687,19 +1733,14 @@ impl<State> Client<State> {
             CONTENT_TYPE,
             HeaderValue::from_static("application/x-www-form-urlencoded"),
         ));
-        let url = self.url_for_path(path)?;
+        let url = self.url_for_path(route.wire_path())?;
         self.require_encrypted_transport_for_sensitive_request(&url)?;
         // SECURITY: this is the single unavoidable non-sanitizing copy. It is
         // moved directly into reqwest::Body before the await; no ordinary
         // crate-owned buffer remains for cancellation to bypass cleaning.
         let body = encoded.with_secret(|bytes| reqwest::Body::from(Vec::from(bytes)));
         let response = self
-            .send_sensitive_prevalidated_body_request(
-                resolved.method(),
-                url,
-                &request_headers,
-                body,
-            )
+            .send_sensitive_prevalidated_body_request(route.method(), url, &request_headers, body)
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
@@ -1862,16 +1903,16 @@ impl<State> Client<State> {
         K: AsRef<str>,
     {
         let registry_path = Self::secret_registry_path(documented_mount, actual_mount, path)?;
-        let resolved = self
-            .resolve_registered_openbao_endpoint(scope_prefix, &method, &registry_path, query)
+        let route = self
+            .resolve_registered_openbao_route(scope_prefix, &method, &registry_path, path, query)
             .await?;
         let normalized_query = query
             .iter()
             .map(|(key, value)| (key.as_ref(), value.as_ref()))
             .collect::<Vec<_>>();
         self.request_json_query_headers_accepting(
-            resolved.method(),
-            path,
+            route.method(),
+            route.wire_path(),
             &normalized_query,
             headers,
             body,
@@ -1898,16 +1939,16 @@ impl<State> Client<State> {
         K: AsRef<str>,
     {
         let registry_path = Self::secret_registry_path(documented_mount, actual_mount, path)?;
-        let resolved = self
-            .resolve_registered_openbao_endpoint(scope_prefix, &method, &registry_path, query)
+        let route = self
+            .resolve_registered_openbao_route(scope_prefix, &method, &registry_path, path, query)
             .await?;
         let normalized_query = query
             .iter()
             .map(|(key, value)| (key.as_ref(), value.as_ref().to_owned()))
             .collect::<Vec<_>>();
         self.request_bytes_headers_accepting_internal(
-            resolved.method(),
-            path,
+            route.method(),
+            route.wire_path(),
             &normalized_query,
             headers,
             body,
@@ -1937,6 +1978,83 @@ impl<State> Client<State> {
             &[StatusCode::OK, StatusCode::NO_CONTENT],
         )
         .await
+    }
+
+    pub(crate) async fn request_auth_secret_json_internal<T, B>(
+        &self,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        self.request_auth_secret_json_headers_accepting(
+            documented_mount,
+            actual_mount,
+            method,
+            path,
+            &[],
+            body,
+            &[StatusCode::OK, StatusCode::NO_CONTENT],
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn request_auth_secret_json_headers_accepting<T, B>(
+        &self,
+        documented_mount: &'static str,
+        actual_mount: &str,
+        method: Method,
+        path: &str,
+        headers: &[(HeaderName, HeaderValue)],
+        body: Option<&B>,
+        accepted_statuses: &[StatusCode],
+    ) -> Result<T>
+    where
+        T: DeserializeOwned,
+        B: Serialize + ?Sized,
+    {
+        let registry_path = Self::auth_registry_path(documented_mount, actual_mount, path)?;
+        let route = self
+            .resolve_registered_openbao_route(
+                "/auth/",
+                &method,
+                &registry_path,
+                path,
+                &[] as &[(&str, &str)],
+            )
+            .await?;
+        let url = self.url_for_path(route.wire_path())?;
+        let response = self
+            .send_sensitive_json_request(route.method(), url, headers, body)
+            .await?;
+        let status = response.status();
+        if !accepted_statuses.contains(&status) {
+            // CEL and other policy-bearing auth handlers can echo submitted
+            // expressions in server errors. Keep those bodies out of ordinary
+            // String-backed Error values entirely.
+            drop(response);
+            return Err(Error::Api {
+                status,
+                errors: Vec::new(),
+            });
+        }
+        if status == StatusCode::NO_CONTENT {
+            return serde_json::from_str("{}").map_err(|_| {
+                Error::Decode("OpenBao response did not match expected schema".into())
+            });
+        }
+        validate_json_content_type(&response)?;
+        let response = read_response_bytes(response, self.config.max_response_bytes).await?;
+        response.with_secret(|bytes| {
+            serde_json::from_slice(bytes)
+                .map_err(|_| Error::Decode("OpenBao response did not match expected schema".into()))
+        })
     }
 
     pub(crate) async fn request_auth_json_accepting<T, B>(
@@ -2040,16 +2158,16 @@ impl<State> Client<State> {
         K: AsRef<str>,
     {
         let registry_path = Self::auth_registry_path(documented_mount, actual_mount, path)?;
-        let resolved = self
-            .resolve_registered_openbao_endpoint("/auth/", &method, &registry_path, query)
+        let route = self
+            .resolve_registered_openbao_route("/auth/", &method, &registry_path, path, query)
             .await?;
         let normalized_query = query
             .iter()
             .map(|(key, value)| (key.as_ref(), value.as_ref()))
             .collect::<Vec<_>>();
         self.request_json_query_headers_accepting(
-            resolved.method(),
-            path,
+            route.method(),
+            route.wire_path(),
             &normalized_query,
             headers,
             body,
@@ -2075,12 +2193,12 @@ impl<State> Client<State> {
         B: Serialize + ?Sized,
     {
         let registry_path = Self::auth_registry_path(documented_mount, actual_mount, path)?;
-        let resolved = self
-            .resolve_registered_openbao_endpoint("/auth/", &method, &registry_path, query)
+        let route = self
+            .resolve_registered_openbao_route("/auth/", &method, &registry_path, path, query)
             .await?;
         self.request_json_secret_query_accepting(
-            resolved.method(),
-            path,
+            route.method(),
+            route.wire_path(),
             query,
             body,
             accepted_statuses,
@@ -2190,16 +2308,16 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        let resolved = self
-            .resolve_registered_openbao_endpoint("/sys/", &method, path, query)
+        let route = self
+            .resolve_registered_openbao_route("/sys/", &method, path, path, query)
             .await?;
         let normalized_query = query
             .iter()
             .map(|(key, value)| (key.as_ref(), value.as_ref()))
             .collect::<Vec<_>>();
         self.request_json_query_headers_accepting(
-            resolved.method(),
-            path,
+            route.method(),
+            route.wire_path(),
             &normalized_query,
             headers,
             body,
@@ -2221,12 +2339,12 @@ impl<State> Client<State> {
         if let Some(accept) = accept {
             headers.push((ACCEPT, accept));
         }
-        let resolved = self
-            .resolve_registered_openbao_endpoint("/sys/", &method, path, query)
+        let route = self
+            .resolve_registered_openbao_route("/sys/", &method, path, path, query)
             .await?;
         self.request_bytes_headers_accepting_internal(
-            resolved.method(),
-            path,
+            route.method(),
+            route.wire_path(),
             query,
             &headers,
             body,
@@ -2243,10 +2361,10 @@ impl<State> Client<State> {
         query: &[(&str, String)],
         accepted_statuses: &[StatusCode],
     ) -> Result<reqwest::Response> {
-        let resolved = self
-            .resolve_registered_openbao_endpoint("/sys/", &method, path, query)
+        let route = self
+            .resolve_registered_openbao_route("/sys/", &method, path, path, query)
             .await?;
-        let mut url = self.url_for_path(path)?;
+        let mut url = self.url_for_path(route.wire_path())?;
         {
             let mut pairs = url.query_pairs_mut();
             for (key, value) in query {
@@ -2254,7 +2372,7 @@ impl<State> Client<State> {
             }
         }
         let response = self
-            .send_sensitive_bytes_request(resolved.method(), url, &[], None)
+            .send_sensitive_bytes_request(route.method(), url, &[], None)
             .await?;
         let status = response.status();
         if accepted_statuses.contains(&status) {
@@ -2708,10 +2826,10 @@ impl<State> Client<State> {
         S: Stream<Item = core::result::Result<Bytes, E>> + Send + Unpin + 'static,
         E: Send + 'static,
     {
-        let resolved = self
-            .resolve_registered_openbao_endpoint("/sys/", &method, path, &[] as &[(&str, &str)])
+        let route = self
+            .resolve_registered_openbao_route("/sys/", &method, path, path, &[] as &[(&str, &str)])
             .await?;
-        let url = self.url_for_path(path)?;
+        let url = self.url_for_path(route.wire_path())?;
         self.require_encrypted_transport_for_sensitive_request(&url)?;
         let content_length_header = HeaderValue::from_str(&content_length.to_string())
             .map_err(|error| Error::InvalidHeader(error.to_string()))?;
@@ -2725,7 +2843,7 @@ impl<State> Client<State> {
         let body =
             reqwest::Body::wrap_stream(ExactLengthRequestStream::new(stream, content_length));
         let response = self
-            .send_sensitive_prevalidated_body_request(resolved.method(), url, &headers, body)
+            .send_sensitive_prevalidated_body_request(route.method(), url, &headers, body)
             .await?;
         let status = response.status();
         if accepted_statuses.contains(&status) {
@@ -2858,6 +2976,34 @@ fn compatibility_error(failure: CachedCompatibilityFailure) -> Error {
 
 fn compatibility_health_status_is_accepted(status: StatusCode) -> bool {
     matches!(status.as_u16(), 200 | 429 | 472 | 473 | 501 | 503)
+}
+
+fn validate_registered_wire_binding(
+    scope_prefix: &'static str,
+    registry_path: &str,
+    wire_path: &str,
+) -> Result<()> {
+    let registry = validate_endpoint_path(registry_path)?;
+    let wire = validate_endpoint_path(wire_path)?;
+    if registry == wire {
+        return Ok(());
+    }
+
+    // Identity can be mounted at a custom, multi-segment path. Its generated
+    // registry template keeps the documented `identity` mount while the wire
+    // path substitutes only that mount prefix. Every operation-specific tail,
+    // including dynamic values, must remain byte-for-byte identical.
+    if scope_prefix == "/identity/"
+        && registry.first().map(String::as_str) == Some("identity")
+        && wire.len() > registry.len().saturating_sub(1)
+        && wire.ends_with(&registry[1..])
+    {
+        return Ok(());
+    }
+
+    Err(Error::Internal(
+        "registered OpenBao capability path does not match its wire route",
+    ))
 }
 
 fn validate_endpoint_spec(endpoint: OpenBaoEndpointSpec) -> Result<()> {
@@ -3657,7 +3803,8 @@ mod tests {
     use super::{
         Client, OpenBaoConfig, env_bool, is_cleartext_url, openbao_config_from_env_lookup,
         openbao_token_from_env_lookup, resolve_openbao_endpoint_for_profile,
-        route_template_matches, validate_token_for_header, validate_user_agent,
+        route_template_matches, validate_registered_wire_binding, validate_token_for_header,
+        validate_user_agent,
     };
     use crate::compatibility::{OpenBaoEndpointSpec, OpenBaoEndpointVariant};
 
@@ -3998,6 +4145,65 @@ mod tests {
         assert!(!format!("{error:?}").contains(LEAKED_VALUE));
     }
 
+    #[cfg(feature = "sensitive-http-test-only")]
+    #[tokio::test]
+    async fn cel_auth_errors_discard_server_echoed_policy_source() {
+        const POLICY_SOURCE: &str = "claims.internal_tenant == 'classified-fixture'";
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut request = [0_u8; 4096];
+            let count = stream
+                .read(&mut request)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&request[..count]);
+            assert!(request.starts_with("POST /v1/auth/jwt/cel/login HTTP/1.1"));
+            let body = format!(r#"{{"errors":["CEL evaluation failed: {POLICY_SOURCE}"]}}"#);
+            let response = format!(
+                "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        });
+        let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 0))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(OpenBaoConfig::allow_sensitive_local_http_for_tests)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+
+        let result = client
+            .request_auth_secret_json_internal::<Empty, Empty>(
+                "jwt",
+                "jwt",
+                Method::POST,
+                "auth/jwt/cel/login",
+                Some(&Empty {}),
+            )
+            .await;
+        let error = match result {
+            Ok(_) => panic!("CEL auth failure was accepted"),
+            Err(error) => error,
+        };
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
+
+        assert!(matches!(
+            &error,
+            Error::Api { status, errors }
+                if *status == reqwest::StatusCode::BAD_REQUEST && errors.is_empty()
+        ));
+        assert!(!format!("{error}").contains(POLICY_SOURCE));
+        assert!(!format!("{error:?}").contains(POLICY_SOURCE));
+    }
+
     #[test]
     fn rejects_http_by_default() {
         assert!(Client::new("http://127.0.0.1:8200").is_err());
@@ -4139,6 +4345,42 @@ mod tests {
             .resolve_openbao_endpoint(OVERLAPPING_ENDPOINT, "sys/health", &[] as &[(&str, &str)])
             .await;
         assert!(matches!(overlap, Err(Error::Internal(_))));
+    }
+
+    #[test]
+    fn registered_routes_bind_capability_paths_to_wire_paths() {
+        assert!(
+            validate_registered_wire_binding(
+                "/sys/",
+                "sys/workflows/manage/example",
+                "sys/workflows/manage/example",
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_registered_wire_binding(
+                "/identity/",
+                "identity/oidc/provider/example/authorize",
+                "team/identity/oidc/provider/example/authorize",
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_registered_wire_binding(
+                "/sys/",
+                "sys/health",
+                "sys/workflows/manage/example",
+            )
+            .is_err()
+        );
+        assert!(
+            validate_registered_wire_binding(
+                "/identity/",
+                "identity/oidc/provider/example/authorize",
+                "team/identity/oidc/provider/example/token",
+            )
+            .is_err()
+        );
     }
 
     #[test]

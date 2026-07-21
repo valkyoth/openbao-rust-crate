@@ -484,7 +484,7 @@ openbao = { version = "2", features = ["time"] }
 | `workflow-trace-acknowledged` | no | Explicit acknowledgment for audited workflow trace builds. |
 | `unauthenticated-workflows` | no | Enables configuring and invoking token-free workflows. Requires `unauthenticated-workflows-acknowledged`; OpenBao must separately enable the conditional route and each workflow must opt in. Implies `sys`. |
 | `unauthenticated-workflows-acknowledged` | no | Explicit acknowledgment that every token-free workflow, server policy, exposure path, and rate limit was audited. |
-| `monitor-stream` | no | Enables typed `/sys/monitor` streaming. Frames are sanitizing, line-delimited, and capped at 1 MiB; direct body polling provides consumer back-pressure and dropping the stream cancels the request. Log bytes remain untrusted and are redacted from `Debug`. Implies `sys`. |
+| `monitor-stream` | no | Enables typed `/sys/monitor` streaming. Frames are sanitizing, line-delimited, and capped at 1 MiB; each executor poll processes at most 64 transport chunks, direct body polling provides consumer back-pressure, and dropping the stream cancels the request. Log bytes remain untrusted and are redacted from `Debug`. Implies `sys`. |
 | `raft-stream` | no | Enables exact-length streaming restore and force-restore for Raft snapshots up to 256 MiB. Overflow, truncation, and stream errors fail the request without first copying the complete snapshot. Implies `sys`. |
 | `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
@@ -830,7 +830,10 @@ OpenBao 2.6 JWT CEL roles are operator-supplied authorization programs.
 require `JwtCelClaimValidationAcknowledgement`. The acknowledgement confirms
 that the CEL program itself requires and constrains `aud`, `sub`, and every
 other authorization-relevant claim; the SDK does not attempt bypassable CEL
-source inspection. See [`SECURITY.md`](SECURITY.md#openbao-26-authentication-contracts).
+source inspection. CEL expressions are held as `SecretString` values and are
+available through explicit `expression()` accessors. CEL login and role API
+failures discard server error bodies because OpenBao can echo policy source.
+See [`SECURITY.md`](SECURITY.md#openbao-26-authentication-contracts).
 
 Configure a CEL role only after reviewing a program that explicitly requires
 every authorization claim:
@@ -1629,7 +1632,8 @@ async fn main() -> Result<()> {
 Consume bounded system-log frames with direct transport back-pressure. This
 requires the non-default `monitor-stream` feature. Keep frame handling
 secret-aware because server logs can contain operational identifiers or
-application-provided values:
+application-provided values. Each executor poll also processes at most 64
+transport chunks before yielding, including immediately ready empty chunks:
 
 ```rust,no_run
 use core::pin::Pin;

@@ -46,6 +46,14 @@ OpenBao does not reject a signed JWT that omits `aud` merely because
 `bound_audiences` is populated, so the CEL program itself must require and
 constrain `aud`, `sub`, and every authorization-relevant claim.
 
+CEL expressions are stored as `SecretString` in `JwtCelProgram` and
+`JwtCelVariable`. Constructors still accept string literals and owned strings;
+read returned source through `expression()` and `ExposeSecret` only where it is
+actually needed. CEL login and CEL role operations intentionally discard
+server-provided failure bodies because OpenBao can include complete policy
+source in compilation or evaluation errors. Match on the HTTP status rather
+than relying on a CEL server error string.
+
 Three exact `2.6.0` operations intentionally fail locally: JWT CEL PATCH and
 prefixed workflow LIST/SCAN. Tagged OpenBao `2.6.0` drops JWT audience/leeway
 constraints during PATCH and has unsafe prefixed workflow handlers. Use full

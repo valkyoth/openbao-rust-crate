@@ -47,6 +47,8 @@ const DEFAULT_MONITOR_FRAME_BYTES: usize = 64 * 1024;
 const MAX_MONITOR_FRAME_BYTES: usize = 1024 * 1024;
 #[cfg(feature = "monitor-stream")]
 const MAX_MONITOR_TRANSPORT_CHUNK_BYTES: usize = 1024 * 1024;
+#[cfg(feature = "monitor-stream")]
+const MAX_MONITOR_CHUNKS_PER_POLL: usize = 64;
 #[cfg(feature = "operator-ops")]
 const MAX_SYS_PPROF_SECONDS: u16 = 300;
 #[cfg(feature = "operator-ops")]
@@ -305,6 +307,7 @@ impl Stream for MonitorStream {
             return Poll::Ready(None);
         }
 
+        let mut chunks_polled = 0_usize;
         loop {
             if let Some(chunk) = this.chunk.take() {
                 let remaining = &chunk[this.chunk_offset..];
@@ -327,6 +330,12 @@ impl Stream for MonitorStream {
                 this.pending.extend_from_slice(remaining);
                 this.chunk_offset = 0;
             }
+
+            if chunks_polled >= MAX_MONITOR_CHUNKS_PER_POLL {
+                context.waker().wake_by_ref();
+                return Poll::Pending;
+            }
+            chunks_polled += 1;
 
             match this.body.as_mut().poll_next(context) {
                 Poll::Pending => return Poll::Pending,
@@ -10354,7 +10363,7 @@ mod tests {
         pin::Pin,
         sync::{
             Arc,
-            atomic::{AtomicBool, Ordering},
+            atomic::{AtomicBool, AtomicUsize, Ordering},
         },
         task::{Context, Poll, Waker},
     };
@@ -12098,6 +12107,19 @@ mod tests {
     }
 
     #[cfg(feature = "monitor-stream")]
+    struct AlwaysReadyEmptyChunks(Arc<AtomicUsize>);
+
+    #[cfg(feature = "monitor-stream")]
+    impl Stream for AlwaysReadyEmptyChunks {
+        type Item = core::result::Result<Bytes, reqwest::Error>;
+
+        fn poll_next(self: Pin<&mut Self>, _context: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Poll::Ready(Some(Ok(Bytes::new())))
+        }
+    }
+
+    #[cfg(feature = "monitor-stream")]
     struct DropProbeStream(Arc<AtomicBool>);
 
     #[cfg(feature = "monitor-stream")]
@@ -12202,6 +12224,31 @@ mod tests {
                 .contains("transport chunk exceeds internal limit")
         );
         assert!(poll_monitor(&mut stream).is_none());
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    #[test]
+    fn monitor_stream_yields_after_bounded_ready_empty_chunks() {
+        let polls = Arc::new(AtomicUsize::new(0));
+        let mut stream = MonitorStream {
+            body: Box::pin(AlwaysReadyEmptyChunks(Arc::clone(&polls))),
+            chunk: None,
+            chunk_offset: 0,
+            pending: sanitization::SecretVec::empty(),
+            format: MonitorLogFormat::Json,
+            max_frame_bytes: 64,
+            terminal: false,
+        };
+        let mut context = Context::from_waker(Waker::noop());
+
+        assert!(matches!(
+            Pin::new(&mut stream).poll_next(&mut context),
+            Poll::Pending
+        ));
+        assert_eq!(
+            polls.load(Ordering::SeqCst),
+            super::MAX_MONITOR_CHUNKS_PER_POLL
+        );
     }
 
     #[cfg(feature = "monitor-stream")]

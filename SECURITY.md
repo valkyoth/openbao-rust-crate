@@ -190,8 +190,12 @@ as security-blocked for exact 2.6.0.
 
 JWT CEL programs are caller-controlled authorization code. The SDK bounds the
 number of variables, each expression, failure messages, and total program
-size, validates variable identifiers and uniqueness, and redacts program text
-from `Debug`. These structural limits do not prove that a valid CEL program is
+size, validates variable identifiers and uniqueness, stores expressions as
+`SecretString`, and redacts program text from `Debug`. CEL login, role read,
+role write, and role patch responses are decoded from sanitizing buffers.
+Their failed response bodies are discarded because OpenBao compilation or
+evaluation errors can echo complete CEL source; public errors retain only the
+HTTP status. These structural limits do not prove that a valid CEL program is
 cheap to compile or execute. Restrict CEL role administration to trusted
 operators and enforce OpenBao process CPU, memory, and request limits.
 
