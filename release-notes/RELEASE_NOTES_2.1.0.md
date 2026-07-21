@@ -92,6 +92,15 @@ helper uses OpenSSL deliberately, and the acknowledged `native-tls` backend
 may use the platform OpenSSL stack. Those existing opt-in security boundaries
 are unchanged.
 
+## Dependency Refresh
+
+- Updated `sanitization` to `2.0.2` in the manifest and every repository
+  lockfile.
+- Updated compatible transitive locks, including `libc` to `0.2.188` and the
+  root `tokio-util` lock to `0.7.19`.
+- Verified that all direct crates, CI cargo tools, and digest-pinned GitHub
+  Actions match their latest stable releases at the release commit.
+
 ## Compatibility Evidence
 
 - All 22 digest-pinned OpenBao releases from `2.0.0` through `2.6.0` passed

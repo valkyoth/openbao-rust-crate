@@ -175,7 +175,7 @@ time = { version = "0.3.54", default-features = false, features = ["parsing"], o
 tokio = { version = "1.53.1", default-features = false, features = ["time"], optional = true }
 tracing = { version = "0.1.44", default-features = false, features = ["std"], optional = true }
 url = { version = "2.5.8", default-features = false }
-sanitization = { version = "2.0.1", default-features = false, features = ["alloc"] }
+sanitization = { version = "2.0.2", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 openssl = "0.10.81"

@@ -40,6 +40,8 @@ All notable changes to this project are documented here.
   Default production builds remain Rustls-only and do not compile OpenSSL;
   production OpenSSL is selected only by explicit features such as
   `transit-import` or the acknowledged native-TLS path.
+- Updated `sanitization` to `2.0.2` and refreshed the root, fuzz, and
+  native-TLS fixture lockfiles to current MSRV-compatible dependency releases.
 - Preserved the public 2.0 constructible struct shapes and exposed additive
   OpenBao 2.6 response metadata through named `*Details` types and methods;
   all 196 `cargo-semver-checks` minor-release checks pass against `v2.0.2`.
