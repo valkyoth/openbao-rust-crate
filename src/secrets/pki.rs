@@ -114,6 +114,25 @@ impl PkiRootDeletion {
     }
 }
 
+/// Explicit acknowledgment for permitting `*` in PKI identity-template values.
+///
+/// OpenBao 2.6 rejects globs rendered from identity metadata in templated
+/// `allowed_domains` and `allowed_uri_sans` values by default. Permitting them
+/// can expand certificate names beyond the intended identity. This marker is
+/// constructible only with `identity-template-overrides-acknowledged`.
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PkiIdentityTemplateGlobOverride(());
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+impl PkiIdentityTemplateGlobOverride {
+    /// Acknowledges the certificate-name expansion risk for trusted templates.
+    #[must_use]
+    pub const fn acknowledge() -> Self {
+        Self(())
+    }
+}
+
 /// PKI role configuration.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct PkiRole {
@@ -156,6 +175,12 @@ pub struct PkiRole {
     /// Allows ACL templating in allowed URI SANs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub allowed_uri_sans_template: Option<bool>,
+    /// Whether rendered identity templates may contain `*` (OpenBao 2.6+).
+    ///
+    /// This is readback state only. Ordinary role serialization always omits
+    /// it; use the acknowledged role methods to enable it.
+    #[serde(default, skip_serializing)]
+    pub allow_globs_in_identity_templates: bool,
     /// Other SAN values or glob patterns allowed for requests.
     #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -294,6 +319,14 @@ pub struct PkiRole {
     /// Uses CSR SAN values when signing through this role.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub use_csr_sans: Option<bool>,
+}
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Serialize)]
+struct PkiRoleWithIdentityTemplateGlobs<'a> {
+    #[serde(flatten)]
+    role: &'a PkiRole,
+    allow_globs_in_identity_templates: bool,
 }
 
 /// PKI role list.
@@ -2215,6 +2248,69 @@ impl Pki<'_> {
             .await
     }
 
+    /// Creates or replaces a PKI role while allowing globs from identity templates.
+    ///
+    /// OpenBao 2.6 rejects `*` rendered from identity metadata in templated
+    /// allowed domains and URI SANs by default. Use this only when the identity
+    /// metadata is trusted and constrained. Ordinary [`PkiRole`] serialization
+    /// cannot emit the override.
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    pub async fn write_role_with_identity_template_globs(
+        &self,
+        name: &str,
+        role: &PkiRole,
+        _acknowledgment: PkiIdentityTemplateGlobOverride,
+    ) -> Result<Empty> {
+        self.validate_role_request_fields(role).await?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::PKI_ROLE_ALLOW_TEMPLATE_GLOBS,
+                true,
+            )])
+            .await?;
+        let payload = PkiRoleWithIdentityTemplateGlobs {
+            role,
+            allow_globs_in_identity_templates: true,
+        };
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(&payload))
+            .await
+    }
+
+    /// Patches a PKI role while allowing globs from identity templates.
+    ///
+    /// This has the same trust requirements as
+    /// [`Pki::write_role_with_identity_template_globs`] and uses JSON Merge
+    /// Patch semantics.
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    pub async fn patch_role_with_identity_template_globs(
+        &self,
+        name: &str,
+        patch: &PkiRole,
+        _acknowledgment: PkiIdentityTemplateGlobOverride,
+    ) -> Result<PkiRole> {
+        self.validate_role_request_fields(patch).await?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::PKI_ROLE_ALLOW_TEMPLATE_GLOBS,
+                true,
+            )])
+            .await?;
+        let payload = PkiRoleWithIdentityTemplateGlobs {
+            role: patch,
+            allow_globs_in_identity_templates: true,
+        };
+        self.enveloped_with_headers(
+            Method::PATCH,
+            &self.path(&["roles", name])?,
+            &[(
+                CONTENT_TYPE,
+                HeaderValue::from_static("application/merge-patch+json"),
+            )],
+            Some(&payload),
+        )
+        .await
+    }
+
     /// Patches a PKI role with JSON Merge Patch semantics.
     pub async fn patch_role(&self, name: &str, patch: &PkiRole) -> Result<PkiRole> {
         self.validate_role_request_fields(patch).await?;
@@ -3973,5 +4069,36 @@ mod tests {
             assert!(debug.contains("<redacted>"));
             assert!(!debug.contains("eab-secret"));
         }
+    }
+
+    #[test]
+    fn pki_template_glob_override_is_readback_only_by_default() {
+        let role: PkiRole = serde_json::from_str(
+            r#"{"allowed_domains":["{{identity.entity.name}}"],"allow_globs_in_identity_templates":true}"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(role.allow_globs_in_identity_templates);
+        let value = serde_json::to_value(role).unwrap_or_else(|error| panic!("{error}"));
+        assert!(value.get("allow_globs_in_identity_templates").is_none());
+    }
+
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    #[test]
+    fn acknowledged_pki_template_glob_override_serializes_true() {
+        let role = PkiRole {
+            allowed_domains: vec!["{{identity.entity.name}}".to_owned()],
+            allow_globs_in_identity_templates: true,
+            ..PkiRole::default()
+        };
+        let ordinary = serde_json::to_value(&role).unwrap_or_else(|error| panic!("{error}"));
+        assert!(ordinary.get("allow_globs_in_identity_templates").is_none());
+
+        let _acknowledgment = super::PkiIdentityTemplateGlobOverride::acknowledge();
+        let payload = super::PkiRoleWithIdentityTemplateGlobs {
+            role: &role,
+            allow_globs_in_identity_templates: true,
+        };
+        let value = serde_json::to_value(payload).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["allow_globs_in_identity_templates"], true);
     }
 }

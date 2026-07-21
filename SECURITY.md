@@ -209,6 +209,24 @@ typed callers cannot send it together with plaintext `password`. The hash is
 still credential material and remains subject to the transport residual-memory
 boundary below.
 
+## OpenBao 2.6 Identity-Template Delimiters
+
+OpenBao 2.6 rejects security-sensitive delimiters rendered from identity
+metadata by default. ACL policies reject `/` plus the `*` and `+` wildcard
+characters, PKI role templates reject `*` in allowed domains and URI SANs,
+and SSH role templates reject `,` in allowed users and domains. Allowing these
+characters can turn one untrusted identity value into a different ACL path, a
+broader certificate name, or multiple SSH principals.
+
+The SDK deserializes the override booleans for audit/readback, but ordinary
+policy and role serialization omits them. Sending `true` requires the
+non-default `identity-template-overrides-acknowledged` feature, an explicit
+`acknowledge...` constructor for the affected surface, and a selected OpenBao
+2.6.0-or-newer profile. Enabling one surface does not enable another, and the
+client rejects these fields against every older exact profile before building
+or sending the HTTP request. Use them only when all referenced identity
+metadata is trusted and constrained independently of the rendered template.
+
 ## Residual Secret Memory
 
 After a JSON request body is handed to `reqwest`, the transport stack, TLS

@@ -71,6 +71,10 @@ jwt-auth = []
 # OpenBao's JWT/OIDC callback and poll endpoints, plus Identity provider GET
 # authorize, place credentials or correlation values in query strings.
 oidc-get-callback-acknowledged = []
+# OpenBao 2.6 identity-template delimiter overrides can turn trusted identity
+# metadata into ACL paths, PKI names, or SSH principal lists with attacker-
+# controlled separators. Typed send paths require this explicit review gate.
+identity-template-overrides-acknowledged = []
 kerberos-auth = []
 kubernetes-auth = []
 ldap-auth = []

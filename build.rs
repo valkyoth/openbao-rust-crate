@@ -21,6 +21,11 @@ fn main() {
             "cargo:warning=OIDC GET protocol support is enabled. Credentials or correlation values enter URL and HTTP-stack buffers; enforce query-free access logging."
         );
     }
+    if std::env::var_os("CARGO_FEATURE_IDENTITY_TEMPLATE_OVERRIDES_ACKNOWLEDGED").is_some() {
+        println!(
+            "cargo:warning=DANGER: OpenBao identity-template delimiter overrides are enabled. Only use trusted identity metadata and separately audit ACL paths, PKI names, and SSH principals."
+        );
+    }
     if std::env::var_os("CARGO_FEATURE_WORKFLOW_TRACE").is_some() {
         println!(
             "cargo:warning=DANGER: workflow-trace can return the OpenBao token and complete intermediate workflow values. Never log trace responses."

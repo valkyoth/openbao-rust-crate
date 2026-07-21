@@ -3607,6 +3607,20 @@ pub struct PolicyInfo {
     /// Whether check-and-set is required for future updates.
     #[serde(default)]
     pub cas_required: bool,
+    /// Whether identity-template values may contain `/` (OpenBao 2.6+).
+    ///
+    /// Enabling this for writes requires the
+    /// `identity-template-overrides-acknowledged` feature and
+    /// [`AclIdentityTemplateOverrides::acknowledge_slashes`].
+    #[serde(default)]
+    pub allow_slashes_in_identity_templates: bool,
+    /// Whether identity-template values may contain `*` or `+` (OpenBao 2.6+).
+    ///
+    /// Enabling this for writes requires the
+    /// `identity-template-overrides-acknowledged` feature and
+    /// [`AclIdentityTemplateOverrides::acknowledge_wildcards`].
+    #[serde(default)]
+    pub allow_wildcards_in_identity_templates: bool,
 }
 
 impl<'de> Deserialize<'de> for PolicyInfo {
@@ -3630,6 +3644,10 @@ impl<'de> Deserialize<'de> for PolicyInfo {
             version: Option<u64>,
             #[serde(default)]
             cas_required: bool,
+            #[serde(default)]
+            allow_slashes_in_identity_templates: bool,
+            #[serde(default)]
+            allow_wildcards_in_identity_templates: bool,
         }
 
         let raw = RawPolicyInfo::deserialize(deserializer)?;
@@ -3640,7 +3658,52 @@ impl<'de> Deserialize<'de> for PolicyInfo {
             modified: raw.modified,
             version: raw.version,
             cas_required: raw.cas_required,
+            allow_slashes_in_identity_templates: raw.allow_slashes_in_identity_templates,
+            allow_wildcards_in_identity_templates: raw.allow_wildcards_in_identity_templates,
         })
+    }
+}
+
+/// Explicit acknowledgment for OpenBao 2.6 ACL identity-template delimiter overrides.
+///
+/// OpenBao rejects `/`, `*`, and `+` in rendered ACL identity-template values
+/// by default. Permitting them can let untrusted identity metadata select
+/// additional paths or wildcard capabilities. This value is constructible only
+/// when `identity-template-overrides-acknowledged` is enabled.
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct AclIdentityTemplateOverrides {
+    allow_slashes: bool,
+    allow_wildcards: bool,
+}
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+impl AclIdentityTemplateOverrides {
+    /// Acknowledges the path-injection risk and permits `/` in rendered values.
+    #[must_use]
+    pub const fn acknowledge_slashes() -> Self {
+        Self {
+            allow_slashes: true,
+            allow_wildcards: false,
+        }
+    }
+
+    /// Acknowledges the wildcard-injection risk and permits `*` and `+`.
+    #[must_use]
+    pub const fn acknowledge_wildcards() -> Self {
+        Self {
+            allow_slashes: false,
+            allow_wildcards: true,
+        }
+    }
+
+    /// Acknowledges both path-separator and wildcard-injection risks.
+    #[must_use]
+    pub const fn acknowledge_slashes_and_wildcards() -> Self {
+        Self {
+            allow_slashes: true,
+            allow_wildcards: true,
+        }
     }
 }
 
@@ -3661,6 +3724,22 @@ pub struct PolicyWriteRequest {
     /// Whether check-and-set should be required by this update (OpenBao 2.3.1+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cas_required: Option<bool>,
+}
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Serialize)]
+struct PolicyWriteWithIdentityTemplateOverrides<'a> {
+    #[serde(flatten)]
+    request: &'a PolicyWriteRequest,
+    #[serde(skip_serializing_if = "is_false")]
+    allow_slashes_in_identity_templates: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    allow_wildcards_in_identity_templates: bool,
+}
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+const fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 impl PolicyWriteRequest {
@@ -6891,6 +6970,62 @@ impl Sys<'_, Authenticated> {
                 Method::POST,
                 &sys_path("sys/policies/acl", name, None)?,
                 Some(request),
+            )
+            .await
+    }
+
+    /// Creates or updates an ACL policy while enabling reviewed identity-template delimiters.
+    ///
+    /// OpenBao 2.6 rejects `/`, `*`, and `+` in rendered identity-template
+    /// values by default. Enable an override only when every identity metadata
+    /// source used by the policy is trusted and constrained. Ordinary
+    /// [`PolicyWriteRequest`] serialization cannot emit these flags.
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    pub async fn write_policy_with_identity_template_overrides(
+        &self,
+        name: &str,
+        request: &PolicyWriteRequest,
+        overrides: AclIdentityTemplateOverrides,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::POLICY_EXPIRATION,
+                    request.expiration.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_TTL,
+                    request.ttl.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_CAS,
+                    request.cas.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_CAS_REQUIRED,
+                    request.cas_required.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_ALLOW_TEMPLATE_SLASHES,
+                    overrides.allow_slashes,
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_ALLOW_TEMPLATE_WILDCARDS,
+                    overrides.allow_wildcards,
+                ),
+            ])
+            .await?;
+        let payload = PolicyWriteWithIdentityTemplateOverrides {
+            request,
+            allow_slashes_in_identity_templates: overrides.allow_slashes,
+            allow_wildcards_in_identity_templates: overrides.allow_wildcards,
+        };
+        self.client
+            .request_sys_json_internal(
+                Method::POST,
+                &sys_path("sys/policies/acl", name, None)?,
+                Some(&payload),
             )
             .await
     }
@@ -11860,5 +11995,54 @@ mod tests {
         };
         drop(stream);
         assert!(dropped.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn policy_identity_template_overrides_decode_as_readback_state() {
+        let policy: super::PolicyInfo = serde_json::from_str(
+            r#"{
+                "name":"templated",
+                "policy":"path {{identity.entity.name}} {}",
+                "allow_slashes_in_identity_templates":true,
+                "allow_wildcards_in_identity_templates":true
+            }"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(policy.allow_slashes_in_identity_templates);
+        assert!(policy.allow_wildcards_in_identity_templates);
+    }
+
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    #[test]
+    fn acknowledged_policy_template_overrides_serialize_only_selected_flags() {
+        let request = PolicyWriteRequest::new("path \"secret/data/app\" {}");
+        let ordinary = serde_json::to_value(&request).unwrap_or_else(|error| panic!("{error}"));
+        assert!(
+            ordinary
+                .get("allow_slashes_in_identity_templates")
+                .is_none()
+        );
+        assert!(
+            ordinary
+                .get("allow_wildcards_in_identity_templates")
+                .is_none()
+        );
+
+        let overrides = super::AclIdentityTemplateOverrides::acknowledge_slashes();
+        let payload = super::PolicyWriteWithIdentityTemplateOverrides {
+            request: &request,
+            allow_slashes_in_identity_templates: overrides.allow_slashes,
+            allow_wildcards_in_identity_templates: overrides.allow_wildcards,
+        };
+        let value = serde_json::to_value(payload).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["allow_slashes_in_identity_templates"], true);
+        assert!(value.get("allow_wildcards_in_identity_templates").is_none());
+
+        let both = super::AclIdentityTemplateOverrides::acknowledge_slashes_and_wildcards();
+        assert!(both.allow_slashes);
+        assert!(both.allow_wildcards);
+        let wildcards = super::AclIdentityTemplateOverrides::acknowledge_wildcards();
+        assert!(!wildcards.allow_slashes);
+        assert!(wildcards.allow_wildcards);
     }
 }

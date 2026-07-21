@@ -21,7 +21,7 @@ use openbao::secrets::identity::IdentityEntityInfo;
 use openbao::secrets::kv2::Kv2Secret;
 use openbao::secrets::pki::PkiCertificateBundle;
 use openbao::secrets::pki::PkiRole;
-use openbao::secrets::ssh::SshRoleKeyType;
+use openbao::secrets::ssh::{SshRoleInfo, SshRoleKeyType};
 use openbao::secrets::totp::{TotpCode, TotpPeriod};
 #[cfg(feature = "operator-ops")]
 use openbao::sys::SealableNamespaceCreation;
@@ -84,6 +84,9 @@ struct OpenBao26SystemFixtures {
     workflow_output_2_6_0: serde_json::Value,
     jwt_cel_role_2_6_0: serde_json::Value,
     kerberos_config_2_6_0: serde_json::Value,
+    acl_policy_2_6_0: serde_json::Value,
+    pki_role_2_6_0: serde_json::Value,
+    ssh_role_2_6_0: serde_json::Value,
 }
 
 #[test]
@@ -203,6 +206,16 @@ fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), B
     let new_cors: CorsConfig = serde_json::from_value(fixtures.cors_2_6_0)?;
     assert!(!old_cors.allow_credentials);
     assert!(new_cors.allow_credentials);
+
+    let policy: PolicyInfo = serde_json::from_value(fixtures.acl_policy_2_6_0)?;
+    assert!(policy.allow_slashes_in_identity_templates);
+    assert!(!policy.allow_wildcards_in_identity_templates);
+
+    let pki_role: PkiRole = serde_json::from_value(fixtures.pki_role_2_6_0)?;
+    assert!(pki_role.allow_globs_in_identity_templates);
+
+    let ssh_role: SshRoleInfo = serde_json::from_value(fixtures.ssh_role_2_6_0)?;
+    assert!(ssh_role.allow_commas_in_identity_templates);
 
     let old_totp: TotpCode = serde_json::from_value(fixtures.totp_2_5_5)?;
     let new_totp: TotpCode = serde_json::from_value(fixtures.totp_2_6_0)?;

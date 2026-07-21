@@ -29,6 +29,10 @@
 //! authorize variant, require the non-default
 //! `oidc-get-callback-acknowledged` feature because OpenBao places credentials
 //! or correlation values in URL query strings.
+//! OpenBao 2.6 identity-template delimiter overrides require the non-default
+//! `identity-template-overrides-acknowledged` feature and explicit per-surface
+//! acknowledgment constructors. Ordinary ACL, PKI, and SSH request
+//! serialization cannot enable these injection-sensitive flags.
 //! Selected system endpoints that return non-JSON data, such as Prometheus
 //! metrics and capped Raft snapshots, are exposed through typed helpers rather
 //! than a public raw-body escape hatch.
@@ -383,6 +387,8 @@ pub mod prelude {
     };
     #[cfg(feature = "ldap")]
     pub use crate::secrets::ldap::{Ldap, LdapConfig, LdapDynamicRole, LdapStaticRole};
+    #[cfg(all(feature = "pki", feature = "identity-template-overrides-acknowledged"))]
+    pub use crate::secrets::pki::PkiIdentityTemplateGlobOverride;
     #[cfg(feature = "pki")]
     pub use crate::secrets::pki::{
         Pki, PkiIssueRequest, PkiPublic, PkiPublicFormat, PkiRole, PkiTidyRequest, PkiTidyStatus,
@@ -393,6 +399,8 @@ pub mod prelude {
     pub use crate::secrets::rabbitmq::{
         RabbitMq, RabbitMqConnectionConfig, RabbitMqCredentials, RabbitMqRole,
     };
+    #[cfg(all(feature = "ssh", feature = "identity-template-overrides-acknowledged"))]
+    pub use crate::secrets::ssh::SshIdentityTemplateCommaOverride;
     #[cfg(feature = "ssh")]
     pub use crate::secrets::ssh::{Ssh, SshPublic, SshPublicKey, SshRoleInfo, SshRoleRequest};
     #[cfg(feature = "totp")]
@@ -415,6 +423,8 @@ pub mod prelude {
         TransitSignResponse, TransitTrimRequest, TransitUpdateKeyRequest, TransitVerifyRequest,
         TransitVerifyResponse, TransitWrappingKey,
     };
+    #[cfg(all(feature = "sys", feature = "identity-template-overrides-acknowledged"))]
+    pub use crate::sys::AclIdentityTemplateOverrides;
     #[cfg(feature = "sys")]
     pub use crate::sys::{
         AuditedRequestHeaderConfig, AuditedRequestHeaders, Capability, CapabilityView, CorsConfig,

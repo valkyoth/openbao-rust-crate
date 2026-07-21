@@ -143,5 +143,22 @@
     "remove_instance_name": false,
     "add_group_aliases": true,
     "decode_pac": true
+  },
+  "acl_policy_2_6_0": {
+    "name": "templated-policy",
+    "policy": "path \"secret/data/{{identity.entity.name}}\" { capabilities = [\"read\"] }",
+    "allow_slashes_in_identity_templates": true,
+    "allow_wildcards_in_identity_templates": false
+  },
+  "pki_role_2_6_0": {
+    "allowed_domains": ["{{identity.entity.name}}"],
+    "allowed_domains_template": true,
+    "allow_globs_in_identity_templates": true
+  },
+  "ssh_role_2_6_0": {
+    "key_type": "ca",
+    "allowed_users": "{{identity.entity.name}}",
+    "allowed_users_template": true,
+    "allow_commas_in_identity_templates": true
   }
 }

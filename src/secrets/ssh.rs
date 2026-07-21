@@ -198,6 +198,33 @@ pub struct SshRoleRequest {
     pub issuer_ref: Option<String>,
 }
 
+/// Explicit acknowledgment for permitting `,` in SSH identity-template values.
+///
+/// OpenBao 2.6 rejects commas rendered into templated `allowed_users` and
+/// `allowed_domains` values by default. Permitting commas can inject additional
+/// principals. This marker is constructible only with
+/// `identity-template-overrides-acknowledged`.
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SshIdentityTemplateCommaOverride(());
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+impl SshIdentityTemplateCommaOverride {
+    /// Acknowledges the principal-list injection risk for trusted templates.
+    #[must_use]
+    pub const fn acknowledge() -> Self {
+        Self(())
+    }
+}
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Serialize)]
+struct SshRoleWithIdentityTemplateCommas<'a> {
+    #[serde(flatten)]
+    request: &'a SshRoleRequest,
+    allow_commas_in_identity_templates: bool,
+}
+
 impl SshRoleRequest {
     /// Creates an OTP role request.
     pub fn otp(default_user: impl Into<String>, cidr_list: impl Into<String>) -> Self {
@@ -311,6 +338,9 @@ pub struct SshRoleInfo {
     /// Whether allowed domains are identity templates.
     #[serde(default)]
     pub allowed_domains_template: Option<bool>,
+    /// Whether rendered identity templates may contain `,` (OpenBao 2.6+).
+    #[serde(default)]
+    pub allow_commas_in_identity_templates: bool,
     /// Allowed user key lengths keyed by key type.
     #[serde(default, deserialize_with = "deserialize_bounded_key_lengths")]
     pub allowed_user_key_lengths: BTreeMap<String, Vec<u16>>,
@@ -914,6 +944,44 @@ impl Ssh<'_> {
             ])
             .await?;
         self.request(Method::POST, &self.path(&["roles", name])?, Some(request))
+            .await
+    }
+
+    /// Creates or updates an SSH role while allowing commas from identity templates.
+    ///
+    /// OpenBao 2.6 rejects commas rendered into templated allowed users and
+    /// domains by default. Use this only when identity metadata is trusted and
+    /// constrained. Ordinary [`SshRoleRequest`] serialization cannot emit the
+    /// override.
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    pub async fn write_role_with_identity_template_commas(
+        &self,
+        name: &str,
+        request: &SshRoleRequest,
+        _acknowledgment: SshIdentityTemplateCommaOverride,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ALLOW_EMPTY_PRINCIPALS,
+                    request.allow_empty_principals.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ISSUER_REF,
+                    request.issuer_ref.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ALLOW_TEMPLATE_COMMAS,
+                    true,
+                ),
+            ])
+            .await?;
+        let payload = SshRoleWithIdentityTemplateCommas {
+            request,
+            allow_commas_in_identity_templates: true,
+        };
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(&payload))
             .await
     }
 
@@ -1586,5 +1654,31 @@ mod tests {
         let submit_debug = format!("{submit:?}");
         assert!(!submit_debug.contains(&["ssh-ca-private-", "key"].concat()));
         assert!(submit_debug.contains("redacted"));
+    }
+
+    #[test]
+    fn ssh_template_comma_override_decodes_as_readback_state() {
+        let role: SshRoleInfo = serde_json::from_str(
+            r#"{"allowed_users":"{{identity.entity.name}}","allow_commas_in_identity_templates":true}"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(role.allow_commas_in_identity_templates);
+
+        let ordinary = serde_json::to_value(SshRoleRequest::ca("{{identity.entity.name}}"))
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(ordinary.get("allow_commas_in_identity_templates").is_none());
+    }
+
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    #[test]
+    fn acknowledged_ssh_template_comma_override_serializes_true() {
+        let request = SshRoleRequest::ca("{{identity.entity.name}}");
+        let _acknowledgment = super::SshIdentityTemplateCommaOverride::acknowledge();
+        let payload = super::SshRoleWithIdentityTemplateCommas {
+            request: &request,
+            allow_commas_in_identity_templates: true,
+        };
+        let value = serde_json::to_value(payload).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["allow_commas_in_identity_templates"], true);
     }
 }

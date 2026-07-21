@@ -17,6 +17,8 @@
   adds workflow CRUD, pagination, bounded secret-aware execution, and separately
   acknowledged trace and unauthenticated execution. Commit 07 adds JWT CEL,
   Kubernetes JWT provider, userpass bcrypt-hash, and Kerberos PAC contracts.
+  Commit 08 adds readback and separately acknowledged typed send paths for the
+  ACL slash/wildcard, PKI glob, and SSH comma identity-template overrides.
   The staged registry now has all 690 operations resolved; exact 2.6.0 JWT CEL
   PATCH is security-blocked because upstream drops audience and leeway
   constraints. The historical projection remains
@@ -341,6 +343,11 @@ Pentest range: `<commit-06>..<commit-07>`.
 ### Commit 08: Add acknowledged template-security overrides
 
 Suggested title: `Gate OpenBao 2.6 identity template overrides`
+
+Status: complete in this commit. Ordinary policy and role serialization omits
+all four override fields; explicit feature-gated constructors and methods are
+required to send `true`, and older profiles reject the fields before
+transport.
 
 - Add ACL slash/wildcard, PKI glob, and SSH comma override response fields.
 - Add explicit acknowledged constructors for sending `true`.

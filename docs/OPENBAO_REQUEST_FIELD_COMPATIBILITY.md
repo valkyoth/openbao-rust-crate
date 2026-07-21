@@ -30,10 +30,13 @@ field to make a request appear compatible.
 | `identity.oidc.provider.token` | `scope` | `2.5.0` | `-` |
 | `ssh.role` | `allow_empty_principals` | `2.0.2` | `-` |
 | `ssh.role` | `issuer_ref` | `2.3.1` | `-` |
+| `ssh.role` | `allow_commas_in_identity_templates` | `2.6.0` | `-` |
 | `sys.policy.write` | `expiration` | `2.3.1` | `-` |
 | `sys.policy.write` | `ttl` | `2.3.1` | `-` |
 | `sys.policy.write` | `cas` | `2.3.1` | `-` |
 | `sys.policy.write` | `cas_required` | `2.3.1` | `-` |
+| `sys.policy.write` | `allow_slashes_in_identity_templates` | `2.6.0` | `-` |
+| `sys.policy.write` | `allow_wildcards_in_identity_templates` | `2.6.0` | `-` |
 | `sys.init` | `stored_shares` | `2.0.0` | `2.5.5` |
 | `sys.rekey` | `stored_shares` | `2.0.0` | `2.5.5` |
 | `sys.config.cors` | `allow_credentials` | `2.6.0` | `-` |
@@ -48,6 +51,7 @@ field to make a request appear compatible.
 | `pki.role` | `not_before_bound` | `2.3.1` | `-` |
 | `pki.role` | `not_after_bound` | `2.3.1` | `-` |
 | `pki.role` | `allowed_ip_sans_cidr` | `2.5.0` | `-` |
+| `pki.role` | `allow_globs_in_identity_templates` | `2.6.0` | `-` |
 | `pki.tidy` | `tidy_invalid_certs` | `2.1.0` | `-` |
 | `pki.tidy` | `page_size` | `2.2.0` | `-` |
 | `pki.config.auto_tidy` | `tidy_invalid_certs` | `2.1.0` | `-` |
@@ -85,6 +89,12 @@ proof when tagged documentation or live behavior contradicts it.
   mount. Omitting it preserves the server's default-issuer behavior.
 - ACL `cas`, `cas_required`, `expiration`, and `ttl` are policy lifecycle and
   concurrency controls. `expiration` and `ttl` remain mutually exclusive.
+- OpenBao 2.6 ACL template overrides permit `/`, `*`, or `+` in rendered
+  identity metadata; PKI permits `*` in templated allowed domains and URI SANs;
+  SSH permits `,` in templated users and domains. Each can expand the resource
+  selected by untrusted metadata. Typed writes require the non-default
+  `identity-template-overrides-acknowledged` feature and an explicit marker.
+  Ordinary request serialization cannot emit these flags.
 - Plugin `oci` changes plugin execution mode. It is never omitted as a
   compatibility fallback.
 - System `stored_shares` is retained for old profiles but is rejected for

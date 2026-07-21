@@ -50,8 +50,8 @@ all 690 operations resolved. JWT CEL PATCH is security-blocked for exact
 `2.6.0` because the upstream handler drops audience and leeway constraints. The
 candidate profile is introspection-only and cannot drive compatibility
 policies or request routing. The stable support claim remains `2.0.0` through
-`2.5.5` until the remaining 2.6 security gates, fixtures, and exact-image
-tests are promoted together.
+`2.5.5` until the final 22-release compatibility and exact-image test matrix
+is promoted together.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -76,6 +76,9 @@ Implemented now:
   helpers, including staged 2.6 PAC-decoding configuration.
 - Userpass login plus user create/read/list/delete, password update, and
   policy update helpers, including staged 2.6 validated bcrypt hashes.
+- Staged OpenBao 2.6 ACL, PKI, and SSH identity-template delimiter readback,
+  with dangerous write overrides available only through an acknowledged
+  feature and explicit per-surface constructors.
 - Token create, create-orphan, role create/read/list/delete, lookup, accessor
   lookup/list/renew/revoke, renew, revoke, revoke-orphan, revoke-self, and tidy
   helpers.
@@ -450,6 +453,7 @@ openbao = { version = "2", features = ["time"] }
 | `identity` | yes | Identity entity/group administration plus OIDC provider administration and typed authorize/token/userinfo protocol helpers. |
 | `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, direct/device poll, and staged 2.6 CEL role/login and Kubernetes provider helpers. |
 | `oidc-get-callback-acknowledged` | no | Enables JWT/OIDC callback and poll GET operations plus the Identity provider GET authorize variant. Credentials, state, and nonce values necessarily enter URL and HTTP-stack buffers; enforce query-free access logging on OpenBao and every intermediary. |
+| `identity-template-overrides-acknowledged` | no | Enables explicit OpenBao 2.6 ACL `/`/`*`/`+`, PKI `*`, and SSH `,` identity-template delimiter overrides. These can turn untrusted identity metadata into additional paths, certificate names, or SSH principals; ordinary request serialization cannot enable them. |
 | `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, group mapping, and staged 2.6 PAC decoding. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |

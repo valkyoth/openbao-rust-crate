@@ -106,6 +106,9 @@ pub(crate) mod fields {
         VersionedRequestField::since("ssh.role", "allow_empty_principals", V2_0_2);
     pub(crate) const SSH_ROLE_ISSUER_REF: VersionedRequestField =
         VersionedRequestField::since("ssh.role", "issuer_ref", V2_3_1);
+    #[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
+    pub(crate) const SSH_ROLE_ALLOW_TEMPLATE_COMMAS: VersionedRequestField =
+        VersionedRequestField::since("ssh.role", "allow_commas_in_identity_templates", V2_6_0);
 
     pub(crate) const POLICY_EXPIRATION: VersionedRequestField =
         VersionedRequestField::since("sys.policy.write", "expiration", V2_3_1);
@@ -115,6 +118,20 @@ pub(crate) mod fields {
         VersionedRequestField::since("sys.policy.write", "cas", V2_3_1);
     pub(crate) const POLICY_CAS_REQUIRED: VersionedRequestField =
         VersionedRequestField::since("sys.policy.write", "cas_required", V2_3_1);
+    #[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
+    pub(crate) const POLICY_ALLOW_TEMPLATE_SLASHES: VersionedRequestField =
+        VersionedRequestField::since(
+            "sys.policy.write",
+            "allow_slashes_in_identity_templates",
+            V2_6_0,
+        );
+    #[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
+    pub(crate) const POLICY_ALLOW_TEMPLATE_WILDCARDS: VersionedRequestField =
+        VersionedRequestField::since(
+            "sys.policy.write",
+            "allow_wildcards_in_identity_templates",
+            V2_6_0,
+        );
     #[cfg(any(feature = "operator-ops", test))]
     pub(crate) const OPERATOR_INIT_STORED_SHARES: VersionedRequestField =
         VersionedRequestField::between("sys.init", "stored_shares", V2_0_0, V2_5_5);
@@ -150,6 +167,9 @@ pub(crate) mod fields {
         VersionedRequestField::since("pki.role", "not_after_bound", V2_3_1);
     pub(crate) const PKI_ROLE_ALLOWED_IP_SANS_CIDR: VersionedRequestField =
         VersionedRequestField::since("pki.role", "allowed_ip_sans_cidr", V2_5_0);
+    #[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
+    pub(crate) const PKI_ROLE_ALLOW_TEMPLATE_GLOBS: VersionedRequestField =
+        VersionedRequestField::since("pki.role", "allow_globs_in_identity_templates", V2_6_0);
     pub(crate) const PKI_TIDY_INVALID_CERTS: VersionedRequestField =
         VersionedRequestField::since("pki.tidy", "tidy_invalid_certs", V2_1_0);
     pub(crate) const PKI_TIDY_PAGE_SIZE: VersionedRequestField =
@@ -176,10 +196,13 @@ pub(crate) mod fields {
         IDENTITY_PROVIDER_TOKEN_SCOPE,
         SSH_ROLE_ALLOW_EMPTY_PRINCIPALS,
         SSH_ROLE_ISSUER_REF,
+        SSH_ROLE_ALLOW_TEMPLATE_COMMAS,
         POLICY_EXPIRATION,
         POLICY_TTL,
         POLICY_CAS,
         POLICY_CAS_REQUIRED,
+        POLICY_ALLOW_TEMPLATE_SLASHES,
+        POLICY_ALLOW_TEMPLATE_WILDCARDS,
         OPERATOR_INIT_STORED_SHARES,
         OPERATOR_REKEY_STORED_SHARES,
         CORS_ALLOW_CREDENTIALS,
@@ -194,6 +217,7 @@ pub(crate) mod fields {
         PKI_ROLE_NOT_BEFORE_BOUND,
         PKI_ROLE_NOT_AFTER_BOUND,
         PKI_ROLE_ALLOWED_IP_SANS_CIDR,
+        PKI_ROLE_ALLOW_TEMPLATE_GLOBS,
         PKI_TIDY_INVALID_CERTS,
         PKI_TIDY_PAGE_SIZE,
         PKI_AUTO_TIDY_INVALID_CERTS,
@@ -314,6 +338,6 @@ mod tests {
                 ));
             }
         }
-        assert_eq!(identities.len(), 36);
+        assert_eq!(identities.len(), 40);
     }
 }

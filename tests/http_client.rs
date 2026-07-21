@@ -3709,6 +3709,67 @@ async fn authentication_2_6_contracts_reject_old_profiles_before_transport() {
     ));
 }
 
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[tokio::test]
+async fn identity_template_overrides_reject_old_profiles_before_transport() {
+    let version = OpenBaoVersion::new(2, 5, 5);
+    let policy =
+        OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+    let config = OpenBaoConfig::new("https://127.0.0.1:1")
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(SecretString::from("template-operator-token")))
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let acl = openbao::sys::AclIdentityTemplateOverrides::acknowledge_slashes();
+    assert!(matches!(
+        client
+            .sys()
+            .write_policy_with_identity_template_overrides(
+                "templated",
+                &openbao::sys::PolicyWriteRequest::new("path \"secret/data/app\" {}"),
+                acl,
+            )
+            .await,
+        Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "sys.policy.write",
+            field: "allow_slashes_in_identity_templates",
+            version: rejected,
+        }) if rejected == version
+    ));
+
+    let pki = client.pki("pki").unwrap_or_else(|error| panic!("{error}"));
+    assert!(matches!(
+        pki.write_role_with_identity_template_globs(
+            "templated",
+            &openbao::secrets::pki::PkiRole::default(),
+            openbao::secrets::pki::PkiIdentityTemplateGlobOverride::acknowledge(),
+        )
+        .await,
+        Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "pki.role",
+            field: "allow_globs_in_identity_templates",
+            version: rejected,
+        }) if rejected == version
+    ));
+
+    let ssh = client.ssh("ssh").unwrap_or_else(|error| panic!("{error}"));
+    assert!(matches!(
+        ssh.write_role_with_identity_template_commas(
+            "templated",
+            &openbao::secrets::ssh::SshRoleRequest::ca("service"),
+            openbao::secrets::ssh::SshIdentityTemplateCommaOverride::acknowledge(),
+        )
+        .await,
+        Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "ssh.role",
+            field: "allow_commas_in_identity_templates",
+            version: rejected,
+        }) if rejected == version
+    ));
+}
+
 #[tokio::test]
 async fn sys_rate_limit_quota_lifecycle_uses_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
