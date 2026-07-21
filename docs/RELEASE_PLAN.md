@@ -764,3 +764,19 @@ Stop criteria:
   2 MiB compressed limit;
 - the complete release gate, all-release GitHub workflow, CodeQL, and final
   exact-commit pentests pass before tagging `v2.1.0`.
+
+### 2.1.1 - Sanitization Dependency Maintenance
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.1`;
+- `sanitization` is updated from `2.0.2` to `2.0.3` in the manifest and every
+  repository lockfile;
+- the public API, all 22 exact OpenBao profiles, endpoint routing, request and
+  response compatibility rules, and security feature gates remain unchanged;
+- README, migration, stability, changelog, and release notes consistently
+  describe the dependency-only patch;
+- `scripts/release_2_1_1_gate.sh`, GitHub CI, CodeQL, the all-release
+  compatibility workflow, and exact-commit pentests pass before tagging
+  `v2.1.1`.

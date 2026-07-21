@@ -1,7 +1,7 @@
 # API Stability Audit
 
 This document records the historical stable `1.x` API audit, its `2.0.0`
-finalization, and the compatible `2.1.0` OpenBao 2.6 extension. The goal is to
+finalization, and the compatible `2.1.x` OpenBao 2.6 extension. The goal is to
 make the public API commitments and security boundaries explicit.
 
 ## Status
@@ -34,7 +34,8 @@ make the public API commitments and security boundaries explicit.
   `2.0.2` narrows the crates.io source package while retaining complete release
   evidence in the corresponding signed Git tag. `2.1.0` adds the exact
   OpenBao `2.6.0` profile and its reviewed API additions without changing the
-  21 historical profiles.
+  21 historical profiles. `2.1.1` is a dependency-only maintenance patch that
+  updates `sanitization` to `2.0.3` without changing those contracts.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 688 documented operations, 592 are typed, 93 are typed-gated,
   and three are security-blocked because the exact `2.6.0` server handlers are

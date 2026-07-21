@@ -44,7 +44,8 @@ the exception can ship.
 ```bash
 cargo clippy --all-targets --all-features -- -D warnings
 scripts/release_2_1_gate.sh
+scripts/release_2_1_1_gate.sh
 ```
 
-The second command also checks the MSRV build, package contents, compatibility
+The patch release command also checks the MSRV build, package contents, compatibility
 contracts, unit and integration tests, documentation, and Kani proofs.

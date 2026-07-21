@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.1 - 2026-07-21
+
+### Changed
+
+- Updated `sanitization` from `2.0.2` to `2.0.3` and refreshed all repository
+  lockfiles. This patch does not change the public API, OpenBao compatibility
+  profiles, endpoint routing, or feature-gate boundaries.
+
 ## 2.1.0 - 2026-07-21
 
 ### Added

@@ -7,6 +7,14 @@ profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
 
+## From `openbao` 2.1.0 To 2.1.1
+
+`2.1.1` is a source-compatible dependency maintenance patch. It updates
+`sanitization` from `2.0.2` to `2.0.3` without changing the SDK's public API,
+OpenBao compatibility profiles, endpoint routes, request or response field
+rules, or feature-gate boundaries. No application source migration is
+required.
+
 ## From `openbao` 2.0.2 To 2.1.0
 
 `2.1.0` is a source-compatible minor release that adds the exact OpenBao
