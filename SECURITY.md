@@ -91,6 +91,14 @@ Please include:
 - Typed dispatch never retries another historical route after HTTP 404/405,
   transport, or decode failure. Such fallback could duplicate writes or let a
   server response influence capability selection.
+- Both reqwest clients disable transport-owned protocol retries, including
+  HTTP/2 NACK replay. Requests repeat only through the explicit SDK retry
+  helper, whose type permits GET, HEAD, and LIST but no write method.
+- Error bodies are retained only for public requests carrying no token,
+  namespace, query, custom header, or request body. Sensitive request failures
+  discard server diagnostics so a peer cannot reflect credentials into
+  loggable `Error` strings. Successful response warnings remain explicitly
+  accessible but are omitted from `ResponseEnvelope` debug output.
 - Public raw JSON, byte, retry, and response-wrapping transports are disabled
   unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
   bypass typed capability selection, endpoint validation, and
@@ -398,11 +406,26 @@ propagation fails closed.
 
 ## Dev Bootstrap Warning
 
-`Sys::bootstrap_dev` is for disposable local OpenBao development instances
-only. It refuses non-loopback and already initialized targets, but it still
-creates root-token and unseal-key material in the caller process. Do not use it
-for production, staging, shared environments, HSM/KMS-backed auto-unseal, or
-any environment that requires an operator key ceremony.
+`Sys::bootstrap_dev_acknowledged` is available only with `dev-bootstrap` and
+`dev-bootstrap-acknowledged`. It is for disposable local OpenBao development
+instances only. It refuses non-loopback and already initialized targets, but a
+numeric loopback address can terminate an SSH tunnel, Kubernetes port-forward,
+reverse proxy, sidecar, or service-mesh route to production. The acknowledgement
+therefore confirms a review of the complete network path; it does not prove the
+destination is disposable. The legacy `Sys::bootstrap_dev` symbol always fails
+closed. Never enable this feature in production workspaces or use it for
+staging, shared environments, HSM/KMS-backed auto-unseal, or any environment
+that requires an operator key ceremony.
+
+Unstructured system JSON is decoded under fixed recursion, node, and aggregate
+string-byte budgets in addition to the response wire-size cap. Typed lists and
+maps retain their endpoint-specific bounds. Response-wrapping callers should
+use `WrappedResponse::try_unwrap(&mut self)`: cancellation preserves the local
+token, while any transport or decode failure remains outcome-unknown and must
+not be retried automatically.
+
+Production panic boundaries and the no-exception policy are documented in
+`docs/PANIC_POLICY.md` and enforced by the release gate.
 
 Local Podman development TLS files under `deploy/podman/dev-state/` are
 generated per checkout and ignored. Private keys must never be committed. The

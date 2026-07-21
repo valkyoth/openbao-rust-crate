@@ -25,6 +25,7 @@ include = [
     "/docs/MIGRATION_GUIDE.md",
     "/docs/OPENBAO_API_COVERAGE.md",
     "/docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md",
+    "/docs/PANIC_POLICY.md",
     "/docs/OPENBAO_REQUEST_FIELD_COMPATIBILITY.md",
     "/docs/OPENBAO_RESPONSE_COMPATIBILITY.md",
     "/docs/OPENBAO_VERSION_SELECTION.md",
@@ -98,6 +99,10 @@ transit-bytes = ["dep:base64-ng"]
 transit-import = ["dep:aes-kw", "dep:base64-ng", "dep:openssl", "dep:rand"]
 transit-import-acknowledged = []
 sys = []
+# Disposable loopback initialization can reach production through a local
+# tunnel or proxy. Keep it outside default builds and require explicit review.
+dev-bootstrap = ["sys"]
+dev-bootstrap-acknowledged = []
 workflow-trace = ["sys"]
 workflow-trace-acknowledged = []
 unauthenticated-workflows = ["sys"]

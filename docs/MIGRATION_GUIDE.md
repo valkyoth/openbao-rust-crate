@@ -66,6 +66,21 @@ Rustls build. Production builds compile OpenSSL only when an application
 explicitly selects an OpenSSL-using feature such as `transit-import` or the
 acknowledged native-TLS backend.
 
+The former `Sys::bootstrap_dev` method remains present so existing source still
+compiles, but now returns `Error::DevBootstrapDisabled` before network access.
+Development tooling must enable `dev-bootstrap` and
+`dev-bootstrap-acknowledged`, construct
+`DevBootstrapAcknowledgement::confirm_disposable_target()`, and call
+`bootstrap_dev_acknowledged`. This is a security behavior change: numeric
+loopback cannot distinguish a disposable server from a tunnel or proxy to
+production.
+
+Replace consuming `WrappedResponse::unwrap()` calls with
+`try_unwrap(&mut self)`. The older method remains deprecated for source
+compatibility, but only the mutable-borrowing API preserves the local wrapping
+token when its future is cancelled. A transport or decode error is still an
+outcome-unknown single-use operation and must not be retried automatically.
+
 ## From `openbao` 1.1.2 To 2.0.0
 
 `2.0.0` is the next major release. It combines explicit multi-version OpenBao

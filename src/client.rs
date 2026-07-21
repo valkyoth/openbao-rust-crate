@@ -1082,6 +1082,9 @@ fn build_http_client(
         .user_agent(config.user_agent.clone())
         .https_only(https_only)
         .redirect(redirect::Policy::none())
+        // Keep every transport request single-shot. Caller-approved retries
+        // are implemented only by the typed GET/HEAD/LIST retry helper.
+        .retry(reqwest::retry::never())
         .tls_version_min(config.min_tls_version);
 
     // Apply and record the backend in one operation so dependency feature
@@ -1821,15 +1824,11 @@ impl<State> Client<State> {
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            let errors =
-                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
-                    .await
-                    .map(|envelope| envelope.errors)
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(|error| crate::error::sanitize_api_error(&error))
-                    .collect();
-            return Err(Error::Api { status, errors });
+            drop(response);
+            return Err(Error::Api {
+                status,
+                errors: Vec::new(),
+            });
         }
         read_json_response(response, self.config.max_response_bytes).await
     }
@@ -2507,14 +2506,11 @@ impl<State> Client<State> {
         if accepted_statuses.contains(&status) {
             return Ok(response);
         }
-        let errors = read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
-            .await
-            .map(|envelope| envelope.errors)
-            .unwrap_or_default()
-            .into_iter()
-            .map(|error| crate::error::sanitize_api_error(&error))
-            .collect();
-        Err(Error::Api { status, errors })
+        drop(response);
+        Err(Error::Api {
+            status,
+            errors: Vec::new(),
+        })
     }
 
     /// Sends a raw authenticated or unauthenticated JSON request.
@@ -2746,17 +2742,10 @@ impl<State> Client<State> {
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            let error =
-                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
-                    .await
-                    .map(|envelope| envelope.errors)
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(|error| crate::error::sanitize_api_error(&error))
-                    .collect();
+            drop(response);
             return Err(Error::Api {
                 status,
-                errors: error,
+                errors: Vec::new(),
             });
         }
 
@@ -2803,14 +2792,14 @@ impl<State> Client<State> {
         };
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            let error =
-                read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
-                    .await
-                    .map(|envelope| envelope.errors)
-                    .unwrap_or_default()
-                    .into_iter()
-                    .map(|error| crate::error::sanitize_api_error(&error))
-                    .collect();
+            if is_sensitive {
+                drop(response);
+                return Err(Error::Api {
+                    status,
+                    errors: Vec::new(),
+                });
+            }
+            let error = read_public_api_errors(response, self.config.max_response_bytes).await;
             return Err(Error::Api {
                 status,
                 errors: error,
@@ -2985,14 +2974,11 @@ impl<State> Client<State> {
         if accepted_statuses.contains(&status) {
             return Ok(());
         }
-        let errors = read_json_response::<ErrorEnvelope>(response, self.config.max_response_bytes)
-            .await
-            .map(|envelope| envelope.errors)
-            .unwrap_or_default()
-            .into_iter()
-            .map(|error| crate::error::sanitize_api_error(&error))
-            .collect();
-        Err(Error::Api { status, errors })
+        drop(response);
+        Err(Error::Api {
+            status,
+            errors: Vec::new(),
+        })
     }
 
     async fn send_sensitive_prevalidated_body_request(
@@ -3636,6 +3622,19 @@ where
     })
 }
 
+async fn read_public_api_errors(
+    response: reqwest::Response,
+    max_response_bytes: usize,
+) -> Vec<String> {
+    read_json_response::<ErrorEnvelope>(response, max_response_bytes)
+        .await
+        .map(|envelope| envelope.errors)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|error| crate::error::sanitize_api_error(&error))
+        .collect()
+}
+
 async fn read_response_bytes(
     mut response: reqwest::Response,
     max_response_bytes: usize,
@@ -4251,6 +4250,62 @@ mod tests {
         ));
         assert!(!format!("{error}").contains(LEAKED_VALUE));
         assert!(!format!("{error:?}").contains(LEAKED_VALUE));
+    }
+
+    #[cfg(feature = "sensitive-http-test-only")]
+    #[tokio::test]
+    async fn ordinary_sensitive_errors_discard_reflected_credentials() {
+        const REFLECTED_SECRET: &str = "s.reflected-secret-must-not-survive";
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut request = [0_u8; 2048];
+            let count = stream
+                .read(&mut request)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&request[..count]);
+            assert!(request.starts_with("POST /v1/sys/leases/lookup HTTP/1.1"));
+            let body = format!(r#"{{"errors":["failed for {REFLECTED_SECRET}"]}}"#);
+            let response = format!(
+                "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream
+                .write_all(response.as_bytes())
+                .unwrap_or_else(|error| panic!("{error}"));
+        });
+        let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 5, 5))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(OpenBaoConfig::allow_sensitive_local_http_for_tests)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .try_with_token(SecretString::from("fixture-client-token"))
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        let result = client
+            .request_json_internal::<Empty, _>(Method::POST, "sys/leases/lookup", Some(&Empty {}))
+            .await;
+        let error = match result {
+            Ok(_) => panic!("sensitive API failure was accepted"),
+            Err(error) => error,
+        };
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
+
+        assert!(matches!(
+            &error,
+            Error::Api { status, errors }
+                if *status == reqwest::StatusCode::BAD_REQUEST && errors.is_empty()
+        ));
+        assert!(!format!("{error}").contains(REFLECTED_SECRET));
+        assert!(!format!("{error:?}").contains(REFLECTED_SECRET));
     }
 
     #[cfg(feature = "sensitive-http-test-only")]

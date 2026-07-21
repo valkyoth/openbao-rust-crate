@@ -8,6 +8,8 @@ echo "checks: formatting"
 cargo fmt --all --check
 
 echo "checks: release metadata"
+test -f docs/PANIC_POLICY.md
+grep -q 'No production exception is currently approved' docs/PANIC_POLICY.md
 scripts/validate-release-metadata.sh
 
 echo "checks: Rust 1.90.0 MSRV"

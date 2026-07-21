@@ -89,6 +89,12 @@ compile_error!(
      Add feature \"operator-ops-acknowledged\" to confirm you have audited this choice."
 );
 
+#[cfg(all(feature = "dev-bootstrap", not(feature = "dev-bootstrap-acknowledged")))]
+compile_error!(
+    "The dev-bootstrap feature can initialize any uninitialized OpenBao server reachable through a loopback tunnel, proxy, or port-forward and returns root and unseal material to the caller process. \
+     Add feature \"dev-bootstrap-acknowledged\" only for disposable development tooling after auditing the complete network path."
+);
+
 #[cfg(all(
     feature = "unstable-internal-ops",
     not(feature = "unstable-internal-ops-acknowledged")

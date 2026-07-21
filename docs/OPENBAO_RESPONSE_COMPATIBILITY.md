@@ -22,6 +22,9 @@ OpenAPI snapshots show the shape.
 - Lists and maps use bounded visitors before reading beyond the configured item
   limit. Bounded maps reject duplicate keys rather than overwriting an earlier
   value or allowing duplicates to evade a unique-key count.
+- Schema-free system JSON uses a recursive decoder with depth, total-node, and
+  aggregate string-byte budgets. These limits apply in addition to the raw
+  response byte cap and reject duplicate object keys.
 - Credentials, private keys, accessors, plugin arguments, and plugin
   environment values retain `SecretString` storage and redacted `Debug`
   behavior across every accepted response variant.

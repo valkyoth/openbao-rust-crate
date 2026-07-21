@@ -6,14 +6,18 @@ use secrecy::SecretString;
 use serde::de::Error as DeError;
 use serde::{
     Deserialize, Deserializer, Serialize,
-    de::{IgnoredAny, MapAccess, SeqAccess, Visitor},
+    de::{DeserializeSeed, IgnoredAny, MapAccess, SeqAccess, Visitor},
 };
+use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
 
 use std::collections::BTreeMap;
 
 use crate::{Error, Result, path::validate_endpoint_path};
 
 const MAX_API_ERRORS: usize = 16;
+const MAX_BOUNDED_JSON_DEPTH: usize = 64;
+const MAX_BOUNDED_JSON_NODES: usize = 262_144;
+const MAX_BOUNDED_JSON_STRING_BYTES: usize = 16 * 1024 * 1024;
 /// Maximum number of strings accepted by the crate's bounded list helpers.
 pub const MAX_RESPONSE_STRINGS: usize = 4096;
 
@@ -166,15 +170,245 @@ pub struct ResponseEnvelope<T> {
 
 impl<T: fmt::Debug> fmt::Debug for ResponseEnvelope<T> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let warning_count = self.warnings.as_ref().map(Vec::len);
         formatter
             .debug_struct("ResponseEnvelope")
             .field("data", &self.data)
             .field("lease_id", &"<redacted>")
             .field("lease_duration", &self.lease_duration)
             .field("renewable", &self.renewable)
-            .field("warnings", &self.warnings)
+            .field("warning_count", &warning_count)
             .field("wrap_info", &self.wrap_info)
             .finish()
+    }
+}
+
+/// JSON value decoded under recursive allocation budgets.
+pub(crate) struct BoundedJsonValue(JsonValue);
+
+impl BoundedJsonValue {
+    pub(crate) fn into_inner(self) -> JsonValue {
+        self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for BoundedJsonValue {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut budget = JsonValueBudget {
+            nodes_remaining: MAX_BOUNDED_JSON_NODES,
+            string_bytes_remaining: MAX_BOUNDED_JSON_STRING_BYTES,
+        };
+        BoundedJsonValueSeed {
+            budget: &mut budget,
+            depth: 0,
+        }
+        .deserialize(deserializer)
+        .map(Self)
+    }
+}
+
+struct JsonValueBudget {
+    nodes_remaining: usize,
+    string_bytes_remaining: usize,
+}
+
+impl JsonValueBudget {
+    fn take_node<E>(&mut self) -> core::result::Result<(), E>
+    where
+        E: DeError,
+    {
+        self.nodes_remaining = self
+            .nodes_remaining
+            .checked_sub(1)
+            .ok_or_else(|| E::custom("OpenBao JSON document exceeds node limit"))?;
+        Ok(())
+    }
+
+    fn take_string<E>(&mut self, bytes: usize) -> core::result::Result<(), E>
+    where
+        E: DeError,
+    {
+        self.string_bytes_remaining = self
+            .string_bytes_remaining
+            .checked_sub(bytes)
+            .ok_or_else(|| E::custom("OpenBao JSON document exceeds string byte limit"))?;
+        Ok(())
+    }
+}
+
+struct BoundedJsonValueSeed<'a> {
+    budget: &'a mut JsonValueBudget,
+    depth: usize,
+}
+
+impl<'de> DeserializeSeed<'de> for BoundedJsonValueSeed<'_> {
+    type Value = JsonValue;
+
+    fn deserialize<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if self.depth > MAX_BOUNDED_JSON_DEPTH {
+            return Err(D::Error::custom(
+                "OpenBao JSON document exceeds nesting limit",
+            ));
+        }
+        self.budget.take_node::<D::Error>()?;
+        deserializer.deserialize_any(BoundedJsonValueVisitor {
+            budget: self.budget,
+            depth: self.depth,
+        })
+    }
+}
+
+struct BoundedJsonValueVisitor<'a> {
+    budget: &'a mut JsonValueBudget,
+    depth: usize,
+}
+
+impl BoundedJsonValueVisitor<'_> {
+    fn child(&mut self) -> BoundedJsonValueSeed<'_> {
+        BoundedJsonValueSeed {
+            budget: self.budget,
+            depth: self.depth.saturating_add(1),
+        }
+    }
+
+    fn string<E>(&mut self, value: String) -> core::result::Result<JsonValue, E>
+    where
+        E: DeError,
+    {
+        self.budget.take_string::<E>(value.len())?;
+        Ok(JsonValue::String(value))
+    }
+}
+
+impl<'de> Visitor<'de> for BoundedJsonValueVisitor<'_> {
+    type Value = JsonValue;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a recursively bounded JSON value")
+    }
+
+    fn visit_unit<E>(self) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Null)
+    }
+
+    fn visit_none<E>(self) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Null)
+    }
+
+    fn visit_bool<E>(self, value: bool) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Bool(value))
+    }
+
+    fn visit_i64<E>(self, value: i64) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Number(JsonNumber::from(value)))
+    }
+
+    fn visit_u64<E>(self, value: u64) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Number(JsonNumber::from(value)))
+    }
+
+    fn visit_f64<E>(self, value: f64) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        JsonNumber::from_f64(value)
+            .map(JsonValue::Number)
+            .ok_or_else(|| E::custom("OpenBao JSON document contains a non-finite number"))
+    }
+
+    fn visit_str<E>(self, value: &str) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        self.budget.take_string::<E>(value.len())?;
+        Ok(JsonValue::String(value.to_owned()))
+    }
+
+    fn visit_string<E>(mut self, value: String) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        self.string(value)
+    }
+
+    fn visit_seq<A>(mut self, mut sequence: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut values = Vec::new();
+        while let Some(value) = sequence.next_element_seed(self.child())? {
+            values.push(value);
+        }
+        Ok(JsonValue::Array(values))
+    }
+
+    fn visit_map<A>(mut self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = JsonMap::new();
+        while let Some(key) = map.next_key_seed(BoundedJsonKeySeed {
+            budget: self.budget,
+        })? {
+            let value = map.next_value_seed(self.child())?;
+            if values.insert(key, value).is_some() {
+                return Err(A::Error::custom(
+                    "OpenBao JSON document contains a duplicate key",
+                ));
+            }
+        }
+        Ok(JsonValue::Object(values))
+    }
+}
+
+struct BoundedJsonKeySeed<'a> {
+    budget: &'a mut JsonValueBudget,
+}
+
+impl<'de> DeserializeSeed<'de> for BoundedJsonKeySeed<'_> {
+    type Value = String;
+
+    fn deserialize<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_string(BoundedJsonKeyVisitor {
+            budget: self.budget,
+        })
+    }
+}
+
+struct BoundedJsonKeyVisitor<'a> {
+    budget: &'a mut JsonValueBudget,
+}
+
+impl<'de> Visitor<'de> for BoundedJsonKeyVisitor<'_> {
+    type Value = String;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a bounded JSON object key")
+    }
+
+    fn visit_str<E>(self, value: &str) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        self.budget.take_string::<E>(value.len())?;
+        Ok(value.to_owned())
+    }
+
+    fn visit_string<E>(self, value: String) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        self.budget.take_string::<E>(value.len())?;
+        Ok(value)
     }
 }
 
@@ -519,7 +753,9 @@ mod tests {
 
     use secrecy::SecretString;
 
-    use super::{BoundedStringList, ListEntries, ListPageOptions, ResponseEnvelope};
+    use super::{
+        BoundedJsonValue, BoundedStringList, ListEntries, ListPageOptions, ResponseEnvelope,
+    };
 
     #[test]
     fn response_debug_redacts_lease_id() {
@@ -607,6 +843,25 @@ mod tests {
         assert_eq!(warning, "safe[31mforged");
         assert!(!warning.chars().any(char::is_control));
         assert!(!warning.contains('\u{202e}'));
+        let debug = format!("{envelope:?}");
+        assert!(debug.contains("warning_count"));
+        assert!(!debug.contains(warning));
+    }
+
+    #[test]
+    fn bounded_json_rejects_excessive_depth_nodes_and_duplicate_keys() {
+        let deep = format!(
+            "{}null{}",
+            "[".repeat(super::MAX_BOUNDED_JSON_DEPTH + 1),
+            "]".repeat(super::MAX_BOUNDED_JSON_DEPTH + 1)
+        );
+        assert!(serde_json::from_str::<BoundedJsonValue>(&deep).is_err());
+
+        let wide = format!("[{}]", vec!["0"; super::MAX_BOUNDED_JSON_NODES].join(","));
+        assert!(serde_json::from_str::<BoundedJsonValue>(&wide).is_err());
+        assert!(
+            serde_json::from_str::<BoundedJsonValue>(r#"{"duplicate":1,"duplicate":2}"#).is_err()
+        );
     }
 
     #[test]

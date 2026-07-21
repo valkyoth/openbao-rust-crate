@@ -6,7 +6,9 @@ use core::{
     pin::Pin,
     task::{Context, Poll},
 };
-use std::{collections::BTreeMap, net::IpAddr};
+use std::collections::BTreeMap;
+#[cfg(feature = "dev-bootstrap")]
+use std::net::IpAddr;
 
 #[cfg(any(feature = "monitor-stream", feature = "raft-stream"))]
 use bytes::Bytes;
@@ -30,7 +32,7 @@ use crate::{
     Authenticated, Client, Error, JsonValue, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ListEntries, MAX_RESPONSE_STRINGS, ResponseEnvelope, WrapInfo,
+        BoundedJsonValue, Empty, ListEntries, MAX_RESPONSE_STRINGS, ResponseEnvelope, WrapInfo,
         deserialize_bounded_secret_string_vec, deserialize_bounded_string_map,
         deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
         deserialize_optional_bounded_string_map, deserialize_optional_bounded_string_vec,
@@ -2808,6 +2810,27 @@ impl Default for DevBootstrapOptions {
     }
 }
 
+/// Explicit confirmation required for disposable development bootstrap.
+///
+/// This acknowledgement does not prove that a numeric loopback endpoint is a
+/// development server. Local tunnels, proxies, and port-forwards can still
+/// reach production. Construct it only after auditing the complete network
+/// path and confirming the target is disposable.
+#[cfg(feature = "dev-bootstrap")]
+#[derive(Clone, Copy, Debug)]
+pub struct DevBootstrapAcknowledgement {
+    _private: (),
+}
+
+#[cfg(feature = "dev-bootstrap")]
+impl DevBootstrapAcknowledgement {
+    /// Confirms that the caller audited the target as disposable development.
+    #[must_use]
+    pub const fn confirm_disposable_target() -> Self {
+        Self { _private: () }
+    }
+}
+
 /// Result from [`Sys::bootstrap_dev`].
 ///
 /// This type intentionally does not implement `Clone`. It contains a root
@@ -3244,6 +3267,7 @@ impl<'a> WrappingContext<'a> {
         Ok(WrappedResponse {
             client: self.client,
             wrap_info,
+            consumed: false,
             _response: PhantomData,
         })
     }
@@ -3266,6 +3290,7 @@ impl fmt::Debug for WrappingContext<'_> {
 pub struct WrappedResponse<'a, T> {
     client: &'a Client<Authenticated>,
     wrap_info: WrapInfo,
+    consumed: bool,
     _response: PhantomData<T>,
 }
 
@@ -3294,21 +3319,58 @@ impl<'a, T> WrappedResponse<'a, T> {
         self.wrap_info.ttl
     }
 
+    /// Returns whether this wrapper successfully redeemed its token.
+    #[must_use]
+    pub const fn is_consumed(&self) -> bool {
+        self.consumed
+    }
+
+    /// Attempts to redeem the token without transferring wrapper ownership.
+    ///
+    /// The token remains in this value when the future is cancelled or when
+    /// transport or decoding fails. Such failures are outcome-unknown: the
+    /// server may have consumed the single-use token even though the client did
+    /// not receive a response. Do not retry automatically. Use wrapping lookup
+    /// or an application-specific recovery decision.
+    pub async fn try_unwrap(&mut self) -> Result<T>
+    where
+        T: DeserializeOwned,
+    {
+        if self.consumed {
+            return Err(Error::InvalidParameter(
+                "wrapping token was already consumed".into(),
+            ));
+        }
+        let payload = WrappingTokenPayload {
+            token: self.wrap_info.token.expose_secret(),
+        };
+        let result = self
+            .client
+            .request_json_internal(Method::POST, "sys/wrapping/unwrap", Some(&payload))
+            .await;
+        if result.is_ok() {
+            self.consumed = true;
+            self.wrap_info.token = SecretString::from(String::new());
+            self.wrap_info.accessor = None;
+        }
+        result
+    }
+
     /// Consumes the wrapping token and decodes the original response shape.
     ///
     /// This returns the same response shape requested from
     /// [`WrappingContext::request_json`]. For ordinary OpenBao data endpoints,
     /// use `T = ResponseEnvelope<MyData>` and then inspect `envelope.data`.
-    pub async fn unwrap(self) -> Result<T>
+    ///
+    /// This compatibility method cannot preserve the local token if its future
+    /// is cancelled. Prefer [`Self::try_unwrap`], which keeps ownership with
+    /// the caller until the operation succeeds.
+    #[deprecated(since = "2.1.0", note = "use cancellation-safe try_unwrap(&mut self)")]
+    pub async fn unwrap(mut self) -> Result<T>
     where
         T: DeserializeOwned,
     {
-        let payload = WrappingTokenPayload {
-            token: self.wrap_info.token.expose_secret(),
-        };
-        self.client
-            .request_json_internal(Method::POST, "sys/wrapping/unwrap", Some(&payload))
-            .await
+        self.try_unwrap().await
     }
 }
 
@@ -3317,6 +3379,7 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
         formatter
             .debug_struct("WrappedResponse")
             .field("wrap_info", &self.wrap_info)
+            .field("consumed", &self.consumed)
             .finish_non_exhaustive()
     }
 }
@@ -5077,12 +5140,14 @@ struct RawWritePayload<'a> {
     encoding: RawEncoding,
 }
 
+#[cfg(feature = "dev-bootstrap")]
 #[derive(Serialize)]
 struct InitPayload {
     secret_shares: u8,
     secret_threshold: u8,
 }
 
+#[cfg(feature = "dev-bootstrap")]
 #[derive(Deserialize)]
 struct InitResponse {
     #[serde(default, deserialize_with = "deserialize_bounded_secret_string_vec")]
@@ -5092,6 +5157,7 @@ struct InitResponse {
     root_token: SecretString,
 }
 
+#[cfg(feature = "dev-bootstrap")]
 #[derive(Serialize)]
 struct UnsealPayload<'a> {
     key: &'a str,
@@ -5374,7 +5440,8 @@ impl<State> Sys<'_, State> {
     /// Set `generic_mount_paths` to replace concrete mount paths with a
     /// dynamic `{mountPath}` parameter when OpenBao supports it.
     pub async fn openapi_document(&self, generic_mount_paths: bool) -> Result<JsonValue> {
-        self.client
+        let document: BoundedJsonValue = self
+            .client
             .request_sys_json_query_accepting(
                 Method::GET,
                 "sys/internal/specs/openapi",
@@ -5382,7 +5449,8 @@ impl<State> Sys<'_, State> {
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
-            .await
+            .await?;
+        Ok(document.into_inner())
     }
 
     /// Reads `/sys/internal/ui/namespaces`.
@@ -5418,7 +5486,8 @@ impl<State> Sys<'_, State> {
     /// Use [`Self::metrics_prometheus`] when the Prometheus text format is
     /// required.
     pub async fn metrics_json(&self) -> Result<JsonValue> {
-        self.client
+        let document: BoundedJsonValue = self
+            .client
             .request_sys_json_query_accepting(
                 Method::GET,
                 "sys/metrics",
@@ -5426,7 +5495,8 @@ impl<State> Sys<'_, State> {
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
-            .await
+            .await?;
+        Ok(document.into_inner())
     }
 
     /// Reads Prometheus text telemetry metrics from `/sys/metrics`.
@@ -5458,11 +5528,11 @@ impl<State> Sys<'_, State> {
     /// so this method exposes the `data` object as JSON while keeping the
     /// normal response-size and content-type protections.
     pub async fn host_info_json(&self) -> Result<JsonValue> {
-        let envelope: ResponseEnvelope<JsonValue> = self
+        let envelope: ResponseEnvelope<BoundedJsonValue> = self
             .client
             .request_sys_json_internal(Method::GET, "sys/host-info", Option::<&Empty>::None)
             .await?;
-        Ok(envelope.data)
+        Ok(envelope.data.into_inner())
     }
 
     /// Reads sanitized OpenBao configuration state from `/sys/config/state/sanitized`.
@@ -5472,13 +5542,15 @@ impl<State> Sys<'_, State> {
     /// helper exposes the sanitized JSON object under the normal response-size
     /// and content-type protections.
     pub async fn sanitized_config_state_json(&self) -> Result<JsonValue> {
-        self.client
+        let document: BoundedJsonValue = self
+            .client
             .request_sys_json_internal(
                 Method::GET,
                 "sys/config/state/sanitized",
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(document.into_inner())
     }
 
     /// Reads runtime logger levels from `/sys/loggers`.
@@ -5594,6 +5666,20 @@ impl Sys<'_, Unauthenticated> {
             .await
     }
 
+    /// Retired compatibility shim for development bootstrap.
+    ///
+    /// This method fails closed because a numeric loopback address can forward
+    /// to production. Enable `dev-bootstrap` and
+    /// `dev-bootstrap-acknowledged`, then call
+    /// [`Self::bootstrap_dev_acknowledged`] with an explicit acknowledgement.
+    #[deprecated(
+        since = "2.1.0",
+        note = "enable dev-bootstrap plus dev-bootstrap-acknowledged and use bootstrap_dev_acknowledged"
+    )]
+    pub async fn bootstrap_dev(&self, _options: &DevBootstrapOptions) -> Result<DevBootstrap> {
+        Err(Error::DevBootstrapDisabled)
+    }
+
     /// Initializes and unseals a fresh loopback OpenBao development instance.
     ///
     /// This helper is intentionally narrow:
@@ -5606,7 +5692,12 @@ impl Sys<'_, Unauthenticated> {
     /// Do not use this for production, staging, shared labs, HSM/KMS-backed
     /// auto-unseal deployments, or any environment where root-token and unseal
     /// key handling must follow an operator ceremony.
-    pub async fn bootstrap_dev(&self, options: &DevBootstrapOptions) -> Result<DevBootstrap> {
+    #[cfg(feature = "dev-bootstrap")]
+    pub async fn bootstrap_dev_acknowledged(
+        &self,
+        _acknowledgement: DevBootstrapAcknowledgement,
+        options: &DevBootstrapOptions,
+    ) -> Result<DevBootstrap> {
         validate_dev_bootstrap_options(options.secret_shares, options.secret_threshold)?;
         require_loopback_dev_target(self.client)?;
 
@@ -5672,6 +5763,7 @@ impl Sys<'_, Unauthenticated> {
         })
     }
 
+    #[cfg(feature = "dev-bootstrap")]
     async fn unseal_once(&self, key: &SecretString) -> Result<UnsealStatus> {
         self.client
             .request_sys_json_internal(
@@ -7010,7 +7102,7 @@ impl Sys<'_, Authenticated> {
     /// Inspects the unstable internal request root (OpenBao 2.5.5+).
     #[cfg(feature = "unstable-internal-ops")]
     pub async fn internal_request_inspection(&self) -> Result<JsonValue> {
-        let envelope: ResponseEnvelope<JsonValue> = self
+        let envelope: ResponseEnvelope<BoundedJsonValue> = self
             .client
             .request_sys_json_internal(
                 Method::GET,
@@ -7018,7 +7110,7 @@ impl Sys<'_, Authenticated> {
                 Option::<&Empty>::None,
             )
             .await?;
-        Ok(envelope.data)
+        Ok(envelope.data.into_inner())
     }
 
     /// Inspects one unstable internal router index.
@@ -8465,13 +8557,15 @@ impl Sys<'_, Authenticated> {
     /// The state schema is mostly diagnostic and may grow with OpenBao, so this
     /// helper returns JSON under the normal response-size protections.
     pub async fn raft_autopilot_state_json(&self) -> Result<JsonValue> {
-        self.client
+        let document: BoundedJsonValue = self
+            .client
             .request_sys_json_internal(
                 Method::GET,
                 "sys/storage/raft/autopilot/state",
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(document.into_inner())
     }
 
     /// Reads Raft Autopilot configuration.
@@ -8683,6 +8777,7 @@ fn rotate_backup_path(target: OperatorRotateTarget) -> String {
     format!("sys/rotate/{}/backup", target.path_segment())
 }
 
+#[cfg(feature = "dev-bootstrap")]
 fn require_loopback_dev_target<State>(client: &Client<State>) -> Result<()> {
     let url = client.base_url();
     let Some(host) = url.host_str() else {

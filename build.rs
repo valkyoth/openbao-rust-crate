@@ -36,4 +36,9 @@ fn main() {
             "cargo:warning=Unauthenticated workflow execution is enabled. Audit server configuration, every exposed workflow, and rate limiting before deployment."
         );
     }
+    if std::env::var_os("CARGO_FEATURE_DEV_BOOTSTRAP").is_some() {
+        println!(
+            "cargo:warning=DANGER: dev-bootstrap can initialize an uninitialized OpenBao server reached through a loopback tunnel or proxy. Use only with disposable development instances."
+        );
+    }
 }

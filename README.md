@@ -210,7 +210,8 @@ for the stable support policy.
 | Release evidence | fmt, clippy, tests, docs, deny, audit, SBOM, optional Kani proof harnesses, and real OpenBao integration |
 | Pentest gate | Required before tagging a release |
 
-Security details live in [SECURITY.md](SECURITY.md). Release evidence and
+Security details live in [SECURITY.md](SECURITY.md), with production panic
+boundaries in [docs/PANIC_POLICY.md](docs/PANIC_POLICY.md). Release evidence and
 release sequencing live in the
 [signed repository source](https://github.com/valkyoth/openbao-rust-crate/tree/v2.1.0/release-notes)
 and
@@ -480,13 +481,15 @@ openbao = { version = "2", features = ["time"] }
 | `transit-import` | no | Software AES-KWP/RSA-OAEP helper for preparing OpenBao Transit BYOK import blobs. Requires `transit-import-acknowledged`; uses `openssl` and `aes-kw`; requires an audited OpenSSL 1.1.1+ runtime baseline; not an HSM, FIPS, certification, post-quantum, or security-boundary claim. Do not use it for classified or high-assurance key wrapping. |
 | `transit-import-acknowledged` | no | Explicit acknowledgment that Transit BYOK software wrapping passes key material through software memory and OpenSSL-managed heap. |
 | `sys` | yes | System backend, readiness, leases, quotas, password policies, resultant ACL, storage, diagnostics, and operator-gated helpers. |
+| `dev-bootstrap` | no | Enables disposable loopback initialization through `bootstrap_dev_acknowledged`. Requires `dev-bootstrap-acknowledged`; a loopback tunnel or proxy can still reach production, so audit the complete network path. Implies `sys`. |
+| `dev-bootstrap-acknowledged` | no | Explicit acknowledgment that the selected numeric-loopback target is a disposable development instance and not a tunnel, proxy, sidecar, or port-forward to another environment. |
 | `workflow-trace` | no | Enables OpenBao workflow diagnostic traces. Requires `workflow-trace-acknowledged`; traces can contain the caller token, request/response bodies, and complete intermediate values. Never log them. Implies `sys`. |
 | `workflow-trace-acknowledged` | no | Explicit acknowledgment for audited workflow trace builds. |
 | `unauthenticated-workflows` | no | Enables configuring and invoking token-free workflows. Requires `unauthenticated-workflows-acknowledged`; OpenBao must separately enable the conditional route and each workflow must opt in. Implies `sys`. |
 | `unauthenticated-workflows-acknowledged` | no | Explicit acknowledgment that every token-free workflow, server policy, exposure path, and rate limit was audited. |
 | `monitor-stream` | no | Enables typed `/sys/monitor` streaming. Frames are sanitizing, line-delimited, and capped at 1 MiB; each executor poll processes at most 64 transport chunks, direct body polling provides consumer back-pressure, and dropping the stream cancels the request. Log bytes remain untrusted and are redacted from `Debug`. Implies `sys`. |
 | `raft-stream` | no | Enables exact-length streaming restore and force-restore for Raft snapshots up to 256 MiB. Overflow, truncation, and stream errors fail the request without first copying the complete snapshot. Implies `sys`. |
-| `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. |
+| `http2` | no | Enables reqwest HTTP/2 support. ALPN negotiates HTTP/2 when OpenBao supports it and otherwise falls back to HTTP/1.1. Reqwest-owned protocol retries are disabled; only caller-approved SDK retry helpers may repeat requests. |
 | `time` | no | Optional RFC3339 timestamp parsing helpers using the `time` crate. |
 | `tokio-helpers` | no | Enables strict-deadline Tokio convenience helpers such as `Sys::wait_ready` and `Sys::wait_until_unsealed`. Runtime-neutral retry-budget variants remain available without this feature. |
 | `tracing` | no | Optional request/response instrumentation with method, redacted path shape, and status only. No bodies, tokens, or namespaces are logged; path shapes still reveal operational activity, so strict path-confidentiality deployments should suppress debug `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`. No OpenTelemetry SDK dependency. |
@@ -1685,7 +1688,7 @@ async fn main() -> Result<()> {
     let token = SecretString::from(std::env::var("BAO_TOKEN").unwrap_or_default());
     let client = Client::new("https://bao.example.com:8200")?.try_with_token(token)?;
 
-    let wrapped = client
+    let mut wrapped = client
         .wrapping("5m")?
         .request_json::<ResponseEnvelope<DbCredential>, openbao::Empty>(
             Method::GET,
@@ -1696,7 +1699,9 @@ async fn main() -> Result<()> {
 
     // Deliver wrapped.token() to the intended recipient. The recipient can
     // unwrap once; Debug output redacts the token and accessor.
-    let response = wrapped.unwrap().await?;
+    // Cancellation leaves the local token in `wrapped`. A transport or decode
+    // failure is still outcome-unknown and must not be retried automatically.
+    let response = wrapped.try_unwrap().await?;
     println!("issued credential for {}", response.data.username);
     Ok(())
 }
@@ -2087,11 +2092,18 @@ Initialize and unseal OpenBao using `bao operator init` and
 `bao operator unseal`, then export `BAO_ADDR=https://127.0.0.1:9940` and
 `BAO_CACERT=deploy/podman/dev-state/tls/dev-ca.crt`.
 
-For disposable local development, the crate can initialize and unseal a fresh
-numeric-loopback instance directly:
+For disposable local development, an explicitly acknowledged build can
+initialize and unseal a fresh numeric-loopback instance. Enable both features:
+
+```toml
+openbao = { version = "2", features = ["dev-bootstrap", "dev-bootstrap-acknowledged"] }
+```
 
 ```rust,no_run
-use openbao::{Client, OpenBaoConfig, Result, sys::DevBootstrapOptions};
+use openbao::{
+    Client, OpenBaoConfig, Result,
+    sys::{DevBootstrapAcknowledgement, DevBootstrapOptions},
+};
 use openbao::Certificate;
 
 #[tokio::main]
@@ -2109,7 +2121,10 @@ async fn main() -> Result<()> {
 
     let bootstrap = client
         .sys()
-        .bootstrap_dev(&DevBootstrapOptions::single_key())
+        .bootstrap_dev_acknowledged(
+            DevBootstrapAcknowledgement::confirm_disposable_target(),
+            &DevBootstrapOptions::single_key(),
+        )
         .await?;
 
     let health = bootstrap.client.sys().health().await?;
@@ -2118,11 +2133,14 @@ async fn main() -> Result<()> {
 }
 ```
 
-`bootstrap_dev` is not a production initialization ceremony. It creates root
-and unseal material in process memory, uses Shamir keys, refuses non-loopback
-targets, and refuses already initialized servers. Do not use it with HSM/KMS
-auto-unseal, shared environments, or any instance that requires operator key
-ceremony.
+`bootstrap_dev_acknowledged` is not a production initialization ceremony. It
+creates root and unseal material in process memory, uses Shamir keys, refuses
+non-loopback targets, and refuses already initialized servers. A numeric
+loopback check cannot detect SSH tunnels, Kubernetes port-forwards, reverse
+proxies, sidecars, or service-mesh forwarding. Audit the complete network path
+and do not use it with HSM/KMS auto-unseal, shared environments, or any
+instance that requires operator key ceremony. The legacy `bootstrap_dev`
+symbol remains for source compatibility but always fails closed.
 
 Run the real OpenBao integration flow:
 

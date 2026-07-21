@@ -50,6 +50,17 @@ deferred operation in the profile.
 - Capability resolution requires an explicit exact, auth-mount, secret-mount,
   or validated Identity binding before dispatch. Mismatched registry/wire
   paths and custom Identity mounts without an operation tail fail locally.
+- Both reqwest clients disable protocol-owned retries, including HTTP/2 NACK
+  replay. Only explicit GET, HEAD, and LIST retry helpers can repeat a request.
+- Development initialization requires the non-default `dev-bootstrap` and
+  `dev-bootstrap-acknowledged` features plus a named acknowledgement. The
+  legacy `bootstrap_dev` method remains source-visible but fails closed.
+- Sensitive request failures discard server-provided diagnostics, successful
+  warnings are omitted from envelope debug output, and schema-free system JSON
+  enforces recursive depth, node, string-byte, and duplicate-key bounds.
+- Added cancellation-safe `WrappedResponse::try_unwrap(&mut self)`. Cancellation
+  preserves the local token; transport and decode failures remain
+  outcome-unknown and must not be retried automatically.
 - Monitor streaming yields after at most 64 immediately ready transport chunks
   per executor poll, including empty chunks.
 - Prefixed workflow LIST and SCAN are blocked because exact `2.6.0` can panic
@@ -94,9 +105,15 @@ deploy OpenBao `2.6.0` should select strict automatic detection or the exact
 `2.6.0` profile. Existing applications selecting older exact profiles retain
 their historical dispatch behavior.
 
-Review new acknowledgement features before enabling workflow traces,
-unauthenticated workflows, identity-template overrides, or operator
-operations. See `docs/MIGRATION_GUIDE.md`, `SECURITY.md`, and
+One security behavior changes despite source compatibility: the legacy
+`bootstrap_dev` symbol now returns `Error::DevBootstrapDisabled` before network
+access. Use the separately gated and acknowledged replacement only in
+disposable development tooling. The consuming `WrappedResponse::unwrap` method
+is deprecated; migrate to cancellation-safe `try_unwrap(&mut self)`.
+
+Review new acknowledgement features before enabling development bootstrap,
+workflow traces, unauthenticated workflows, identity-template overrides, or
+operator operations. See `docs/MIGRATION_GUIDE.md`, `SECURITY.md`, and
 `docs/OPENBAO_VERSION_SELECTION.md`.
 
 ## Release Gate

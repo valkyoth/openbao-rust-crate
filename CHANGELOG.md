@@ -64,6 +64,14 @@ All notable changes to this project are documented here.
   that derives or validates the registry/wire relationship before constructing
   one internal route value. Mismatched routes and custom Identity mounts with
   an empty operation tail fail before transport.
+- Disabled reqwest-owned protocol retries on both HTTP clients so writes cannot
+  be replayed after HTTP/2 NACKs outside the SDK's typed retry policy.
+- Moved development initialization behind `dev-bootstrap` plus
+  `dev-bootstrap-acknowledged` and a named runtime acknowledgement. The legacy
+  `bootstrap_dev` symbol now fails closed.
+- Added cancellation-safe `WrappedResponse::try_unwrap`, recursively bounded
+  schema-free system JSON, sensitive error-body suppression, warning redaction
+  in envelope debug output, and a release-enforced panic policy.
 - Limited monitor transport work to 64 chunks per executor poll so an
   always-ready stream of empty or partial chunks cannot monopolize one task.
 - Bounded and redacted JWT CEL programs, made userpass bcrypt hashes distinct

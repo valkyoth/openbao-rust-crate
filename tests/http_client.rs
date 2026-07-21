@@ -25,6 +25,8 @@ use std::{
 
 #[cfg(feature = "raft-stream")]
 use bytes::Bytes;
+#[cfg(feature = "dev-bootstrap")]
+use openbao::sys::DevBootstrapAcknowledgement;
 use openbao::{
     Authenticated, Client, Error, Method, OpenBaoCompatibilityPolicy, OpenBaoCompatibilityStatus,
     OpenBaoConfig, OpenBaoVersion, ResponseEnvelope, RetryPolicy, RetryableMethod, Unauthenticated,
@@ -1556,9 +1558,10 @@ async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
     let addr = listener
         .local_addr()
         .unwrap_or_else(|error| panic!("{error}"));
+    let (cancel_request_seen, cancel_request_waiter) = mpsc::channel();
 
     let server = thread::spawn(move || {
-        for step in 0..2 {
+        for step in 0..3 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match step {
@@ -1570,6 +1573,16 @@ async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
                     r#"{"data":null,"wrap_info":{"token":"wrap-token","accessor":"wrap-accessor","ttl":300,"creation_time":"2026-06-04T00:00:00Z","creation_path":"secret/custom"}}"#.to_owned()
                 }
                 1 => {
+                    assert!(request.starts_with("POST /v1/sys/wrapping/unwrap HTTP/1.1"));
+                    assert!(request.contains("x-vault-token: test-token"));
+                    assert!(request.contains(r#""token":"wrap-token""#));
+                    cancel_request_seen
+                        .send(())
+                        .unwrap_or_else(|error| panic!("{error}"));
+                    thread::sleep(Duration::from_millis(100));
+                    continue;
+                }
+                2 => {
                     assert!(request.starts_with("POST /v1/sys/wrapping/unwrap HTTP/1.1"));
                     assert!(request.contains("x-vault-token: test-token"));
                     assert!(request.contains(r#""token":"wrap-token""#));
@@ -1595,7 +1608,7 @@ async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
         .unwrap_or_else(|error| panic!("{error}"))
         .with_token(SecretString::from("test-token"));
 
-    let wrapped = client
+    let mut wrapped = client
         .wrapping("5m")
         .unwrap_or_else(|error| panic!("{error}"))
         .request_json::<ResponseEnvelope<SecretData>, _>(
@@ -1613,11 +1626,30 @@ async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
     assert!(!debug.contains("wrap-token"));
     assert!(!debug.contains("wrap-accessor"));
 
+    {
+        let cancelled = wrapped.try_unwrap();
+        tokio::pin!(cancelled);
+        loop {
+            tokio::select! {
+                result = &mut cancelled => panic!("unwrap completed before cancellation: {result:?}"),
+                () = tokio::task::yield_now() => {
+                    if cancel_request_waiter.try_recv().is_ok() {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(wrapped.token().expose_secret(), "wrap-token");
+    assert!(!wrapped.is_consumed());
+
     let envelope = wrapped
-        .unwrap()
+        .try_unwrap()
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(envelope.data.value, "ok");
+    assert!(wrapped.is_consumed());
+    assert!(wrapped.token().expose_secret().is_empty());
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
@@ -8029,6 +8061,7 @@ async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "dev-bootstrap")]
 #[tokio::test]
 async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
@@ -8086,7 +8119,10 @@ async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
 
     let bootstrap = client
         .sys()
-        .bootstrap_dev(&DevBootstrapOptions::default())
+        .bootstrap_dev_acknowledged(
+            DevBootstrapAcknowledgement::confirm_disposable_target(),
+            &DevBootstrapOptions::default(),
+        )
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(bootstrap.root_token.expose_secret(), "root-token");
@@ -8105,18 +8141,32 @@ async fn dev_bootstrap_initializes_unseals_and_returns_root_client() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "dev-bootstrap")]
 #[tokio::test]
 async fn dev_bootstrap_refuses_non_loopback_targets_before_http() {
     let client = Client::new("https://example.com").unwrap_or_else(|error| panic!("{error}"));
     let error = match client
         .sys()
-        .bootstrap_dev(&DevBootstrapOptions::default())
+        .bootstrap_dev_acknowledged(
+            DevBootstrapAcknowledgement::confirm_disposable_target(),
+            &DevBootstrapOptions::default(),
+        )
         .await
     {
         Ok(_) => panic!("non-loopback dev bootstrap unexpectedly succeeded"),
         Err(error) => error,
     };
     assert!(matches!(error, Error::InvalidBaseUrl(_)));
+}
+
+#[tokio::test]
+async fn legacy_dev_bootstrap_fails_closed_before_http() {
+    let client = Client::new("https://127.0.0.1:8200").unwrap_or_else(|error| panic!("{error}"));
+    let result = client
+        .sys()
+        .bootstrap_dev(&DevBootstrapOptions::default())
+        .await;
+    assert!(matches!(result, Err(Error::DevBootstrapDisabled)));
 }
 
 #[tokio::test]

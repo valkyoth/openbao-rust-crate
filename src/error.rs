@@ -64,6 +64,8 @@ pub enum Error {
     },
     /// A public raw request was attempted without explicit acknowledgement.
     RawApiDisabled,
+    /// Development bootstrap was attempted through the retired default API.
+    DevBootstrapDisabled,
     /// A crate invariant was violated.
     Internal(&'static str),
     /// Bootstrap convergence detected that a concurrent writer changed the
@@ -152,6 +154,10 @@ impl fmt::Display for Error {
             Self::RawApiDisabled => write!(
                 formatter,
                 "OpenBao raw request APIs require raw-api and raw-api-acknowledged"
+            ),
+            Self::DevBootstrapDisabled => write!(
+                formatter,
+                "OpenBao development bootstrap requires dev-bootstrap, dev-bootstrap-acknowledged, and the explicitly acknowledged API"
             ),
             Self::Internal(message) => write!(formatter, "internal OpenBao SDK error: {message}"),
             Self::BootstrapContention(message) => {
