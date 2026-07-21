@@ -42,6 +42,9 @@ All notable changes to this project are documented here.
   `transit-import` or the acknowledged native-TLS path.
 - Updated `sanitization` to `2.0.2` and refreshed the root, fuzz, and
   native-TLS fixture lockfiles to current MSRV-compatible dependency releases.
+- Moved the detailed implemented-capability inventory from the README to
+  `docs/CURRENT_STATUS.md`, leaving a compact release snapshot and direct
+  coverage links on crates.io.
 - Preserved the public 2.0 constructible struct shapes and exposed additive
   OpenBao 2.6 response metadata through named `*Details` types and methods;
   all 196 `cargo-semver-checks` minor-release checks pass against `v2.0.2`.

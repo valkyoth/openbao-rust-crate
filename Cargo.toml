@@ -22,6 +22,7 @@ include = [
     "/tests/fixtures/tls_test_ca.crl.pem",
     "/docs/API_STABILITY_AUDIT.md",
     "/docs/CUSTOM_PLUGIN_PATTERN.md",
+    "/docs/CURRENT_STATUS.md",
     "/docs/MIGRATION_GUIDE.md",
     "/docs/OPENBAO_API_COVERAGE.md",
     "/docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md",

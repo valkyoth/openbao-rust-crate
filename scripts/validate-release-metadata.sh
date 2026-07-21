@@ -100,6 +100,7 @@ check_grep 'version = "2.1.0"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep '"/tests/http_client.rs"' Cargo.toml
+check_grep '"/docs/CURRENT_STATUS.md"' Cargo.toml
 check_grep '"/docs/OPENBAO_VERSION_SELECTION.md"' Cargo.toml
 check_grep 'channel = "1.97.1"' rust-toolchain.toml
 check_grep 'rustup toolchain install 1.90.0' scripts/ci_install_rust.sh

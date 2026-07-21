@@ -100,6 +100,8 @@ are unchanged.
   root `tokio-util` lock to `0.7.19`.
 - Verified that all direct crates, CI cargo tools, and digest-pinned GitHub
   Actions match their latest stable releases at the release commit.
+- Moved the full capability inventory to `docs/CURRENT_STATUS.md` so the
+  crates.io README remains focused on installation, selection, and examples.
 
 ## Compatibility Evidence
 
