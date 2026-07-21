@@ -60,9 +60,10 @@ All notable changes to this project are documented here.
   responses through sanitizing buffers. CEL failures discard server error
   bodies so compilation or evaluation errors cannot echo policy source into
   public loggable errors.
-- Bound registered capability resolution and the validated wire path into one
-  internal route value, rejecting mismatched capability/wire dispatch before
-  transport.
+- Made registered capability resolution require an explicit binding strategy
+  that derives or validates the registry/wire relationship before constructing
+  one internal route value. Mismatched routes and custom Identity mounts with
+  an empty operation tail fail before transport.
 - Limited monitor transport work to 64 chunks per executor poll so an
   always-ready stream of empty or partial chunks cannot monopolize one task.
 - Bounded and redacted JWT CEL programs, made userpass bcrypt hashes distinct

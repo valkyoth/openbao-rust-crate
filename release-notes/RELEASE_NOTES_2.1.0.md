@@ -47,8 +47,9 @@ deferred operation in the profile.
 - CEL expressions use `SecretString` storage and explicit accessors. CEL login
   and role operations decode successful bodies from sanitizing storage and
   discard failure bodies because OpenBao errors can echo policy source.
-- Capability resolution is bound to its validated wire route before dispatch;
-  mismatched registry and wire paths fail locally.
+- Capability resolution requires an explicit exact, auth-mount, secret-mount,
+  or validated Identity binding before dispatch. Mismatched registry/wire
+  paths and custom Identity mounts without an operation tail fail locally.
 - Monitor streaming yields after at most 64 immediately ready transport chunks
   per executor poll, including empty chunks.
 - Prefixed workflow LIST and SCAN are blocked because exact `2.6.0` can panic

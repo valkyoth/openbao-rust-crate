@@ -895,6 +895,63 @@ struct RegisteredOpenBaoRoute {
     wire_path: String,
 }
 
+enum RegisteredRouteBinding<'a> {
+    Exact {
+        scope_prefix: &'static str,
+        path: &'a str,
+    },
+    AuthMount {
+        documented_mount: &'static str,
+        actual_mount: &'a str,
+        wire_path: &'a str,
+    },
+    SecretMount {
+        scope_prefix: &'static str,
+        documented_mount: &'static str,
+        actual_mount: &'a str,
+        wire_path: &'a str,
+    },
+    IdentityMount {
+        registry_path: &'a str,
+        wire_path: &'a str,
+    },
+}
+
+impl<'a> RegisteredRouteBinding<'a> {
+    fn registered(
+        scope_prefix: &'static str,
+        registry_path: &'a str,
+        wire_path: &'a str,
+    ) -> Result<Self> {
+        let registry = validate_endpoint_path(registry_path)?;
+        let wire = validate_endpoint_path(wire_path)?;
+        if registry == wire {
+            return Ok(Self::Exact {
+                scope_prefix,
+                path: wire_path,
+            });
+        }
+
+        // Identity can be mounted at a custom, multi-segment path. Require a
+        // non-empty operation tail and preserve every tail segment exactly.
+        if scope_prefix == "/identity/"
+            && registry.len() > 1
+            && registry.first().map(String::as_str) == Some("identity")
+            && wire.len() > registry.len() - 1
+            && wire.ends_with(&registry[1..])
+        {
+            return Ok(Self::IdentityMount {
+                registry_path,
+                wire_path,
+            });
+        }
+
+        Err(Error::Internal(
+            "registered OpenBao capability path does not match its wire route",
+        ))
+    }
+}
+
 impl RegisteredOpenBaoRoute {
     fn method(&self) -> Method {
         self.resolved.method()
@@ -1582,28 +1639,54 @@ impl<State> Client<State> {
 
     async fn resolve_registered_openbao_route<Q, K>(
         &self,
-        scope_prefix: &'static str,
         requested_method: &Method,
-        registry_path: &str,
-        wire_path: &str,
+        binding: RegisteredRouteBinding<'_>,
         query: &[(K, Q)],
     ) -> Result<RegisteredOpenBaoRoute>
     where
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        validate_endpoint_path(wire_path)?;
+        let (scope_prefix, registry_path, wire_path) = match binding {
+            RegisteredRouteBinding::Exact { scope_prefix, path } => {
+                validate_endpoint_path(path)?;
+                (scope_prefix, path.to_owned(), path.to_owned())
+            }
+            RegisteredRouteBinding::AuthMount {
+                documented_mount,
+                actual_mount,
+                wire_path,
+            } => (
+                "/auth/",
+                Self::auth_registry_path(documented_mount, actual_mount, wire_path)?,
+                wire_path.to_owned(),
+            ),
+            RegisteredRouteBinding::SecretMount {
+                scope_prefix,
+                documented_mount,
+                actual_mount,
+                wire_path,
+            } => (
+                scope_prefix,
+                Self::secret_registry_path(documented_mount, actual_mount, wire_path)?,
+                wire_path.to_owned(),
+            ),
+            RegisteredRouteBinding::IdentityMount {
+                registry_path,
+                wire_path,
+            } => ("/identity/", registry_path.to_owned(), wire_path.to_owned()),
+        };
         let resolved = self
             .resolve_registered_openbao_endpoint(
                 scope_prefix,
                 requested_method,
-                registry_path,
+                &registry_path,
                 query,
             )
             .await?;
         Ok(RegisteredOpenBaoRoute {
             resolved,
-            wire_path: wire_path.to_owned(),
+            wire_path,
         })
     }
 
@@ -1625,9 +1708,9 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        validate_registered_wire_binding(scope_prefix, registry_path, path)?;
+        let binding = RegisteredRouteBinding::registered(scope_prefix, registry_path, path)?;
         let route = self
-            .resolve_registered_openbao_route(scope_prefix, &method, registry_path, path, query)
+            .resolve_registered_openbao_route(&method, binding, query)
             .await?;
         let normalized_query = query
             .iter()
@@ -1660,9 +1743,9 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        validate_registered_wire_binding(scope_prefix, registry_path, path)?;
+        let binding = RegisteredRouteBinding::registered(scope_prefix, registry_path, path)?;
         let route = self
-            .resolve_registered_openbao_route(scope_prefix, &method, registry_path, path, query)
+            .resolve_registered_openbao_route(&method, binding, query)
             .await?;
         let mut url = self.url_for_path(route.wire_path())?;
         if !query.is_empty() {
@@ -1705,15 +1788,9 @@ impl<State> Client<State> {
     where
         T: DeserializeOwned,
     {
-        validate_registered_wire_binding(scope_prefix, registry_path, path)?;
+        let binding = RegisteredRouteBinding::registered(scope_prefix, registry_path, path)?;
         let route = self
-            .resolve_registered_openbao_route(
-                scope_prefix,
-                &method,
-                registry_path,
-                path,
-                &[] as &[(&str, &str)],
-            )
+            .resolve_registered_openbao_route(&method, binding, &[] as &[(&str, &str)])
             .await?;
         let mut encoded = BoundedSecretWriter::new(self.config.max_request_bytes);
         for (index, (name, value)) in fields.iter().enumerate() {
@@ -1902,9 +1979,17 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        let registry_path = Self::secret_registry_path(documented_mount, actual_mount, path)?;
         let route = self
-            .resolve_registered_openbao_route(scope_prefix, &method, &registry_path, path, query)
+            .resolve_registered_openbao_route(
+                &method,
+                RegisteredRouteBinding::SecretMount {
+                    scope_prefix,
+                    documented_mount,
+                    actual_mount,
+                    wire_path: path,
+                },
+                query,
+            )
             .await?;
         let normalized_query = query
             .iter()
@@ -1938,9 +2023,17 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        let registry_path = Self::secret_registry_path(documented_mount, actual_mount, path)?;
         let route = self
-            .resolve_registered_openbao_route(scope_prefix, &method, &registry_path, path, query)
+            .resolve_registered_openbao_route(
+                &method,
+                RegisteredRouteBinding::SecretMount {
+                    scope_prefix,
+                    documented_mount,
+                    actual_mount,
+                    wire_path: path,
+                },
+                query,
+            )
             .await?;
         let normalized_query = query
             .iter()
@@ -2019,13 +2112,14 @@ impl<State> Client<State> {
         T: DeserializeOwned,
         B: Serialize + ?Sized,
     {
-        let registry_path = Self::auth_registry_path(documented_mount, actual_mount, path)?;
         let route = self
             .resolve_registered_openbao_route(
-                "/auth/",
                 &method,
-                &registry_path,
-                path,
+                RegisteredRouteBinding::AuthMount {
+                    documented_mount,
+                    actual_mount,
+                    wire_path: path,
+                },
                 &[] as &[(&str, &str)],
             )
             .await?;
@@ -2157,9 +2251,16 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
-        let registry_path = Self::auth_registry_path(documented_mount, actual_mount, path)?;
         let route = self
-            .resolve_registered_openbao_route("/auth/", &method, &registry_path, path, query)
+            .resolve_registered_openbao_route(
+                &method,
+                RegisteredRouteBinding::AuthMount {
+                    documented_mount,
+                    actual_mount,
+                    wire_path: path,
+                },
+                query,
+            )
             .await?;
         let normalized_query = query
             .iter()
@@ -2192,9 +2293,16 @@ impl<State> Client<State> {
         T: DeserializeOwned,
         B: Serialize + ?Sized,
     {
-        let registry_path = Self::auth_registry_path(documented_mount, actual_mount, path)?;
         let route = self
-            .resolve_registered_openbao_route("/auth/", &method, &registry_path, path, query)
+            .resolve_registered_openbao_route(
+                &method,
+                RegisteredRouteBinding::AuthMount {
+                    documented_mount,
+                    actual_mount,
+                    wire_path: path,
+                },
+                query,
+            )
             .await?;
         self.request_json_secret_query_accepting(
             route.method(),
@@ -2309,7 +2417,14 @@ impl<State> Client<State> {
         K: AsRef<str>,
     {
         let route = self
-            .resolve_registered_openbao_route("/sys/", &method, path, path, query)
+            .resolve_registered_openbao_route(
+                &method,
+                RegisteredRouteBinding::Exact {
+                    scope_prefix: "/sys/",
+                    path,
+                },
+                query,
+            )
             .await?;
         let normalized_query = query
             .iter()
@@ -2340,7 +2455,14 @@ impl<State> Client<State> {
             headers.push((ACCEPT, accept));
         }
         let route = self
-            .resolve_registered_openbao_route("/sys/", &method, path, path, query)
+            .resolve_registered_openbao_route(
+                &method,
+                RegisteredRouteBinding::Exact {
+                    scope_prefix: "/sys/",
+                    path,
+                },
+                query,
+            )
             .await?;
         self.request_bytes_headers_accepting_internal(
             route.method(),
@@ -2362,7 +2484,14 @@ impl<State> Client<State> {
         accepted_statuses: &[StatusCode],
     ) -> Result<reqwest::Response> {
         let route = self
-            .resolve_registered_openbao_route("/sys/", &method, path, path, query)
+            .resolve_registered_openbao_route(
+                &method,
+                RegisteredRouteBinding::Exact {
+                    scope_prefix: "/sys/",
+                    path,
+                },
+                query,
+            )
             .await?;
         let mut url = self.url_for_path(route.wire_path())?;
         {
@@ -2827,7 +2956,14 @@ impl<State> Client<State> {
         E: Send + 'static,
     {
         let route = self
-            .resolve_registered_openbao_route("/sys/", &method, path, path, &[] as &[(&str, &str)])
+            .resolve_registered_openbao_route(
+                &method,
+                RegisteredRouteBinding::Exact {
+                    scope_prefix: "/sys/",
+                    path,
+                },
+                &[] as &[(&str, &str)],
+            )
             .await?;
         let url = self.url_for_path(route.wire_path())?;
         self.require_encrypted_transport_for_sensitive_request(&url)?;
@@ -2976,34 +3112,6 @@ fn compatibility_error(failure: CachedCompatibilityFailure) -> Error {
 
 fn compatibility_health_status_is_accepted(status: StatusCode) -> bool {
     matches!(status.as_u16(), 200 | 429 | 472 | 473 | 501 | 503)
-}
-
-fn validate_registered_wire_binding(
-    scope_prefix: &'static str,
-    registry_path: &str,
-    wire_path: &str,
-) -> Result<()> {
-    let registry = validate_endpoint_path(registry_path)?;
-    let wire = validate_endpoint_path(wire_path)?;
-    if registry == wire {
-        return Ok(());
-    }
-
-    // Identity can be mounted at a custom, multi-segment path. Its generated
-    // registry template keeps the documented `identity` mount while the wire
-    // path substitutes only that mount prefix. Every operation-specific tail,
-    // including dynamic values, must remain byte-for-byte identical.
-    if scope_prefix == "/identity/"
-        && registry.first().map(String::as_str) == Some("identity")
-        && wire.len() > registry.len().saturating_sub(1)
-        && wire.ends_with(&registry[1..])
-    {
-        return Ok(());
-    }
-
-    Err(Error::Internal(
-        "registered OpenBao capability path does not match its wire route",
-    ))
 }
 
 fn validate_endpoint_spec(endpoint: OpenBaoEndpointSpec) -> Result<()> {
@@ -3801,9 +3909,9 @@ mod tests {
     use crate::{Empty, Error, Method, OpenBaoCompatibilityPolicy, OpenBaoVersion};
 
     use super::{
-        Client, OpenBaoConfig, env_bool, is_cleartext_url, openbao_config_from_env_lookup,
-        openbao_token_from_env_lookup, resolve_openbao_endpoint_for_profile,
-        route_template_matches, validate_registered_wire_binding, validate_token_for_header,
+        Client, OpenBaoConfig, RegisteredRouteBinding, env_bool, is_cleartext_url,
+        openbao_config_from_env_lookup, openbao_token_from_env_lookup,
+        resolve_openbao_endpoint_for_profile, route_template_matches, validate_token_for_header,
         validate_user_agent,
     };
     use crate::compatibility::{OpenBaoEndpointSpec, OpenBaoEndpointVariant};
@@ -4350,7 +4458,7 @@ mod tests {
     #[test]
     fn registered_routes_bind_capability_paths_to_wire_paths() {
         assert!(
-            validate_registered_wire_binding(
+            RegisteredRouteBinding::registered(
                 "/sys/",
                 "sys/workflows/manage/example",
                 "sys/workflows/manage/example",
@@ -4358,7 +4466,7 @@ mod tests {
             .is_ok()
         );
         assert!(
-            validate_registered_wire_binding(
+            RegisteredRouteBinding::registered(
                 "/identity/",
                 "identity/oidc/provider/example/authorize",
                 "team/identity/oidc/provider/example/authorize",
@@ -4366,7 +4474,7 @@ mod tests {
             .is_ok()
         );
         assert!(
-            validate_registered_wire_binding(
+            RegisteredRouteBinding::registered(
                 "/sys/",
                 "sys/health",
                 "sys/workflows/manage/example",
@@ -4374,10 +4482,30 @@ mod tests {
             .is_err()
         );
         assert!(
-            validate_registered_wire_binding(
+            RegisteredRouteBinding::registered(
                 "/identity/",
                 "identity/oidc/provider/example/authorize",
                 "team/identity/oidc/provider/example/token",
+            )
+            .is_err()
+        );
+        assert!(
+            RegisteredRouteBinding::registered(
+                "/sys/",
+                "identity/oidc/provider/example/authorize",
+                "team/identity/oidc/provider/example/authorize",
+            )
+            .is_err()
+        );
+        assert!(
+            RegisteredRouteBinding::registered("/identity/", "identity", "team/identity/anything",)
+                .is_err()
+        );
+        assert!(
+            RegisteredRouteBinding::registered(
+                "/identity/",
+                "identity/authorize",
+                "team/identity",
             )
             .is_err()
         );
