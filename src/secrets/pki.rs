@@ -18,7 +18,8 @@ use crate::{
     Authenticated, Client, Error, JsonValue, Result, SecretVec, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_map,
+        BoundedJsonValueSeed, BoundedPrimitiveJsonValueSeed, Empty, JsonValueBudget, ListEntries,
+        ListPageOptions, ResponseEnvelope, deserialize_bounded_string_map,
         deserialize_bounded_string_vec,
     },
 };
@@ -3542,10 +3543,14 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedJsonMapVisitor<MAX> {
         A: MapAccess<'de>,
     {
         let mut values = BTreeMap::new();
+        let mut budget = JsonValueBudget::new();
+        budget.take_node::<A::Error>()?;
         while values.len() < MAX {
-            let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
+            let Some(key) = map.next_key::<String>()? else {
                 return Ok(values);
             };
+            budget.take_string::<A::Error>(key.len())?;
+            let value = map.next_value_seed(BoundedJsonValueSeed::new(&mut budget, 1))?;
             if values.insert(key, value).is_some() {
                 return Err(serde::de::Error::custom(
                     "OpenBao JSON metadata map contains a duplicate key",
@@ -3578,15 +3583,14 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedPrimitiveJsonMapVisitor<MAX>
         A: MapAccess<'de>,
     {
         let mut values = BTreeMap::new();
+        let mut budget = JsonValueBudget::new();
+        budget.take_node::<A::Error>()?;
         while values.len() < MAX {
-            let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
+            let Some(key) = map.next_key::<String>()? else {
                 return Ok(values);
             };
-            if value.is_array() || value.is_object() {
-                return Err(serde::de::Error::custom(
-                    "OpenBao JSON metadata values must be primitive",
-                ));
-            }
+            budget.take_string::<A::Error>(key.len())?;
+            let value = map.next_value_seed(BoundedPrimitiveJsonValueSeed::new(&mut budget))?;
             if values.insert(key, value).is_some() {
                 return Err(serde::de::Error::custom(
                     "OpenBao JSON metadata map contains a duplicate key",
@@ -4007,6 +4011,18 @@ mod tests {
             error
                 .to_string()
                 .contains("OpenBao JSON metadata map exceeds item limit")
+        );
+
+        let mut nested = serde_json::Value::Null;
+        for _ in 0..=64 {
+            nested = serde_json::json!([nested]);
+        }
+        assert!(
+            serde_json::from_value::<PkiCelRole>(serde_json::json!({
+                "expression": "true",
+                "nested": nested
+            }))
+            .is_err()
         );
     }
 

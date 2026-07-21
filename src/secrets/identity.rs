@@ -21,8 +21,8 @@ use crate::{
     Authenticated, Client, Error, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
-        deserialize_bounded_string_vec,
+        BoundedJsonValueSeed, Empty, JsonValueBudget, ListEntries, ResponseEnvelope,
+        deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
     },
     validation::validate_duration_parameter,
 };
@@ -4070,8 +4070,12 @@ where
             A: serde::de::SeqAccess<'de>,
         {
             let mut values = Vec::new();
+            let mut budget = JsonValueBudget::new();
+            budget.take_node::<A::Error>()?;
             while values.len() < IDENTITY_LIST_LIMIT {
-                let Some(value) = seq.next_element::<JsonValue>()? else {
+                let Some(value) =
+                    seq.next_element_seed(BoundedJsonValueSeed::new(&mut budget, 1))?
+                else {
                     return Ok(values);
                 };
                 values.push(value);
@@ -4108,10 +4112,14 @@ where
             A: serde::de::MapAccess<'de>,
         {
             let mut values = BTreeMap::new();
+            let mut budget = JsonValueBudget::new();
+            budget.take_node::<A::Error>()?;
             while values.len() < IDENTITY_LIST_LIMIT {
-                let Some((key, value)) = map.next_entry::<String, JsonValue>()? else {
+                let Some(key) = map.next_key::<String>()? else {
                     return Ok(values);
                 };
+                budget.take_string::<A::Error>(key.len())?;
+                let value = map.next_value_seed(BoundedJsonValueSeed::new(&mut budget, 1))?;
                 if values.insert(key, value).is_some() {
                     return Err(serde::de::Error::custom(
                         "identity OIDC JSON object contains a duplicate key",
@@ -4515,6 +4523,24 @@ mod tests {
         }
         assert!(serde_json::from_value::<IdentityOidcIntrospection>(extra.clone().into()).is_err());
         assert!(serde_json::from_value::<IdentityOidcDiscovery>(extra.into()).is_err());
+
+        let mut nested = serde_json::Value::Null;
+        for _ in 0..=64 {
+            nested = serde_json::json!([nested]);
+        }
+        assert!(
+            serde_json::from_value::<IdentityOidcIntrospection>(serde_json::json!({
+                "active": true,
+                "nested": nested.clone()
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<IdentityOidcDiscovery>(serde_json::json!({
+                "nested": nested
+            }))
+            .is_err()
+        );
     }
 
     #[test]
@@ -4541,6 +4567,17 @@ mod tests {
         }))
         .unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(jwks.keys.len(), crate::response::MAX_RESPONSE_STRINGS);
+
+        let mut nested = serde_json::Value::Null;
+        for _ in 0..=64 {
+            nested = serde_json::json!([nested]);
+        }
+        assert!(
+            serde_json::from_value::<IdentityOidcJwks>(serde_json::json!({
+                "keys": [nested]
+            }))
+            .is_err()
+        );
     }
 
     #[test]

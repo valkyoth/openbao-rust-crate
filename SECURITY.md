@@ -96,9 +96,11 @@ Please include:
   helper, whose type permits GET, HEAD, and LIST but no write method.
 - Error bodies are retained only for public requests carrying no token,
   namespace, query, custom header, or request body. Sensitive request failures
-  discard server diagnostics so a peer cannot reflect credentials into
-  loggable `Error` strings. Successful response warnings remain explicitly
-  accessible but are omitted from `ResponseEnvelope` debug output.
+  parse diagnostics only into zeroizing values and retain fixed `resource
+  conflict` or `permission denied` markers needed by typed error helpers; the
+  server text is discarded so reflected credentials cannot enter loggable
+  `Error` strings. Successful response warnings remain explicitly accessible
+  but are omitted from `ResponseEnvelope` debug output.
 - Public raw JSON, byte, retry, and response-wrapping transports are disabled
   unless both `raw-api` and `raw-api-acknowledged` are enabled. Raw transports
   bypass typed capability selection, endpoint validation, and
@@ -417,12 +419,17 @@ closed. Never enable this feature in production workspaces or use it for
 staging, shared environments, HSM/KMS-backed auto-unseal, or any environment
 that requires an operator key ceremony.
 
-Unstructured system JSON is decoded under fixed recursion, node, and aggregate
-string-byte budgets in addition to the response wire-size cap. Typed lists and
-maps retain their endpoint-specific bounds. Response-wrapping callers should
-use `WrappedResponse::try_unwrap(&mut self)`: cancellation preserves the local
+Unstructured system JSON and typed Identity/PKI extension JSON are decoded
+under fixed recursion, node, and aggregate string-byte budgets in addition to
+the response wire-size cap. One shared budget covers each complete extension
+map or vector; primitive-only PKI metadata rejects containers before retaining
+their contents. Typed lists and maps retain their endpoint-specific item
+bounds. Response-wrapping callers should use
+`WrappedResponse::try_unwrap(&mut self)`: cancellation preserves the local
 token, while any transport or decode failure remains outcome-unknown and must
-not be retried automatically.
+not be retried automatically. The deprecated consuming `unwrap(self)` remains
+only for `2.x` source compatibility and is scheduled for removal in the next
+semver-major release.
 
 Production panic boundaries and the no-exception policy are documented in
 `docs/PANIC_POLICY.md` and enforced by the release gate.

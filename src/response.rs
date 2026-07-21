@@ -197,26 +197,28 @@ impl<'de> Deserialize<'de> for BoundedJsonValue {
     where
         D: Deserializer<'de>,
     {
-        let mut budget = JsonValueBudget {
-            nodes_remaining: MAX_BOUNDED_JSON_NODES,
-            string_bytes_remaining: MAX_BOUNDED_JSON_STRING_BYTES,
-        };
-        BoundedJsonValueSeed {
-            budget: &mut budget,
-            depth: 0,
-        }
-        .deserialize(deserializer)
-        .map(Self)
+        let mut budget = JsonValueBudget::new();
+        BoundedJsonValueSeed::new(&mut budget, 0)
+            .deserialize(deserializer)
+            .map(Self)
     }
 }
 
-struct JsonValueBudget {
+/// Shared allocation budget for one unstructured JSON field.
+pub(crate) struct JsonValueBudget {
     nodes_remaining: usize,
     string_bytes_remaining: usize,
 }
 
 impl JsonValueBudget {
-    fn take_node<E>(&mut self) -> core::result::Result<(), E>
+    pub(crate) const fn new() -> Self {
+        Self {
+            nodes_remaining: MAX_BOUNDED_JSON_NODES,
+            string_bytes_remaining: MAX_BOUNDED_JSON_STRING_BYTES,
+        }
+    }
+
+    pub(crate) fn take_node<E>(&mut self) -> core::result::Result<(), E>
     where
         E: DeError,
     {
@@ -227,7 +229,7 @@ impl JsonValueBudget {
         Ok(())
     }
 
-    fn take_string<E>(&mut self, bytes: usize) -> core::result::Result<(), E>
+    pub(crate) fn take_string<E>(&mut self, bytes: usize) -> core::result::Result<(), E>
     where
         E: DeError,
     {
@@ -239,9 +241,16 @@ impl JsonValueBudget {
     }
 }
 
-struct BoundedJsonValueSeed<'a> {
+/// Deserialization seed that charges one JSON value to a shared budget.
+pub(crate) struct BoundedJsonValueSeed<'a> {
     budget: &'a mut JsonValueBudget,
     depth: usize,
+}
+
+impl<'a> BoundedJsonValueSeed<'a> {
+    pub(crate) fn new(budget: &'a mut JsonValueBudget, depth: usize) -> Self {
+        Self { budget, depth }
+    }
 }
 
 impl<'de> DeserializeSeed<'de> for BoundedJsonValueSeed<'_> {
@@ -271,10 +280,7 @@ struct BoundedJsonValueVisitor<'a> {
 
 impl BoundedJsonValueVisitor<'_> {
     fn child(&mut self) -> BoundedJsonValueSeed<'_> {
-        BoundedJsonValueSeed {
-            budget: self.budget,
-            depth: self.depth.saturating_add(1),
-        }
+        BoundedJsonValueSeed::new(self.budget, self.depth.saturating_add(1))
     }
 
     fn string<E>(&mut self, value: String) -> core::result::Result<JsonValue, E>
@@ -283,6 +289,106 @@ impl BoundedJsonValueVisitor<'_> {
     {
         self.budget.take_string::<E>(value.len())?;
         Ok(JsonValue::String(value))
+    }
+}
+
+/// Deserialization seed for primitive JSON values under a shared budget.
+pub(crate) struct BoundedPrimitiveJsonValueSeed<'a> {
+    budget: &'a mut JsonValueBudget,
+}
+
+impl<'a> BoundedPrimitiveJsonValueSeed<'a> {
+    pub(crate) fn new(budget: &'a mut JsonValueBudget) -> Self {
+        Self { budget }
+    }
+}
+
+impl<'de> DeserializeSeed<'de> for BoundedPrimitiveJsonValueSeed<'_> {
+    type Value = JsonValue;
+
+    fn deserialize<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        self.budget.take_node::<D::Error>()?;
+        deserializer.deserialize_any(BoundedPrimitiveJsonValueVisitor {
+            budget: self.budget,
+        })
+    }
+}
+
+struct BoundedPrimitiveJsonValueVisitor<'a> {
+    budget: &'a mut JsonValueBudget,
+}
+
+impl<'de> Visitor<'de> for BoundedPrimitiveJsonValueVisitor<'_> {
+    type Value = JsonValue;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a primitive JSON metadata value")
+    }
+
+    fn visit_unit<E>(self) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Null)
+    }
+
+    fn visit_none<E>(self) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Null)
+    }
+
+    fn visit_bool<E>(self, value: bool) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Bool(value))
+    }
+
+    fn visit_i64<E>(self, value: i64) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Number(JsonNumber::from(value)))
+    }
+
+    fn visit_u64<E>(self, value: u64) -> core::result::Result<Self::Value, E> {
+        Ok(JsonValue::Number(JsonNumber::from(value)))
+    }
+
+    fn visit_f64<E>(self, value: f64) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        JsonNumber::from_f64(value)
+            .map(JsonValue::Number)
+            .ok_or_else(|| E::custom("OpenBao JSON metadata contains a non-finite number"))
+    }
+
+    fn visit_str<E>(self, value: &str) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        self.budget.take_string::<E>(value.len())?;
+        Ok(JsonValue::String(value.to_owned()))
+    }
+
+    fn visit_string<E>(self, value: String) -> core::result::Result<Self::Value, E>
+    where
+        E: DeError,
+    {
+        self.budget.take_string::<E>(value.len())?;
+        Ok(JsonValue::String(value))
+    }
+
+    fn visit_seq<A>(self, _sequence: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        Err(A::Error::custom(
+            "OpenBao JSON metadata values must be primitive",
+        ))
+    }
+
+    fn visit_map<A>(self, _map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        Err(A::Error::custom(
+            "OpenBao JSON metadata values must be primitive",
+        ))
     }
 }
 
@@ -752,6 +858,7 @@ mod tests {
     #![allow(clippy::panic)]
 
     use secrecy::SecretString;
+    use serde::de::DeserializeSeed;
 
     use super::{
         BoundedJsonValue, BoundedStringList, ListEntries, ListPageOptions, ResponseEnvelope,
@@ -861,6 +968,14 @@ mod tests {
         assert!(serde_json::from_str::<BoundedJsonValue>(&wide).is_err());
         assert!(
             serde_json::from_str::<BoundedJsonValue>(r#"{"duplicate":1,"duplicate":2}"#).is_err()
+        );
+
+        let mut budget = super::JsonValueBudget::new();
+        let nested = serde_json::json!({"value": []});
+        assert!(
+            super::BoundedPrimitiveJsonValueSeed::new(&mut budget)
+                .deserialize(nested)
+                .is_err()
         );
     }
 

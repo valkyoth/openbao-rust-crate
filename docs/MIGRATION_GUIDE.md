@@ -80,6 +80,8 @@ Replace consuming `WrappedResponse::unwrap()` calls with
 compatibility, but only the mutable-borrowing API preserves the local wrapping
 token when its future is cancelled. A transport or decode error is still an
 outcome-unknown single-use operation and must not be retried automatically.
+The deprecated consuming method is scheduled for removal in the next
+semver-major release.
 
 ## From `openbao` 1.1.2 To 2.0.0
 

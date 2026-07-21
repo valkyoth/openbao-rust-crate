@@ -72,6 +72,11 @@ All notable changes to this project are documented here.
 - Added cancellation-safe `WrappedResponse::try_unwrap`, recursively bounded
   schema-free system JSON, sensitive error-body suppression, warning redaction
   in envelope debug output, and a release-enforced panic policy.
+- Restored bootstrap race convergence without retaining sensitive diagnostics:
+  authenticated failures now expose only fixed conflict or permission markers.
+  Extended the recursive JSON budget to Identity OIDC/JWKS extension values and
+  PKI extension metadata, with one aggregate budget per container and
+  allocation-free rejection of non-primitive PKI metadata containers.
 - Limited monitor transport work to 64 chunks per executor poll so an
   always-ready stream of empty or partial chunks cannot monopolize one task.
 - Bounded and redacted JWT CEL programs, made userpass bcrypt hashes distinct

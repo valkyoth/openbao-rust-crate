@@ -55,9 +55,12 @@ deferred operation in the profile.
 - Development initialization requires the non-default `dev-bootstrap` and
   `dev-bootstrap-acknowledged` features plus a named acknowledgement. The
   legacy `bootstrap_dev` method remains source-visible but fails closed.
-- Sensitive request failures discard server-provided diagnostics, successful
-  warnings are omitted from envelope debug output, and schema-free system JSON
-  enforces recursive depth, node, string-byte, and duplicate-key bounds.
+- Sensitive request failures discard server-provided text while retaining only
+  fixed conflict or permission markers, preserving bootstrap race convergence
+  without reflecting secrets. Successful warnings are omitted from envelope
+  debug output. Schema-free system JSON plus Identity and PKI extension values
+  enforce shared recursive depth, node, string-byte, and duplicate-key bounds;
+  primitive PKI maps reject containers before retaining their contents.
 - Added cancellation-safe `WrappedResponse::try_unwrap(&mut self)`. Cancellation
   preserves the local token; transport and decode failures remain
   outcome-unknown and must not be retried automatically.
@@ -109,7 +112,9 @@ One security behavior changes despite source compatibility: the legacy
 `bootstrap_dev` symbol now returns `Error::DevBootstrapDisabled` before network
 access. Use the separately gated and acknowledged replacement only in
 disposable development tooling. The consuming `WrappedResponse::unwrap` method
-is deprecated; migrate to cancellation-safe `try_unwrap(&mut self)`.
+is deprecated; migrate to cancellation-safe `try_unwrap(&mut self)`. The
+consuming method remains only for `2.x` compatibility and is scheduled for
+removal in the next semver-major release.
 
 Review new acknowledgement features before enabling development bootstrap,
 workflow traces, unauthenticated workflows, identity-template overrides, or

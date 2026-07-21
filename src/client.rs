@@ -31,7 +31,10 @@ use reqwest::{
 };
 use sanitization::{SecretVec, SecureSanitize};
 use secrecy::{ExposeSecret, SecretString};
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{
+    Deserialize, Deserializer, Serialize,
+    de::{DeserializeOwned, IgnoredAny, SeqAccess, Visitor},
+};
 #[cfg(feature = "raft-stream")]
 use {bytes::Bytes, futures_core::Stream};
 
@@ -43,6 +46,7 @@ use crate::{
         OpenBaoOperationDisposition, OpenBaoVersion, is_generated_profile, is_routable_profile,
         latest_routable_profile, openbao_operation, openbao_profile_versions,
     },
+    error::{REDACTED_CONFLICT_MARKER, REDACTED_PERMISSION_DENIED_MARKER},
     path::{validate_endpoint_path, validate_mount_path},
     response::ErrorEnvelope,
 };
@@ -63,6 +67,7 @@ const MAX_COMPATIBILITY_WAITERS: usize = 4096;
 const MAX_ENDPOINT_ID_BYTES: usize = 192;
 const MAX_ENDPOINT_VARIANTS: usize = 16;
 const MAX_OPTIONAL_ROUTE_EXPANSIONS: usize = 8;
+const MAX_SENSITIVE_API_ERRORS: usize = 16;
 const ADDRESS_ENV_KEYS: &[&str] = &["OPENBAO_ADDR", "BAO_ADDR", "VAULT_ADDR"];
 const TOKEN_ENV_KEYS: &[&str] = &["OPENBAO_TOKEN", "BAO_TOKEN", "VAULT_TOKEN"];
 const NAMESPACE_ENV_KEYS: &[&str] = &["OPENBAO_NAMESPACE", "BAO_NAMESPACE", "VAULT_NAMESPACE"];
@@ -1762,14 +1767,11 @@ impl<State> Client<State> {
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            // Workflow and other explicitly secret response bodies can echo
-            // tokens, definitions, inputs, or intermediate values. Never
-            // deserialize their error text into ordinary loggable strings.
-            drop(response);
-            return Err(Error::Api {
-                status,
-                errors: Vec::new(),
-            });
+            // Retain only fixed classification markers; never copy workflow
+            // diagnostics into ordinary loggable strings.
+            let errors =
+                read_sensitive_api_classification(response, self.config.max_response_bytes).await;
+            return Err(Error::Api { status, errors });
         }
         if status != StatusCode::NO_CONTENT {
             validate_json_content_type(&response)?;
@@ -1824,11 +1826,9 @@ impl<State> Client<State> {
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            drop(response);
-            return Err(Error::Api {
-                status,
-                errors: Vec::new(),
-            });
+            let errors =
+                read_sensitive_api_classification(response, self.config.max_response_bytes).await;
+            return Err(Error::Api { status, errors });
         }
         read_json_response(response, self.config.max_response_bytes).await
     }
@@ -2129,13 +2129,10 @@ impl<State> Client<State> {
         let status = response.status();
         if !accepted_statuses.contains(&status) {
             // CEL and other policy-bearing auth handlers can echo submitted
-            // expressions in server errors. Keep those bodies out of ordinary
-            // String-backed Error values entirely.
-            drop(response);
-            return Err(Error::Api {
-                status,
-                errors: Vec::new(),
-            });
+            // expressions. Retain only fixed, secret-free classifications.
+            let errors =
+                read_sensitive_api_classification(response, self.config.max_response_bytes).await;
+            return Err(Error::Api { status, errors });
         }
         if status == StatusCode::NO_CONTENT {
             return serde_json::from_str("{}").map_err(|_| {
@@ -2506,11 +2503,9 @@ impl<State> Client<State> {
         if accepted_statuses.contains(&status) {
             return Ok(response);
         }
-        drop(response);
-        Err(Error::Api {
-            status,
-            errors: Vec::new(),
-        })
+        let errors =
+            read_sensitive_api_classification(response, self.config.max_response_bytes).await;
+        Err(Error::Api { status, errors })
     }
 
     /// Sends a raw authenticated or unauthenticated JSON request.
@@ -2742,11 +2737,9 @@ impl<State> Client<State> {
             .await?;
         let status = response.status();
         if !accepted_statuses.contains(&status) {
-            drop(response);
-            return Err(Error::Api {
-                status,
-                errors: Vec::new(),
-            });
+            let errors =
+                read_sensitive_api_classification(response, self.config.max_response_bytes).await;
+            return Err(Error::Api { status, errors });
         }
 
         if let Some((_name, expected_content_type)) =
@@ -2793,11 +2786,10 @@ impl<State> Client<State> {
         let status = response.status();
         if !accepted_statuses.contains(&status) {
             if is_sensitive {
-                drop(response);
-                return Err(Error::Api {
-                    status,
-                    errors: Vec::new(),
-                });
+                let errors =
+                    read_sensitive_api_classification(response, self.config.max_response_bytes)
+                        .await;
+                return Err(Error::Api { status, errors });
             }
             let error = read_public_api_errors(response, self.config.max_response_bytes).await;
             return Err(Error::Api {
@@ -2974,11 +2966,9 @@ impl<State> Client<State> {
         if accepted_statuses.contains(&status) {
             return Ok(());
         }
-        drop(response);
-        Err(Error::Api {
-            status,
-            errors: Vec::new(),
-        })
+        let errors =
+            read_sensitive_api_classification(response, self.config.max_response_bytes).await;
+        Err(Error::Api { status, errors })
     }
 
     async fn send_sensitive_prevalidated_body_request(
@@ -3635,6 +3625,103 @@ async fn read_public_api_errors(
         .collect()
 }
 
+#[derive(Deserialize)]
+struct SensitiveErrorEnvelope {
+    #[serde(default, deserialize_with = "deserialize_sensitive_error_list")]
+    errors: Vec<SecretString>,
+}
+
+fn deserialize_sensitive_error_list<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Vec<SecretString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_seq(SensitiveErrorListVisitor)
+}
+
+struct SensitiveErrorListVisitor;
+
+impl<'de> Visitor<'de> for SensitiveErrorListVisitor {
+    type Value = Vec<SecretString>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a bounded list of sensitive OpenBao API errors")
+    }
+
+    fn visit_seq<A>(self, mut sequence: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut errors = Vec::with_capacity(
+            sequence
+                .size_hint()
+                .unwrap_or(0)
+                .min(MAX_SENSITIVE_API_ERRORS),
+        );
+        while errors.len() < MAX_SENSITIVE_API_ERRORS {
+            let Some(error) = sequence.next_element::<SecretString>()? else {
+                return Ok(errors);
+            };
+            errors.push(error);
+        }
+        while sequence.next_element::<IgnoredAny>()?.is_some() {}
+        Ok(errors)
+    }
+}
+
+async fn read_sensitive_api_classification(
+    response: reqwest::Response,
+    max_response_bytes: usize,
+) -> Vec<String> {
+    let status = response.status();
+    if validate_json_content_type(&response).is_err() {
+        drop(response);
+        return Vec::new();
+    }
+    let body = match read_response_bytes(response, max_response_bytes).await {
+        Ok(body) => body,
+        Err(_) => return Vec::new(),
+    };
+    let classification = body.with_secret(|bytes| {
+        serde_json::from_slice::<SensitiveErrorEnvelope>(bytes)
+            .ok()
+            .map(|envelope| {
+                let conflict = status == StatusCode::BAD_REQUEST
+                    && envelope.errors.iter().any(|message| {
+                        let message = message.expose_secret().as_bytes();
+                        contains_ascii_case_insensitive(message, b"already exists")
+                            || contains_ascii_case_insensitive(message, b"already in use")
+                            || contains_ascii_case_insensitive(message, b"existing key")
+                    });
+                let permission_denied = envelope.errors.iter().any(|message| {
+                    contains_ascii_case_insensitive(
+                        message.expose_secret().as_bytes(),
+                        b"permission denied",
+                    )
+                });
+                (conflict, permission_denied)
+            })
+            .unwrap_or((false, false))
+    });
+
+    let mut markers = Vec::with_capacity(2);
+    if classification.0 {
+        markers.push(REDACTED_CONFLICT_MARKER.to_owned());
+    }
+    if classification.1 {
+        markers.push(REDACTED_PERMISSION_DENIED_MARKER.to_owned());
+    }
+    markers
+}
+
+fn contains_ascii_case_insensitive(value: &[u8], needle: &[u8]) -> bool {
+    !needle.is_empty()
+        && value
+            .windows(needle.len())
+            .any(|window| window.eq_ignore_ascii_case(needle))
+}
+
 async fn read_response_bytes(
     mut response: reqwest::Response,
     max_response_bytes: usize,
@@ -4269,7 +4356,7 @@ mod tests {
                 .unwrap_or_else(|error| panic!("{error}"));
             let request = String::from_utf8_lossy(&request[..count]);
             assert!(request.starts_with("POST /v1/sys/leases/lookup HTTP/1.1"));
-            let body = format!(r#"{{"errors":["failed for {REFLECTED_SECRET}"]}}"#);
+            let body = format!(r#"{{"errors":["mount already exists for {REFLECTED_SECRET}"]}}"#);
             let response = format!(
                 "HTTP/1.1 400 Bad Request\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
                 body.len(),
@@ -4302,8 +4389,10 @@ mod tests {
         assert!(matches!(
             &error,
             Error::Api { status, errors }
-                if *status == reqwest::StatusCode::BAD_REQUEST && errors.is_empty()
+                if *status == reqwest::StatusCode::BAD_REQUEST
+                    && errors == &[super::REDACTED_CONFLICT_MARKER]
         ));
+        assert!(error.is_conflict());
         assert!(!format!("{error}").contains(REFLECTED_SECRET));
         assert!(!format!("{error:?}").contains(REFLECTED_SECRET));
     }

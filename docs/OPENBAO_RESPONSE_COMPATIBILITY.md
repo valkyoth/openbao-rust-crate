@@ -2,7 +2,7 @@
 
 This policy governs reviewed response decoding across every exact OpenBao
 release locked under `compat/api-snapshots/`, currently `2.0.0` through
-`2.5.5`. Response compatibility is evidence-based: optional fields and aliases
+`2.6.0`. Response compatibility is evidence-based: optional fields and aliases
 are added only when tagged documentation or the checksum-locked normalized
 OpenAPI snapshots show the shape.
 
@@ -22,9 +22,12 @@ OpenAPI snapshots show the shape.
 - Lists and maps use bounded visitors before reading beyond the configured item
   limit. Bounded maps reject duplicate keys rather than overwriting an earlier
   value or allowing duplicates to evade a unique-key count.
-- Schema-free system JSON uses a recursive decoder with depth, total-node, and
-  aggregate string-byte budgets. These limits apply in addition to the raw
-  response byte cap and reject duplicate object keys.
+- Schema-free system JSON and Identity/PKI extension values use a recursive
+  decoder with depth, total-node, and aggregate string-byte budgets. One shared
+  budget covers each complete extension map or vector. These limits apply in
+  addition to the raw response byte cap and reject duplicate object keys;
+  primitive-only PKI metadata rejects arrays and objects before retaining
+  their contents.
 - Credentials, private keys, accessors, plugin arguments, and plugin
   environment values retain `SecretString` storage and redacted `Debug`
   behavior across every accepted response variant.
