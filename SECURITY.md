@@ -227,6 +227,13 @@ client rejects these fields against every older exact profile before building
 or sending the HTTP request. Use them only when all referenced identity
 metadata is trusted and constrained independently of the rendered template.
 
+`AdminBootstrap` never opts into these overrides. ACL policy, PKI role, and SSH
+role convergence treats a matching resource with the corresponding override
+enabled as drift, writes through the ordinary safe method, and verifies the
+readback flag is disabled. If OpenBao or a concurrent writer leaves the flag
+enabled, bootstrap returns `Error::BootstrapContention` rather than reporting
+successful convergence.
+
 ## Residual Secret Memory
 
 After a JSON request body is handed to `reqwest`, the transport stack, TLS

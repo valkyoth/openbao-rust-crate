@@ -926,7 +926,7 @@ impl AdminBootstrap {
                 }
                 BootstrapOperation::Policy { name, policy } => {
                     let status = match client.sys().read_policy(name).await {
-                        Ok(existing) if policy_rules_equal(&existing.rules, policy) => {
+                        Ok(existing) if policy_matches_desired(&existing, policy) => {
                             BootstrapPreviewStatus::Unchanged
                         }
                         Ok(_) => BootstrapPreviewStatus::WouldUpdate,
@@ -1224,7 +1224,7 @@ impl AdminBootstrap {
                 }
                 BootstrapOperation::Policy { name, policy } => {
                     let status = match client.sys().read_policy(name).await {
-                        Ok(existing) if policy_rules_equal(&existing.rules, policy) => {
+                        Ok(existing) if policy_matches_desired(&existing, policy) => {
                             BootstrapStepStatus::Unchanged
                         }
                         Ok(_) => {
@@ -1233,7 +1233,7 @@ impl AdminBootstrap {
                                 .write_policy(name, &PolicyWriteRequest::new(policy.clone()))
                                 .await?;
                             let verification = client.sys().read_policy(name).await?;
-                            if !policy_rules_equal(&verification.rules, policy) {
+                            if !policy_matches_desired(&verification, policy) {
                                 return Err(bootstrap_contention_error());
                             }
                             BootstrapStepStatus::Updated
@@ -1244,7 +1244,7 @@ impl AdminBootstrap {
                                 .write_policy(name, &PolicyWriteRequest::new(policy.clone()))
                                 .await?;
                             let verification = client.sys().read_policy(name).await?;
-                            if !policy_rules_equal(&verification.rules, policy) {
+                            if !policy_matches_desired(&verification, policy) {
                                 return Err(bootstrap_contention_error());
                             }
                             BootstrapStepStatus::Created
@@ -1823,12 +1823,19 @@ fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<Str
         .collect()
 }
 
+fn policy_matches_desired(existing: &crate::sys::PolicyInfo, desired: &str) -> bool {
+    policy_rules_equal(&existing.rules, desired)
+        && !existing.allow_slashes_in_identity_templates
+        && !existing.allow_wildcards_in_identity_templates
+}
+
 #[cfg(feature = "pki")]
 fn pki_role_matches_desired(existing: &PkiRole, desired: &PkiRole) -> bool {
-    desired
-        .issuer_ref
-        .as_ref()
-        .is_none_or(|value| existing.issuer_ref.as_ref() == Some(value))
+    !existing.allow_globs_in_identity_templates
+        && desired
+            .issuer_ref
+            .as_ref()
+            .is_none_or(|value| existing.issuer_ref.as_ref() == Some(value))
         && vec_empty_or_equal(&existing.allowed_domains, &desired.allowed_domains)
         && desired
             .allow_subdomains
@@ -1896,10 +1903,11 @@ fn database_static_role_matches_desired(
 
 #[cfg(feature = "ssh")]
 fn ssh_role_matches_desired(existing: &SshRoleInfo, desired: &SshRoleRequest) -> bool {
-    desired
-        .default_user
-        .as_ref()
-        .is_none_or(|value| existing.default_user.as_ref() == Some(value))
+    !existing.allow_commas_in_identity_templates
+        && desired
+            .default_user
+            .as_ref()
+            .is_none_or(|value| existing.default_user.as_ref() == Some(value))
         && desired
             .cidr_list
             .as_ref()
@@ -2057,7 +2065,7 @@ mod tests {
         bootstrap::{
             AdminBootstrap, BootstrapPreviewReport, BootstrapPreviewStatus, BootstrapPreviewStep,
             BootstrapStepStatus, MAX_BOOTSTRAP_OPERATIONS, is_already_exists_error,
-            policy_rules_equal, secret_values_equal,
+            policy_matches_desired, policy_rules_equal, secret_values_equal,
         },
         secrets::transit::TransitCreateKeyRequest,
     };
@@ -2214,6 +2222,36 @@ mod tests {
         let oversized_policy = "a".repeat(crate::policy::MAX_POLICY_BYTES + 1);
         assert!(!policy_rules_equal(&oversized_policy, &oversized_policy));
 
+        let safe_policy: crate::sys::PolicyInfo = serde_json::from_value(serde_json::json!({
+            "name": "app-read",
+            "policy": "path \"secret/data/app\" {}"
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(policy_matches_desired(
+            &safe_policy,
+            "path \"secret/data/app\" {}"
+        ));
+        let unsafe_slashes: crate::sys::PolicyInfo = serde_json::from_value(serde_json::json!({
+            "name": "app-read",
+            "policy": "path \"secret/data/app\" {}",
+            "allow_slashes_in_identity_templates": true
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(!policy_matches_desired(
+            &unsafe_slashes,
+            "path \"secret/data/app\" {}"
+        ));
+        let unsafe_wildcards: crate::sys::PolicyInfo = serde_json::from_value(serde_json::json!({
+            "name": "app-read",
+            "policy": "path \"secret/data/app\" {}",
+            "allow_wildcards_in_identity_templates": true
+        }))
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(!policy_matches_desired(
+            &unsafe_wildcards,
+            "path \"secret/data/app\" {}"
+        ));
+
         let duplicate = Error::Api {
             status: StatusCode::BAD_REQUEST,
             errors: vec!["path is already in use".to_owned()],
@@ -2246,6 +2284,12 @@ mod tests {
             ..PkiRole::default()
         };
         assert!(super::pki_role_matches_desired(&existing, &desired));
+
+        let unsafe_existing = PkiRole {
+            allow_globs_in_identity_templates: true,
+            ..existing.clone()
+        };
+        assert!(!super::pki_role_matches_desired(&unsafe_existing, &desired));
 
         let different = PkiRole {
             allowed_domains: vec!["internal.example.com".to_owned()],
@@ -2301,6 +2345,12 @@ mod tests {
         };
         let desired = SshRoleRequest::otp("alice", "127.0.0.1/32");
         assert!(super::ssh_role_matches_desired(&existing, &desired));
+
+        let unsafe_existing = SshRoleInfo {
+            allow_commas_in_identity_templates: true,
+            ..existing.clone()
+        };
+        assert!(!super::ssh_role_matches_desired(&unsafe_existing, &desired));
 
         let different = SshRoleRequest::otp("bob", "127.0.0.1/32");
         assert!(!super::ssh_role_matches_desired(&existing, &different));

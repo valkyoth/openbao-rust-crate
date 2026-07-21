@@ -12327,6 +12327,129 @@ async fn admin_bootstrap_preview_is_read_only() {
 }
 
 #[tokio::test]
+async fn admin_bootstrap_preview_marks_identity_template_overrides_for_safe_update() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            let body = match step {
+                0 => {
+                    assert!(request.starts_with("GET /v1/sys/policies/acl/app-read HTTP/1.1"));
+                    r#"{"data":{"name":"app-read","policy":"path \"secret/data/app\" {}","allow_slashes_in_identity_templates":true}}"#
+                }
+                1 => {
+                    assert!(request.starts_with("GET /v1/pki/roles/web HTTP/1.1"));
+                    r#"{"data":{"allowed_domains":["example.com"],"allow_globs_in_identity_templates":true}}"#
+                }
+                2 => {
+                    assert!(request.starts_with("GET /v1/ssh/roles/operators HTTP/1.1"));
+                    r#"{"data":{"key_type":"ca","allowed_users":"service","allow_commas_in_identity_templates":true}}"#
+                }
+                _ => unreachable!(),
+            };
+            write_json_response(&mut stream, "200 OK", body);
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_policy_document("app-read", "path \"secret/data/app\" {}")
+        .and_then(|builder| {
+            builder.ensure_pki_role(
+                "pki",
+                "web",
+                openbao::secrets::pki::PkiRole {
+                    allowed_domains: vec!["example.com".to_owned()],
+                    ..Default::default()
+                },
+            )
+        })
+        .and_then(|builder| {
+            builder.ensure_ssh_role(
+                "ssh",
+                "operators",
+                openbao::secrets::ssh::SshRoleRequest::ca("service"),
+            )
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let preview = bootstrap
+        .preview(&client)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(preview.steps.len(), 3);
+    assert!(
+        preview
+            .steps
+            .iter()
+            .all(|step| { step.status == openbao::bootstrap::BootstrapPreviewStatus::WouldUpdate })
+    );
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn admin_bootstrap_rejects_persisted_policy_template_override_after_safe_write() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    let server = thread::spawn(move || {
+        for step in 0..3 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            match step {
+                0 | 2 => {
+                    assert!(request.starts_with("GET /v1/sys/policies/acl/app-read HTTP/1.1"));
+                    write_json_response(
+                        &mut stream,
+                        "200 OK",
+                        r#"{"data":{"name":"app-read","policy":"path \"secret/data/app\" {}","allow_wildcards_in_identity_templates":true}}"#,
+                    );
+                }
+                1 => {
+                    assert!(request.starts_with("POST /v1/sys/policies/acl/app-read HTTP/1.1"));
+                    assert!(!request.contains("allow_slashes_in_identity_templates"));
+                    assert!(!request.contains("allow_wildcards_in_identity_templates"));
+                    write_json_response(&mut stream, "204 No Content", "");
+                }
+                _ => unreachable!(),
+            }
+        }
+    });
+
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("root-token"));
+    let mut bootstrap = openbao::bootstrap::AdminBootstrap::new();
+    bootstrap
+        .ensure_policy_document("app-read", "path \"secret/data/app\" {}")
+        .unwrap_or_else(|error| panic!("{error}"));
+
+    assert!(matches!(
+        bootstrap.run(&client).await,
+        Err(Error::BootstrapContention(_))
+    ));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
 async fn admin_bootstrap_can_provision_approle_auth() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
