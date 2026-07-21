@@ -726,7 +726,15 @@ pub struct CorsConfig {
     /// Additional headers allowed on cross-origin requests.
     #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
     pub allowed_headers: Vec<String>,
-    /// Whether cross-origin requests may include credentials (OpenBao 2.6+).
+}
+
+/// CORS configuration including fields introduced by OpenBao 2.6.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct CorsConfigDetails {
+    /// Configuration available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub config: CorsConfig,
+    /// Whether cross-origin requests may include credentials.
     #[serde(default)]
     pub allow_credentials: bool,
 }
@@ -739,9 +747,13 @@ pub struct CorsConfigRequest {
     /// Additional headers allowed on cross-origin requests.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub allowed_headers: Vec<String>,
-    /// Whether cross-origin requests may include credentials (OpenBao 2.6+).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub allow_credentials: Option<bool>,
+}
+
+#[derive(Serialize)]
+struct CorsConfigRequestWithCredentials<'a> {
+    #[serde(flatten)]
+    request: &'a CorsConfigRequest,
+    allow_credentials: bool,
 }
 
 impl CorsConfigRequest {
@@ -755,7 +767,6 @@ impl CorsConfigRequest {
         Self {
             allowed_origins: allowed_origins.into_iter().map(Into::into).collect(),
             allowed_headers: Vec::new(),
-            allow_credentials: None,
         }
     }
 
@@ -763,15 +774,6 @@ impl CorsConfigRequest {
     #[must_use]
     pub fn with_allowed_header(mut self, header: impl Into<String>) -> Self {
         self.allowed_headers.push(header.into());
-        self
-    }
-
-    /// Controls whether cross-origin requests may include credentials.
-    ///
-    /// This field is available only with the OpenBao 2.6.0 profile or newer.
-    #[must_use]
-    pub const fn with_allow_credentials(mut self, allow_credentials: bool) -> Self {
-        self.allow_credentials = Some(allow_credentials);
         self
     }
 
@@ -1155,12 +1157,6 @@ pub struct VersionHistoryEntry {
         deserialize_with = "deserialize_optional_safe_metadata_string"
     )]
     pub build_date: Option<String>,
-    /// Source commit timestamp, returned by OpenBao 2.6+.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_optional_safe_metadata_string"
-    )]
-    pub commit_date: Option<String>,
     /// Previous installed version, when known.
     #[serde(
         default,
@@ -1173,6 +1169,40 @@ pub struct VersionHistoryEntry {
         deserialize_with = "deserialize_optional_safe_metadata_string"
     )]
     pub timestamp_installed: Option<String>,
+}
+
+/// Installed-version metadata including fields introduced by OpenBao 2.6.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct VersionHistoryEntryDetails {
+    /// Metadata available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub entry: VersionHistoryEntry,
+    /// Source commit timestamp.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
+    pub commit_date: Option<String>,
+}
+
+/// Version history with OpenBao 2.6 metadata.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct VersionHistoryDetails {
+    /// Installed version strings.
+    #[serde(default, deserialize_with = "deserialize_bounded_string_vec")]
+    pub keys: Vec<String>,
+    /// Detailed version metadata keyed by version string.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_bounded_version_history_details_map"
+    )]
+    pub key_info: BTreeMap<String, VersionHistoryEntryDetails>,
+}
+
+impl ListEntries for VersionHistoryDetails {
+    fn entries(&self) -> &[String] {
+        &self.keys
+    }
 }
 
 /// Namespace metadata returned by `/sys/namespaces`.
@@ -2038,19 +2068,27 @@ pub struct SealStatus {
     /// Server version.
     #[serde(deserialize_with = "deserialize_safe_metadata_string")]
     pub version: String,
-    /// Legacy build timestamp returned through OpenBao 2.5.x.
+}
+
+/// Seal status with build metadata returned by newer OpenBao releases.
+#[derive(Clone, Debug, Deserialize)]
+pub struct SealStatusDetails {
+    /// Seal state available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub status: SealStatus,
+    /// Build timestamp, when returned.
     #[serde(
         default,
         deserialize_with = "deserialize_optional_safe_metadata_string"
     )]
     pub build_date: Option<String>,
-    /// Source commit timestamp returned by OpenBao 2.6+.
+    /// Source commit timestamp, when returned.
     #[serde(
         default,
         deserialize_with = "deserialize_optional_safe_metadata_string"
     )]
     pub commit_date: Option<String>,
-    /// Recovery seal type, when OpenBao 2.6+ configures one.
+    /// Recovery seal type, when configured.
     #[serde(
         default,
         deserialize_with = "deserialize_optional_safe_metadata_string"
@@ -2087,13 +2125,21 @@ pub struct UnsealStatus {
         deserialize_with = "deserialize_optional_safe_metadata_string"
     )]
     pub cluster_id: Option<String>,
-    /// Legacy build timestamp returned through OpenBao 2.5.x.
+}
+
+/// Unseal progress with build metadata returned by newer OpenBao releases.
+#[derive(Clone, Debug, Deserialize)]
+pub struct UnsealStatusDetails {
+    /// Unseal state available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub status: UnsealStatus,
+    /// Build timestamp, when returned.
     #[serde(
         default,
         deserialize_with = "deserialize_optional_safe_metadata_string"
     )]
     pub build_date: Option<String>,
-    /// Source commit timestamp returned by OpenBao 2.6+.
+    /// Source commit timestamp, when returned.
     #[serde(
         default,
         deserialize_with = "deserialize_optional_safe_metadata_string"
@@ -3607,20 +3653,6 @@ pub struct PolicyInfo {
     /// Whether check-and-set is required for future updates.
     #[serde(default)]
     pub cas_required: bool,
-    /// Whether identity-template values may contain `/` (OpenBao 2.6+).
-    ///
-    /// Enabling this for writes requires the
-    /// `identity-template-overrides-acknowledged` feature and
-    /// [`AclIdentityTemplateOverrides::acknowledge_slashes`].
-    #[serde(default)]
-    pub allow_slashes_in_identity_templates: bool,
-    /// Whether identity-template values may contain `*` or `+` (OpenBao 2.6+).
-    ///
-    /// Enabling this for writes requires the
-    /// `identity-template-overrides-acknowledged` feature and
-    /// [`AclIdentityTemplateOverrides::acknowledge_wildcards`].
-    #[serde(default)]
-    pub allow_wildcards_in_identity_templates: bool,
 }
 
 impl<'de> Deserialize<'de> for PolicyInfo {
@@ -3644,10 +3676,6 @@ impl<'de> Deserialize<'de> for PolicyInfo {
             version: Option<u64>,
             #[serde(default)]
             cas_required: bool,
-            #[serde(default)]
-            allow_slashes_in_identity_templates: bool,
-            #[serde(default)]
-            allow_wildcards_in_identity_templates: bool,
         }
 
         let raw = RawPolicyInfo::deserialize(deserializer)?;
@@ -3658,6 +3686,59 @@ impl<'de> Deserialize<'de> for PolicyInfo {
             modified: raw.modified,
             version: raw.version,
             cas_required: raw.cas_required,
+        })
+    }
+}
+
+/// ACL policy readback including OpenBao 2.6 identity-template overrides.
+#[derive(Clone, Debug, Serialize)]
+pub struct PolicyInfoDetails {
+    /// Policy fields available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub policy: PolicyInfo,
+    /// Whether rendered identity-template values may contain `/`.
+    pub allow_slashes_in_identity_templates: bool,
+    /// Whether rendered identity-template values may contain `*` or `+`.
+    pub allow_wildcards_in_identity_templates: bool,
+}
+
+impl<'de> Deserialize<'de> for PolicyInfoDetails {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawPolicyInfoDetails {
+            #[serde(default)]
+            name: String,
+            #[serde(default)]
+            rules: Option<String>,
+            #[serde(default)]
+            policy: Option<String>,
+            #[serde(default)]
+            expiration: Option<String>,
+            #[serde(default)]
+            modified: Option<String>,
+            #[serde(default)]
+            version: Option<u64>,
+            #[serde(default)]
+            cas_required: bool,
+            #[serde(default)]
+            allow_slashes_in_identity_templates: bool,
+            #[serde(default)]
+            allow_wildcards_in_identity_templates: bool,
+        }
+
+        let raw = RawPolicyInfoDetails::deserialize(deserializer)?;
+        Ok(Self {
+            policy: PolicyInfo {
+                name: raw.name,
+                rules: raw.rules.or(raw.policy).unwrap_or_default(),
+                expiration: raw.expiration,
+                modified: raw.modified,
+                version: raw.version,
+                cas_required: raw.cas_required,
+            },
             allow_slashes_in_identity_templates: raw.allow_slashes_in_identity_templates,
             allow_wildcards_in_identity_templates: raw.allow_wildcards_in_identity_templates,
         })
@@ -4571,24 +4652,6 @@ pub struct LeaseLookup {
     /// Remaining lease TTL in seconds.
     #[serde(default)]
     pub ttl: u64,
-    /// Namespace containing the lease, returned by OpenBao 2.6+.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_optional_safe_metadata_string"
-    )]
-    pub namespace_path: Option<String>,
-    /// Backend path that issued the lease, returned by OpenBao 2.6+.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_optional_safe_metadata_string"
-    )]
-    pub path: Option<String>,
-    /// Revocation error retained by OpenBao, returned by OpenBao 2.6+.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_optional_safe_metadata_string"
-    )]
-    pub revoke_error: Option<String>,
 }
 
 impl fmt::Debug for LeaseLookup {
@@ -4601,6 +4664,41 @@ impl fmt::Debug for LeaseLookup {
             .field("last_renewal", &self.last_renewal)
             .field("renewable", &self.renewable)
             .field("ttl", &self.ttl)
+            .finish()
+    }
+}
+
+/// Lease metadata including fields introduced by OpenBao 2.6.
+#[derive(Clone, Deserialize)]
+pub struct LeaseLookupDetails {
+    /// Lease metadata available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub lease: LeaseLookup,
+    /// Namespace containing the lease.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
+    pub namespace_path: Option<String>,
+    /// Backend path that issued the lease.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
+    pub path: Option<String>,
+    /// Revocation error retained by OpenBao.
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_safe_metadata_string"
+    )]
+    pub revoke_error: Option<String>,
+}
+
+impl fmt::Debug for LeaseLookupDetails {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("LeaseLookupDetails")
+            .field("lease", &self.lease)
             .field(
                 "namespace_path",
                 &self.namespace_path.as_ref().map(|_| "<redacted>"),
@@ -5075,6 +5173,13 @@ impl<State> Sys<'_, State> {
             .await
     }
 
+    /// Reads `/sys/seal-status` with build and recovery-seal metadata.
+    pub async fn seal_status_details(&self) -> Result<SealStatusDetails> {
+        self.client
+            .request_sys_json_internal(Method::GET, "sys/seal-status", Option::<&Empty>::None)
+            .await
+    }
+
     /// Polls `/sys/seal-status` until OpenBao is initialized and unsealed.
     ///
     /// Available only with the non-default `tokio-helpers` feature. This is a
@@ -5446,6 +5551,27 @@ impl Sys<'_, Unauthenticated> {
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
     #[cfg(feature = "operator-ops")]
     pub async fn operator_unseal(&self, request: &OperatorUnsealRequest) -> Result<UnsealStatus> {
+        self.client
+            .request_sys_json_internal(
+                Method::POST,
+                "sys/unseal",
+                Some(&OperatorUnsealPayload {
+                    key: request.key.expose_secret(),
+                    reset: request.reset,
+                    migrate: request.migrate,
+                }),
+            )
+            .await
+    }
+
+    /// Submits an unseal share and returns newer OpenBao build metadata.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_unseal_details(
+        &self,
+        request: &OperatorUnsealRequest,
+    ) -> Result<UnsealStatusDetails> {
         self.client
             .request_sys_json_internal(
                 Method::POST,
@@ -6942,6 +7068,19 @@ impl Sys<'_, Authenticated> {
         Ok(envelope.data)
     }
 
+    /// Reads one ACL policy with OpenBao 2.6 identity-template override state.
+    pub async fn read_policy_details(&self, name: &str) -> Result<PolicyInfoDetails> {
+        let envelope: ResponseEnvelope<PolicyInfoDetails> = self
+            .client
+            .request_sys_json_internal(
+                Method::GET,
+                &sys_path("sys/policies/acl", name, None)?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Creates or updates an ACL policy.
     pub async fn write_policy(&self, name: &str, request: &PolicyWriteRequest) -> Result<Empty> {
         request.validate()?;
@@ -7368,6 +7507,21 @@ impl Sys<'_, Authenticated> {
         Ok(envelope.data)
     }
 
+    /// Looks up lease metadata including OpenBao 2.6 backend context.
+    pub async fn lookup_lease_details(
+        &self,
+        lease_id: &SecretString,
+    ) -> Result<LeaseLookupDetails> {
+        let payload = LeaseLookupPayload {
+            lease_id: validate_lease_id(lease_id)?,
+        };
+        let envelope: ResponseEnvelope<LeaseLookupDetails> = self
+            .client
+            .request_sys_json_internal(Method::POST, "sys/leases/lookup", Some(&payload))
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Lists lease counts, optionally filtered by lease type.
     pub async fn list_leases(&self, lease_type: &str) -> Result<LeaseCount> {
         validate_query_string_value(lease_type, "lease type")?;
@@ -7694,6 +7848,13 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Reads CORS configuration including OpenBao 2.6 credential state.
+    pub async fn cors_config_details(&self) -> Result<CorsConfigDetails> {
+        self.client
+            .request_sys_json_internal(Method::GET, "sys/config/cors", Option::<&Empty>::None)
+            .await
+    }
+
     /// Writes `/sys/config/cors`.
     ///
     /// OpenBao requires `sudo` capability for this endpoint. The request uses
@@ -7701,13 +7862,32 @@ impl Sys<'_, Authenticated> {
     pub async fn write_cors_config(&self, request: &CorsConfigRequest) -> Result<Empty> {
         request.validate()?;
         self.client
+            .request_sys_json_internal(Method::POST, "sys/config/cors", Some(request))
+            .await
+    }
+
+    /// Writes CORS configuration with OpenBao 2.6 credential support.
+    pub async fn write_cors_config_with_credentials(
+        &self,
+        request: &CorsConfigRequest,
+        allow_credentials: bool,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
             .validate_versioned_request_fields(&[(
                 &crate::request_compatibility::fields::CORS_ALLOW_CREDENTIALS,
-                request.allow_credentials.is_some(),
+                true,
             )])
             .await?;
         self.client
-            .request_sys_json_internal(Method::POST, "sys/config/cors", Some(request))
+            .request_sys_json_internal(
+                Method::POST,
+                "sys/config/cors",
+                Some(&CorsConfigRequestWithCredentials {
+                    request,
+                    allow_credentials,
+                }),
+            )
             .await
     }
 
@@ -7727,6 +7907,15 @@ impl Sys<'_, Authenticated> {
 
     /// Lists installed OpenBao versions through `/sys/version-history`.
     pub async fn version_history(&self) -> Result<VersionHistory> {
+        let method =
+            Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
+        self.client
+            .request_sys_json_internal(method, "sys/version-history", Option::<&Empty>::None)
+            .await
+    }
+
+    /// Lists installed versions with OpenBao 2.6 commit metadata.
+    pub async fn version_history_details(&self) -> Result<VersionHistoryDetails> {
         let method =
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?;
         self.client
@@ -9548,6 +9737,17 @@ where
     )
 }
 
+fn deserialize_bounded_version_history_details_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, VersionHistoryEntryDetails>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(
+        BoundedVersionHistoryDetailsMapVisitor::<{ crate::response::MAX_RESPONSE_STRINGS }>,
+    )
+}
+
 fn deserialize_bounded_namespace_info_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, NamespaceInfo>, D::Error>
@@ -10029,6 +10229,42 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionHistoryMapVisitor<MAX
     }
 }
 
+struct BoundedVersionHistoryDetailsMapVisitor<const MAX: usize>;
+
+impl<'de, const MAX: usize> Visitor<'de> for BoundedVersionHistoryDetailsMapVisitor<MAX> {
+    type Value = BTreeMap<String, VersionHistoryEntryDetails>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "a map of at most {MAX} detailed version history entries"
+        )
+    }
+
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut values = BTreeMap::new();
+        while values.len() < MAX {
+            let Some((key, value)) = map.next_entry::<String, VersionHistoryEntryDetails>()? else {
+                return Ok(values);
+            };
+            if values.insert(key, value).is_some() {
+                return Err(serde::de::Error::custom(
+                    "OpenBao response map contains a duplicate key",
+                ));
+            }
+        }
+        if map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {
+            return Err(A::Error::custom(
+                "OpenBao detailed version history map exceeds item limit",
+            ));
+        }
+        Ok(values)
+    }
+}
+
 struct BoundedPluginDetailListVisitor<const MAX: usize>;
 
 impl<'de, const MAX: usize> Visitor<'de> for BoundedPluginDetailListVisitor<MAX> {
@@ -10135,12 +10371,11 @@ mod tests {
         MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest,
         RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest, RaftPeerRequest,
         RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest,
-        ResultantAcl, SealStatus, SysHashAlgorithm, SysHashRequest, SysRandomRequest,
-        SysRandomResponse, SysRandomSource, UiMounts, UiNamespaces, UnsealStatus, VersionHistory,
-        VersionHistoryEntry, WorkflowData, WorkflowInfo, WorkflowList, WorkflowWritePayload,
-        WorkflowWriteRequest, audited_request_header_path, internal_ui_mount_path,
-        locked_user_unlock_path, namespace_path, rate_limit_quota_path, remount_status_path,
-        sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
+        ResultantAcl, SysHashAlgorithm, SysHashRequest, SysRandomRequest, SysRandomResponse,
+        SysRandomSource, UiMounts, UiNamespaces, VersionHistory, WorkflowData, WorkflowInfo,
+        WorkflowList, WorkflowWritePayload, WorkflowWriteRequest, audited_request_header_path,
+        internal_ui_mount_path, locked_user_unlock_path, namespace_path, rate_limit_quota_path,
+        remount_status_path, sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
         validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
         validate_raft_server_id, validate_raft_snapshot, validate_raft_snapshot_length,
         validate_rate_limit_quota_config, validate_rate_limit_quota_request, validate_sha256_hex,
@@ -10781,7 +11016,7 @@ mod tests {
 
     #[test]
     fn lease_lookup_topology_metadata_is_bounded_and_log_safe() {
-        let lease: super::LeaseLookup = serde_json::from_value(serde_json::json!({
+        let lease: super::LeaseLookupDetails = serde_json::from_value(serde_json::json!({
             "id": "database/creds/readonly/lease-id",
             "issue_time": "2026-07-17T10:00:00Z",
             "expire_time": "2026-07-17T11:00:00Z",
@@ -10799,7 +11034,7 @@ mod tests {
 
         for unsafe_value in ["database/creds/readonly\nforged", "\u{0000}"] {
             assert!(
-                serde_json::from_value::<super::LeaseLookup>(serde_json::json!({
+                serde_json::from_value::<super::LeaseLookupDetails>(serde_json::json!({
                     "id": "lease-id",
                     "issue_time": "2026-07-17T10:00:00Z",
                     "expire_time": "2026-07-17T11:00:00Z",
@@ -10809,7 +11044,7 @@ mod tests {
             );
         }
         assert!(
-            serde_json::from_value::<super::LeaseLookup>(serde_json::json!({
+            serde_json::from_value::<super::LeaseLookupDetails>(serde_json::json!({
                 "id": "lease-id",
                 "issue_time": "2026-07-17T10:00:00Z",
                 "expire_time": "2026-07-17T11:00:00Z",
@@ -10834,7 +11069,7 @@ mod tests {
                 "timestamp_installed": null
             });
             value[field] = serde_json::json!("forged\nmetadata");
-            assert!(serde_json::from_value::<VersionHistoryEntry>(value).is_err());
+            assert!(serde_json::from_value::<super::VersionHistoryEntryDetails>(value).is_err());
         }
 
         for field in [
@@ -10851,7 +11086,7 @@ mod tests {
                 "version": "2.6.0"
             });
             value[field] = serde_json::json!("forged\rmetadata");
-            assert!(serde_json::from_value::<SealStatus>(value).is_err());
+            assert!(serde_json::from_value::<super::SealStatusDetails>(value).is_err());
         }
 
         for field in [
@@ -10866,12 +11101,12 @@ mod tests {
                 "version": "2.6.0"
             });
             value[field] = serde_json::json!("\u{001b}[31mforged");
-            assert!(serde_json::from_value::<UnsealStatus>(value).is_err());
+            assert!(serde_json::from_value::<super::UnsealStatusDetails>(value).is_err());
         }
 
         let oversized = "x".repeat(MAX_SYSTEM_RESPONSE_METADATA_BYTES + 1);
         assert!(
-            serde_json::from_value::<SealStatus>(serde_json::json!({
+            serde_json::from_value::<super::SealStatusDetails>(serde_json::json!({
                 "type": "shamir",
                 "initialized": true,
                 "sealed": false,
@@ -11999,7 +12234,7 @@ mod tests {
 
     #[test]
     fn policy_identity_template_overrides_decode_as_readback_state() {
-        let policy: super::PolicyInfo = serde_json::from_str(
+        let policy: super::PolicyInfoDetails = serde_json::from_str(
             r#"{
                 "name":"templated",
                 "policy":"path {{identity.entity.name}} {}",

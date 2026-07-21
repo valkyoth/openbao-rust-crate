@@ -308,6 +308,14 @@ impl ListEntries for TotpKeyList {
 pub struct TotpCode {
     /// Generated TOTP code. Treat as secret material.
     pub code: SecretString,
+}
+
+/// Generated TOTP code with metadata returned by OpenBao 2.6.
+#[derive(Clone, Deserialize)]
+pub struct TotpCodeDetails {
+    /// Generated code available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub code: TotpCode,
     /// Unix timestamp at which OpenBao generated the code (OpenBao 2.6+).
     #[serde(default)]
     pub generated: Option<i64>,
@@ -323,6 +331,15 @@ impl fmt::Debug for TotpCode {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("TotpCode")
+            .field("code", &"<redacted>")
+            .finish()
+    }
+}
+
+impl fmt::Debug for TotpCodeDetails {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TotpCodeDetails")
             .field("code", &"<redacted>")
             .field("generated", &self.generated)
             .field("expire_time", &self.expire_time)
@@ -517,6 +534,18 @@ impl Totp<'_> {
         Ok(envelope.data)
     }
 
+    /// Generates a TOTP code with OpenBao 2.6 generation metadata.
+    pub async fn generate_code_details(&self, name: &str) -> Result<TotpCodeDetails> {
+        let envelope: crate::ResponseEnvelope<TotpCodeDetails> = self
+            .request(
+                Method::GET,
+                &self.path("code", name)?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
     /// Validates a TOTP code against a named key.
     pub async fn validate_code(
         &self,
@@ -618,7 +647,7 @@ mod tests {
     use crate::{Client, OpenBaoConfig};
 
     use super::{
-        TotpCode, TotpKeyCreateRequest, TotpKeyCreateResponse, TotpKeyList, TotpPeriod,
+        TotpCodeDetails, TotpKeyCreateRequest, TotpKeyCreateResponse, TotpKeyList, TotpPeriod,
         TotpValidateRequest,
     };
 
@@ -676,7 +705,7 @@ mod tests {
         assert!(!response_debug.contains("url-secret"));
         assert!(response_debug.contains("redacted"));
 
-        let code: TotpCode = serde_json::from_value(serde_json::json!({
+        let code: TotpCodeDetails = serde_json::from_value(serde_json::json!({
             "code": "654321",
             "generated": 1_752_749_200_i64,
             "expire_time": 1_752_749_230_i64,
@@ -686,7 +715,7 @@ mod tests {
         assert_eq!(code.period, Some(TotpPeriod::Duration("30s".to_owned())));
         assert!(!format!("{code:?}").contains("654321"));
         assert!(
-            serde_json::from_value::<TotpCode>(serde_json::json!({
+            serde_json::from_value::<TotpCodeDetails>(serde_json::json!({
                 "code": "654321",
                 "period": "invalid\nperiod"
             }))

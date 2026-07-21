@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.0 - 2026-07-21
+
 ### Added
 
 - Added OpenBao 2.6 workflow list/scan, read/write/delete, and
@@ -26,6 +28,21 @@ All notable changes to this project are documented here.
   sealable namespaces, workflow CRUD/execution, JWT CEL role CRUD, userpass
   bcrypt-hash administration, and changed response fields. All 22 locked
   releases pass their own exact profile.
+
+### Changed
+
+- Extended strict exact-version compatibility from OpenBao `2.0.0` through
+  `2.6.0` without changing any historical profile, route, field rule, or
+  evidence record.
+- Made `2.6.0` the newest reviewed OpenBao profile while retaining Rust
+  `1.90.0` as the MSRV and Rust `1.97.1` as the primary release toolchain.
+- Added OpenSSL as a direct development dependency for live signed-JWT tests.
+  Default production builds remain Rustls-only and do not compile OpenSSL;
+  production OpenSSL is selected only by explicit features such as
+  `transit-import` or the acknowledged native-TLS path.
+- Preserved the public 2.0 constructible struct shapes and exposed additive
+  OpenBao 2.6 response metadata through named `*Details` types and methods;
+  all 196 `cargo-semver-checks` minor-release checks pass against `v2.0.2`.
 
 ### Security
 

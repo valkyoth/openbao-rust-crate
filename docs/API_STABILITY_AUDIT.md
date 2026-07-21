@@ -1,12 +1,12 @@
 # API Stability Audit
 
-This document records the historical stable `1.x` API audit and its `2.0.0`
-finalization. The goal is to make the public API commitments and security
-boundaries explicit.
+This document records the historical stable `1.x` API audit, its `2.0.0`
+finalization, and the compatible `2.1.0` OpenBao 2.6 extension. The goal is to
+make the public API commitments and security boundaries explicit.
 
 ## Status
 
-- Release line: `1.x` historical audit; stable `2.0.x`
+- Release line: `1.x` historical audit; stable `2.1.x`
 - Started: 2026-06-03
 - Audit status: stable endpoint API frozen at `1.0.0`; `1.0.1` and `1.0.2`
   are compatible maintenance patches, and `1.1.0` is a reviewed
@@ -32,7 +32,14 @@ boundaries explicit.
   21-release compatibility workflow, and the exact-commit pentest. `2.0.1`
   corrects release documentation without changing the compatibility contract.
   `2.0.2` narrows the crates.io source package while retaining complete release
-  evidence in the corresponding signed Git tag.
+  evidence in the corresponding signed Git tag. `2.1.0` adds the exact
+  OpenBao `2.6.0` profile and its reviewed API additions without changing the
+  21 historical profiles.
+- OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
+  deferred. Of 688 documented operations, 592 are typed, 93 are typed-gated,
+  and three are security-blocked because the exact `2.6.0` server handlers are
+  unsafe. Two older union operations are correctly unavailable because those
+  routes do not exist in the `2.6.0` profile.
 
 ## Stabilization Rules
 
@@ -120,6 +127,10 @@ must now have an explicit current decision.
 | `0.8.0` | Retry, auto-renewal, lease tracking, pagination, Identity OIDC/MFA, PKI root/named issuer, tracing, seal watcher, HTTP/2, and secret wrappers needed decisions. | Resolved in the API Areas table above. Background auto-renewal, background lease tracking, request-level seal back-pressure, runtime HTTP/2 knobs, and per-engine wrapped method duplication are rejected for stable scope. |
 
 ## Deferred Work Template
+
+This template records historical scope decisions and future OpenBao onboarding
+rules. It does not represent unfinished `2.1.0` or OpenBao `2.6.0` work; the
+active exact profile has no deferred operation disposition.
 
 When moving a feature out of the stable scope, record:
 

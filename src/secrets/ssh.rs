@@ -338,9 +338,6 @@ pub struct SshRoleInfo {
     /// Whether allowed domains are identity templates.
     #[serde(default)]
     pub allowed_domains_template: Option<bool>,
-    /// Whether rendered identity templates may contain `,` (OpenBao 2.6+).
-    #[serde(default)]
-    pub allow_commas_in_identity_templates: bool,
     /// Allowed user key lengths keyed by key type.
     #[serde(default, deserialize_with = "deserialize_bounded_key_lengths")]
     pub allowed_user_key_lengths: BTreeMap<String, Vec<u16>>,
@@ -377,6 +374,17 @@ pub struct SshRoleInfo {
     /// Issuer reference used by this role.
     #[serde(default)]
     pub issuer_ref: Option<String>,
+}
+
+/// SSH role readback including fields introduced by OpenBao 2.6.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct SshRoleDetails {
+    /// Role fields available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub role: SshRoleInfo,
+    /// Whether rendered identity templates may contain `,`.
+    #[serde(default)]
+    pub allow_commas_in_identity_templates: bool,
 }
 
 /// SSH OTP credential request.
@@ -988,6 +996,18 @@ impl Ssh<'_> {
     /// Reads an SSH role.
     pub async fn read_role(&self, name: &str) -> Result<SshRoleInfo> {
         let envelope: ResponseEnvelope<SshRoleInfo> = self
+            .request(
+                Method::GET,
+                &self.path(&["roles", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads an SSH role with OpenBao 2.6 identity-template override state.
+    pub async fn read_role_details(&self, name: &str) -> Result<SshRoleDetails> {
+        let envelope: ResponseEnvelope<SshRoleDetails> = self
             .request(
                 Method::GET,
                 &self.path(&["roles", name])?,
@@ -1658,11 +1678,11 @@ mod tests {
 
     #[test]
     fn ssh_template_comma_override_decodes_as_readback_state() {
-        let role: SshRoleInfo = serde_json::from_str(
+        let details: super::SshRoleDetails = serde_json::from_str(
             r#"{"allowed_users":"{{identity.entity.name}}","allow_commas_in_identity_templates":true}"#,
         )
         .unwrap_or_else(|error| panic!("{error}"));
-        assert!(role.allow_commas_in_identity_templates);
+        assert!(details.allow_commas_in_identity_templates);
 
         let ordinary = serde_json::to_value(SshRoleRequest::ca("{{identity.entity.name}}"))
             .unwrap_or_else(|error| panic!("{error}"));

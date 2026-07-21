@@ -175,12 +175,6 @@ pub struct PkiRole {
     /// Allows ACL templating in allowed URI SANs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub allowed_uri_sans_template: Option<bool>,
-    /// Whether rendered identity templates may contain `*` (OpenBao 2.6+).
-    ///
-    /// This is readback state only. Ordinary role serialization always omits
-    /// it; use the acknowledged role methods to enable it.
-    #[serde(default, skip_serializing)]
-    pub allow_globs_in_identity_templates: bool,
     /// Other SAN values or glob patterns allowed for requests.
     #[serde(default, deserialize_with = "deserialize_bounded_string_or_vec")]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -319,6 +313,17 @@ pub struct PkiRole {
     /// Uses CSR SAN values when signing through this role.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub use_csr_sans: Option<bool>,
+}
+
+/// PKI role readback including fields introduced by OpenBao 2.6.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct PkiRoleDetails {
+    /// Role fields available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub role: PkiRole,
+    /// Whether rendered identity templates may contain `*`.
+    #[serde(default)]
+    pub allow_globs_in_identity_templates: bool,
 }
 
 #[cfg(feature = "identity-template-overrides-acknowledged")]
@@ -2336,6 +2341,16 @@ impl Pki<'_> {
         .await
     }
 
+    /// Reads a PKI role with OpenBao 2.6 identity-template override state.
+    pub async fn read_role_details(&self, name: &str) -> Result<PkiRoleDetails> {
+        self.enveloped(
+            Method::GET,
+            &self.path(&["roles", name])?,
+            Option::<&Empty>::None,
+        )
+        .await
+    }
+
     /// Lists PKI role names.
     pub async fn list_roles(&self) -> Result<PkiRoleList> {
         let method =
@@ -4073,12 +4088,12 @@ mod tests {
 
     #[test]
     fn pki_template_glob_override_is_readback_only_by_default() {
-        let role: PkiRole = serde_json::from_str(
+        let details: super::PkiRoleDetails = serde_json::from_str(
             r#"{"allowed_domains":["{{identity.entity.name}}"],"allow_globs_in_identity_templates":true}"#,
         )
         .unwrap_or_else(|error| panic!("{error}"));
-        assert!(role.allow_globs_in_identity_templates);
-        let value = serde_json::to_value(role).unwrap_or_else(|error| panic!("{error}"));
+        assert!(details.allow_globs_in_identity_templates);
+        let value = serde_json::to_value(details.role).unwrap_or_else(|error| panic!("{error}"));
         assert!(value.get("allow_globs_in_identity_templates").is_none());
     }
 
@@ -4087,7 +4102,6 @@ mod tests {
     fn acknowledged_pki_template_glob_override_serializes_true() {
         let role = PkiRole {
             allowed_domains: vec!["{{identity.entity.name}}".to_owned()],
-            allow_globs_in_identity_templates: true,
             ..PkiRole::default()
         };
         let ordinary = serde_json::to_value(&role).unwrap_or_else(|error| panic!("{error}"));

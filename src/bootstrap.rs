@@ -21,7 +21,7 @@ use crate::secrets::identity::{
 #[cfg(feature = "pki")]
 use crate::secrets::pki::PkiRole;
 #[cfg(feature = "ssh")]
-use crate::secrets::ssh::{SshRoleInfo, SshRoleRequest};
+use crate::secrets::ssh::SshRoleRequest;
 use crate::{
     AclPolicyBuilder, Authenticated, Client, Error, Result,
     auth::token::{TokenAuth, TokenCreateRequest},
@@ -933,7 +933,7 @@ impl AdminBootstrap {
                     ));
                 }
                 BootstrapOperation::Policy { name, policy } => {
-                    let status = match client.sys().read_policy(name).await {
+                    let status = match client.sys().read_policy_details(name).await {
                         Ok(existing) if policy_matches_desired(&existing, policy) => {
                             BootstrapPreviewStatus::Unchanged
                         }
@@ -982,7 +982,7 @@ impl AdminBootstrap {
                 #[cfg(feature = "pki")]
                 BootstrapOperation::PkiRole { mount, name, role } => {
                     let pki = client.pki(mount)?;
-                    let status = match pki.read_role(name).await {
+                    let status = match pki.read_role_details(name).await {
                         Ok(existing) if pki_role_matches_desired(&existing, role) => {
                             BootstrapPreviewStatus::Unchanged
                         }
@@ -1037,7 +1037,7 @@ impl AdminBootstrap {
                     request,
                 } => {
                     let ssh = client.ssh(mount)?;
-                    let status = match ssh.read_role(name).await {
+                    let status = match ssh.read_role_details(name).await {
                         Ok(existing) if ssh_role_matches_desired(&existing, request) => {
                             BootstrapPreviewStatus::Unchanged
                         }
@@ -1231,7 +1231,7 @@ impl AdminBootstrap {
                     ));
                 }
                 BootstrapOperation::Policy { name, policy } => {
-                    let status = match client.sys().read_policy(name).await {
+                    let status = match client.sys().read_policy_details(name).await {
                         Ok(existing) if policy_has_unsafe_template_overrides(&existing) => {
                             return Err(Error::UnsafeBootstrapConfiguration(
                                 "ACL policy has identity-template delimiter overrides enabled; disable them with a state-preserving operation before bootstrap",
@@ -1245,7 +1245,7 @@ impl AdminBootstrap {
                                 .sys()
                                 .write_policy(name, &PolicyWriteRequest::new(policy.clone()))
                                 .await?;
-                            let verification = client.sys().read_policy(name).await?;
+                            let verification = client.sys().read_policy_details(name).await?;
                             if !policy_matches_desired(&verification, policy) {
                                 return Err(bootstrap_contention_error());
                             }
@@ -1256,7 +1256,7 @@ impl AdminBootstrap {
                                 .sys()
                                 .write_policy(name, &PolicyWriteRequest::new(policy.clone()))
                                 .await?;
-                            let verification = client.sys().read_policy(name).await?;
+                            let verification = client.sys().read_policy_details(name).await?;
                             if !policy_matches_desired(&verification, policy) {
                                 return Err(bootstrap_contention_error());
                             }
@@ -1319,7 +1319,7 @@ impl AdminBootstrap {
                 #[cfg(feature = "pki")]
                 BootstrapOperation::PkiRole { mount, name, role } => {
                     let pki = client.pki(mount)?;
-                    let status = match pki.read_role(name).await {
+                    let status = match pki.read_role_details(name).await {
                         Ok(existing) if pki_role_has_unsafe_template_override(&existing) => {
                             return Err(Error::UnsafeBootstrapConfiguration(
                                 "PKI role has allow_globs_in_identity_templates enabled; disable it with a state-preserving operation before bootstrap",
@@ -1330,7 +1330,7 @@ impl AdminBootstrap {
                         }
                         Ok(_) => {
                             pki.write_role(name, role).await?;
-                            let verification = pki.read_role(name).await?;
+                            let verification = pki.read_role_details(name).await?;
                             if !pki_role_matches_desired(&verification, role) {
                                 return Err(bootstrap_contention_error());
                             }
@@ -1338,7 +1338,7 @@ impl AdminBootstrap {
                         }
                         Err(error) if error.is_not_found() => {
                             pki.write_role(name, role).await?;
-                            let verification = pki.read_role(name).await?;
+                            let verification = pki.read_role_details(name).await?;
                             if !pki_role_matches_desired(&verification, role) {
                                 return Err(bootstrap_contention_error());
                             }
@@ -1421,7 +1421,7 @@ impl AdminBootstrap {
                     request,
                 } => {
                     let ssh = client.ssh(mount)?;
-                    let status = match ssh.read_role(name).await {
+                    let status = match ssh.read_role_details(name).await {
                         Ok(existing) if ssh_role_has_unsafe_template_override(&existing) => {
                             return Err(Error::UnsafeBootstrapConfiguration(
                                 "SSH role has allow_commas_in_identity_templates enabled; disable it with a state-preserving operation before bootstrap",
@@ -1432,7 +1432,7 @@ impl AdminBootstrap {
                         }
                         Ok(_) => {
                             ssh.write_role(name, request).await?;
-                            let verification = ssh.read_role(name).await?;
+                            let verification = ssh.read_role_details(name).await?;
                             if !ssh_role_matches_desired(&verification, request) {
                                 return Err(bootstrap_contention_error());
                             }
@@ -1440,7 +1440,7 @@ impl AdminBootstrap {
                         }
                         Err(error) if error.is_not_found() => {
                             ssh.write_role(name, request).await?;
-                            let verification = ssh.read_role(name).await?;
+                            let verification = ssh.read_role_details(name).await?;
                             if !ssh_role_matches_desired(&verification, request) {
                                 return Err(bootstrap_contention_error());
                             }
@@ -1846,45 +1846,49 @@ fn secret_patch_payload(values: &BTreeMap<String, SecretString>) -> BTreeMap<Str
         .collect()
 }
 
-fn policy_has_unsafe_template_overrides(existing: &crate::sys::PolicyInfo) -> bool {
+fn policy_has_unsafe_template_overrides(existing: &crate::sys::PolicyInfoDetails) -> bool {
     existing.allow_slashes_in_identity_templates || existing.allow_wildcards_in_identity_templates
 }
 
-fn policy_matches_desired(existing: &crate::sys::PolicyInfo, desired: &str) -> bool {
-    policy_rules_equal(&existing.rules, desired) && !policy_has_unsafe_template_overrides(existing)
+fn policy_matches_desired(existing: &crate::sys::PolicyInfoDetails, desired: &str) -> bool {
+    policy_rules_equal(&existing.policy.rules, desired)
+        && !policy_has_unsafe_template_overrides(existing)
 }
 
 #[cfg(feature = "pki")]
-fn pki_role_has_unsafe_template_override(existing: &PkiRole) -> bool {
+fn pki_role_has_unsafe_template_override(existing: &crate::secrets::pki::PkiRoleDetails) -> bool {
     existing.allow_globs_in_identity_templates
 }
 
 #[cfg(feature = "pki")]
-fn pki_role_matches_desired(existing: &PkiRole, desired: &PkiRole) -> bool {
+fn pki_role_matches_desired(
+    existing: &crate::secrets::pki::PkiRoleDetails,
+    desired: &PkiRole,
+) -> bool {
     !pki_role_has_unsafe_template_override(existing)
         && desired
             .issuer_ref
             .as_ref()
-            .is_none_or(|value| existing.issuer_ref.as_ref() == Some(value))
-        && vec_empty_or_equal(&existing.allowed_domains, &desired.allowed_domains)
+            .is_none_or(|value| existing.role.issuer_ref.as_ref() == Some(value))
+        && vec_empty_or_equal(&existing.role.allowed_domains, &desired.allowed_domains)
         && desired
             .allow_subdomains
-            .is_none_or(|value| existing.allow_subdomains == Some(value))
+            .is_none_or(|value| existing.role.allow_subdomains == Some(value))
         && desired
             .ttl
             .as_ref()
-            .is_none_or(|value| existing.ttl.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.ttl.as_ref() == Some(value))
         && desired
             .max_ttl
             .as_ref()
-            .is_none_or(|value| existing.max_ttl.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.max_ttl.as_ref() == Some(value))
         && desired
             .key_type
             .as_ref()
-            .is_none_or(|value| existing.key_type.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.key_type.as_ref() == Some(value))
         && desired
             .key_bits
-            .is_none_or(|value| existing.key_bits == Some(value))
+            .is_none_or(|value| existing.role.key_bits == Some(value))
 }
 
 #[cfg(feature = "database")]
@@ -1932,43 +1936,46 @@ fn database_static_role_matches_desired(
 }
 
 #[cfg(feature = "ssh")]
-fn ssh_role_has_unsafe_template_override(existing: &SshRoleInfo) -> bool {
+fn ssh_role_has_unsafe_template_override(existing: &crate::secrets::ssh::SshRoleDetails) -> bool {
     existing.allow_commas_in_identity_templates
 }
 
 #[cfg(feature = "ssh")]
-fn ssh_role_matches_desired(existing: &SshRoleInfo, desired: &SshRoleRequest) -> bool {
+fn ssh_role_matches_desired(
+    existing: &crate::secrets::ssh::SshRoleDetails,
+    desired: &SshRoleRequest,
+) -> bool {
     !ssh_role_has_unsafe_template_override(existing)
         && desired
             .default_user
             .as_ref()
-            .is_none_or(|value| existing.default_user.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.default_user.as_ref() == Some(value))
         && desired
             .cidr_list
             .as_ref()
-            .is_none_or(|value| existing.cidr_list.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.cidr_list.as_ref() == Some(value))
         && desired
             .port
-            .is_none_or(|value| existing.port == Some(value))
+            .is_none_or(|value| existing.role.port == Some(value))
         && desired
             .key_type
-            .is_none_or(|value| existing.key_type == Some(value))
+            .is_none_or(|value| existing.role.key_type == Some(value))
         && desired
             .allowed_users
             .as_ref()
-            .is_none_or(|value| existing.allowed_users.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.allowed_users.as_ref() == Some(value))
         && desired
             .ttl
             .as_ref()
-            .is_none_or(|value| existing.ttl.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.ttl.as_ref() == Some(value))
         && desired
             .max_ttl
             .as_ref()
-            .is_none_or(|value| existing.max_ttl.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.max_ttl.as_ref() == Some(value))
         && desired
             .issuer_ref
             .as_ref()
-            .is_none_or(|value| existing.issuer_ref.as_ref() == Some(value))
+            .is_none_or(|value| existing.role.issuer_ref.as_ref() == Some(value))
 }
 
 #[cfg(feature = "identity")]
@@ -2257,31 +2264,34 @@ mod tests {
         let oversized_policy = "a".repeat(crate::policy::MAX_POLICY_BYTES + 1);
         assert!(!policy_rules_equal(&oversized_policy, &oversized_policy));
 
-        let safe_policy: crate::sys::PolicyInfo = serde_json::from_value(serde_json::json!({
-            "name": "app-read",
-            "policy": "path \"secret/data/app\" {}"
-        }))
-        .unwrap_or_else(|error| panic!("{error}"));
+        let safe_policy: crate::sys::PolicyInfoDetails =
+            serde_json::from_value(serde_json::json!({
+                "name": "app-read",
+                "policy": "path \"secret/data/app\" {}"
+            }))
+            .unwrap_or_else(|error| panic!("{error}"));
         assert!(policy_matches_desired(
             &safe_policy,
             "path \"secret/data/app\" {}"
         ));
-        let unsafe_slashes: crate::sys::PolicyInfo = serde_json::from_value(serde_json::json!({
-            "name": "app-read",
-            "policy": "path \"secret/data/app\" {}",
-            "allow_slashes_in_identity_templates": true
-        }))
-        .unwrap_or_else(|error| panic!("{error}"));
+        let unsafe_slashes: crate::sys::PolicyInfoDetails =
+            serde_json::from_value(serde_json::json!({
+                "name": "app-read",
+                "policy": "path \"secret/data/app\" {}",
+                "allow_slashes_in_identity_templates": true
+            }))
+            .unwrap_or_else(|error| panic!("{error}"));
         assert!(!policy_matches_desired(
             &unsafe_slashes,
             "path \"secret/data/app\" {}"
         ));
-        let unsafe_wildcards: crate::sys::PolicyInfo = serde_json::from_value(serde_json::json!({
-            "name": "app-read",
-            "policy": "path \"secret/data/app\" {}",
-            "allow_wildcards_in_identity_templates": true
-        }))
-        .unwrap_or_else(|error| panic!("{error}"));
+        let unsafe_wildcards: crate::sys::PolicyInfoDetails =
+            serde_json::from_value(serde_json::json!({
+                "name": "app-read",
+                "policy": "path \"secret/data/app\" {}",
+                "allow_wildcards_in_identity_templates": true
+            }))
+            .unwrap_or_else(|error| panic!("{error}"));
         assert!(!policy_matches_desired(
             &unsafe_wildcards,
             "path \"secret/data/app\" {}"
@@ -2303,15 +2313,18 @@ mod tests {
     #[test]
     #[cfg(feature = "pki")]
     fn pki_role_convergence_compares_desired_fields_only() {
-        let existing = PkiRole {
-            issuer_ref: Some("issuer-a".to_owned()),
-            allowed_domains: vec!["example.com".to_owned()],
-            allow_subdomains: Some(true),
-            ttl: Some("1h".to_owned()),
-            max_ttl: Some("24h".to_owned()),
-            key_type: Some("rsa".to_owned()),
-            key_bits: Some(3072),
-            ..PkiRole::default()
+        let existing = crate::secrets::pki::PkiRoleDetails {
+            role: PkiRole {
+                issuer_ref: Some("issuer-a".to_owned()),
+                allowed_domains: vec!["example.com".to_owned()],
+                allow_subdomains: Some(true),
+                ttl: Some("1h".to_owned()),
+                max_ttl: Some("24h".to_owned()),
+                key_type: Some("rsa".to_owned()),
+                key_bits: Some(3072),
+                ..PkiRole::default()
+            },
+            allow_globs_in_identity_templates: false,
         };
         let desired = PkiRole {
             allowed_domains: vec!["example.com".to_owned()],
@@ -2320,7 +2333,7 @@ mod tests {
         };
         assert!(super::pki_role_matches_desired(&existing, &desired));
 
-        let unsafe_existing = PkiRole {
+        let unsafe_existing = crate::secrets::pki::PkiRoleDetails {
             allow_globs_in_identity_templates: true,
             ..existing.clone()
         };
@@ -2367,21 +2380,24 @@ mod tests {
     #[test]
     #[cfg(feature = "ssh")]
     fn ssh_role_convergence_compares_desired_fields_only() {
-        let existing = SshRoleInfo {
-            default_user: Some("alice".to_owned()),
-            cidr_list: Some("127.0.0.1/32".to_owned()),
-            port: None,
-            key_type: Some(SshRoleKeyType::Otp),
-            allowed_users: None,
-            ttl: Some("30m".to_owned()),
-            max_ttl: None,
-            issuer_ref: None,
-            ..SshRoleInfo::default()
+        let existing = crate::secrets::ssh::SshRoleDetails {
+            role: SshRoleInfo {
+                default_user: Some("alice".to_owned()),
+                cidr_list: Some("127.0.0.1/32".to_owned()),
+                port: None,
+                key_type: Some(SshRoleKeyType::Otp),
+                allowed_users: None,
+                ttl: Some("30m".to_owned()),
+                max_ttl: None,
+                issuer_ref: None,
+                ..SshRoleInfo::default()
+            },
+            allow_commas_in_identity_templates: false,
         };
         let desired = SshRoleRequest::otp("alice", "127.0.0.1/32");
         assert!(super::ssh_role_matches_desired(&existing, &desired));
 
-        let unsafe_existing = SshRoleInfo {
+        let unsafe_existing = crate::secrets::ssh::SshRoleDetails {
             allow_commas_in_identity_templates: true,
             ..existing.clone()
         };

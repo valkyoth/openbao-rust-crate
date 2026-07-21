@@ -384,8 +384,8 @@ async fn run_2_6_flow(
         .await?;
 
     eprintln!("OpenBao integration stage: changed-response-fields");
-    let seal = client.sys().seal_status().await?;
-    assert_eq!(seal.version, "2.6.0");
+    let seal = client.sys().seal_status_details().await?;
+    assert_eq!(seal.status.version, "2.6.0");
     assert!(seal.commit_date.is_some());
     Ok(())
 }

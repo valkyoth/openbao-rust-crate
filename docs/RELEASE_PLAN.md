@@ -54,6 +54,13 @@ selected package-local tests, required fixtures, user-facing documentation,
 licenses, security policy, and changelog. Complete compatibility evidence and
 maintainer tooling remain in the signed Git source.
 
+`2.1.0` appends exact OpenBao `2.6.0` support without modifying the 21
+historical profiles. The active union contains 690 operation identities and
+15,180 operation/profile cells. All 688 documented `2.6.0` operations are
+typed, typed-gated, or security-blocked; no operation is postponed or left in
+a planning state. The ordered implementation and evidence contract is in
+[`OPENBAO_2_6_0_SUPPORT_PLAN.md`](OPENBAO_2_6_0_SUPPORT_PLAN.md).
+
 ## Standing Release Gates
 
 Every release:
@@ -85,6 +92,9 @@ Every release:
 - Compatibility with OpenBao `2.0.0` through `2.5.5` is version-specific and
   append-only. New server profiles must not overwrite the behavior retained
   for an older supported server.
+- The `2.1.0` extension applies the same standard through OpenBao `2.6.0`.
+  Security-blocked operations are fail-closed server-defect decisions, not
+  deferred SDK implementation.
 - Arbitrary undocumented external plugin schemas and third-party service
   behavior remain outside the core-server support claim.
 
@@ -732,3 +742,25 @@ Stop criteria:
   larger than 2 MiB;
 - the packaged source passes all-feature tests independently of the repository;
 - all standard release gates and GitHub checks pass before tagging `v2.0.2`.
+
+### 2.1.0 - OpenBao 2.6.0 Compatibility
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.0`;
+- the exact OpenBao `2.6.0` source, OCI image, tagged documentation, runtime
+  OpenAPI, capability profile, response fixtures, and live evidence are locked
+  and cross-bound;
+- all 22 exact profiles from `2.0.0` through `2.6.0` pass their own
+  digest-pinned live compatibility matrix without cross-profile substitution;
+- all 688 operations in the `2.6.0` profile are typed, typed-gated, or
+  explicitly security-blocked, with no planned or deferred operation;
+- JWT CEL role writes require explicit claim-validation acknowledgement and a
+  validly signed JWT without `aud` is rejected by the live CEL policy test;
+- README, migration, stability, coverage, security, changelog, and release
+  notes describe the same compatibility and feature-gate boundaries;
+- the focused crates.io package passes all-feature tests and remains below the
+  2 MiB compressed limit;
+- the complete release gate, all-release GitHub workflow, CodeQL, and final
+  exact-commit pentests pass before tagging `v2.1.0`.

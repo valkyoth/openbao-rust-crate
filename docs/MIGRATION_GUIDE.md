@@ -1,11 +1,62 @@
 # Migration Guide
 
-This guide tracks migrations between stable OpenBao SDK releases. The `2.0.0`
-contract inventory contains 666 logical operation identities across the
+This guide tracks migrations between stable OpenBao SDK releases. The current
+contract inventory contains 690 logical operation identities across the
 supported OpenBao release union. Every operation available in a supported
 profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
+
+## From `openbao` 2.0.2 To 2.1.0
+
+`2.1.0` is a source-compatible minor release that adds the exact OpenBao
+`2.6.0` profile. Existing applications pinned to an older exact profile keep
+the same routes, request-field rules, response compatibility, and capability
+results. Selecting an older profile remains a statement about the server that
+is actually deployed; it does not emulate an old endpoint on a newer server.
+
+Applications deploying OpenBao `2.6.0` can use strict automatic detection or
+select the exact profile explicitly:
+
+```rust
+use openbao::{OpenBaoCompatibilityPolicy, OpenBaoVersion};
+
+let policy = OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 6, 0))?;
+# Ok::<_, openbao::Error>(policy)
+```
+
+The release adds typed sealable-namespace, workflow, authenticated
+root-generation, JWT CEL, Kubernetes JWT provider, userpass bcrypt-hash,
+Kerberos PAC, and identity-template override contracts. Risk-bearing workflow
+trace, unauthenticated workflow, identity-template override, and operator
+operations retain explicit compile-time and value-level acknowledgement gates.
+
+Existing constructible public structs keep their 2.0 field sets. OpenBao 2.6
+response additions are available through explicit methods such as
+`seal_status_details`, `lookup_lease_details`, `cors_config_details`,
+`version_history_details`, `read_policy_details`, and each engine's
+`read_role_details` or `read_config_details`. Use
+`configure_with_decode_pac` and `write_cors_config_with_credentials` for the
+corresponding 2.6 request fields. This preserves Rust source compatibility
+while keeping every reviewed field typed and accessible.
+
+JWT CEL role writes now require
+`JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel()`.
+OpenBao does not reject a signed JWT that omits `aud` merely because
+`bound_audiences` is populated, so the CEL program itself must require and
+constrain `aud`, `sub`, and every authorization-relevant claim.
+
+Three exact `2.6.0` operations intentionally fail locally: JWT CEL PATCH and
+prefixed workflow LIST/SCAN. Tagged OpenBao `2.6.0` drops JWT audience/leeway
+constraints during PATCH and has unsafe prefixed workflow handlers. Use full
+JWT CEL role replacement and unprefixed workflow listing. These are explicit
+security blocks, not postponed SDK implementation.
+
+OpenSSL is a direct development dependency for generating signed JWTs in the
+crate's live integration test. It is not compiled for a downstream default
+Rustls build. Production builds compile OpenSSL only when an application
+explicitly selects an OpenSSL-using feature such as `transit-import` or the
+acknowledged native-TLS backend.
 
 ## From `openbao` 1.1.2 To 2.0.0
 

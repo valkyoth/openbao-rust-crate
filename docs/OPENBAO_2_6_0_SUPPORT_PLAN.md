@@ -23,7 +23,9 @@
   22-profile dispatch, response fixtures, 15,180-cell version contract, and
   exact-image live matrix. All 22 releases pass; exact 2.6.0 executes six
   additional focused flows. JWT CEL PATCH remains security-blocked for exact
-  2.6.0 because upstream drops audience and leeway constraints.
+  2.6.0 because upstream drops audience and leeway constraints. The Commit 09
+  implementation (`e86c7d1`) and JWT CEL hardening follow-up (`2779413`) both
+  passed their exact-range pentests.
 - Compatibility invariant: append an exact `2.6.0` profile without modifying
   the behavior, evidence hashes, routes, or field rules of the 21 profiles from
   `2.0.0` through `2.5.5`.
@@ -95,12 +97,12 @@ the complete set into the active 22-profile inventory.
 | --- | --- | --- |
 | Root generation | Authenticated clients use `/sys/generate-root-token`; legacy `/sys/generate-root` is deprecated and disabled by default. | Keep one public ceremony API and select the path from the exact profile. Never probe and fall back. |
 | Init/rekey | `stored_shares` is removed and ignored. | Keep the Rust fields for old profiles, add a maximum `2.5.5` field rule, and reject them locally for `2.6.0`. |
-| Seal/version history | `build_date` becomes `commit_date`; seal status adds `recovery_seal_type`. | Decode both names additively. Preserve `build_date` for source compatibility and expose `commit_date` explicitly. |
-| Lease lookup | Adds `path`, `namespace_path`, and `revoke_error`. | Add optional fields with bounded decoding and redacted Debug treatment for topology-bearing values. |
-| CORS | Adds `allow_credentials`. | Add request and response fields, available since `2.6.0`. |
+| Seal/version history | `build_date` becomes `commit_date`; seal status adds `recovery_seal_type`. | Preserve the existing response structs and expose additive metadata through semver-safe `*Details` responses. |
+| Lease lookup | Adds `path`, `namespace_path`, and `revoke_error`. | Expose a bounded, redacted `LeaseLookupDetails` response without changing the constructible 2.0 type. |
+| CORS | Adds `allow_credentials`. | Add explicit detailed-read and version-checked write methods without adding fields to existing constructible structs. |
 | Userpass | Adds mutually exclusive pre-hashed bcrypt `password_hash`. | Add secret-aware constructors and reset helpers that make plaintext/hash exclusivity explicit. |
-| Kerberos | Adds `decode_pac`. | Add a versioned optional configuration field. |
-| TOTP | Generated-code response adds `generated`, `expire_time`, and `period`. | Extend the response type with bounded optional fields. Do not copy the upstream OpenAPI misclassification into the validation request. |
+| Kerberos | Adds `decode_pac`. | Add explicit detailed-read and version-checked configuration methods. |
+| TOTP | Generated-code response adds `generated`, `expire_time`, and `period`. | Add `TotpCodeDetails` with bounded optional fields. Do not copy the upstream OpenAPI misclassification into the validation request. |
 | JWT | Adds the Kubernetes provider. | Add a typed Kubernetes provider constructor while retaining the deployment-specific map escape hatch. |
 | ACL policy | Adds slash and wildcard identity-template overrides. | Require explicit dangerous-override acknowledgment and a 2.6.0 field rule. |
 | PKI role | Adds the glob identity-template override. | Require explicit dangerous-override acknowledgment and a 2.6.0 field rule. |
@@ -265,8 +267,9 @@ Suggested title: `Handle OpenBao 2.6 system contract changes`
 
 - Route the existing authenticated root-generation ceremony by exact profile.
 - Add maximum-version request-field rules and validation for `stored_shares`.
-- Add `commit_date`, legacy `build_date`, `recovery_seal_type`, lease lookup
-  additions, CORS credentials, and TOTP generation metadata.
+- Add semver-safe detail responses for `commit_date`, legacy `build_date`,
+  `recovery_seal_type`, lease topology, CORS credentials, and TOTP generation
+  metadata.
 - Add representative old/new response fixtures and HTTP path tests.
 - Keep public old-profile fields source-compatible.
 
@@ -327,7 +330,7 @@ Status: complete in this commit.
   behavior, not the contradictory guide example.
 - Add secret-aware userpass bcrypt-hash create/update operations with local
   mutual-exclusion checks.
-- Add Kerberos `decode_pac`.
+- Add explicit Kerberos `configure_with_decode_pac` and detailed readback.
 - Apply exact 2.6.0 request-field rules and old-profile rejection tests.
 - Security-block exact 2.6.0 JWT CEL PATCH after tagged-source review showed
   that its handler does not preserve audience or leeway constraints. Full POST
@@ -365,8 +368,8 @@ Pentest range: `<commit-07>..<commit-08>`.
 
 ### Commit 09: Run the complete 22-release compatibility matrix
 
-Status: implemented after Commit 08 (`063c333`); pentest pending for the final
-Commit 09 hash.
+Status: complete in `e86c7d1`, with the clean pentested JWT CEL hardening
+follow-up in `2779413`.
 
 Suggested title: `Verify OpenBao 2.0.0 through 2.6.0 compatibility`
 
@@ -389,6 +392,9 @@ Pentest range: `<commit-08>..<commit-09>`.
 ### Commit 10: Prepare the 2.1.0 release candidate
 
 Suggested title: `Prepare openbao crate 2.1.0`
+
+Status: implemented in this commit; final exact-commit CI and independent
+pentests remain release/tag gates rather than implementation work.
 
 - Set the crate version only after implementation and compatibility tests are
   complete.
@@ -424,6 +430,12 @@ The 2.1.0 release candidate is ready only when all of the following are true:
    or lease topology value appears in Debug, tracing, or error output.
 8. CI, release gates, documentation checks, package verification, and the final
    independent pentests are green for the exact release commit.
+
+No implementation item is postponed beyond Commit 10. The three
+security-blocked `2.6.0` operations remain intentionally unavailable until a
+future exact OpenBao release provides reviewed safe server behavior; they are
+not SDK backlog. Auto-unseal plugins and protocol/language functions listed
+below are server or external-library boundaries, not omitted HTTP operations.
 
 ## Scope Boundaries
 

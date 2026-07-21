@@ -83,8 +83,8 @@ proof when tagged documentation or live behavior contradicts it.
 - Userpass `password_hash` is accepted from `2.6.0`. Typed helpers require a
   validated, redacted bcrypt value with cost 5 through 12 and never serialize
   it together with plaintext `password`.
-- Kerberos `decode_pac` is rejected before `2.6.0`; leaving it unset preserves
-  the historical request body.
+- `KerberosAuthAdmin::configure_with_decode_pac` is rejected before `2.6.0`;
+  `configure` preserves the historical request body.
 - SSH `issuer_ref` changes which CA signs certificates in a multi-issuer
   mount. Omitting it preserves the server's default-issuer behavior.
 - ACL `cas`, `cas_required`, `expiration`, and `ttl` are policy lifecycle and
@@ -103,8 +103,8 @@ proof when tagged documentation or live behavior contradicts it.
 - System `stored_shares` is retained for old profiles but is rejected for
   `2.6.0`, where OpenBao removed and ignores it. The client never silently
   sends an ineffective operator-ceremony field.
-- CORS `allow_credentials` is rejected before `2.6.0`; omitting it preserves
-  the older CORS request shape.
+- `Sys::write_cors_config_with_credentials` is rejected before `2.6.0`;
+  `write_cors_config` preserves the older CORS request shape.
 - Sealable namespace creation is rejected before `2.6.0`. The typed helper
   always sends a validated Shamir `seal` document and never silently creates
   an ordinary namespace when the selected profile lacks namespace sealing.

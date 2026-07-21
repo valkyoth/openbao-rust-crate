@@ -16,19 +16,19 @@ use std::error::Error;
 use std::io;
 
 use openbao::auth::token::TokenAuth;
-use openbao::auth::{jwt::JwtCelRole, kerberos::KerberosConfig};
+use openbao::auth::{jwt::JwtCelRole, kerberos::KerberosConfigDetails};
 use openbao::secrets::identity::IdentityEntityInfo;
 use openbao::secrets::kv2::Kv2Secret;
 use openbao::secrets::pki::PkiCertificateBundle;
-use openbao::secrets::pki::PkiRole;
-use openbao::secrets::ssh::{SshRoleInfo, SshRoleKeyType};
-use openbao::secrets::totp::{TotpCode, TotpPeriod};
+use openbao::secrets::pki::{PkiRole, PkiRoleDetails};
+use openbao::secrets::ssh::{SshRoleDetails, SshRoleKeyType};
+use openbao::secrets::totp::{TotpCodeDetails, TotpPeriod};
 #[cfg(feature = "operator-ops")]
 use openbao::sys::SealableNamespaceCreation;
 use openbao::sys::{
-    CorsConfig, Health, LeaseLookup, NamespaceSealStatus, PluginInfo, PolicyInfo, PolicyList,
-    RateLimitQuotaInfo, RateLimitQuotaList, SealStatus, UnsealStatus, VersionHistoryEntry,
-    WorkflowData, WorkflowInfo, WorkflowList,
+    CorsConfigDetails, Health, LeaseLookupDetails, NamespaceSealStatus, PluginInfo, PolicyInfo,
+    PolicyInfoDetails, PolicyList, RateLimitQuotaInfo, RateLimitQuotaList, SealStatusDetails,
+    UnsealStatusDetails, VersionHistoryEntryDetails, WorkflowData, WorkflowInfo, WorkflowList,
 };
 use openbao::{ExposeSecret, ResponseEnvelope, SecretString};
 use serde::Deserialize;
@@ -184,41 +184,41 @@ fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), B
     let fixtures: OpenBao26SystemFixtures =
         serde_json::from_str(include_str!("fixtures/openbao_2_6_system_responses.json"))?;
 
-    let old_seal: SealStatus = serde_json::from_value(fixtures.seal_2_5_5)?;
-    let new_seal: SealStatus = serde_json::from_value(fixtures.seal_2_6_0)?;
+    let old_seal: SealStatusDetails = serde_json::from_value(fixtures.seal_2_5_5)?;
+    let new_seal: SealStatusDetails = serde_json::from_value(fixtures.seal_2_6_0)?;
     assert!(old_seal.build_date.is_some());
     assert!(old_seal.commit_date.is_none());
     assert_eq!(new_seal.recovery_seal_type.as_deref(), Some("shamir"));
     assert!(new_seal.commit_date.is_some());
 
-    let old_unseal: UnsealStatus = serde_json::from_value(fixtures.unseal_2_5_5)?;
-    let new_unseal: UnsealStatus = serde_json::from_value(fixtures.unseal_2_6_0)?;
+    let old_unseal: UnsealStatusDetails = serde_json::from_value(fixtures.unseal_2_5_5)?;
+    let new_unseal: UnsealStatusDetails = serde_json::from_value(fixtures.unseal_2_6_0)?;
     assert!(old_unseal.build_date.is_some());
     assert!(new_unseal.commit_date.is_some());
 
-    let old_lease: LeaseLookup = serde_json::from_value(fixtures.lease_2_5_5)?;
-    let new_lease: LeaseLookup = serde_json::from_value(fixtures.lease_2_6_0)?;
+    let old_lease: LeaseLookupDetails = serde_json::from_value(fixtures.lease_2_5_5)?;
+    let new_lease: LeaseLookupDetails = serde_json::from_value(fixtures.lease_2_6_0)?;
     assert!(old_lease.namespace_path.is_none());
     assert_eq!(new_lease.namespace_path.as_deref(), Some("team/payments/"));
     assert!(!format!("{new_lease:?}").contains("current-lease"));
 
-    let old_cors: CorsConfig = serde_json::from_value(fixtures.cors_2_5_5)?;
-    let new_cors: CorsConfig = serde_json::from_value(fixtures.cors_2_6_0)?;
+    let old_cors: CorsConfigDetails = serde_json::from_value(fixtures.cors_2_5_5)?;
+    let new_cors: CorsConfigDetails = serde_json::from_value(fixtures.cors_2_6_0)?;
     assert!(!old_cors.allow_credentials);
     assert!(new_cors.allow_credentials);
 
-    let policy: PolicyInfo = serde_json::from_value(fixtures.acl_policy_2_6_0)?;
+    let policy: PolicyInfoDetails = serde_json::from_value(fixtures.acl_policy_2_6_0)?;
     assert!(policy.allow_slashes_in_identity_templates);
     assert!(!policy.allow_wildcards_in_identity_templates);
 
-    let pki_role: PkiRole = serde_json::from_value(fixtures.pki_role_2_6_0)?;
+    let pki_role: PkiRoleDetails = serde_json::from_value(fixtures.pki_role_2_6_0)?;
     assert!(pki_role.allow_globs_in_identity_templates);
 
-    let ssh_role: SshRoleInfo = serde_json::from_value(fixtures.ssh_role_2_6_0)?;
+    let ssh_role: SshRoleDetails = serde_json::from_value(fixtures.ssh_role_2_6_0)?;
     assert!(ssh_role.allow_commas_in_identity_templates);
 
-    let old_totp: TotpCode = serde_json::from_value(fixtures.totp_2_5_5)?;
-    let new_totp: TotpCode = serde_json::from_value(fixtures.totp_2_6_0)?;
+    let old_totp: TotpCodeDetails = serde_json::from_value(fixtures.totp_2_5_5)?;
+    let new_totp: TotpCodeDetails = serde_json::from_value(fixtures.totp_2_6_0)?;
     assert!(old_totp.generated.is_none());
     assert_eq!(
         new_totp.period,
@@ -226,9 +226,9 @@ fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), B
     );
     assert!(!format!("{new_totp:?}").contains("654321"));
 
-    let old_version: VersionHistoryEntry = serde_json::from_value(fixtures.version_2_5_5)?;
-    let new_version: VersionHistoryEntry = serde_json::from_value(fixtures.version_2_6_0)?;
-    assert!(old_version.build_date.is_some());
+    let old_version: VersionHistoryEntryDetails = serde_json::from_value(fixtures.version_2_5_5)?;
+    let new_version: VersionHistoryEntryDetails = serde_json::from_value(fixtures.version_2_6_0)?;
+    assert!(old_version.entry.build_date.is_some());
     assert!(new_version.commit_date.is_some());
 
     let namespace_status: NamespaceSealStatus =
@@ -250,9 +250,9 @@ fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), B
     assert_eq!(cel_role.bound_audiences, ["payments"]);
     assert!(!format!("{cel_role:?}").contains("fixture-cel-literal"));
 
-    let kerberos: KerberosConfig = serde_json::from_value(fixtures.kerberos_config_2_6_0)?;
+    let kerberos: KerberosConfigDetails = serde_json::from_value(fixtures.kerberos_config_2_6_0)?;
     assert_eq!(kerberos.decode_pac, Some(true));
-    assert!(kerberos.keytab.is_none());
+    assert!(kerberos.config.keytab.is_none());
 
     #[cfg(feature = "operator-ops")]
     {

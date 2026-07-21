@@ -50,9 +50,27 @@ pub struct KerberosConfig {
     /// Adds LDAP groups found for the user as group aliases.
     #[serde(default)]
     pub add_group_aliases: Option<bool>,
-    /// Decodes the PAC from Kerberos tickets (OpenBao 2.6+).
+}
+
+/// Kerberos configuration readback including OpenBao 2.6 fields.
+#[derive(Clone, Default, Deserialize)]
+pub struct KerberosConfigDetails {
+    /// Configuration fields available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub config: KerberosConfig,
+    /// Whether OpenBao decodes PAC authorization data.
     #[serde(default)]
     pub decode_pac: Option<bool>,
+}
+
+impl fmt::Debug for KerberosConfigDetails {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("KerberosConfigDetails")
+            .field("config", &self.config)
+            .field("decode_pac", &self.decode_pac)
+            .finish()
+    }
 }
 
 #[derive(Serialize)]
@@ -91,13 +109,6 @@ impl KerberosConfig {
         self
     }
 
-    /// Sets whether OpenBao decodes Kerberos PAC authorization data.
-    #[must_use]
-    pub fn decode_pac(mut self, enabled: bool) -> Self {
-        self.decode_pac = Some(enabled);
-        self
-    }
-
     fn validate(&self) -> Result<()> {
         if self.service_account.trim().is_empty() {
             return Err(Error::InvalidParameter(
@@ -126,7 +137,6 @@ impl fmt::Debug for KerberosConfig {
             .field("service_account", &self.service_account)
             .field("remove_instance_name", &self.remove_instance_name)
             .field("add_group_aliases", &self.add_group_aliases)
-            .field("decode_pac", &self.decode_pac)
             .finish()
     }
 }
@@ -555,12 +565,6 @@ impl KerberosAuthAdmin<'_> {
     /// Configures the Kerberos service account and keytab.
     pub async fn configure(&self, config: &KerberosConfig) -> Result<Empty> {
         config.validate()?;
-        self.client
-            .validate_versioned_request_fields(&[(
-                &crate::request_compatibility::fields::KERBEROS_CONFIG_DECODE_PAC,
-                config.decode_pac.is_some(),
-            )])
-            .await?;
         let keytab = config
             .keytab
             .as_ref()
@@ -571,7 +575,42 @@ impl KerberosAuthAdmin<'_> {
             service_account: &config.service_account,
             remove_instance_name: config.remove_instance_name,
             add_group_aliases: config.add_group_aliases,
-            decode_pac: config.decode_pac,
+            decode_pac: None,
+        };
+        self.client
+            .request_auth_json_internal(
+                "kerberos",
+                &self.mount,
+                Method::POST,
+                &format!("auth/{}/config", self.mount),
+                Some(&payload),
+            )
+            .await
+    }
+
+    /// Configures Kerberos PAC decoding on OpenBao 2.6 or newer.
+    pub async fn configure_with_decode_pac(
+        &self,
+        config: &KerberosConfig,
+        decode_pac: bool,
+    ) -> Result<Empty> {
+        config.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::KERBEROS_CONFIG_DECODE_PAC,
+                true,
+            )])
+            .await?;
+        let keytab = config
+            .keytab
+            .as_ref()
+            .ok_or(Error::MissingField("Kerberos keytab"))?;
+        let payload = KerberosConfigPayload {
+            keytab: keytab.expose_secret(),
+            service_account: &config.service_account,
+            remove_instance_name: config.remove_instance_name,
+            add_group_aliases: config.add_group_aliases,
+            decode_pac: Some(decode_pac),
         };
         self.client
             .request_auth_json_internal(
@@ -587,6 +626,21 @@ impl KerberosAuthAdmin<'_> {
     /// Reads the Kerberos service-account configuration.
     pub async fn read_config(&self) -> Result<KerberosConfig> {
         let envelope: ResponseEnvelope<KerberosConfig> = self
+            .client
+            .request_auth_json_internal(
+                "kerberos",
+                &self.mount,
+                Method::GET,
+                &format!("auth/{}/config", self.mount),
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads Kerberos configuration with OpenBao 2.6 PAC-decoding state.
+    pub async fn read_config_details(&self) -> Result<KerberosConfigDetails> {
+        let envelope: ResponseEnvelope<KerberosConfigDetails> = self
             .client
             .request_auth_json_internal(
                 "kerberos",
@@ -978,13 +1032,13 @@ mod tests {
 
     #[test]
     fn kerberos_config_read_accepts_missing_keytab() {
-        let config: KerberosConfig = serde_json::from_str(
+        let details: super::KerberosConfigDetails = serde_json::from_str(
             r#"{"service_account":"openbao_svc","remove_instance_name":false,"add_group_aliases":true,"decode_pac":true}"#,
         )
         .unwrap_or_else(|error| panic!("{error}"));
-        assert!(config.keytab.is_none());
-        assert_eq!(config.service_account, "openbao_svc");
-        assert_eq!(config.decode_pac, Some(true));
+        assert!(details.config.keytab.is_none());
+        assert_eq!(details.config.service_account, "openbao_svc");
+        assert_eq!(details.decode_pac, Some(true));
     }
 
     #[test]

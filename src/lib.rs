@@ -320,8 +320,8 @@ pub mod prelude {
     };
     #[cfg(feature = "kerberos-auth")]
     pub use crate::auth::kerberos::{
-        KerberosAuth, KerberosAuthAdmin, KerberosConfig, KerberosGroupInfo, KerberosGroupList,
-        KerberosGroupRequest, KerberosLdapConfig, KerberosLoginMetadata,
+        KerberosAuth, KerberosAuthAdmin, KerberosConfig, KerberosConfigDetails, KerberosGroupInfo,
+        KerberosGroupList, KerberosGroupRequest, KerberosLdapConfig, KerberosLoginMetadata,
     };
     #[cfg(feature = "kubernetes-auth")]
     pub use crate::auth::kubernetes::{
@@ -391,7 +391,8 @@ pub mod prelude {
     pub use crate::secrets::pki::PkiIdentityTemplateGlobOverride;
     #[cfg(feature = "pki")]
     pub use crate::secrets::pki::{
-        Pki, PkiIssueRequest, PkiPublic, PkiPublicFormat, PkiRole, PkiTidyRequest, PkiTidyStatus,
+        Pki, PkiIssueRequest, PkiPublic, PkiPublicFormat, PkiRole, PkiRoleDetails, PkiTidyRequest,
+        PkiTidyStatus,
     };
     #[cfg(feature = "acme-protocol")]
     pub use crate::secrets::pki::{PkiAcmeClientConfig, PkiAcmeScope};
@@ -402,7 +403,9 @@ pub mod prelude {
     #[cfg(all(feature = "ssh", feature = "identity-template-overrides-acknowledged"))]
     pub use crate::secrets::ssh::SshIdentityTemplateCommaOverride;
     #[cfg(feature = "ssh")]
-    pub use crate::secrets::ssh::{Ssh, SshPublic, SshPublicKey, SshRoleInfo, SshRoleRequest};
+    pub use crate::secrets::ssh::{
+        Ssh, SshPublic, SshPublicKey, SshRoleDetails, SshRoleInfo, SshRoleRequest,
+    };
     #[cfg(feature = "totp")]
     pub use crate::secrets::totp::{Totp, TotpKeyCreateRequest, TotpKeyInfo};
     #[cfg(all(feature = "transit", feature = "transit-import"))]
@@ -428,15 +431,17 @@ pub mod prelude {
     #[cfg(feature = "sys")]
     pub use crate::sys::{
         AuditedRequestHeaderConfig, AuditedRequestHeaders, Capability, CapabilityView, CorsConfig,
-        CorsConfigRequest, GeneratedPassword, HaNode, HaStatus, Health, KeyStatus, LeaderStatus,
-        LeaseCount, LockedUsers, LockedUsersMountAccessor, LockedUsersNamespace, LoggerLevel,
-        LoggerLevels, NamespaceInfo, NamespaceList, NamespaceRequest, PasswordPolicy,
-        PasswordPolicyList, PasswordPolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration,
+        CorsConfigDetails, CorsConfigRequest, GeneratedPassword, HaNode, HaStatus, Health,
+        KeyStatus, LeaderStatus, LeaseCount, LeaseLookupDetails, LockedUsers,
+        LockedUsersMountAccessor, LockedUsersNamespace, LoggerLevel, LoggerLevels, NamespaceInfo,
+        NamespaceList, NamespaceRequest, PasswordPolicy, PasswordPolicyList,
+        PasswordPolicyWriteRequest, PolicyInfoDetails, RaftAutopilotConfig, RaftConfiguration,
         RaftJoinRequest, RaftJoinResponse, RaftPeerRequest, RaftServer, RateLimitQuotaConfig,
         RateLimitQuotaInfo, RateLimitQuotaList, RateLimitQuotaRequest, RemountMigrationInfo,
         RemountRequest, RemountResponse, RemountStatus, ResultantAcl, ResultantAclPath, SealStatus,
-        Sys, UiMountDetails, UiMountSummary, UiMounts, UiNamespaces, VersionHistory,
-        VersionHistoryEntry, WrappedResponse, WrappingContext,
+        SealStatusDetails, Sys, UiMountDetails, UiMountSummary, UiMounts, UiNamespaces,
+        VersionHistory, VersionHistoryDetails, VersionHistoryEntry, VersionHistoryEntryDetails,
+        WrappedResponse, WrappingContext,
     };
     #[cfg(all(feature = "sys", feature = "operator-ops"))]
     pub use crate::sys::{

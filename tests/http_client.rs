@@ -3695,13 +3695,12 @@ async fn authentication_2_6_contracts_reject_old_profiles_before_transport() {
     let kerberos = openbao::auth::kerberos::KerberosConfig::new(
         "openbao/service",
         SecretString::from("base64-keytab"),
-    )
-    .decode_pac(true);
+    );
     assert!(matches!(
         client
             .kerberos_auth_admin()
             .unwrap_or_else(|error| panic!("{error}"))
-            .configure(&kerberos)
+            .configure_with_decode_pac(&kerberos, true)
             .await,
         Err(Error::UnsupportedOpenBaoRequestField {
             endpoint: "auth.kerberos.config",

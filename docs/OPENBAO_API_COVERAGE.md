@@ -15,6 +15,8 @@ LDAP auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
 Kerberos auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
+OpenBao `2.6.0` was reviewed from its exact tagged source, runtime OpenAPI, and
+digest-pinned image on 2026-07-14 and promoted after the complete live matrix.
 The exact endpoint contract baseline is captured from the official OpenBao
 `v2.5.5` tagged source commit and reconciled with the locked-image OpenAPI
 snapshot. It is summarized in `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md`; the
