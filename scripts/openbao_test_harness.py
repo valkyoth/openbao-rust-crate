@@ -48,7 +48,14 @@ CORE_OPERATION_IDS = (
     "token",
     "capabilities",
     "response-wrapping",
+    "root-generation-routing",
+    "sealable-namespace",
+    "workflow",
+    "jwt-cel",
+    "userpass-password-hash",
+    "changed-response-fields",
 )
+OPENBAO_2_6_OPERATION_IDS = CORE_OPERATION_IDS[8:]
 
 
 class HarnessError(RuntimeError):
@@ -676,13 +683,16 @@ def read_descriptor(descriptor: int, maximum: int) -> bytes:
 
 
 def validate_attestation(value: dict[str, Any], version: str) -> None:
+    latest = version == "2.6.0"
+    expected_executed = list(CORE_OPERATION_IDS if latest else CORE_OPERATION_IDS[:8])
+    expected_skipped = [] if latest else list(OPENBAO_2_6_OPERATION_IDS)
     if set(value) != {"schema", "version", "executed", "skipped"}:
         raise HarnessError("integration attestation fields are invalid")
     if (
         value.get("schema") != "openbao-core-flow-attestation/v1"
         or value.get("version") != version
-        or value.get("executed") != list(CORE_OPERATION_IDS)
-        or value.get("skipped") != []
+        or value.get("executed") != expected_executed
+        or value.get("skipped") != expected_skipped
     ):
         raise HarnessError("integration attestation is incomplete or contradictory")
     if not value["executed"]:
@@ -1015,9 +1025,21 @@ def run_integration(version: str) -> dict[str, Any]:
             "operations": [
                 {
                     "id": operation,
-                    "status": "passed",
-                    "reason_code": None,
-                    "classification": None,
+                    "status": (
+                        "passed"
+                        if version == "2.6.0" or operation not in OPENBAO_2_6_OPERATION_IDS
+                        else "skipped"
+                    ),
+                    "reason_code": (
+                        None
+                        if version == "2.6.0" or operation not in OPENBAO_2_6_OPERATION_IDS
+                        else "server-operation-unavailable"
+                    ),
+                    "classification": (
+                        None
+                        if version == "2.6.0" or operation not in OPENBAO_2_6_OPERATION_IDS
+                        else "expected-server-difference"
+                    ),
                 }
                 for operation in CORE_OPERATION_IDS
             ],
@@ -1121,13 +1143,22 @@ def self_test() -> None:
     valid_attestation = {
         "schema": "openbao-core-flow-attestation/v1",
         "version": "2.5.5",
-        "executed": list(CORE_OPERATION_IDS),
-        "skipped": [],
+        "executed": list(CORE_OPERATION_IDS[:8]),
+        "skipped": list(OPENBAO_2_6_OPERATION_IDS),
     }
     validate_attestation(valid_attestation, "2.5.5")
+    validate_attestation(
+        {
+            "schema": "openbao-core-flow-attestation/v1",
+            "version": "2.6.0",
+            "executed": list(CORE_OPERATION_IDS),
+            "skipped": [],
+        },
+        "2.6.0",
+    )
     for mutation in (
         {**valid_attestation, "executed": []},
-        {**valid_attestation, "executed": list(CORE_OPERATION_IDS[:-1])},
+        {**valid_attestation, "executed": list(CORE_OPERATION_IDS[:7])},
         {**valid_attestation, "skipped": ["health"]},
         {**valid_attestation, "version": "2.5.4"},
     ):

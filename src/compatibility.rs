@@ -5,11 +5,9 @@
 //! exact reviewed server release.
 //!
 //! This module also exposes a generated read-only registry of secret-free route
-//! templates across the 21 locked OpenBao releases plus the staged 2.6.0
-//! profile. Registry evidence reports what exact tagged documentation contains.
-//! Staged profiles are available for capability introspection but cannot drive
-//! policy verification or runtime dispatch until their security contract is
-//! promoted. Client compatibility policies can verify and cache the stable
+//! templates across 22 locked OpenBao releases from 2.0.0 through 2.6.0.
+//! Registry evidence reports what exact tagged documentation contains. Client
+//! compatibility policies can verify and cache the stable
 //! version returned by `/sys/health`, or explicitly select an assumed promoted
 //! profile where probing is unavailable. The internal typed dispatcher binds
 //! logical SDK endpoints to reviewed operation variants; endpoint families
@@ -983,18 +981,17 @@ mod tests {
 
     #[test]
     fn compatibility_policies_require_runtime_approved_profiles() -> Result<()> {
-        let known = OpenBaoVersion::new(2, 5, 5);
-        let staged = OpenBaoVersion::new(2, 6, 0);
+        let previous = OpenBaoVersion::new(2, 5, 5);
+        let known = OpenBaoVersion::new(2, 6, 0);
         let unpublished = OpenBaoVersion::new(2, 4, 2);
 
         assert_eq!(
             OpenBaoCompatibilityPolicy::exact(known)?.kind(),
             OpenBaoCompatibilityPolicyKind::Exact
         );
-        assert!(OpenBaoCompatibilityPolicy::exact(staged).is_err());
-        assert!(OpenBaoCompatibilityPolicy::assume(staged).is_err());
-        let staged_range = OpenBaoVersionRequirement::inclusive(known, staged)?;
-        assert!(OpenBaoCompatibilityPolicy::range(staged_range).is_err());
+        assert!(OpenBaoCompatibilityPolicy::exact(previous).is_ok());
+        let approved_range = OpenBaoVersionRequirement::inclusive(previous, known)?;
+        assert!(OpenBaoCompatibilityPolicy::range(approved_range).is_ok());
         assert!(OpenBaoCompatibilityPolicy::exact(unpublished).is_err());
         assert!(OpenBaoCompatibilityPolicy::assume(unpublished).is_err());
         assert!(
@@ -1010,7 +1007,7 @@ mod tests {
     #[test]
     fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
         let strict = OpenBaoCompatibilityPolicy::automatic_strict();
-        let unknown = OpenBaoVersion::new(2, 6, 0);
+        let unknown = OpenBaoVersion::new(2, 6, 1);
         assert_eq!(
             strict.evaluate_detected(unknown),
             Err(OpenBaoCompatibilityFailure::UnknownVersion(unknown))
@@ -1028,7 +1025,7 @@ mod tests {
         assert_eq!(acknowledged.detected_version(), Some(unknown));
         assert_eq!(
             acknowledged.profile_version(),
-            Some(OpenBaoVersion::new(2, 5, 5))
+            Some(OpenBaoVersion::new(2, 6, 0))
         );
         Ok(())
     }
@@ -1187,10 +1184,10 @@ mod tests {
         assert_eq!(versions[21], OpenBaoVersion::new(2, 6, 0));
         assert_eq!(
             latest_routable_profile(),
-            Some(OpenBaoVersion::new(2, 5, 5))
+            Some(OpenBaoVersion::new(2, 6, 0))
         );
         assert!(is_routable_profile(OpenBaoVersion::new(2, 5, 5)));
-        assert!(!is_routable_profile(OpenBaoVersion::new(2, 6, 0)));
+        assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 0)));
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 6, 0)).is_some());
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 4, 2)).is_none());
 
@@ -1277,9 +1274,7 @@ mod tests {
                 .iter()
                 .copied()
                 .find(|operation| operation.method() == method && operation.path_template() == path)
-                .unwrap_or_else(|| {
-                    panic!("missing staged OpenBao 2.6 operation {method:?} {path}")
-                });
+                .unwrap_or_else(|| panic!("missing OpenBao 2.6 operation {method:?} {path}"));
             assert_eq!(operation.disposition(), disposition);
             assert_eq!(
                 operation.availability(OpenBaoVersion::new(2, 5, 5)),

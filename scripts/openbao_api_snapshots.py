@@ -37,8 +37,8 @@ SNAPSHOT_LOCK_PATH = COMPAT_ROOT / "api-snapshots.lock.json"
 SNAPSHOT_CHECKSUM_PATH = COMPAT_ROOT / "api-snapshots.lock.sha256"
 
 GENERATOR_VERSION = 1
-OBSERVED_ON = "2026-07-10"
-EXPECTED_SNAPSHOT_LOCK_SHA256 = "440fbaef87506b3b463689892abb9c0c741e2382676e3c92c4e21fa8cd2a3af6"
+OBSERVED_ON = "2026-07-17"
+EXPECTED_SNAPSHOT_LOCK_SHA256 = "92b317b33daa1be8428f48d76caf8d65c6d331874a3a615c79ab2719929d63ba"
 EXPECTED_SNAPSHOT_RECORDS = (
     ("2.0.0", "edc1e8daae71bba48e1656555a82a3ad5f80b497ce87918a0a1a7cc564627081", "6251b7f9e971bd5d791ccab4e43775228c27461883a1ed6587af22aa9a56dd95", None),
     ("2.0.1", "1ae9535ec91318fe990ae71aa93dfa9ea1ea81506c85a092965eca92bb9b07e6", "4b32092b3a8a9bcdcc25ff1e9182d9cd7fdaba91a7b781e575420e32b1a91e95", "5b9424973f9fcaa0e5a64f481a956425b23f32dfeb59504ca4e6522f10a64272"),
@@ -61,6 +61,7 @@ EXPECTED_SNAPSHOT_RECORDS = (
     ("2.5.3", "bf82462ec7d30e2cbfc7c03905da930f609e37e3f4960c5e083e34be7c58376b", "9ea04ce4b2f2c2ae3cdd15bcd705e664e0957f5789d1a0b7e80a4edf0547b886", "ba06610c4480fe5ae565718629396ada6884d32b29c40b27223255c222d199fb"),
     ("2.5.4", "412840864974eff0b65f8506681a275483da285cd82822719bab92cee7e36822", "d8e2dcc85f8bf50076abe9fa7635aa5bfa7750f3dc27dc9baa4c0b4bc43c9430", "d95b39e69411e409cd93d707b7c510e1b063106ce4efeeab9e10db875dd76841"),
     ("2.5.5", "511d18f9bf894cba50c857c247cf3a22b8fd3529144039f27c3552209557be63", "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4", "88b414dfdb76a17a0cb92a6d52da07ce24cd83903d7ffb6ca00d4de692234e5e"),
+    ("2.6.0", "d6ab7dfebcad55bed1c2fb383af00d1141018a4373571c850705f8e684eb934d", "3479568c017fa999258a9e1022299d8be6283b1b02c8994bdcd88c27afd10442", "be2a87012e39b8c66ef07ec51b0014b1ffafc5849a9a7b1215ab3b24f2fa7865"),
 )
 MAX_LOCK_BYTES = 256 * 1024
 MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024
@@ -967,6 +968,8 @@ def rendered_line(version: str) -> tuple[str, tuple[str, ...]] | None:
         return ("2.4.x", ("/api-docs/2.4.x/auth/", "/api-docs/2.4.x/secret/", "/api-docs/2.4.x/system/"))
     if minor == "2.5":
         return ("2.5.x-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
+    if minor == "2.6":
+        return ("2.6.x-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
     return None
 
 
@@ -1704,7 +1707,16 @@ def verify() -> dict[str, Any]:
             version,
             record["source_commit_sha1"],
         )
-        validate_openapi_snapshot(openapi, openapi_data, record)
+        validate_openapi_snapshot(
+            openapi,
+            openapi_data,
+            record,
+            expected_schema=(
+                "openbao-normalized-openapi/v2"
+                if version == "2.6.0"
+                else "openbao-normalized-openapi/v1"
+            ),
+        )
         if (
             len(documentation["files"]) != documentation_record["file_count"]
             or len(documentation.get("operations", [])) != documentation_record["operation_count"]
@@ -1744,6 +1756,11 @@ def verify() -> dict[str, Any]:
                 rendered_document,
                 rendered_data,
                 rendered_record["line"],
+                observed_on=(
+                    OBSERVED_ON
+                    if version == "2.6.0"
+                    else "2026-07-10"
+                ),
             )
             tagged_operations = set(operation_index(documentation))
             rendered_operations = {
@@ -1774,7 +1791,10 @@ def verify() -> dict[str, Any]:
             if diff_record is not None or expected_snapshot[3] is not None:
                 raise SnapshotError("first snapshot record must not have a predecessor diff")
         else:
-            diff = require_keys(diff_record, {"path", "sha256", "bytes", "change_count"}, "API diff")
+            diff_fields = {"path", "sha256", "bytes", "change_count"}
+            if version == "2.6.0":
+                diff_fields.add("normalized_predecessor_openapi")
+            diff = require_keys(diff_record, diff_fields, "API diff")
             if diff["path"] != f"compat/api-diffs/{previous_version}--{version}.json":
                 raise SnapshotError("API diff path changed")
             if diff["sha256"] != expected_snapshot[3]:
@@ -1782,9 +1802,31 @@ def verify() -> dict[str, Any]:
             diff_data = verify_artifact(diff, MAX_SNAPSHOT_BYTES, cache)
             diff_document = parse_json(diff_data, MAX_SNAPSHOT_BYTES)
             validate_diff_snapshot(diff_document, diff_data, previous_version, version)
+            expected_from_hashes = previous_hashes
+            if version == "2.6.0":
+                normalized_record = require_keys(
+                    diff["normalized_predecessor_openapi"],
+                    {"path", "sha256", "bytes"},
+                    "normalized predecessor OpenAPI snapshot",
+                )
+                if normalized_record["path"] != "compat/api-snapshots/2.5.5/openapi-v2.json":
+                    raise SnapshotError("normalized predecessor OpenAPI path changed")
+                normalized_data = verify_artifact(normalized_record, MAX_SNAPSHOT_BYTES, cache)
+                normalized_document = parse_json(normalized_data, MAX_SNAPSHOT_BYTES)
+                predecessor_record = records[index - 1]
+                validate_openapi_snapshot(
+                    normalized_document,
+                    normalized_data,
+                    predecessor_record,
+                    expected_schema="openbao-normalized-openapi/v2",
+                )
+                expected_from_hashes = {
+                    "documentation": previous_hashes["documentation"],
+                    "openapi": normalized_record["sha256"],
+                }
             if (
                 diff_document["change_count"] != diff["change_count"]
-                or diff_document["from_snapshot_sha256"] != previous_hashes
+                or diff_document["from_snapshot_sha256"] != expected_from_hashes
                 or diff_document["to_snapshot_sha256"]
                 != {
                     "documentation": documentation_record["sha256"],

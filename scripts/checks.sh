@@ -21,7 +21,7 @@ echo "checks: OpenBao API snapshots"
 python3 scripts/openbao_api_snapshots.py --verify
 python3 scripts/openbao_api_snapshots.py --self-test
 
-echo "checks: staged OpenBao 2.6.0 API evidence"
+echo "checks: historical OpenBao 2.6.0 onboarding evidence"
 python3 scripts/openbao_onboarding_api.py --verify
 python3 scripts/openbao_onboarding_api.py --self-test
 

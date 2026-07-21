@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate and verify staged OpenBao 2.6.0 API evidence."""
+"""Generate and verify preserved OpenBao 2.6.0 onboarding API evidence."""
 
 from __future__ import annotations
 
@@ -24,6 +24,9 @@ SOURCE_COMMIT = "03e3a243b6f07d17c60ce0a182adee7cf4c424eb"
 RENDERED_LINE = "2.6.x-current"
 RENDERED_ROOTS = ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/")
 EXPECTED_LOCK_SHA256 = "4f1a16777ef9c74bd6e5e131c9fa501121ea0d18e01ee490aed44d36dd7f0f6e"
+EXPECTED_ACTIVE_SNAPSHOT_LOCK_SHA256 = (
+    "440fbaef87506b3b463689892abb9c0c741e2382676e3c92c4e21fa8cd2a3af6"
+)
 MAX_REVIEWED_DISCREPANCIES = 32
 
 ARTIFACT_PATHS = {
@@ -47,21 +50,24 @@ def load_release_evidence() -> tuple[dict[str, Any], bytes]:
         raise OnboardingError("release evidence validation failed") from error
     data = snapshots.read_regular_file(releases.ONBOARDING_LOCK_PATH, snapshots.MAX_LOCK_BYTES)
     if snapshots.sha256(data) != releases.EXPECTED_ONBOARDING_LOCK_SHA256:
-        raise OnboardingError("candidate release evidence identity changed")
+        raise OnboardingError("onboarding release evidence identity changed")
     document = snapshots.parse_json(data, snapshots.MAX_LOCK_BYTES)
     try:
         releases.validate_onboarding_document(document)
     except releases.LockValidationError as error:
-        raise OnboardingError("candidate release evidence shape changed") from error
+        raise OnboardingError("onboarding release evidence shape changed") from error
     return document, data
 
 
 def active_predecessor() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], bytes, bytes]:
     active = snapshots.verify()
     records = active["records"]
-    if not isinstance(records, list) or not records or records[-1].get("version") != PREDECESSOR:
+    if not isinstance(records, list):
+        raise OnboardingError("active API evidence records changed")
+    matches = [record for record in records if record.get("version") == PREDECESSOR]
+    if len(matches) != 1:
         raise OnboardingError("active API evidence predecessor changed")
-    record = records[-1]
+    record = matches[0]
     documentation_data = snapshots.read_regular_file(
         snapshots.require_repo_path(record["documentation"]["path"]),
         snapshots.MAX_SNAPSHOT_BYTES,
@@ -86,9 +92,10 @@ def active_predecessor() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]
 
 def active_predecessor_release() -> dict[str, Any]:
     records = snapshots.release_records()
-    if not records or records[-1].get("version") != PREDECESSOR:
+    matches = [record for record in records if record.get("version") == PREDECESSOR]
+    if len(matches) != 1:
         raise OnboardingError("active release predecessor changed")
-    return records[-1]
+    return matches[0]
 
 
 def reviewed_discrepancies() -> dict[str, Any]:
@@ -167,7 +174,7 @@ def generate(source_repository: str) -> None:
     )
     predecessor_release = active_predecessor_release()
     if release["version"] != VERSION or release["source"]["peeled_commit_sha1"] != SOURCE_COMMIT:
-        raise OnboardingError("candidate release identity changed")
+        raise OnboardingError("onboarding release identity changed")
 
     documentation = snapshots.extract_documentation(repository, release)
     documentation_data = snapshots.canonical_json(documentation)
@@ -270,7 +277,7 @@ def generate(source_repository: str) -> None:
         CHECKSUM_PATH,
         f"{snapshots.sha256(lock_data)}  api-evidence.lock.json\n".encode(),
     )
-    print("generated staged OpenBao 2.6.0 API evidence")
+    print("generated OpenBao 2.6.0 onboarding API evidence")
 
 
 def require_artifact_record(
@@ -291,7 +298,7 @@ def verify_artifact(record: dict[str, Any], maximum: int) -> tuple[dict[str, Any
         snapshots.require_repo_path(record["path"]), maximum
     )
     if len(data) != record["bytes"] or snapshots.sha256(data) != record["sha256"]:
-        raise OnboardingError("staged artifact size or digest changed")
+        raise OnboardingError("onboarding artifact size or digest changed")
     return snapshots.parse_json(data, maximum), data
 
 
@@ -315,7 +322,7 @@ def validate_lock_document(lock: dict[str, Any], lock_data: bytes) -> None:
         or lock["generator_version"] != snapshots.GENERATOR_VERSION
         or lock["observed_on"] != OBSERVED_ON
         or lock["version"] != VERSION
-        or lock["active_snapshot_lock_sha256"] != snapshots.EXPECTED_SNAPSHOT_LOCK_SHA256
+        or lock["active_snapshot_lock_sha256"] != EXPECTED_ACTIVE_SNAPSHOT_LOCK_SHA256
         or snapshots.canonical_json(lock) != lock_data
     ):
         raise OnboardingError("onboarding API evidence lock metadata changed")
@@ -385,7 +392,7 @@ def verify() -> dict[str, Any]:
     lock = snapshots.parse_json(lock_data, snapshots.MAX_LOCK_BYTES)
     validate_lock_document(lock, lock_data)
     if lock["release_evidence"]["sha256"] != snapshots.sha256(release_data):
-        raise OnboardingError("candidate release evidence content changed")
+        raise OnboardingError("onboarding release evidence content changed")
     if (
         lock["predecessor"]["active_documentation_sha256"]
         != predecessor["documentation"]["sha256"]
@@ -450,7 +457,7 @@ def verify() -> dict[str, Any]:
         or openapi["image_linux_amd64_digest"]
         != release["image"]["linux_amd64_digest"]
     ):
-        raise OnboardingError("staged API artifacts differ from candidate release evidence")
+        raise OnboardingError("onboarding API artifacts differ from release evidence")
     if rendered["roots"] != list(RENDERED_ROOTS) or any(
         not any(page["path"].startswith(root) for root in RENDERED_ROOTS)
         for page in rendered["pages"]
@@ -474,7 +481,7 @@ def verify() -> dict[str, Any]:
         or artifacts["rendered_cross_check"]["operation_count"] != len(rendered["operations"])
         or artifacts["reviewed_discrepancies"]["item_count"] != len(discrepancies["items"])
     ):
-        raise OnboardingError("staged API evidence counts changed")
+        raise OnboardingError("onboarding API evidence counts changed")
     if diff["from_snapshot_sha256"] != {
         "documentation": predecessor["documentation"]["sha256"],
         "openapi": artifacts["predecessor_openapi_v2"]["sha256"],
@@ -482,7 +489,7 @@ def verify() -> dict[str, Any]:
         "documentation": artifacts["documentation"]["sha256"],
         "openapi": artifacts["openapi"]["sha256"],
     }:
-        raise OnboardingError("staged API diff bindings changed")
+        raise OnboardingError("onboarding API diff bindings changed")
     tagged = set(snapshots.operation_index(documentation))
     rendered_operations = {
         f"{operation['method']} {operation['path']}" for operation in rendered["operations"]
@@ -555,10 +562,10 @@ def main() -> int:
             generate(arguments.source_repository)
         elif arguments.verify:
             verify()
-            print("OpenBao 2.6.0 staged API evidence: verified")
+            print("OpenBao 2.6.0 onboarding API evidence: verified")
         else:
             self_test()
-            print("OpenBao 2.6.0 staged API evidence self-tests: ok")
+            print("OpenBao 2.6.0 onboarding API evidence self-tests: ok")
         return 0
     except (OSError, OnboardingError, snapshots.SnapshotError, subprocess.SubprocessError) as error:
         print(f"OpenBao onboarding API operation failed: {error}", file=sys.stderr)

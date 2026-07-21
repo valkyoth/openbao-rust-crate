@@ -57,6 +57,10 @@ Please include:
   checksum-anchored, duplicate-key-safe offline validator documented in
   `compat/README.md`. Artifact identity alone is not an API compatibility or
   server security endorsement.
+- OpenBao 2.6.0 has a different image-signing topology: the release index is
+  signed by `release-images.yml`, while the locked Linux amd64 child is bound
+  by that verified index and is not independently signed. Validators reject
+  any attempt to overstate the child signature or substitute the workflow.
 - Compatibility evidence, CI workflows, generators, release scripts, and
   maintainer policy remain in each signed Git tag rather than the crates.io
   source package. The package retains the compiled reviewed registry and
@@ -75,9 +79,10 @@ Please include:
   cell, but its `100.00%` figure is classification coverage rather than a claim
   that every endpoint ran live. The report binds its capability, request,
   response-fixture, and core-flow inputs by SHA-256; labels live and serde
-  evidence as representative; rejects skipped core-flow passes; and records
-  that no external database, directory, cloud, OIDC, MFA, DNS, or broker
-  service was exercised.
+  evidence as representative; rejects unexplained, contradictory, or
+  all-skipped core-flow passes; permits only the six explicit 2.6-only
+  unavailable-operation skips on older profiles; and records that no external
+  database, directory, cloud, OIDC, MFA, DNS, or broker service was exercised.
 - Version-aware typed dispatch selects exactly one reviewed operation before
   request serialization. The method comes from immutable registry evidence;
   concrete paths and required query selectors must match that operation's
@@ -411,6 +416,13 @@ network, and a dynamically published loopback API port. Never expose these old
 servers to another host or reuse them for application, staging, or production
 traffic. Passing historical core tests is a compatibility observation, not a
 security endorsement of the server release.
+
+The active matrix covers 22 exact releases from `2.0.0` through `2.6.0`.
+Every profile executes the common eight-operation core flow; exact `2.6.0`
+also executes root-generation routing, sealable namespace, workflow, JWT CEL,
+userpass bcrypt-hash, and changed-response-field flows. The previous
+21-release result is retained under `compat/core-flow-history/` so promotion
+does not erase prior evidence.
 
 The compatibility workflow has read-only repository permissions, persists no
 checkout credential, references no repository secret, and deliberately avoids

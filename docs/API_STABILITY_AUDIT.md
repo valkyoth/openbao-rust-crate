@@ -20,10 +20,11 @@ boundaries explicit.
 - Major boundary: `2.0.0` combines multi-version OpenBao compatibility with
   intentionally breaking raw-transport, JWT/OIDC secret-metadata, and base-URL
   hardening. See the migration guide before updating from 1.x.
-- Final coverage: the compatibility union has 666 logical operation identities
-  and 13,986 operation/profile cells. All operations available in supported
-  profiles are typed, typed-gated, or security-blocked. The current `2.5.5`
-  profile has 665 documented operations: 580 typed and 85 typed-gated.
+- Final coverage: the compatibility union has 690 logical operation identities
+  and 15,180 operation/profile cells. All operations available in supported
+  profiles are typed, typed-gated, or security-blocked. The current `2.6.0`
+  profile has 688 documented operations: 592 typed, 93 typed-gated, and 3
+  security-blocked.
 - Evidence boundary: contract and serde evidence is complete; live integration
   coverage is representative rather than an endpoint-by-endpoint execution
   claim.

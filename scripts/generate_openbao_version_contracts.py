@@ -35,8 +35,8 @@ REQUEST_RULES_PATH = ROOT / "src/request_compatibility.rs"
 RESPONSE_TEST_PATH = ROOT / "tests/serde_fixtures.rs"
 MAX_INPUT_BYTES = 8 * 1024 * 1024
 MAX_OUTPUT_BYTES = 16 * 1024 * 1024
-EXPECTED_MATRIX_SHA256 = "3fee4d9084cda7f45dc66ddf04573fa7bb1564069c20a08a344cf20912d2328c"
-EXPECTED_MARKDOWN_SHA256 = "692789c72c2e924bef5307afd32a1420deb3252e92789e9e745761b8744abfac"
+EXPECTED_MATRIX_SHA256 = "763a96834eefb08254919743b7a1c91debc06581a3299944fe208538317c25c5"
+EXPECTED_MARKDOWN_SHA256 = "20aa12c4335dcb0c8e4329f659a616d9473d202de646e81ea8f405e7e3e0cb7c"
 ALLOWED_DISPOSITIONS = {"typed", "typed-gated", "security-blocked"}
 ALLOWED_AVAILABILITY = {"documented", "unavailable"}
 FORBIDDEN_STATES = {"planned", "decision", "partial", "raw", "external", "rejected", "unlinked"}
@@ -45,7 +45,7 @@ EXPECTED_SCOPE = {
     "destructive_test_isolation": "fresh ephemeral OpenBao server per exact profile",
     "external_services_proven": [],
     "external_services_scope": "no external database, directory, cloud, OIDC, MFA, DNS, or broker service was exercised",
-    "live_claim": "eight representative built-in core flows per exact profile",
+    "live_claim": "eight representative built-in core flows per exact profile plus six OpenBao 2.6-only flows on 2.6.0",
     "response_claim": "five representative public response families per exact profile",
 }
 
@@ -109,8 +109,8 @@ def build_matrix() -> dict[str, Any]:
         registry.get("schema") != "openbao-capability-registry/v1"
         or not isinstance(versions, list)
         or not isinstance(operations, list)
-        or len(versions) != 21
-        or len(operations) != 666
+        or len(versions) != 22
+        or len(operations) != 690
     ):
         raise ContractError("capability registry shape is invalid")
     if any(operation.get("disposition") not in ALLOWED_DISPOSITIONS for operation in operations):
@@ -148,12 +148,20 @@ def build_matrix() -> dict[str, Any]:
         ):
             raise ContractError("profile evidence is not a passing exact-release record")
         live_operations = core_record.get("operations")
-        if (
-            not isinstance(live_operations, list)
-            or not live_operations
-            or any(item.get("status") != "passed" for item in live_operations)
-        ):
-            raise ContractError("representative live evidence is incomplete or skipped")
+        if not isinstance(live_operations, list) or not live_operations:
+            raise ContractError("representative live evidence is incomplete")
+        passed_live_ids = [
+            item["id"] for item in live_operations if item.get("status") == "passed"
+        ]
+        skipped_live_ids = [
+            item["id"] for item in live_operations if item.get("status") == "skipped"
+        ]
+        expected_passed = list(
+            CORE_OPERATION_IDS if version == "2.6.0" else CORE_OPERATION_IDS[:8]
+        )
+        expected_skipped = [] if version == "2.6.0" else list(CORE_OPERATION_IDS[8:])
+        if passed_live_ids != expected_passed or skipped_live_ids != expected_skipped:
+            raise ContractError("representative live evidence contradicts the exact profile")
 
         cells = []
         counts: Counter[str] = Counter()
@@ -196,8 +204,9 @@ def build_matrix() -> dict[str, Any]:
             {
                 "cells": cells,
                 "live_evidence": {
-                    "claim": "representative core flows only; not every endpoint",
-                    "operation_ids": [item["id"] for item in live_operations],
+                    "claim": "representative core flows only; unavailable operations are explicit skips",
+                    "operation_ids": passed_live_ids,
+                    "skipped_operation_ids": skipped_live_ids,
                     "status": "passed",
                 },
                 "response_fixture_evidence": {
@@ -270,7 +279,7 @@ def validate_matrix(matrix: dict[str, Any], expected_versions: list[str]) -> Non
         raise ContractError("version contract evidence source identities are invalid")
     operations = matrix["operations"]
     profiles = matrix["profiles"]
-    if not isinstance(operations, list) or len(operations) != 666:
+    if not isinstance(operations, list) or len(operations) != 690:
         raise ContractError("version contract operation count is invalid")
     if not isinstance(profiles, list) or [item.get("version") for item in profiles] != expected_versions:
         raise ContractError("version contract profile order is invalid")
@@ -331,9 +340,15 @@ def validate_matrix(matrix: dict[str, Any], expected_versions: list[str]) -> Non
             raise ContractError("profile coverage is incomplete")
         live = profile.get("live_evidence")
         response = profile.get("response_fixture_evidence")
+        version = profile["version"]
+        expected_passed = list(
+            CORE_OPERATION_IDS if version == "2.6.0" else CORE_OPERATION_IDS[:8]
+        )
+        expected_skipped = [] if version == "2.6.0" else list(CORE_OPERATION_IDS[8:])
         if live != {
-            "claim": "representative core flows only; not every endpoint",
-            "operation_ids": list(CORE_OPERATION_IDS),
+            "claim": "representative core flows only; unavailable operations are explicit skips",
+            "operation_ids": expected_passed,
+            "skipped_operation_ids": expected_skipped,
             "status": "passed",
         }:
             raise ContractError("profile live evidence is incomplete or overstated")
@@ -369,7 +384,8 @@ def markdown(matrix: dict[str, Any]) -> bytes:
         "This table is generated from committed compatibility evidence. `100.00%` means",
         "every documented operation for that exact profile is classified as typed,",
         "typed-gated, or security-blocked. It does not mean every operation was exercised",
-        "live. Live tests cover eight representative built-in core flows; serde fixtures",
+        "live. Live tests cover eight representative built-in core flows on every profile",
+        "and six additional 2.6-only flows on 2.6.0; serde fixtures",
         "cover five representative response families.",
         "",
         "| OpenBao | Documented operations | Typed | Typed-gated | Security-blocked | Unavailable inventory operations | Classified coverage | Live core flows | Response fixture families |",
@@ -520,14 +536,14 @@ def main() -> int:
             print("OpenBao version contracts self-tests: ok")
         elif arguments.verify:
             verify_outputs()
-            print("OpenBao version contracts: 13,986 cells verified")
+            print("OpenBao version contracts: 15,180 cells verified")
         else:
             generated = outputs()
             for path, data in generated.items():
                 if sha256(data) != expected_hashes()[path]:
                     raise ContractError("refusing to write an unanchored version contract")
                 atomic_write(path, data)
-            print("OpenBao version contracts: wrote 13,986 cells")
+            print("OpenBao version contracts: wrote 15,180 cells")
         return 0
     except (ContractError, SnapshotError, OSError, ValueError, KeyError, TypeError) as error:
         print(f"OpenBao version contracts failed: {error}", file=os.sys.stderr)

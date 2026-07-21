@@ -1,6 +1,6 @@
 {
   "generator_version": 1,
-  "harness_sha256": "612e47af50827b9357536611e071e4fbeb2470f30c3d06afc9e5889e6111f728",
+  "harness_sha256": "765b652f4ad605dc957552ab1f02bebcd7d47b3449feb6027880bde409fbe80b",
   "records": [
     {
       "compatibility_status": "tested-subset",
@@ -55,42 +55,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -151,42 +115,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -247,42 +175,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -343,42 +235,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -439,42 +295,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -535,42 +355,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -631,42 +415,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -727,42 +475,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -823,42 +535,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -919,42 +595,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1015,42 +655,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1111,42 +715,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1207,42 +775,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1303,42 +835,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1399,42 +895,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1495,42 +955,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1591,42 +1015,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1687,42 +1075,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1783,42 +1135,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1879,42 +1195,6 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
@@ -1975,147 +1255,15 @@
           "id": "response-wrapping",
           "reason_code": null,
           "status": "passed"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "root-generation-routing",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "sealable-namespace",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "workflow",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "jwt-cel",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "userpass-password-hash",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
-        },
-        {
-          "classification": "expected-server-difference",
-          "id": "changed-response-fields",
-          "reason_code": "server-operation-unavailable",
-          "status": "skipped"
         }
       ],
       "outcome": "passed",
       "reported_version": "2.5.5",
       "test_count": 1,
       "version": "2.5.5"
-    },
-    {
-      "compatibility_status": "tested-subset",
-      "failure_class": null,
-      "failure_reason_code": null,
-      "image_linux_amd64_digest": "sha256:80b71b06de94d9b11da83fd1cdb70cbd84b375739620c18b12d76b4f5ffe95ab",
-      "operations": [
-        {
-          "classification": null,
-          "id": "health",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "mount-management",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "kv1",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "kv2",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "policy",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "token",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "capabilities",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "response-wrapping",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "root-generation-routing",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "sealable-namespace",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "workflow",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "jwt-cel",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "userpass-password-hash",
-          "reason_code": null,
-          "status": "passed"
-        },
-        {
-          "classification": null,
-          "id": "changed-response-fields",
-          "reason_code": null,
-          "status": "passed"
-        }
-      ],
-      "outcome": "passed",
-      "reported_version": "2.6.0",
-      "test_count": 1,
-      "version": "2.6.0"
     }
   ],
-  "release_inventory_sha256": "5300cf4eb4fdce36eab24d35ae6b4ccf8809af543bc4de9d854b55158aec0abc",
+  "release_inventory_sha256": "028dfa5cf562816b3a51d894aaf723ba06354dd422b606e60546ac2eb236f136",
   "schema": "openbao-core-flow-results/v1",
   "scope": {
     "claim": "only the listed core SDK operations were executed",
@@ -2128,20 +1276,14 @@
       "policy",
       "token",
       "capabilities",
-      "response-wrapping",
-      "root-generation-routing",
-      "sealable-namespace",
-      "workflow",
-      "jwt-cel",
-      "userpass-password-hash",
-      "changed-response-fields"
+      "response-wrapping"
     ]
   },
   "summary": {
     "failed": 0,
-    "passed": 22,
-    "release_count": 22,
-    "skipped_operations": 126
+    "passed": 21,
+    "release_count": 21,
+    "skipped_operations": 0
   },
-  "test_definition_sha256": "e179d8130cf161c146b50d83e20535643675784a0982c6c965ce16c47424d1dd"
+  "test_definition_sha256": "087c13105fb09789bf98a753b9708a50bd671ac7d47ef9ce6ac060cbef8eb96e"
 }

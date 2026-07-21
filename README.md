@@ -44,14 +44,12 @@ server-version compatibility for every published stable release from `2.0.0`
 through `2.5.5`. Rust `1.97.1` is the primary checked toolchain; Rust `1.90.0`
 remains the compatibility floor.
 
-Development on `main` is onboarding OpenBao `2.6.0` for crate `2.1.0`. Its
-22-profile candidate capability registry is staged and checksum-anchored, with
-all 690 operations resolved. JWT CEL PATCH is security-blocked for exact
-`2.6.0` because the upstream handler drops audience and leeway constraints. The
-candidate profile is introspection-only and cannot drive compatibility
-policies or request routing. The stable support claim remains `2.0.0` through
-`2.5.5` until the final 22-release compatibility and exact-image test matrix
-is promoted together.
+Development on `main` has promoted OpenBao `2.6.0` for crate `2.1.0`. The
+active registry contains 690 operation identities across 22 exact profiles and
+15,180 explicit operation/profile cells. Every digest-pinned release from
+`2.0.0` through `2.6.0` passes its own exact-profile live matrix. JWT CEL PATCH
+is security-blocked for exact `2.6.0` because the upstream handler drops
+audience and leeway constraints.
 
 The crate is dual-licensed under MIT or Apache-2.0.
 
@@ -68,15 +66,15 @@ Implemented now:
   helpers.
 - JWT login plus JWT/OIDC auth method config, role administration, browser
   authorization URL and direct/device polling helpers, plus explicitly
-  acknowledged GET callback redemption and staged 2.6 CEL/Kubernetes-provider
+  acknowledged GET callback redemption and 2.6 CEL/Kubernetes-provider
   contracts.
 - LDAP auth login plus config and user/group policy mapping helpers.
 - RADIUS login plus config and user policy mapping helpers.
 - Kerberos login plus service-account, LDAP config, and group policy mapping
-  helpers, including staged 2.6 PAC-decoding configuration.
+  helpers, including 2.6 PAC-decoding configuration.
 - Userpass login plus user create/read/list/delete, password update, and
-  policy update helpers, including staged 2.6 validated bcrypt hashes.
-- Staged OpenBao 2.6 ACL, PKI, and SSH identity-template delimiter readback,
+  policy update helpers, including 2.6 validated bcrypt hashes.
+- OpenBao 2.6 ACL, PKI, and SSH identity-template delimiter readback,
   with dangerous write overrides available only through an acknowledged
   feature and explicit per-surface constructors.
 - Token create, create-orphan, role create/read/list/delete, lookup, accessor
@@ -166,12 +164,9 @@ Implemented now:
   for application-specific OpenBao plugin APIs.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Version-locked real OpenBao integration harness plus a committed core-flow
-  baseline covering all 21 exact releases from `2.0.0` through `2.5.5`.
-- Generated read-only capability profiles with 666 stable, secret-free
+  baseline covering all 22 exact releases from `2.0.0` through `2.6.0`.
+- Generated read-only capability profiles with 690 stable, secret-free
   operation identities and complete exact-release range coverage.
-- On `main`, a staged 2.6.0 registry with 690 stable operation identities,
-  684 resolved operations, reviewed workflow and root-token routes, and a
-  byte-identical projection of all 21 historical profiles.
 
 `2.0.2` keeps the stable `2.0.x` API and publishes a focused source package.
 Repository-only compatibility evidence, CI workflows, release tooling, and
@@ -235,15 +230,16 @@ The SDK tracks compatibility evidence across this supported range:
 
 ## OpenBao Server Version Support
 
-The `2.0.x` line carries immutable compatibility profiles for OpenBao `2.0.0`
-through `2.5.5`. Historical wire compatibility and security endorsement are
-separate claims:
+The published `2.0.x` line carries immutable profiles through OpenBao `2.5.5`;
+the upcoming `2.1.0` line on `main` extends them through `2.6.0`. Historical
+wire compatibility and security endorsement are separate claims:
 
 | SDK release line | Compatibility evidence | Security posture |
 | --- | --- | --- |
 | `0.1.0` through `1.0.2` | Release-tested with OpenBao `2.5.4`. | Historical result only; not a current security endorsement. |
 | `1.1.0` through `1.1.2` | Release-tested with OpenBao `2.5.5`. | OpenBao `2.5.5` remains the newest reviewed server profile. |
 | `2.0.0` through `2.0.2` | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Exact profiles `2.0.0` through `2.5.4` are security-deprecated compatibility targets and do not include all fixes present in `2.5.5`. |
+| `2.1.0` (`main`) | Exact contract profiles and representative live core flows for all 22 published releases from `2.0.0` through `2.6.0`; six additional 2.6-only flows run on exact `2.6.0`. | OpenBao `2.6.0` is the newest reviewed server. Older profiles remain compatibility targets, not security endorsements. |
 
 The immutable source and OCI artifact inventory for those historical releases
 is committed under
@@ -261,7 +257,9 @@ The generated [exact-version support matrix](docs/OPENBAO_VERSION_SUPPORT_MATRIX
 classifies every operation/profile cell and separates contract coverage from
 representative live and serde evidence.
 The live result is explicitly a tested subset of health, mount, KV, policy,
-token, capability, and response-wrapping behavior. Contract classification is
+token, capability, and response-wrapping behavior on every release, plus root
+generation routing, sealable namespaces, workflows, JWT CEL, userpass hashes,
+and changed response fields on `2.6.0`. Contract classification is
 complete, but it is not a claim that every typed helper was exercised live on
 every historical release.
 
@@ -451,10 +449,10 @@ openbao = { version = "2", features = ["time"] }
 | `cubbyhole` | yes | Token-scoped Cubbyhole read/write/delete/list helpers. |
 | `database` | yes | Database secrets engine config, role, credential, and rotation helpers. |
 | `identity` | yes | Identity entity/group administration plus OIDC provider administration and typed authorize/token/userinfo protocol helpers. |
-| `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, direct/device poll, and staged 2.6 CEL role/login and Kubernetes provider helpers. |
+| `jwt-auth` | yes | JWT login plus JWT/OIDC config, role administration, auth URL, direct/device poll, and 2.6 CEL role/login and Kubernetes provider helpers. |
 | `oidc-get-callback-acknowledged` | no | Enables JWT/OIDC callback and poll GET operations plus the Identity provider GET authorize variant. Credentials, state, and nonce values necessarily enter URL and HTTP-stack buffers; enforce query-free access logging on OpenBao and every intermediary. |
 | `identity-template-overrides-acknowledged` | no | Enables explicit OpenBao 2.6 ACL `/`/`*`/`+`, PKI `*`, and SSH `,` identity-template delimiter overrides. These can turn untrusted identity metadata into additional paths, certificate names, or SSH principals; ordinary request serialization cannot enable them. |
-| `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, group mapping, and staged 2.6 PAC decoding. |
+| `kerberos-auth` | yes | Kerberos SPNEGO login, service-account config, LDAP config, group mapping, and 2.6 PAC decoding. |
 | `kubernetes-auth` | yes | Kubernetes auth login/config/role helpers. |
 | `ldap-auth` | yes | LDAP auth login/config/user/group mapping helpers. |
 | `radius-auth` | no | RADIUS login/config/user mapping helpers. Legacy RADIUS uses MD5-based authenticators and requires `radius-auth-acknowledged`; do not use it for classified networks or new high-assurance deployments. |
@@ -462,7 +460,7 @@ openbao = { version = "2", features = ["time"] }
 | `kubernetes` | yes | Kubernetes secrets engine config, role, and generated service account token helpers. |
 | `ldap` | yes | LDAP secrets engine config, static/dynamic role, credential, and library helpers. |
 | `rabbitmq` | yes | RabbitMQ secrets engine connection, lease, role, and credential helpers. |
-| `userpass` | yes | Userpass login, user administration, and staged 2.6 validated bcrypt-hash helpers. |
+| `userpass` | yes | Userpass login, user administration, and 2.6 validated bcrypt-hash helpers. |
 | `token` | yes | Token lifecycle, create-orphan, accessor renewal/revocation, token role, tidy, and revoke-orphan helpers. |
 | `kv1` | yes | KV v1 secrets engine helpers. |
 | `kv2` | yes | KV v2 secrets engine helpers. |
@@ -508,10 +506,10 @@ openbao = { version = "2", features = ["time"] }
 
 The generated
 [exact-version support matrix](docs/OPENBAO_VERSION_SUPPORT_MATRIX.md) covers
-666 logical operation identities across 21 locked OpenBao releases and 13,986
+690 logical operation identities across 22 locked OpenBao releases and 15,180
 operation/profile cells. Every operation documented for a supported profile is
-typed, typed-gated, or security-blocked. OpenBao `2.5.5` has 665 documented
-operations: 580 typed and 85 typed-gated.
+typed, typed-gated, or security-blocked. OpenBao `2.6.0` has 688 documented
+operations: 592 typed, 93 typed-gated, and 3 security-blocked.
 
 The original exact-source extraction remains available in
 [docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](https://github.com/valkyoth/openbao-rust-crate/blob/v2.0.2/docs/OPENBAO_2_5_ENDPOINT_MATRIX.md)
@@ -560,11 +558,11 @@ Selected unsupported fields fail locally and are never silently omitted.
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, create/create-orphan, renew/renew-accessor, revoke, revoke-self, and revoke-accessor helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
-| JWT/OIDC | Gated GET flows | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL helpers, and staged 2.6 CEL role/login and Kubernetes provider support. Exact 2.6.0 CEL PATCH is security-blocked because it drops constraints. GET callback redemption and direct/device polling require `oidc-get-callback-acknowledged` because credentials or correlation values enter URL query strings. |
+| JWT/OIDC | Gated GET flows | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL helpers, and 2.6 CEL role/login and Kubernetes provider support. Exact 2.6.0 CEL PATCH is security-blocked because it drops constraints. GET callback redemption and direct/device polling require `oidc-get-callback-acknowledged` because credentials or correlation values enter URL query strings. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
 | RADIUS auth | Gated | Login, method config, user create/read/list/delete, paginated user list helpers. Available only with `radius-auth` plus `radius-auth-acknowledged` because legacy RADIUS uses MD5-based authenticators. |
-| Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, group create/read/list/delete mappings, and staged 2.6 `decode_pac`. |
-| Userpass auth | Yes | Login and user create/read/list/delete, password/policy updates, and staged 2.6 validated pre-hashed bcrypt creation/reset helpers. |
+| Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, group create/read/list/delete mappings, and 2.6 `decode_pac`. |
+| Userpass auth | Yes | Login and user create/read/list/delete, password/policy updates, and 2.6 validated pre-hashed bcrypt creation/reset helpers. |
 
 ### Secret Engines
 
@@ -627,7 +625,7 @@ Selected unsupported fields fail locally and are never silently omitted.
 | Lease helpers | Yes | Safe exact lookup, renew, revoke, prefix revoke, force prefix revoke, count, tidy, and `RenewalHint` timing helpers for caller-owned renewal loops. |
 | Plugin catalog | Yes | List, type-list, register, read, delete, and mounted backend reload helpers. |
 | Production init, unseal, rekey, rotate, token ceremonies, in-flight diagnostics, PKI root deletion | Gated | Available only with `operator-ops` plus `operator-ops-acknowledged`; default builds cannot call these APIs. PKI root deletion also requires `PkiRootDeletion::confirm()` at the call site. |
-| System backend closure | Yes | Modern ACL, auth-mount reads, lease listings, barrier/key-share rotation, password policies, root/recovery token ceremonies, local token decoding, resultant ACL, legacy recovery-key rekey, in-flight inspection, and staged OpenBao 2.6 workflow management/execution are typed. Workflow trace and token-free execution require separate acknowledgment features. UI headers and internal counter/request/router inspection require `unstable-internal-ops`; bounded system-log streaming requires `monitor-stream`. |
+| System backend closure | Yes | Modern ACL, auth-mount reads, lease listings, barrier/key-share rotation, password policies, root/recovery token ceremonies, local token decoding, resultant ACL, legacy recovery-key rekey, in-flight inspection, and OpenBao 2.6 workflow management/execution are typed. Workflow trace and token-free execution require separate acknowledgment features. UI headers and internal counter/request/router inspection require `unstable-internal-ops`; bounded system-log streaming requires `monitor-stream`. |
 
 ## Examples
 

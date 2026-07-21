@@ -19,12 +19,11 @@
   Kubernetes JWT provider, userpass bcrypt-hash, and Kerberos PAC contracts.
   Commit 08 adds readback and separately acknowledged typed send paths for the
   ACL slash/wildcard, PKI glob, and SSH comma identity-template overrides.
-  The staged registry now has all 690 operations resolved; exact 2.6.0 JWT CEL
-  PATCH is security-blocked because upstream drops audience and leeway
-  constraints. The historical projection remains
-  byte-identical to the active 21-profile registry. The candidate is explicitly
-  introspection-only: runtime policies and dispatch remain capped at 2.5.5
-  until final cross-lock promotion in Commit 09.
+  Commit 09 atomically promotes the release/API locks, 690-operation registry,
+  22-profile dispatch, response fixtures, 15,180-cell version contract, and
+  exact-image live matrix. All 22 releases pass; exact 2.6.0 executes six
+  additional focused flows. JWT CEL PATCH remains security-blocked for exact
+  2.6.0 because upstream drops audience and leeway constraints.
 - Compatibility invariant: append an exact `2.6.0` profile without modifying
   the behavior, evidence hashes, routes, or field rules of the 21 profiles from
   `2.0.0` through `2.5.5`.
@@ -58,9 +57,9 @@ additions, so operation counts alone must not be treated as new functionality.
 
 The active release, snapshot, capability, contract, and live-test locks are
 cryptographically cross-bound. A release cannot be appended to only one of
-them while keeping CI honest. Therefore 2.6.0 is staged under
-`compat/onboarding/2.6.0/` until the complete evidence set is ready for atomic
-promotion into the active 22-profile inventory.
+them while keeping CI honest. The original files under
+`compat/onboarding/2.6.0/` preserve pre-promotion evidence; Commit 09 promotes
+the complete set into the active 22-profile inventory.
 
 ## Investigation Findings
 
@@ -365,6 +364,9 @@ policy/role output.
 Pentest range: `<commit-07>..<commit-08>`.
 
 ### Commit 09: Run the complete 22-release compatibility matrix
+
+Status: implemented after Commit 08 (`063c333`); pentest pending for the final
+Commit 09 hash.
 
 Suggested title: `Verify OpenBao 2.0.0 through 2.6.0 compatibility`
 

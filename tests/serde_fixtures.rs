@@ -144,7 +144,7 @@ fn locked_openbao_response_profiles_deserialize() -> Result<(), Box<dyn Error>> 
         serde_json::from_str(include_str!("fixtures/openbao_response_profiles.json"))?;
     assert_eq!(fixtures.schema, "openbao-versioned-response-fixtures/v1");
     assert_eq!(fixtures.snapshot_lock_sha256.len(), 64);
-    assert_eq!(fixtures.profiles.len(), 21);
+    assert_eq!(fixtures.profiles.len(), 22);
 
     for (index, fixture) in fixtures.profiles.into_iter().enumerate() {
         assert_eq!(fixture.openapi_sha256.len(), 64);

@@ -6,18 +6,26 @@ All notable changes to this project are documented here.
 
 ### Added
 
-- Added staged OpenBao 2.6 workflow list/scan, read/write/delete, and
+- Added OpenBao 2.6 workflow list/scan, read/write/delete, and
   authenticated execution APIs with bounded sanitizing definitions and JSON
   input/output.
 - Added separately acknowledged `workflow-trace` and
   `unauthenticated-workflows` feature pairs, redacted trace handling, and
   conditional token-free dispatch without route probing or fallback.
-- Added staged OpenBao 2.6 JWT CEL role/login APIs, Kubernetes JWT provider
+- Added OpenBao 2.6 JWT CEL role/login APIs, Kubernetes JWT provider
   configuration, validated userpass bcrypt-hash creation/reset helpers, and
   Kerberos PAC-decoding configuration with exact-version request-field rules.
-- Added staged OpenBao 2.6 ACL slash/wildcard, PKI glob, and SSH comma
+- Added OpenBao 2.6 ACL slash/wildcard, PKI glob, and SSH comma
   identity-template override readback plus explicitly acknowledged typed write
   methods and exact-version request-field rules.
+- Promoted OpenBao 2.6.0 into the active release, API snapshot, capability,
+  response-fixture, version-contract, CI, and live-test inventories.
+- Expanded the active compatibility model to 690 operation identities across
+  22 exact profiles and 15,180 explicit operation/profile cells.
+- Added digest-pinned live 2.6.0 checks for exact root-generation routing,
+  sealable namespaces, workflow CRUD/execution, JWT CEL role CRUD, userpass
+  bcrypt-hash administration, and changed response fields. All 22 locked
+  releases pass their own exact profile.
 
 ### Security
 

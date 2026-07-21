@@ -12,8 +12,8 @@ ranges, mixed clusters, assumed mode, and future-release onboarding, is in
 
 ## Release Lock
 
-`releases.lock.json` records the 21 published OpenBao releases selected for the
-initial compatibility range. Each record contains:
+`releases.lock.json` records the 22 published OpenBao releases from `2.0.0`
+through `2.6.0` selected for the active compatibility range. Each record contains:
 
 - the exact official Git tag ref object and peeled source commit;
 - the published, non-draft, non-prerelease GitHub Release timestamp;
@@ -34,15 +34,11 @@ Releases API has no published release for either tag. A repository tag alone
 does not enter the supported stable-release inventory.
 
 New releases are first recorded outside the active inventory under
-`onboarding/<version>/`. The separately checksummed and validator-anchored
-`onboarding/2.6.0/release-evidence.json` locks the 2.6.0 source release, image,
-signature topology, and embedded provenance. Its separately anchored
-`api-evidence.lock.json` binds the tagged documentation, normalized runtime
-OpenAPI, `2.5.5--2.6.0` diff, current rendered-doc observation, and reviewed
-source/runtime discrepancies. Capability, contract, and live evidence remain
-incomplete. Staging prevents a newly published release from changing the
-active profile count or invalidating historical snapshot, capability, and test
-matrices before the complete evidence set can be promoted atomically.
+`onboarding/<version>/`. The 2.6.0 onboarding files remain as immutable
+pre-promotion evidence for its source release, image, signature topology,
+tagged documentation, runtime OpenAPI, adjacent diff, rendered observation,
+and reviewed discrepancies. The same evidence is now promoted into the active
+22-profile locks, capability registry, contracts, and live matrix.
 
 OpenBao's OCI indexes and `linux/amd64` manifests were verified with Cosign
 `3.1.1`, built from module tag `v3.1.1` at peeled source commit
@@ -62,17 +58,18 @@ visible without adding roughly two MiB of duplicated certificate material.
 
 OpenBao 2.6.0 changed its release-image topology: the multi-platform index is
 signed by the exact `release-images.yml` workflow identity, while its
-`linux/amd64` child manifest has no separate Cosign signature. The staged
+`linux/amd64` child manifest has no separate Cosign signature. The active
 record says so explicitly. Integrity for that child comes from its descriptor
 inside the verified signed index; it is never reported as independently
 signed. The same index includes a BuildKit SLSA provenance manifest whose
-subject and source revision were checked and locked. This does not turn the
-staged release into an active compatibility claim.
+subject and source revision were checked and locked. This is a different
+verification topology, not a claim that the child was independently signed.
 
-No Cosign `.att` OCI tags were present for this repository, and the GitHub
-attestations API returned no SLSA provenance attestation for the checked image
-indexes on `2026-07-10`. The lock records `not_published`; it does not convert
-the verified image signatures into a provenance-attestation claim.
+No Cosign `.att` OCI tags were present for the 2.0.0 through 2.5.5 images, and
+the GitHub attestations API returned no SLSA provenance attestation for those
+indexes on `2026-07-10`. Their records remain `not_published`. OpenBao 2.6.0
+instead carries the separately checked embedded BuildKit provenance described
+above.
 
 ## Offline Validation
 
@@ -105,7 +102,7 @@ downgrades. The release and signature locks each have a sidecar SHA-256 plus a
 hard-coded validator anchor, so changing historical evidence requires an
 explicit multi-file review.
 
-The same validator checks the staged 2.6.0 onboarding evidence and rejects
+The same validator checks the historical 2.6.0 onboarding evidence and rejects
 signer substitution, an overclaim that the amd64 child was independently
 signed, provenance-subject substitution, checksum replacement, and all common
 input-file attacks covered by the shared bounded reader.
@@ -146,7 +143,8 @@ component-schema changes between adjacent published releases. A zero-change
 diff is still retained and hashed. Existing artifacts are immutable: the
 generator accepts an existing file only when its bytes are identical.
 
-Rendered `2.3.x`, `2.4.x`, and current `2.5.x` pages are separately recorded
+Rendered `2.3.x`, `2.4.x`, historical-current `2.5.x`, and current `2.6.x`
+pages are separately recorded
 under `rendered-api-cross-checks/`. They are explicitly secondary observations
 because a minor-line or current website can change and cannot prove an exact
 patch release. They never replace or modify tagged-source evidence. No
@@ -158,19 +156,17 @@ reads, and no-follow/non-blocking file opens. It verifies every source commit,
 OCI digest, artifact size/hash, internal version, count, predecessor diff, and
 rendered-observation identity against the release inventory.
 
-The staged 2.6.0 API lock applies the same controls without extending the
-active 21-profile lock. It additionally binds the unchanged 2.5.5 predecessor
-hashes and records reviewed JWT CEL, Kubernetes provider, workflow, and
-non-standard method discrepancies in `onboarding/2.6.0/`. This separation is
-intentional: 2.6.0 is not selectable until all cross-bound evidence is ready
-for atomic promotion.
+The active 2.6.0 API record applies the same controls and also locks the
+unchanged 2.5.5 predecessor hashes plus reviewed JWT CEL, Kubernetes provider,
+workflow, and non-standard method discrepancies. The original onboarding
+artifacts remain immutable audit evidence for the pre-promotion state.
 
 Historical normalized OpenAPI snapshots use the immutable v1 normalizer. That
 normalizer removed identifiers named like annotation keys when they occurred
 inside OpenAPI named maps. New onboarding evidence uses the v2 normalizer,
 which removes annotations contextually while preserving identifiers in OpenAPI
 and JSON Schema named maps, nested callback maps, and security requirement
-objects. The staged lock therefore includes a separately captured v2-normalized
+objects. The active lock therefore includes a separately captured v2-normalized
 2.5.5 predecessor; the adjacent 2.5.5-to-2.6.0 diff compares the same
 normalization schema on both sides without rewriting any historical artifact.
 
@@ -181,7 +177,7 @@ the file in memory and rejects any stale or manually detached fixture.
 
 `version-contract-matrix.json` joins the capability registry, exact tagged
 contracts, request-field rules, response fixtures, and representative live
-core-flow results into all 13,986 operation/profile cells. Its generated
+core-flow results into all 15,180 operation/profile cells. Its generated
 summary and the user-facing `docs/OPENBAO_VERSION_SUPPORT_MATRIX.md` derive
 coverage percentages mechanically. Live and fixture evidence remains labeled
 as representative so a profile pass cannot be misreported as an endpoint-level
@@ -198,7 +194,7 @@ python3 scripts/openbao_api_snapshots.py \
 Generation requires `git`, `skopeo`, and rootless `podman`. Existing committed
 artifacts are never overwritten with different bytes.
 
-To reproduce only the staged 2.6.0 evidence from its exact source clone:
+To reproduce the retained 2.6.0 onboarding evidence from its exact source clone:
 
 ```sh
 python3 scripts/openbao_onboarding_api.py \
@@ -262,7 +258,7 @@ listener twice.
 ## Historical Core-Flow Results
 
 `core-flow-results.json` records a successful live run against every one of the
-21 exact releases in `releases.lock.json`, from `2.0.0` through `2.5.5`. Each
+22 exact releases in `releases.lock.json`, from `2.0.0` through `2.6.0`. Each
 run verifies the reported server version and executes the same core subset:
 
 - health and seal status;
@@ -273,12 +269,19 @@ run verifies the reported server version and executes the same core subset:
 - caller, token, and accessor capability checks;
 - response wrapping, lookup, and unwrap.
 
+Exact `2.6.0` additionally exercises root-token route selection, sealable
+namespaces, workflow CRUD/execution, JWT CEL role CRUD, userpass bcrypt-hash
+administration, and changed response fields. Earlier profiles record those six
+operations as explicit `server-operation-unavailable` skips.
+
 The result is intentionally labeled `tested-subset`. It does not claim that
 every typed helper or every documented OpenBao endpoint was exercised on every
-historical server. The report records zero skipped operations and binds the
-exact release inventory, harness source, Rust test definition, image digest,
+server. The report binds the exact release inventory, harness source, Rust
+test definition, image digest,
 and reported server version. Its canonical bytes are protected by
-`core-flow-results.sha256` and a hard-coded validator anchor.
+`core-flow-results.sha256` and a hard-coded validator anchor. The prior
+21-release result is retained under `core-flow-history/through-2.5.5.json`
+with its original checksum.
 
 The Rust test writes a completion attestation only after the complete flow and
 post-test resource verification succeed. Missing, reordered, duplicated,
@@ -290,10 +293,10 @@ tokens or raw server errors cannot enter committed evidence.
 
 `capability-registry.json` and
 `src/generated/openbao_capabilities.rs` are deterministic outputs of
-`scripts/generate_openbao_capability_registry.py`. The registry assigns 664
+`scripts/generate_openbao_capability_registry.py`. The registry assigns 690
 stable operation identifiers across the union of exact tagged documentation
-and the corrected 2.5.5 contract. Every operation has a contiguous,
-non-overlapping range partition covering all 21 locked releases.
+and reviewed contract corrections. Every operation has a contiguous,
+non-overlapping range partition covering all 22 locked releases.
 
 Availability means only that an exact tagged route is documented. It is not a
 live-behavior result or a typed-SDK support claim. The pre-2.0 matrix's typed
@@ -320,7 +323,7 @@ python3 -B scripts/generate_openbao_capability_registry.py --self-test
 `.github/workflows/openbao-compatibility.yml` obtains every matrix value from
 the validated release inventory through `scripts/openbao_ci_matrix.py`. Pull
 requests run `2.0.0` plus the latest patch in each OpenBao minor line. Scheduled
-nightly runs, manual pre-release gates, and version-tag runs cover all 21 exact
+nightly runs, manual pre-release gates, and version-tag runs cover all 22 exact
 releases.
 
 Compatibility jobs do not use a shared Cargo cache or repository secrets. They

@@ -184,10 +184,17 @@ def report_metadata() -> dict[str, Any]:
 def validate_operation(operation: dict[str, Any]) -> None:
     if set(operation) != {"id", "status", "reason_code", "classification"}:
         raise CiMatrixError("CI operation result fields are invalid")
-    if operation["status"] != "passed":
-        raise CiMatrixError("CI core-flow operations cannot be skipped or failed individually")
-    if operation["reason_code"] is not None or operation["classification"] is not None:
-        raise CiMatrixError("passing CI operation carries a failure classification")
+    if operation["status"] == "passed":
+        if operation["reason_code"] is not None or operation["classification"] is not None:
+            raise CiMatrixError("passing CI operation carries a failure classification")
+    elif operation["status"] == "skipped":
+        if (
+            operation["reason_code"] != "server-operation-unavailable"
+            or operation["classification"] != "expected-server-difference"
+        ):
+            raise CiMatrixError("skipped CI operation lacks its stable classification")
+    else:
+        raise CiMatrixError("CI core-flow operation status is invalid")
 
 
 def validate_result_record(
@@ -228,6 +235,12 @@ def validate_result_record(
             if not isinstance(operation, dict):
                 raise CiMatrixError("CI operation result is not an object")
             validate_operation(operation)
+            should_skip = (
+                release["version"] != "2.6.0"
+                and operation["id"] in CORE_OPERATION_IDS[8:]
+            )
+            if (operation["status"] == "skipped") != should_skip:
+                raise CiMatrixError("CI operation status contradicts the exact profile")
     else:
         allowed_reasons = dict(FAILURE_REASONS)
         if allow_ci_reason:
@@ -714,10 +727,11 @@ def self_test() -> None:
         "2.3.2",
         "2.4.4",
         "2.5.5",
+        "2.6.0",
     ]
     if profile_versions("representative", document) != expected_representatives:
         raise CiMatrixError("representative CI profile is not the reviewed release set")
-    if len(profile_versions("all", document)) != 21:
+    if len(profile_versions("all", document)) != 22:
         raise CiMatrixError("all-release CI profile is incomplete")
     for version in ("", "2.5", "v2.5.5", "2.05.5", "2.5.5;echo"):
         expect_rejected(
@@ -792,9 +806,21 @@ def self_test() -> None:
                 "operations": [
                     {
                         "id": operation,
-                        "status": "passed",
-                        "reason_code": None,
-                        "classification": None,
+                        "status": (
+                            "skipped"
+                            if version != "2.6.0" and operation in CORE_OPERATION_IDS[8:]
+                            else "passed"
+                        ),
+                        "reason_code": (
+                            "server-operation-unavailable"
+                            if version != "2.6.0" and operation in CORE_OPERATION_IDS[8:]
+                            else None
+                        ),
+                        "classification": (
+                            "expected-server-difference"
+                            if version != "2.6.0" and operation in CORE_OPERATION_IDS[8:]
+                            else None
+                        ),
                     }
                     for operation in CORE_OPERATION_IDS
                 ],

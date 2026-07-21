@@ -46,18 +46,19 @@ MAX_INPUT_BYTES = 32 * 1024 * 1024
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_OPERATIONS = 2048
 MAX_PATH_BYTES = 4096
-EXPECTED_OPERATION_COUNT = 666
+EXPECTED_OPERATION_COUNT = 690
 EXPECTED_STAGED_OPERATION_COUNT = 690
-EXPECTED_REGISTRY_SHA256 = "16e80a6e668f3de027ade450f3820f559e1c76eaa0e3064d693bd378af1146f2"
+EXPECTED_REGISTRY_SHA256 = "31325842ac84d7db0100bb2d1f4ffdfba7c0029fb3f8745c5c42058f89dac893"
 EXPECTED_STAGED_REGISTRY_SHA256 = "397f94126d3756d51cd779bbbef91aa8f993287f85561d4330a3734902f2a87e"
-EXPECTED_RUST_SHA256 = "b0e659d675d92e2034939c82d6c19f265c6fad2a71fcac64efcc8ac531d4ef0a"
-EXPECTED_VERSIONS = (
+EXPECTED_RUST_SHA256 = "7a659d4dc1a60039c2dffb24a49590338fc33efc8aadd79eee25bdf65809d159"
+HISTORICAL_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
     "2.4.4", "2.5.0", "2.5.1", "2.5.2", "2.5.3", "2.5.4", "2.5.5",
 )
 STAGED_VERSION = "2.6.0"
-EXPECTED_STAGED_VERSIONS = (*EXPECTED_VERSIONS, STAGED_VERSION)
+EXPECTED_VERSIONS = (*HISTORICAL_VERSIONS, STAGED_VERSION)
+EXPECTED_STAGED_VERSIONS = EXPECTED_VERSIONS
 
 # These routes are present in the locked OpenAPI documents but are absent from
 # the tagged MDX operation extraction because their surrounding documentation
@@ -88,7 +89,7 @@ DISPOSITIONS = {
     "typed": "typed",
     "typed-gated": "typed-gated",
 }
-SECURITY_BLOCKED = frozenset()
+HISTORICAL_SECURITY_BLOCKED = frozenset()
 HISTORICAL_DISPOSITIONS = {
     ("GET", "/sys/internal/ui/feature-flags"): "typed-gated",
 }
@@ -123,6 +124,11 @@ STAGED_DISPOSITIONS = {
     ("SCAN", "/sys/workflows/manage"): "typed",
     ("SCAN", "/sys/workflows/manage/:prefix"): "security-blocked",
 }
+SECURITY_BLOCKED = frozenset(
+    f"{method} {path}"
+    for (method, path), disposition in STAGED_DISPOSITIONS.items()
+    if disposition == "security-blocked"
+)
 PENDING_DISPOSITIONS = {
     "pending-typed",
     "pending-typed-gated",
@@ -239,7 +245,7 @@ def matrix_operations(matrix: dict[str, Any]) -> dict[tuple[str, str], str]:
                 raise RegistryError("current contract operation is duplicated")
             result[key] = DISPOSITIONS[status]
     blocked = {operation_key(*key) for key, value in result.items() if value == "security-blocked"}
-    if blocked != SECURITY_BLOCKED:
+    if blocked != HISTORICAL_SECURITY_BLOCKED:
         raise RegistryError("security-blocked operation policy changed without code review")
     return result
 
@@ -339,8 +345,8 @@ def root_generation_endpoints() -> list[dict[str, Any]]:
                 "variants": [
                     {
                         "operation_id": stable_id(*legacy),
-                        "minimum": EXPECTED_VERSIONS[0],
-                        "maximum": EXPECTED_VERSIONS[-1],
+                        "minimum": HISTORICAL_VERSIONS[0],
+                        "maximum": HISTORICAL_VERSIONS[-1],
                     },
                     {
                         "operation_id": stable_id(*current),
@@ -382,8 +388,14 @@ def build_registry() -> dict[str, Any]:
         version = record["version"]
         documentation_path = ROOT / record["documentation"]["path"]
         openapi_path = ROOT / record["openapi"]["path"]
-        tagged = documented_operations(load_json(documentation_path), version)
-        openapi = supplemented_openapi_operations(load_json(openapi_path), version)
+        if version == STAGED_VERSION:
+            tagged, corrected = candidate_documented_operations(
+                load_json(documentation_path)
+            )
+            openapi = CANDIDATE_OPENAPI_SUPPLEMENTS | corrected
+        else:
+            tagged = documented_operations(load_json(documentation_path), version)
+            openapi = supplemented_openapi_operations(load_json(openapi_path), version)
         tagged_by_version[version] = tagged
         openapi_by_version[version] = openapi
         by_version[version] = tagged | openapi
@@ -396,7 +408,10 @@ def build_registry() -> dict[str, Any]:
     operations: list[dict[str, Any]] = []
     for method, path in all_operations:
         disposition = current.get(
-            (method, path), HISTORICAL_DISPOSITIONS.get((method, path), "unlinked")
+            (method, path),
+            STAGED_DISPOSITIONS.get(
+                (method, path), HISTORICAL_DISPOSITIONS.get((method, path), "unlinked")
+            ),
         )
         if operation_key(method, path) in SECURITY_BLOCKED:
             disposition = "security-blocked"
@@ -435,6 +450,7 @@ def build_registry() -> dict[str, Any]:
             "profile_count": len(versions),
             "dispositions": dict(sorted(Counter(item["disposition"] for item in operations).items())),
         },
+        "logical_endpoints": root_generation_endpoints(),
         "operations": operations,
     }
     validate_registry(registry)
@@ -568,6 +584,7 @@ def validate_registry(registry: dict[str, Any]) -> None:
         "contract_matrix_sha256",
         "versions",
         "summary",
+        "logical_endpoints",
         "operations",
     }
     if (
@@ -613,6 +630,7 @@ def validate_registry(registry: dict[str, Any]) -> None:
         expected_start = 0
         previous_state: tuple[str, str] | None = None
         latest_available = False
+        ever_available = False
         for item in ranges:
             if set(item) != {"minimum", "maximum", "availability", "evidence"}:
                 raise RegistryError("capability range fields are invalid")
@@ -634,17 +652,14 @@ def validate_registry(registry: dict[str, Any]) -> None:
                 raise RegistryError("capability ranges overlap, contain gaps, or contradict evidence")
             expected_start = maximum + 1
             previous_state = state
+            ever_available |= state[0] == "documented"
             if maximum == len(versions) - 1:
                 latest_available = state[0] == "documented"
         if expected_start != len(versions):
             raise RegistryError("capability ranges do not cover every exact profile")
         historical_disposition = HISTORICAL_DISPOSITIONS.get((method, path))
-        if (
-            operation["disposition"] in {"typed", "typed-gated"}
-            and not latest_available
-            and historical_disposition != operation["disposition"]
-        ):
-            raise RegistryError("typed capability is unavailable in the current profile")
+        if operation["disposition"] in {"typed", "typed-gated"} and not ever_available:
+            raise RegistryError("typed capability is unavailable in every profile")
         if historical_disposition is not None and latest_available:
             raise RegistryError("historical-only capability is unexpectedly current")
         key = operation_key(method, path)
@@ -662,6 +677,39 @@ def validate_registry(registry: dict[str, Any]) -> None:
         "dispositions": expected_counts,
     }:
         raise RegistryError("capability registry summary is inconsistent")
+
+    operation_ids = set(ids)
+    endpoints = registry["logical_endpoints"]
+    if not isinstance(endpoints, list) or len(endpoints) != len(ROOT_GENERATION_ENDPOINTS):
+        raise RegistryError("logical endpoint inventory is invalid")
+    endpoint_ids: list[str] = []
+    for endpoint in endpoints:
+        if set(endpoint) != {"id", "variants"} or not isinstance(endpoint["variants"], list):
+            raise RegistryError("logical endpoint fields are invalid")
+        endpoint_ids.append(endpoint["id"])
+        expected_minimum = EXPECTED_VERSIONS[0]
+        for variant in endpoint["variants"]:
+            if set(variant) != {"operation_id", "minimum", "maximum"}:
+                raise RegistryError("logical endpoint variant fields are invalid")
+            minimum = version_index.get(variant["minimum"])
+            maximum = version_index.get(variant["maximum"])
+            if (
+                variant["operation_id"] not in operation_ids
+                or minimum is None
+                or maximum is None
+                or minimum > maximum
+                or variant["minimum"] != expected_minimum
+            ):
+                raise RegistryError("logical endpoint variants overlap or contain a gap")
+            expected_minimum = (
+                EXPECTED_VERSIONS[maximum + 1]
+                if maximum + 1 < len(EXPECTED_VERSIONS)
+                else ""
+            )
+        if expected_minimum:
+            raise RegistryError("logical endpoint variants do not cover every profile")
+    if endpoint_ids != sorted(set(endpoint_ids)):
+        raise RegistryError("logical endpoint identifiers are invalid")
 
 
 def validate_staged_registry(
@@ -916,11 +964,9 @@ def rust_output(registry: dict[str, Any]) -> bytes:
 
 def outputs() -> dict[Path, bytes]:
     active = build_registry()
-    staged = build_staged_registry(active)
     return {
         REGISTRY_PATH: canonical_json(active),
-        STAGED_REGISTRY_PATH: canonical_json(staged),
-        RUST_PATH: rust_output(staged),
+        RUST_PATH: rust_output(active),
     }
 
 
@@ -950,7 +996,6 @@ def verify_outputs() -> None:
     generated = outputs()
     expected_hashes = {
         REGISTRY_PATH: EXPECTED_REGISTRY_SHA256,
-        STAGED_REGISTRY_PATH: EXPECTED_STAGED_REGISTRY_SHA256,
         RUST_PATH: EXPECTED_RUST_SHA256,
     }
     for path, expected in generated.items():
@@ -962,12 +1007,17 @@ def verify_outputs() -> None:
             raise RegistryError("generated capability output is missing or unsafe") from error
         if actual != expected:
             raise RegistryError("generated capability output is stale")
+    try:
+        staged = read_regular_file(STAGED_REGISTRY_PATH, MAX_OUTPUT_BYTES)
+    except (OSError, SnapshotError) as error:
+        raise RegistryError("historical candidate registry is missing or unsafe") from error
+    if sha256(staged) != EXPECTED_STAGED_REGISTRY_SHA256:
+        raise RegistryError("historical candidate registry checksum changed")
 
 
 def self_test() -> None:
     verify_outputs()
     registry = build_registry()
-    staged = build_staged_registry(registry)
 
     def expect_rejected(label: str, value: dict[str, Any]) -> None:
         try:
@@ -1005,27 +1055,6 @@ def self_test() -> None:
     if canonical_json(build_registry()) != canonical_json(registry) or rust_output(build_registry()) != rust_output(registry):
         raise RegistryError("capability generation is not deterministic")
 
-    staged_gap = copy.deepcopy(staged)
-    staged_gap["logical_endpoints"][0]["variants"][1]["minimum"] = "2.5.5"
-    try:
-        validate_staged_registry(staged_gap, registry)
-    except RegistryError:
-        pass
-    else:
-        raise RegistryError("capability self-test accepted overlapping candidate routes")
-
-    historical_mutation = copy.deepcopy(staged)
-    historical_mutation["operations"][0]["ranges"][0]["evidence"] = "locked-openapi"
-    try:
-        validate_staged_registry(historical_mutation, registry)
-    except RegistryError:
-        pass
-    else:
-        raise RegistryError("capability self-test accepted historical profile mutation")
-
-    if canonical_json(build_staged_registry(registry)) != canonical_json(staged):
-        raise RegistryError("staged capability generation is not deterministic")
-
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -1043,7 +1072,6 @@ def main() -> int:
             generated = outputs()
             expected_hashes = {
                 REGISTRY_PATH: EXPECTED_REGISTRY_SHA256,
-                STAGED_REGISTRY_PATH: EXPECTED_STAGED_REGISTRY_SHA256,
                 RUST_PATH: EXPECTED_RUST_SHA256,
             }
             for path, data in generated.items():
@@ -1052,15 +1080,13 @@ def main() -> int:
                 atomic_write(path, data)
             print(
                 "OpenBao capability registry: wrote "
-                f"{EXPECTED_OPERATION_COUNT} active and "
-                f"{EXPECTED_STAGED_OPERATION_COUNT} staged operations"
+                f"{EXPECTED_OPERATION_COUNT} active operations"
             )
         elif arguments.verify:
             verify_outputs()
             print(
                 "OpenBao capability registry: "
-                f"{EXPECTED_OPERATION_COUNT} active and "
-                f"{EXPECTED_STAGED_OPERATION_COUNT} staged operations verified"
+                f"{EXPECTED_OPERATION_COUNT} active operations verified"
             )
         else:
             self_test()

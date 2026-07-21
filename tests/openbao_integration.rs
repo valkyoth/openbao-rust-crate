@@ -84,11 +84,53 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     let kv1_mount = format!("obrs-kv1-{suffix}");
     let kv2_mount = format!("obrs-kv2-{suffix}");
     let auth_mount = format!("obrs-auth-{suffix}");
+    #[cfg(feature = "operator-ops")]
+    let jwt_mount = format!("obrs-jwt-{suffix}");
     let policy_name = format!("obrs-policy-{suffix}");
+    #[cfg(feature = "operator-ops")]
+    let namespace = format!("obrs-ns-{suffix}");
+    #[cfg(feature = "operator-ops")]
+    let workflow = format!("obrs-flow-{suffix}");
+    #[cfg(feature = "operator-ops")]
+    let hashed_user = format!("obrs-user-{suffix}");
 
     let result = run_flow(&client, &kv1_mount, &kv2_mount, &auth_mount, &policy_name).await;
+    #[cfg(feature = "operator-ops")]
+    let latest_result = if result.is_ok() && expected_version == "2.6.0" {
+        run_2_6_flow(
+            &client,
+            &kv1_mount,
+            &auth_mount,
+            &jwt_mount,
+            &namespace,
+            &workflow,
+            &hashed_user,
+        )
+        .await
+    } else {
+        Ok(())
+    };
+    #[cfg(not(feature = "operator-ops"))]
+    let latest_result: Result<(), Box<dyn std::error::Error>> = if expected_version == "2.6.0" {
+        Err(io::Error::other("OpenBao 2.6.0 integration requires the operator-ops feature").into())
+    } else {
+        Ok(())
+    };
+    #[cfg(feature = "operator-ops")]
+    if expected_version == "2.6.0" {
+        cleanup_2_6_flow(
+            &client,
+            &jwt_mount,
+            &namespace,
+            &workflow,
+            &auth_mount,
+            &hashed_user,
+        )
+        .await?;
+    }
     cleanup_flow(&client, &kv1_mount, &kv2_mount, &auth_mount, &policy_name).await?;
     result?;
+    latest_result?;
     write_core_flow_attestation(&result_file, &expected_version)?;
     Ok(())
 }
@@ -118,7 +160,7 @@ async fn cleanup_flow(
     Ok(())
 }
 
-const CORE_OPERATION_IDS: [&str; 8] = [
+const CORE_OPERATION_IDS: [&str; 14] = [
     "health",
     "mount-management",
     "kv1",
@@ -127,27 +169,211 @@ const CORE_OPERATION_IDS: [&str; 8] = [
     "token",
     "capabilities",
     "response-wrapping",
+    "root-generation-routing",
+    "sealable-namespace",
+    "workflow",
+    "jwt-cel",
+    "userpass-password-hash",
+    "changed-response-fields",
+];
+
+const OPENBAO_2_6_OPERATION_IDS: [&str; 6] = [
+    "root-generation-routing",
+    "sealable-namespace",
+    "workflow",
+    "jwt-cel",
+    "userpass-password-hash",
+    "changed-response-fields",
 ];
 
 #[derive(Serialize)]
 struct CoreFlowAttestation<'a> {
     schema: &'static str,
     version: &'a str,
-    executed: [&'static str; 8],
-    skipped: [&'static str; 0],
+    executed: Vec<&'static str>,
+    skipped: Vec<&'static str>,
 }
 
 fn write_core_flow_attestation(
     result_file: &str,
     expected_version: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let is_2_6 = expected_version == "2.6.0";
     let encoded = serde_json::to_vec(&CoreFlowAttestation {
         schema: "openbao-core-flow-attestation/v1",
         version: expected_version,
-        executed: CORE_OPERATION_IDS,
-        skipped: [],
+        executed: if is_2_6 {
+            CORE_OPERATION_IDS.to_vec()
+        } else {
+            CORE_OPERATION_IDS[..8].to_vec()
+        },
+        skipped: if is_2_6 {
+            Vec::new()
+        } else {
+            OPENBAO_2_6_OPERATION_IDS.to_vec()
+        },
     })?;
     fs::write(result_file, encoded)?;
+    Ok(())
+}
+
+#[cfg(feature = "operator-ops")]
+async fn run_2_6_flow(
+    client: &Client<openbao::Authenticated>,
+    kv1_mount: &str,
+    userpass_mount: &str,
+    jwt_mount: &str,
+    namespace: &str,
+    workflow: &str,
+    hashed_user: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    eprintln!("OpenBao integration stage: root-generation-routing");
+    assert!(!client.sys().operator_generate_root_status().await?.started);
+    let started = client
+        .sys()
+        .operator_generate_root_start(&openbao::sys::OperatorTokenGenerationStartRequest::new())
+        .await?;
+    assert!(started.status.started);
+    assert!(started.otp.is_some());
+    client.sys().operator_generate_root_cancel().await?;
+    assert!(!client.sys().operator_generate_root_status().await?.started);
+
+    eprintln!("OpenBao integration stage: sealable-namespace");
+    let creation = client
+        .sys()
+        .create_sealable_namespace(
+            namespace,
+            &openbao::sys::SealableNamespaceRequest::new(1, 1)?,
+        )
+        .await?;
+    assert_eq!(creation.key_threshold, 1);
+    let share = creation
+        .key_shares
+        .into_iter()
+        .next()
+        .ok_or_else(|| io::Error::other("sealable namespace returned no unseal share"))?;
+    if !client.sys().namespace_seal_status(namespace).await?.sealed {
+        client.sys().seal_namespace(namespace).await?;
+    }
+    assert!(client.sys().namespace_seal_status(namespace).await?.sealed);
+    assert!(
+        !client
+            .sys()
+            .unseal_namespace(namespace, &share)
+            .await?
+            .sealed
+    );
+
+    eprintln!("OpenBao integration stage: workflow");
+    let definition = openbao::sys::WorkflowWriteRequest::new(SecretString::from(format!(
+        "flow \"read\" {{ request \"secret\" {{ operation = \"read\" path = \"{kv1_mount}/app/config\" }} }}"
+    )))?;
+    eprintln!("OpenBao integration stage: workflow-write");
+    let stored = client.sys().write_workflow(workflow, &definition).await?;
+    assert_eq!(stored.path, workflow);
+    eprintln!("OpenBao integration stage: workflow-list");
+    assert!(
+        client
+            .sys()
+            .list_workflows()
+            .await?
+            .keys
+            .iter()
+            .any(|key| key == workflow)
+    );
+    eprintln!("OpenBao integration stage: workflow-execute");
+    let _ = client
+        .sys()
+        .execute_workflow(workflow, &openbao::sys::WorkflowData::empty())
+        .await?;
+
+    eprintln!("OpenBao integration stage: jwt-cel");
+    client
+        .sys()
+        .enable_auth_method(
+            jwt_mount,
+            &openbao::sys::AuthEnableRequest {
+                backend_type: "jwt".to_owned(),
+                description: Some("openbao crate 2.6 integration test".to_owned()),
+                config: None,
+                local: Some(true),
+            },
+        )
+        .await?;
+    let jwt = client.jwt_admin_at(jwt_mount)?;
+    let role = openbao::auth::jwt::JwtCelRoleRequest::new(openbao::auth::jwt::JwtCelProgram::new(
+        "false",
+    )?);
+    assert_eq!(jwt.write_cel_role("service", &role).await?.name, "service");
+    assert_eq!(jwt.read_cel_role("service").await?.name, "service");
+    assert!(
+        jwt.list_cel_roles()
+            .await?
+            .keys
+            .iter()
+            .any(|name| name == "service")
+    );
+
+    eprintln!("OpenBao integration stage: userpass-password-hash");
+    let first_hash = openbao::auth::userpass::UserpassPasswordHash::bcrypt(SecretString::from(
+        format!("$2b$10${}", "A".repeat(53)),
+    ))?;
+    let second_hash = openbao::auth::userpass::UserpassPasswordHash::bcrypt(SecretString::from(
+        format!("$2b$10${}", "B".repeat(53)),
+    ))?;
+    let userpass = client.userpass_admin_at(userpass_mount)?;
+    userpass
+        .write_hashed_user(
+            hashed_user,
+            &openbao::auth::userpass::UserpassHashedUserRequest::new(first_hash),
+        )
+        .await?;
+    let _ = userpass.read_user(hashed_user).await?;
+    userpass
+        .update_password_hash(hashed_user, &second_hash)
+        .await?;
+
+    eprintln!("OpenBao integration stage: changed-response-fields");
+    let seal = client.sys().seal_status().await?;
+    assert_eq!(seal.version, "2.6.0");
+    assert!(seal.commit_date.is_some());
+    Ok(())
+}
+
+#[cfg(feature = "operator-ops")]
+async fn cleanup_2_6_flow(
+    client: &Client<openbao::Authenticated>,
+    jwt_mount: &str,
+    namespace: &str,
+    workflow: &str,
+    userpass_mount: &str,
+    hashed_user: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let _ = client.sys().operator_generate_root_cancel().await;
+    let _ = client.sys().delete_workflow(workflow).await;
+    let _ = client
+        .jwt_admin_at(jwt_mount)?
+        .delete_cel_role("service")
+        .await;
+    let _ = client
+        .userpass_admin_at(userpass_mount)?
+        .delete_user(hashed_user)
+        .await;
+    let _ = client.sys().delete_namespace(namespace).await;
+    if client
+        .sys()
+        .list_namespaces()
+        .await?
+        .keys
+        .iter()
+        .any(|path| path.trim_end_matches('/') == namespace)
+    {
+        let _ = client
+            .sys()
+            .delete_sealed_namespace(namespace, openbao::sys::SealedNamespaceDeletion::confirm())
+            .await;
+    }
+    let _ = client.sys().disable_auth_method(jwt_mount).await;
     Ok(())
 }
 

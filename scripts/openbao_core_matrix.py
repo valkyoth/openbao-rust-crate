@@ -31,9 +31,12 @@ from validate_openbao_release_lock import (
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_PATH = ROOT / "compat/core-flow-results.json"
 CHECKSUM_PATH = ROOT / "compat/core-flow-results.sha256"
+HISTORICAL_RESULTS_PATH = ROOT / "compat/core-flow-history/through-2.5.5.json"
+HISTORICAL_CHECKSUM_PATH = ROOT / "compat/core-flow-history/through-2.5.5.sha256"
 HARNESS_PATH = ROOT / "scripts/openbao_test_harness.py"
 TEST_PATH = ROOT / "tests/openbao_integration.rs"
-EXPECTED_RESULTS_SHA256 = "d7aa0b1f07d535ae8b762587ae8221cefb073ff5acba12fec3d7d5b03e1e3d8c"
+EXPECTED_RESULTS_SHA256 = "f398edd6e1371fdc18dfdedff86821d926fcb434955308862cccc6e036318375"
+HISTORICAL_RESULTS_SHA256 = "d7aa0b1f07d535ae8b762587ae8221cefb073ff5acba12fec3d7d5b03e1e3d8c"
 MAX_RESULTS_BYTES = 512 * 1024
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
 FAILURE_CLASSES = {
@@ -263,6 +266,12 @@ def validate_matrix(
                     raise MatrixError("skipped operation lacks a stable reason code")
             else:
                 raise MatrixError("core-flow operation status is invalid")
+            should_skip = (
+                record["version"] != "2.6.0"
+                and operation_id in CORE_OPERATION_IDS[8:]
+            )
+            if (operation["status"] == "skipped") != should_skip:
+                raise MatrixError("core-flow operation status contradicts the exact profile")
         if operation_ids != list(CORE_OPERATION_IDS):
             raise MatrixError("core-flow operations are missing, duplicated, or reordered")
         if passed_operations == 0:
@@ -310,6 +319,7 @@ def immutable_write(path: Path, data: bytes, maximum: int) -> None:
 
 
 def capture() -> None:
+    validate_historical_results()
     matrix = build_matrix()
     try:
         inventory = validate_lock_files()
@@ -318,16 +328,23 @@ def capture() -> None:
     validate_matrix(matrix, inventory, require_all_passed=True)
     data = canonical_json(matrix)
     digest = sha256(data)
-    immutable_write(RESULTS_PATH, data, MAX_RESULTS_BYTES)
-    immutable_write(
+    current = read_regular_file(RESULTS_PATH, MAX_RESULTS_BYTES)
+    if sha256(current) not in {
+        HISTORICAL_RESULTS_SHA256,
+        EXPECTED_RESULTS_SHA256,
+        digest,
+    }:
+        raise MatrixError("active core-flow evidence has an unknown predecessor")
+    atomic_write(RESULTS_PATH, data)
+    atomic_write(
         CHECKSUM_PATH,
         f"{digest}  core-flow-results.json\n".encode(),
-        256,
     )
     print(f"OpenBao core matrix: {len(matrix['records'])} exact releases passed")
 
 
 def load_results() -> tuple[dict[str, Any], bytes]:
+    validate_historical_results()
     try:
         data = read_regular_file(RESULTS_PATH, MAX_RESULTS_BYTES)
         checksum = read_regular_file(CHECKSUM_PATH, 256)
@@ -343,6 +360,19 @@ def load_results() -> tuple[dict[str, Any], bytes]:
     except SnapshotError as error:
         raise MatrixError("core-flow evidence is malformed JSON") from error
     return value, data
+
+
+def validate_historical_results() -> None:
+    try:
+        data = read_regular_file(HISTORICAL_RESULTS_PATH, MAX_RESULTS_BYTES)
+        checksum = read_regular_file(HISTORICAL_CHECKSUM_PATH, 256)
+    except (OSError, SnapshotError) as error:
+        raise MatrixError("historical core-flow evidence is missing or unsafe") from error
+    if sha256(data) != HISTORICAL_RESULTS_SHA256:
+        raise MatrixError("historical core-flow evidence digest changed")
+    expected = f"{HISTORICAL_RESULTS_SHA256}  through-2.5.5.json\n".encode()
+    if checksum != expected:
+        raise MatrixError("historical core-flow evidence sidecar changed")
 
 
 def verify() -> None:

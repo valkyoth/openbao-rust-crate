@@ -2,15 +2,11 @@
 
 OpenBao documents its HTTP API below `/v1`, but that prefix is not a
 backwards-compatibility guarantee. The SDK therefore selects an immutable
-exact-release profile before a typed request is serialized. Profiles currently
-cover the 21 published stable releases from `2.0.0` through `2.5.5`. During
-the 2.1.0 development cycle, `main` also contains a generated 2.6.0 candidate
-profile. Its evidence is staged and checksum-anchored, but it is not part of
-the stable support matrix until all pending 2.6 operations, field rules,
-fixtures, and exact-image results are promoted atomically. Candidate profiles
-are visible through capability introspection only. Strict detection rejects
-them, explicit exact/assumed/range policies cannot select them, and unverified
-or acknowledged-newer routing continues to use the latest promoted profile.
+exact-release profile before a typed request is serialized. Active profiles
+cover all 22 published stable releases from `2.0.0` through `2.6.0`. Exact,
+assumed, range, strict-detection, and acknowledged-newer policies may select
+`2.6.0`; generated route dispatch never probes or falls back to an older
+profile after a server error.
 
 The recommended policy for new applications is strict automatic detection:
 
