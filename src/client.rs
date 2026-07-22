@@ -5208,6 +5208,31 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "memory-lock")]
+    #[test]
+    fn authenticated_client_fails_closed_after_token_lock_poisoning() {
+        let client = Client::new("https://bao.example.com")
+            .and_then(|client| client.try_with_token(SecretString::from("locked-token")))
+            .unwrap_or_else(|error| panic!("failed to construct locked-token client: {error}"));
+        let token = client
+            .token
+            .as_ref()
+            .unwrap_or_else(|| panic!("authenticated client did not retain a token"));
+
+        let poisoned = std::panic::catch_unwind(|| {
+            let _guard = token
+                .0
+                .lock()
+                .unwrap_or_else(|error| panic!("failed to lock test token: {error}"));
+            panic!("poison the token lock");
+        });
+        assert!(poisoned.is_err());
+        assert!(matches!(
+            client.authentication_token_is_memory_locked(),
+            Err(Error::SecretMemoryProtection(message)) if message.contains("poisoned")
+        ));
+    }
+
     #[test]
     fn debug_redacts_namespace() {
         let config = OpenBaoConfig::new("https://bao.example.com")

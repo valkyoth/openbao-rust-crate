@@ -383,6 +383,13 @@ verification or its synchronization lock fails.
 `Client::authentication_token_is_memory_locked` provides a fallible,
 non-secret deployment assertion for the retained allocation.
 
+The mapped token is held behind a standard mutex because the dependency's
+integrity-checking mapped type is `Send` but deliberately not `Sync`. Token
+header construction is therefore serialized briefly for clients shared across
+tasks. If a panic poisons that mutex, the SDK permanently rejects token access
+for that client rather than recovering unknown secret state. Reconstruct the
+client from a reviewed credential source; do not clear or bypass poison.
+
 This automatic scope is deliberately limited to the long-lived token retained
 by an authenticated `Client`. Tokens initially supplied as `SecretString`,
 environment variables, or login responses exist transiently in sanitizing
