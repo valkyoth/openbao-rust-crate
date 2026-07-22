@@ -373,12 +373,21 @@ according to the host runtime. Classified or high-assurance key wrapping must
 not use this software helper; perform wrapping in an HSM or equivalent audited
 boundary instead.
 
-The `memory-lock` feature enables `sanitization` memory-lock support for secret
-buffers where the operating system permits it. It is disabled by default and
-requires `memory-lock-acknowledged` because mlock/VirtualLock limits, container
-permissions, swap policy, and failure behavior are deployment-specific. Memory
-locking is a host hardening control, not a guarantee that dependency-owned HTTP,
-TLS, kernel, allocator, or device buffers avoid swap or crash dumps.
+The `memory-lock` feature enables and exposes `sanitization`'s mapped-memory
+secret types through the crate's `sanitization` re-export. It does **not**
+transparently replace SDK-owned `SecretString` or `SecretVec` fields with
+`LockedSecretString`, `LockedSecretVec`, guarded variants, or their bounded
+wrappers. Consequently, enabling the feature alone does not lock root tokens,
+unseal or recovery shares, authentication credentials, KV values, or other
+secrets held by the SDK. Applications that need this control must explicitly
+move reviewed values into mapped-memory types at their own ownership boundary.
+
+The feature is disabled by default and requires `memory-lock-acknowledged`
+because mlock/VirtualLock limits, container permissions, swap policy, and
+failure behavior are deployment-specific. Even for explicitly mapped values,
+memory locking is a host hardening control, not a guarantee that SDK-owned or
+dependency-owned HTTP, TLS, kernel, allocator, or device buffers avoid swap or
+crash dumps.
 
 The `radius-auth` feature is not enabled by default. RADIUS relies on
 MD5-based authenticators and is retained only for audited legacy compatibility.

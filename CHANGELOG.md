@@ -13,6 +13,13 @@ All notable changes to this project are documented here.
   patch does not change the public API, OpenBao compatibility profiles,
   endpoint routing, or feature-gate boundaries.
 
+### Security
+
+- Clarified that `memory-lock` exposes `sanitization` mapped-memory types but
+  does not transparently lock SDK-owned `SecretString` or `SecretVec` storage.
+  Compile diagnostics and security documentation now reject the previous
+  implication that enabling the feature alone protects SDK-held secrets.
+
 ## 2.1.0 - 2026-07-21
 
 ### Added

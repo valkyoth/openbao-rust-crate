@@ -36,6 +36,16 @@ feature-gate changes.
   fixture lockfile binds `sanitization` but does not enable a feature that
   pulls `base64-ng`.
 
+## Security Documentation
+
+The `memory-lock` feature enables and re-exports `sanitization`'s mapped-memory
+types, but it does not transparently convert SDK-owned `SecretString` or
+`SecretVec` fields into locked or guarded storage. Enabling the feature alone
+therefore does not lock tokens, key shares, credentials, KV values, or other
+SDK-held secrets. Applications requiring this host hardening control must
+explicitly move reviewed values into mapped-memory types and audit allocation
+failure, OS lock limits, swap, and crash-dump policy.
+
 ## Release Gate
 
 Run `scripts/release_2_1_1_gate.sh`. Tagging additionally requires green

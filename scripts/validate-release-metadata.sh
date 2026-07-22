@@ -130,6 +130,8 @@ check_grep 'unauthenticated-workflows-acknowledged = \[\]' Cargo.toml
 check_grep 'identity-template-overrides-acknowledged = \[\]' Cargo.toml
 check_grep 'dev-bootstrap-acknowledged = \[\]' Cargo.toml
 check_grep 'No production exception is currently approved' docs/PANIC_POLICY.md
+check_grep 'transparently replace SDK-owned' SECURITY.md
+check_grep 'does \*\*not\*\* replace SDK-owned' README.md
 check_grep 'scripts/release_2_1_gate.sh' release-notes/RELEASE_NOTES_2.1.0.md
 check_grep 'scripts/release_2_1_1_gate.sh' release-notes/RELEASE_NOTES_2.1.1.md
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml

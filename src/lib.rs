@@ -122,8 +122,9 @@ compile_error!(
 
 #[cfg(all(feature = "memory-lock", not(feature = "memory-lock-acknowledged")))]
 compile_error!(
-    "The memory-lock feature asks sanitization to lock secret buffers out of swap. \
-     Review OS mlock/VirtualLock limits, failure behavior, and deployment quotas before enabling it. \
+    "The memory-lock feature exposes sanitization mapped-memory secret types; it does not replace \
+     SDK-owned SecretString/SecretVec storage with locked or guarded allocations. Review explicit \
+     mapped-type use, OS mlock/VirtualLock limits, failure behavior, and deployment quotas. \
      Add feature \"memory-lock-acknowledged\" to confirm this host-level control was audited."
 );
 

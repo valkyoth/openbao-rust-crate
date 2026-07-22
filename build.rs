@@ -13,7 +13,7 @@ fn main() {
     }
     if std::env::var_os("CARGO_FEATURE_MEMORY_LOCK").is_some() {
         println!(
-            "cargo:warning=memory-lock is enabled. Verify host mlock/VirtualLock limits, swap policy, and failure handling for this deployment."
+            "cargo:warning=memory-lock exposes sanitization mapped-memory types but does not lock SDK-owned SecretString/SecretVec storage. Verify explicit type use, host mlock/VirtualLock limits, swap policy, and failure handling."
         );
     }
     if std::env::var_os("CARGO_FEATURE_OIDC_GET_CALLBACK_ACKNOWLEDGED").is_some() {

@@ -779,6 +779,8 @@ Stop criteria:
   response compatibility rules, and security feature gates remain unchanged;
 - README, migration, stability, changelog, and release notes consistently
   describe the dependency-only patch;
+- `memory-lock` documentation and compile diagnostics explicitly state that
+  the feature exposes mapped types without changing SDK-owned secret storage;
 - `scripts/release_2_1_1_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.1`.
