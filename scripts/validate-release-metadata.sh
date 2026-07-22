@@ -159,7 +159,7 @@ check_grep '2.0.0 - Multi-Version OpenBao Compatibility' docs/RELEASE_PLAN.md
 check_grep '2.0.1 - Compatibility Documentation Correction' docs/RELEASE_PLAN.md
 check_grep '2.0.2 - Focused crates.io Source Package' docs/RELEASE_PLAN.md
 check_grep '2.1.0 - OpenBao 2.6.0 Compatibility' docs/RELEASE_PLAN.md
-check_grep '2.1.1 - Sanitization Dependency Maintenance' docs/RELEASE_PLAN.md
+check_grep '2.1.1 - Security Dependency Maintenance' docs/RELEASE_PLAN.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.12.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.13.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_1.0.0.md
@@ -177,12 +177,12 @@ check_grep 'Release date: 2026-07-12' release-notes/RELEASE_NOTES_2.0.2.md
 check_grep 'Version: 2.1.0' release-notes/RELEASE_NOTES_2.1.0.md
 check_grep 'Release date: 2026-07-21' release-notes/RELEASE_NOTES_2.1.0.md
 check_grep 'Version: 2.1.1' release-notes/RELEASE_NOTES_2.1.1.md
-check_grep 'Release date: 2026-07-21' release-notes/RELEASE_NOTES_2.1.1.md
+check_grep 'Release date: 2026-07-22' release-notes/RELEASE_NOTES_2.1.1.md
 check_grep '2.0.0 - 2026-07-11' CHANGELOG.md
 check_grep '2.0.1 - 2026-07-11' CHANGELOG.md
 check_grep '2.0.2 - 2026-07-12' CHANGELOG.md
 check_grep '2.1.0 - 2026-07-21' CHANGELOG.md
-check_grep '2.1.1 - 2026-07-21' CHANGELOG.md
+check_grep '2.1.1 - 2026-07-22' CHANGELOG.md
 check_grep 'Audit status:' docs/API_STABILITY_AUDIT.md
 check_grep 'From `vaultrs`' docs/MIGRATION_GUIDE.md
 

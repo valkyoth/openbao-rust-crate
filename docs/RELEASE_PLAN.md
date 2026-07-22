@@ -765,7 +765,7 @@ Stop criteria:
 - the complete release gate, all-release GitHub workflow, CodeQL, and final
   exact-commit pentests pass before tagging `v2.1.0`.
 
-### 2.1.1 - Sanitization Dependency Maintenance
+### 2.1.1 - Security Dependency Maintenance
 
 Stop criteria:
 
@@ -773,6 +773,8 @@ Stop criteria:
   `2.1.1`;
 - `sanitization` is updated from `2.0.2` to `2.0.3` in the manifest and every
   repository lockfile;
+- `base64-ng` is updated from `1.3.8` to `1.3.9` in the manifest and every
+  workspace lockfile where the optional dependency is active;
 - the public API, all 22 exact OpenBao profiles, endpoint routing, request and
   response compatibility rules, and security feature gates remain unchanged;
 - README, migration, stability, changelog, and release notes consistently

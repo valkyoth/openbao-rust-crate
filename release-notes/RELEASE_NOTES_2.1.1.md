@@ -3,7 +3,7 @@
 ## Version
 
 - Version: 2.1.1
-- Release date: 2026-07-21
+- Release date: 2026-07-22
 - Git tag: `v2.1.1`
 - Git commit: see the signed `v2.1.1` tag object
 - License: MIT OR Apache-2.0
@@ -11,9 +11,10 @@
 ## Summary
 
 `2.1.1` is a dependency maintenance patch for the stable `2.1.x` line. It
-updates `sanitization` from `2.0.2` to `2.0.3` and refreshes all repository
-lockfiles. There are no SDK API, OpenBao profile, route, request-field,
-response-field, or feature-gate changes.
+updates `sanitization` from `2.0.2` to `2.0.3`, updates `base64-ng` from
+`1.3.8` to `1.3.9`, and refreshes the affected repository lockfiles. There are
+no SDK API, OpenBao profile, route, request-field, response-field, or
+feature-gate changes.
 
 ## Compatibility
 
@@ -29,8 +30,11 @@ response-field, or feature-gate changes.
 
 - Updated `sanitization` to `2.0.3` with the existing `alloc` feature and
   unchanged default-feature policy.
-- Updated the root, fuzz, and native-TLS fixture lockfiles to bind the same
-  dependency release.
+- Updated `base64-ng` to `1.3.9` with the existing optional dependency and
+  `alloc` feature policy.
+- Updated the root and fuzz lockfiles for both dependencies. The native-TLS
+  fixture lockfile binds `sanitization` but does not enable a feature that
+  pulls `base64-ng`.
 
 ## Release Gate
 

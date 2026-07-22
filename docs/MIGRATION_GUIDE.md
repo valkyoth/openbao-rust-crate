@@ -10,10 +10,10 @@ contract dispositions.
 ## From `openbao` 2.1.0 To 2.1.1
 
 `2.1.1` is a source-compatible dependency maintenance patch. It updates
-`sanitization` from `2.0.2` to `2.0.3` without changing the SDK's public API,
-OpenBao compatibility profiles, endpoint routes, request or response field
-rules, or feature-gate boundaries. No application source migration is
-required.
+`sanitization` from `2.0.2` to `2.0.3` and `base64-ng` from `1.3.8` to `1.3.9`
+without changing the SDK's public API, OpenBao compatibility profiles,
+endpoint routes, request or response field rules, or feature-gate boundaries.
+No application source migration is required.
 
 ## From `openbao` 2.0.2 To 2.1.0
 

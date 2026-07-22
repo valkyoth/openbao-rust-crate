@@ -17,6 +17,6 @@ grep -q '2.0.2 - Focused crates.io Source Package' docs/RELEASE_PLAN.md
 grep -q 'Version: 2.0.2' release-notes/RELEASE_NOTES_2.0.2.md
 grep -q '2.1.0 - OpenBao 2.6.0 Compatibility' docs/RELEASE_PLAN.md
 grep -q 'Version: 2.1.0' release-notes/RELEASE_NOTES_2.1.0.md
-grep -q '2.1.1 - Sanitization Dependency Maintenance' docs/RELEASE_PLAN.md
+grep -q '2.1.1 - Security Dependency Maintenance' docs/RELEASE_PLAN.md
 grep -q 'Version: 2.1.1' release-notes/RELEASE_NOTES_2.1.1.md
 echo "stable release gate complete"
