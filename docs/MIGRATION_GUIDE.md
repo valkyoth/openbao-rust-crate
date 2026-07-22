@@ -15,9 +15,23 @@ exception for the non-default, acknowledged `memory-lock` feature. OpenBao
 profiles, endpoint routes, and request/response field rules are unchanged.
 
 Applications that do not enable `memory-lock` require no source migration.
-All applications must keep OpenBao authentication tokens at or below the new
-16 KiB absolute ceiling; oversized custom token formats now return
-`Error::InvalidHeader` before header allocation.
+All clients now default to a 16 KiB authentication-token limit. Oversized
+custom token formats return `Error::InvalidHeader` before header allocation.
+OpenBao does not publish a custom-token length ceiling, so a deployment that
+intentionally uses a larger reviewed format can configure a bounded override:
+
+```rust
+use openbao::OpenBaoConfig;
+
+let config = OpenBaoConfig::new("https://bao.example.com")?
+    .max_auth_token_bytes(64 * 1024)?;
+# Ok::<_, openbao::Error>(config)
+```
+
+The SDK hard ceiling is 1 MiB. High-assurance deployments should keep the
+16 KiB default unless compatibility requires more and memory quotas have been
+reviewed.
+
 With `memory-lock`, `Client::try_with_token` keeps its signature but can now
 return `Error::SecretMemoryProtection` when mapped allocation, OS locking,
 random-canary setup, or canary verification fails. Callers that already hold a

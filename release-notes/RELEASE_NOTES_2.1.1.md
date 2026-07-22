@@ -27,8 +27,9 @@ contracts are unchanged.
 - All 690 logical operation identities and 15,180 operation/profile cells are
   unchanged from `2.1.0`.
 - Normal builds require no source migration from `2.1.0`. `memory-lock` builds
-  receive the compatibility exception described below. Every build now rejects
-  authentication tokens larger than 16 KiB.
+  receive the compatibility exception described below. Every build defaults to
+  a 16 KiB authentication-token limit; reviewed custom formats may configure a
+  larger limit up to the 1 MiB hard ceiling.
 
 ## Dependency Refresh
 
@@ -54,10 +55,12 @@ when the supplied mapping reports an active OS lock, and
 assertions. A safe mutex around the mapped token preserves the authenticated
 client's `Send + Sync` contract while serializing canary verification.
 
-All authentication paths enforce a 16 KiB token ceiling before header or
-mapped-storage allocation. OS-random canaries detect accidental or adjacent
-mapping corruption; they are defense in depth and do not resist an attacker
-that can arbitrarily write process memory.
+All authentication paths enforce the configured token limit before header or
+mapped-storage allocation. The secure default is 16 KiB. Because OpenBao does
+not publish a custom-token length ceiling, `OpenBaoConfig::max_auth_token_bytes`
+allows an explicit reviewed override up to the 1 MiB hard ceiling. OS-random
+canaries detect accidental or adjacent mapping corruption; they are defense in
+depth and do not resist an attacker that can arbitrarily write process memory.
 
 This is an intentional compatibility exception in a non-default,
 acknowledgement-gated feature. Other public `SecretString`/`SecretVec` values

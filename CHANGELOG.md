@@ -17,7 +17,8 @@ All notable changes to this project are documented here.
   `Error::SecretMemoryProtection`.
 - Enabled `sanitization`'s hardened native profile for required OS locking and
   OS-random corruption-detection canaries, rejected direct mapped tokens that
-  are not actually locked, and added a 16 KiB authentication-token ceiling.
+  are not actually locked, and added a 16 KiB default authentication-token
+  limit with an explicit bounded override and 1 MiB hard ceiling.
 
 ### Security
 

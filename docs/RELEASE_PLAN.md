@@ -778,9 +778,12 @@ Stop criteria:
 - all 22 exact OpenBao profiles, endpoint routing, and request and response
   compatibility rules remain unchanged;
 - the non-default acknowledged `memory-lock` feature actively and fail-closed
-  stores authentication tokens no larger than 16 KiB in locked mapped memory
-  with required OS-random canaries, rejects direct mapped tokens without an
-  active OS lock, and exposes a non-secret verification method;
+  stores authentication tokens in locked mapped memory with required OS-random
+  canaries, rejects direct mapped tokens without an active OS lock, and exposes
+  a non-secret verification method;
+- authentication-token processing enforces a 16 KiB secure default before
+  header allocation, permits only an explicit reviewed override, and retains a
+  1 MiB absolute ceiling for compatibility with OpenBao custom token IDs;
 - README, migration, stability, changelog, and release notes consistently
   describe the dependency updates and accepted patch-line compatibility
   exception;

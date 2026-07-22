@@ -378,7 +378,12 @@ header validation, `Client::try_with_token` transfers the token into
 `sanitization::LockedSecretString`; `Client::try_with_locked_token` accepts an
 already mapped token without ordinary SDK heap restaging only when that
 mapping reports an active operating-system memory lock. Authentication tokens
-are capped at 16 KiB before header or mapped-storage allocation. Client
+default to a 16 KiB limit before header or mapped-storage allocation. OpenBao
+permits root or sudo operators to choose custom token IDs without publishing a
+length ceiling, so `OpenBaoConfig::max_auth_token_bytes` provides an explicit
+bounded override up to an absolute 1 MiB ceiling. High-assurance deployments
+should retain the default unless their reviewed token format requires more and
+their locked-memory quota accounts for the larger allocation. Client
 construction fails with `Error::SecretMemoryProtection` if mapping, OS locking,
 or OS-random canary setup cannot be established, and request construction fails
 if canary verification or its synchronization lock fails.

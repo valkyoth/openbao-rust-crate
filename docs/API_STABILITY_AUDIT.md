@@ -37,10 +37,11 @@ make the public API commitments and security boundaries explicit.
   21 historical profiles. `2.1.1` updates `sanitization` to `2.0.3` and
   `base64-ng` to `1.3.9`; it also makes a documented compatibility exception
   for the non-default `memory-lock` feature so authenticated clients retain
-  tokens no larger than 16 KiB in fail-closed locked mapped storage with
-  required random canaries. Direct mapped-token input must report an active OS
-  lock; canaries are not an attacker-resistant integrity boundary. OpenBao
-  contracts are unchanged.
+  tokens in fail-closed locked mapped storage with required random canaries.
+  Authentication tokens have a 16 KiB secure default limit, an explicit
+  configuration override, and a 1 MiB hard ceiling. Direct mapped-token input
+  must report an active OS lock; canaries are not an attacker-resistant
+  integrity boundary. OpenBao contracts are unchanged.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 688 documented operations, 592 are typed, 93 are typed-gated,
   and three are security-blocked because the exact `2.6.0` server handlers are

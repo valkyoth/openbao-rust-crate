@@ -58,7 +58,8 @@ const MAX_RETRY_ATTEMPTS: usize = 8;
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
 const DEFAULT_RETRY_JITTER_PERCENT: u8 = 20;
 const MAX_USER_AGENT_BYTES: usize = 512;
-const MAX_AUTH_TOKEN_BYTES: usize = 16 * 1024;
+const DEFAULT_MAX_AUTH_TOKEN_BYTES: usize = 16 * 1024;
+const ABSOLUTE_MAX_AUTH_TOKEN_BYTES: usize = 1024 * 1024;
 const MAX_COMPATIBILITY_HEALTH_BYTES: usize = 64 * 1024;
 const MAX_COMPATIBILITY_WAITERS: usize = 4096;
 const MAX_ENDPOINT_ID_BYTES: usize = 192;
@@ -334,6 +335,7 @@ pub struct OpenBaoConfig {
     connect_timeout: Duration,
     max_request_bytes: usize,
     max_response_bytes: usize,
+    max_auth_token_bytes: usize,
     user_agent: String,
     namespace: Option<String>,
     http_policy: HttpPolicy,
@@ -364,6 +366,7 @@ impl OpenBaoConfig {
             connect_timeout: Duration::from_secs(5),
             max_request_bytes: DEFAULT_MAX_REQUEST_BYTES,
             max_response_bytes: MAX_RESPONSE_BYTES,
+            max_auth_token_bytes: DEFAULT_MAX_AUTH_TOKEN_BYTES,
             user_agent: "openbao-rust-client".to_owned(),
             namespace: None,
             http_policy: HttpPolicy::HttpsOnly,
@@ -510,6 +513,20 @@ impl OpenBaoConfig {
             ));
         }
         self.max_request_bytes = bytes;
+        Ok(self)
+    }
+
+    /// Sets the maximum authentication-token size accepted by this client.
+    ///
+    /// The secure default is 16 KiB. OpenBao permits root or sudo callers to
+    /// choose custom token IDs without publishing a length ceiling, so
+    /// deployments that intentionally use a larger format may raise this
+    /// bound explicitly. The absolute SDK ceiling is 1 MiB. Raising the limit
+    /// increases transient header allocation and, with `memory-lock`, locked
+    /// memory consumption for every authenticated client.
+    pub fn max_auth_token_bytes(mut self, bytes: usize) -> Result<Self> {
+        validate_max_auth_token_bytes(bytes)?;
+        self.max_auth_token_bytes = bytes;
         Ok(self)
     }
 
@@ -667,6 +684,7 @@ impl OpenBaoConfig {
     fn validate(&self) -> Result<()> {
         validate_base_url_components(&self.base_url)?;
         validate_min_tls_version(self.min_tls_version)?;
+        validate_max_auth_token_bytes(self.max_auth_token_bytes)?;
         if !self.crl_pem_bundles.is_empty()
             && self.root_certificate_mode != RootCertificateMode::OnlyConfigured
         {
@@ -690,6 +708,15 @@ impl OpenBaoConfig {
             ))),
         }
     }
+}
+
+fn validate_max_auth_token_bytes(bytes: usize) -> Result<()> {
+    if !(1..=ABSOLUTE_MAX_AUTH_TOKEN_BYTES).contains(&bytes) {
+        return Err(Error::InvalidParameter(
+            "authentication token limit must be between 1 byte and 1 MiB".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn validate_min_tls_version(version: tls::Version) -> Result<()> {
@@ -746,6 +773,7 @@ impl fmt::Debug for OpenBaoConfig {
             .field("connect_timeout", &self.connect_timeout)
             .field("max_request_bytes", &self.max_request_bytes)
             .field("max_response_bytes", &self.max_response_bytes)
+            .field("max_auth_token_bytes", &self.max_auth_token_bytes)
             .field("user_agent", &self.user_agent)
             .field("has_namespace", &self.namespace.is_some())
             .field("http_policy", &self.http_policy)
@@ -1187,7 +1215,11 @@ impl Client<Unauthenticated> {
     /// Converts the client into an authenticated client after validating that
     /// the token can be represented safely in the configured auth header.
     pub fn try_with_token(self, token: SecretString) -> Result<Client<Authenticated>> {
-        validate_token_for_header(&token, self.config.header_mode)?;
+        validate_token_for_header(
+            &token,
+            self.config.header_mode,
+            self.config.max_auth_token_bytes,
+        )?;
         let token = ClientToken::from_secret_string(token)?;
         Ok(self.with_validated_token(token))
     }
@@ -1197,9 +1229,9 @@ impl Client<Unauthenticated> {
     ///
     /// This avoids staging the retained token in an ordinary SDK-owned heap
     /// allocation. The supplied mapping must report an active operating-system
-    /// memory lock, and the token must not exceed 16 KiB. Header construction
-    /// and the HTTP stack still create transient non-lockable copies; see the
-    /// crate security documentation.
+    /// memory lock, and the token must not exceed the configured authentication
+    /// token limit. Header construction and the HTTP stack still create
+    /// transient non-lockable copies; see the crate security documentation.
     #[cfg(feature = "memory-lock")]
     pub fn try_with_locked_token(
         self,
@@ -1212,7 +1244,11 @@ impl Client<Unauthenticated> {
         }
         token
             .try_with_secret(|value| {
-                validate_token_value_for_header(value, self.config.header_mode)
+                validate_token_value_for_header(
+                    value,
+                    self.config.header_mode,
+                    self.config.max_auth_token_bytes,
+                )
             })
             .map_err(|_| {
                 Error::SecretMemoryProtection("authentication token integrity verification failed")
@@ -2887,7 +2923,11 @@ impl<State> Client<State> {
             );
         }
         if let Some(token) = self.token.as_ref() {
-            let (name, value) = token_header_for(token, self.config.header_mode)?;
+            let (name, value) = token_header_for(
+                token,
+                self.config.header_mode,
+                self.config.max_auth_token_bytes,
+            )?;
             request.headers_mut().insert(name, value);
         }
         if let Some(payload) = body {
@@ -2934,7 +2974,11 @@ impl<State> Client<State> {
             );
         }
         if let Some(token) = self.token.as_ref() {
-            let (name, value) = token_header_for(token, self.config.header_mode)?;
+            let (name, value) = token_header_for(
+                token,
+                self.config.header_mode,
+                self.config.max_auth_token_bytes,
+            )?;
             request.headers_mut().insert(name, value);
         }
         if let Some(body) = body {
@@ -3028,7 +3072,11 @@ impl<State> Client<State> {
             );
         }
         if let Some(token) = self.token.as_ref() {
-            let (name, value) = token_header_for(token, self.config.header_mode)?;
+            let (name, value) = token_header_for(
+                token,
+                self.config.header_mode,
+                self.config.max_auth_token_bytes,
+            )?;
             request.headers_mut().insert(name, value);
         }
         *request.body_mut() = Some(body);
@@ -3516,28 +3564,40 @@ fn validate_user_agent(user_agent: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_token_for_header(token: &SecretString, header_mode: HeaderMode) -> Result<()> {
-    validate_token_value_for_header(token.expose_secret(), header_mode)
+fn validate_token_for_header(
+    token: &SecretString,
+    header_mode: HeaderMode,
+    max_auth_token_bytes: usize,
+) -> Result<()> {
+    validate_token_value_for_header(token.expose_secret(), header_mode, max_auth_token_bytes)
 }
 
 fn token_header_for(
     token: &ClientToken,
     header_mode: HeaderMode,
+    max_auth_token_bytes: usize,
 ) -> Result<(HeaderName, HeaderValue)> {
-    token.try_with_secret(|token_value| token_header_for_value(token_value, header_mode))?
+    token.try_with_secret(|token_value| {
+        token_header_for_value(token_value, header_mode, max_auth_token_bytes)
+    })?
 }
 
-fn validate_token_value_for_header(token_value: &str, header_mode: HeaderMode) -> Result<()> {
-    token_header_for_value(token_value, header_mode).map(|_| ())
+fn validate_token_value_for_header(
+    token_value: &str,
+    header_mode: HeaderMode,
+    max_auth_token_bytes: usize,
+) -> Result<()> {
+    token_header_for_value(token_value, header_mode, max_auth_token_bytes).map(|_| ())
 }
 
 fn token_header_for_value(
     token_value: &str,
     header_mode: HeaderMode,
+    max_auth_token_bytes: usize,
 ) -> Result<(HeaderName, HeaderValue)> {
-    if token_value.len() > MAX_AUTH_TOKEN_BYTES {
+    if token_value.len() > max_auth_token_bytes {
         return Err(Error::InvalidHeader(
-            "authentication token exceeds maximum allowed length".into(),
+            "authentication token exceeds configured maximum length".into(),
         ));
     }
     let trimmed = token_value.trim();
@@ -4029,8 +4089,9 @@ mod tests {
     use crate::{Empty, Error, Method, OpenBaoCompatibilityPolicy, OpenBaoVersion};
 
     use super::{
-        Client, HeaderMode, MAX_AUTH_TOKEN_BYTES, OpenBaoConfig, RegisteredRouteBinding, env_bool,
-        is_cleartext_url, openbao_config_from_env_lookup, openbao_token_from_env_lookup,
+        ABSOLUTE_MAX_AUTH_TOKEN_BYTES, Client, DEFAULT_MAX_AUTH_TOKEN_BYTES, HeaderMode,
+        OpenBaoConfig, RegisteredRouteBinding, env_bool, is_cleartext_url,
+        openbao_config_from_env_lookup, openbao_token_from_env_lookup,
         resolve_openbao_endpoint_for_profile, route_template_matches, validate_token_for_header,
         validate_token_value_for_header, validate_user_agent,
     };
@@ -5102,34 +5163,42 @@ mod tests {
         assert!(
             validate_token_for_header(
                 &SecretString::from("token-value"),
-                super::HeaderMode::VaultToken
+                super::HeaderMode::VaultToken,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
             )
             .is_ok()
         );
         assert!(
             validate_token_for_header(
                 &SecretString::from("token\nvalue"),
-                super::HeaderMode::VaultToken
+                super::HeaderMode::VaultToken,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
             )
             .is_err()
         );
         assert!(
             validate_token_for_header(
                 &SecretString::from(" token-value"),
-                super::HeaderMode::VaultToken
+                super::HeaderMode::VaultToken,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
             )
             .is_err()
         );
         assert!(
             validate_token_for_header(
                 &SecretString::from("token-value "),
-                super::HeaderMode::Bearer
+                super::HeaderMode::Bearer,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
             )
             .is_err()
         );
         assert!(
-            validate_token_for_header(&SecretString::from("  "), super::HeaderMode::VaultToken)
-                .is_err()
+            validate_token_for_header(
+                &SecretString::from("  "),
+                super::HeaderMode::VaultToken,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
+            )
+            .is_err()
         );
         assert!(
             Client::new("https://bao.example.com")
@@ -5256,20 +5325,64 @@ mod tests {
     }
 
     #[test]
-    fn authentication_tokens_have_a_dedicated_size_bound() {
-        let maximum = "x".repeat(MAX_AUTH_TOKEN_BYTES);
-        assert!(validate_token_value_for_header(&maximum, HeaderMode::VaultToken).is_ok());
-        assert!(validate_token_value_for_header(&maximum, HeaderMode::Bearer).is_ok());
+    fn authentication_token_size_bound_is_secure_by_default_and_configurable() {
+        let maximum = "x".repeat(DEFAULT_MAX_AUTH_TOKEN_BYTES);
+        assert!(
+            validate_token_value_for_header(
+                &maximum,
+                HeaderMode::VaultToken,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_token_value_for_header(
+                &maximum,
+                HeaderMode::Bearer,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
+            )
+            .is_ok()
+        );
 
-        let oversized = "x".repeat(MAX_AUTH_TOKEN_BYTES + 1);
+        let oversized = "x".repeat(DEFAULT_MAX_AUTH_TOKEN_BYTES + 1);
         assert!(matches!(
-            validate_token_value_for_header(&oversized, HeaderMode::VaultToken),
-            Err(Error::InvalidHeader(message)) if message.contains("maximum allowed length")
+            validate_token_value_for_header(
+                &oversized,
+                HeaderMode::VaultToken,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
+            ),
+            Err(Error::InvalidHeader(message)) if message.contains("configured maximum length")
         ));
         assert!(matches!(
-            validate_token_value_for_header(&oversized, HeaderMode::Bearer),
-            Err(Error::InvalidHeader(message)) if message.contains("maximum allowed length")
+            validate_token_value_for_header(
+                &oversized,
+                HeaderMode::Bearer,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
+            ),
+            Err(Error::InvalidHeader(message)) if message.contains("configured maximum length")
         ));
+
+        let config = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.max_auth_token_bytes(oversized.len()))
+            .unwrap_or_else(|error| panic!("failed to configure token limit: {error}"));
+        assert!(
+            Client::from_config(config)
+                .and_then(|client| client.try_with_token(SecretString::from(oversized)))
+                .is_ok()
+        );
+
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| config.max_auth_token_bytes(0))
+                .is_err()
+        );
+        assert!(
+            OpenBaoConfig::new("https://bao.example.com")
+                .and_then(|config| {
+                    config.max_auth_token_bytes(ABSOLUTE_MAX_AUTH_TOKEN_BYTES + 1)
+                })
+                .is_err()
+        );
     }
 
     #[cfg(feature = "memory-lock")]
@@ -5397,7 +5510,12 @@ mod tests {
 
         assert_eq!(token.expose_secret(), " token-with-spaces ");
         assert!(
-            validate_token_for_header(&token, super::HeaderMode::VaultToken).is_err(),
+            validate_token_for_header(
+                &token,
+                super::HeaderMode::VaultToken,
+                DEFAULT_MAX_AUTH_TOKEN_BYTES,
+            )
+            .is_err(),
             "environment token whitespace must not be silently normalized"
         );
     }
