@@ -376,12 +376,21 @@ boundary instead.
 The `memory-lock` feature changes authenticated client custody. After token
 header validation, `Client::try_with_token` transfers the token into
 `sanitization::LockedSecretString`; `Client::try_with_locked_token` accepts an
-already mapped token without ordinary SDK heap restaging. Client construction
-fails with `Error::SecretMemoryProtection` if mapping or OS locking cannot be
-established, and request construction fails if mapped-storage integrity
-verification or its synchronization lock fails.
+already mapped token without ordinary SDK heap restaging only when that
+mapping reports an active operating-system memory lock. Authentication tokens
+are capped at 16 KiB before header or mapped-storage allocation. Client
+construction fails with `Error::SecretMemoryProtection` if mapping, OS locking,
+or OS-random canary setup cannot be established, and request construction fails
+if canary verification or its synchronization lock fails.
 `Client::authentication_token_is_memory_locked` provides a fallible,
 non-secret deployment assertion for the retained allocation.
+
+The feature enables `sanitization`'s reviewed `profile-hardened-native` feature.
+Its random canaries detect accidental or adjacent mapping corruption and cause
+the SDK to fail closed. Canaries are not an attacker-resistant integrity
+boundary. They are defense in depth: an attacker with arbitrary process-memory
+write capability can modify both token data and canaries. OS locking also does
+not protect against a process compromise.
 
 The mapped token is held behind a standard mutex because the dependency's
 integrity-checking mapped type is `Send` but deliberately not `Sync`. Token

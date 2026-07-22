@@ -58,6 +58,7 @@ const MAX_RETRY_ATTEMPTS: usize = 8;
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
 const DEFAULT_RETRY_JITTER_PERCENT: u8 = 20;
 const MAX_USER_AGENT_BYTES: usize = 512;
+const MAX_AUTH_TOKEN_BYTES: usize = 16 * 1024;
 const MAX_COMPATIBILITY_HEALTH_BYTES: usize = 64 * 1024;
 const MAX_COMPATIBILITY_WAITERS: usize = 4096;
 const MAX_ENDPOINT_ID_BYTES: usize = 192;
@@ -1195,13 +1196,20 @@ impl Client<Unauthenticated> {
     /// locked token allocation.
     ///
     /// This avoids staging the retained token in an ordinary SDK-owned heap
-    /// allocation. Header construction and the HTTP stack still create
-    /// transient non-lockable copies; see the crate security documentation.
+    /// allocation. The supplied mapping must report an active operating-system
+    /// memory lock, and the token must not exceed 16 KiB. Header construction
+    /// and the HTTP stack still create transient non-lockable copies; see the
+    /// crate security documentation.
     #[cfg(feature = "memory-lock")]
     pub fn try_with_locked_token(
         self,
         token: sanitization::LockedSecretString,
     ) -> Result<Client<Authenticated>> {
+        if !token.is_memory_locked() {
+            return Err(Error::SecretMemoryProtection(
+                "authentication token is not protected by an operating-system memory lock",
+            ));
+        }
         token
             .try_with_secret(|value| {
                 validate_token_value_for_header(value, self.config.header_mode)
@@ -1209,7 +1217,7 @@ impl Client<Unauthenticated> {
             .map_err(|_| {
                 Error::SecretMemoryProtection("authentication token integrity verification failed")
             })??;
-        Ok(self.with_validated_token(ClientToken::from_locked(token)))
+        Ok(self.with_validated_token(ClientToken::from_locked(token)?))
     }
 
     #[cfg(any(
@@ -3527,6 +3535,11 @@ fn token_header_for_value(
     token_value: &str,
     header_mode: HeaderMode,
 ) -> Result<(HeaderName, HeaderValue)> {
+    if token_value.len() > MAX_AUTH_TOKEN_BYTES {
+        return Err(Error::InvalidHeader(
+            "authentication token exceeds maximum allowed length".into(),
+        ));
+    }
     let trimmed = token_value.trim();
     if trimmed.is_empty() {
         return Err(Error::InvalidHeader(
@@ -3544,7 +3557,13 @@ fn token_header_for_value(
             sensitive_header_value(token_value)?,
         )),
         HeaderMode::Bearer => {
-            let mut bearer = String::with_capacity("Bearer ".len() + token_value.len());
+            let capacity = "Bearer "
+                .len()
+                .checked_add(token_value.len())
+                .ok_or_else(|| {
+                    Error::InvalidHeader("authentication token length overflow".into())
+                })?;
+            let mut bearer = String::with_capacity(capacity);
             bearer.push_str("Bearer ");
             bearer.push_str(token_value);
             let value = sensitive_header_value(&bearer).map_err(|_| {
@@ -3570,7 +3589,7 @@ impl ClientToken {
         drop(token);
         let locked = sanitization::LockedSecretString::from_string(staged).map_err(|_| {
             Error::SecretMemoryProtection(
-                "operating-system token memory locking could not be established",
+                "required token memory protection could not be established",
             )
         })?;
         Ok(Self(std::sync::Mutex::new(locked)))
@@ -3582,8 +3601,13 @@ impl ClientToken {
     }
 
     #[cfg(feature = "memory-lock")]
-    fn from_locked(token: sanitization::LockedSecretString) -> Self {
-        Self(std::sync::Mutex::new(token))
+    fn from_locked(token: sanitization::LockedSecretString) -> Result<Self> {
+        if !token.is_memory_locked() {
+            return Err(Error::SecretMemoryProtection(
+                "authentication token is not protected by an operating-system memory lock",
+            ));
+        }
+        Ok(Self(std::sync::Mutex::new(token)))
     }
 
     #[cfg(feature = "memory-lock")]
@@ -4005,10 +4029,10 @@ mod tests {
     use crate::{Empty, Error, Method, OpenBaoCompatibilityPolicy, OpenBaoVersion};
 
     use super::{
-        Client, OpenBaoConfig, RegisteredRouteBinding, env_bool, is_cleartext_url,
-        openbao_config_from_env_lookup, openbao_token_from_env_lookup,
+        Client, HeaderMode, MAX_AUTH_TOKEN_BYTES, OpenBaoConfig, RegisteredRouteBinding, env_bool,
+        is_cleartext_url, openbao_config_from_env_lookup, openbao_token_from_env_lookup,
         resolve_openbao_endpoint_for_profile, route_template_matches, validate_token_for_header,
-        validate_user_agent,
+        validate_token_value_for_header, validate_user_agent,
     };
     use crate::compatibility::{OpenBaoEndpointSpec, OpenBaoEndpointVariant};
 
@@ -5206,6 +5230,46 @@ mod tests {
                 .authentication_token_is_memory_locked()
                 .unwrap_or_else(|error| panic!("failed to inspect token storage: {error}"))
         );
+    }
+
+    #[cfg(feature = "memory-lock")]
+    #[test]
+    fn authenticated_client_rejects_mapped_token_without_active_memory_lock() {
+        let mut request = sanitization::ProtectionRequest::locked();
+        request.memory_lock = sanitization::Requirement::NotRequested;
+        let token = sanitization::LockedSecretString::try_from_exact_len_with_protection(
+            "unlocked-token".len(),
+            request,
+            |output| {
+                output.copy_from_slice(b"unlocked-token");
+                Ok::<(), core::convert::Infallible>(())
+            },
+        )
+        .unwrap_or_else(|error| panic!("failed to construct unlocked test token: {error}"));
+        assert!(!token.is_memory_locked());
+
+        assert!(matches!(
+            Client::new("https://bao.example.com")
+                .and_then(|client| client.try_with_locked_token(token)),
+            Err(Error::SecretMemoryProtection(message)) if message.contains("not protected")
+        ));
+    }
+
+    #[test]
+    fn authentication_tokens_have_a_dedicated_size_bound() {
+        let maximum = "x".repeat(MAX_AUTH_TOKEN_BYTES);
+        assert!(validate_token_value_for_header(&maximum, HeaderMode::VaultToken).is_ok());
+        assert!(validate_token_value_for_header(&maximum, HeaderMode::Bearer).is_ok());
+
+        let oversized = "x".repeat(MAX_AUTH_TOKEN_BYTES + 1);
+        assert!(matches!(
+            validate_token_value_for_header(&oversized, HeaderMode::VaultToken),
+            Err(Error::InvalidHeader(message)) if message.contains("maximum allowed length")
+        ));
+        assert!(matches!(
+            validate_token_value_for_header(&oversized, HeaderMode::Bearer),
+            Err(Error::InvalidHeader(message)) if message.contains("maximum allowed length")
+        ));
     }
 
     #[cfg(feature = "memory-lock")]

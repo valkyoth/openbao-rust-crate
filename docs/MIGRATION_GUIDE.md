@@ -15,12 +15,18 @@ exception for the non-default, acknowledged `memory-lock` feature. OpenBao
 profiles, endpoint routes, and request/response field rules are unchanged.
 
 Applications that do not enable `memory-lock` require no source migration.
+All applications must keep OpenBao authentication tokens at or below the new
+16 KiB absolute ceiling; oversized custom token formats now return
+`Error::InvalidHeader` before header allocation.
 With `memory-lock`, `Client::try_with_token` keeps its signature but can now
-return `Error::SecretMemoryProtection` when mapped allocation, OS locking, or
-integrity verification fails. Callers that already hold a
+return `Error::SecretMemoryProtection` when mapped allocation, OS locking,
+random-canary setup, or canary verification fails. Callers that already hold a
 `sanitization::LockedSecretString` should use `try_with_locked_token` to avoid
-restaging the retained token in ordinary SDK heap storage. Deployment checks
-can assert `authentication_token_is_memory_locked()?` after construction.
+restaging the retained token in ordinary SDK heap storage; the supplied mapping
+must report an active OS lock. Deployment checks can assert
+`authentication_token_is_memory_locked()?` after construction. The random
+canaries detect accidental or adjacent corruption, not arbitrary attacker
+writes.
 
 This change intentionally corrects the ineffective 2.1.0 feature semantics in
 2.1.1 rather than preserving them until a new major release. Public endpoint

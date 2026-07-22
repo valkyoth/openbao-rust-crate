@@ -123,7 +123,9 @@ compile_error!(
 #[cfg(all(feature = "memory-lock", not(feature = "memory-lock-acknowledged")))]
 compile_error!(
     "The memory-lock feature stores the authenticated Client's retained token in OS-locked mapped \
-     memory and fails client construction when that protection cannot be established. Other \
+     memory with random corruption-detection canaries and fails client construction when those \
+     required controls cannot be established. Canaries are not an attacker-resistant integrity \
+     boundary. Other \
      SecretString/SecretVec values and HTTP/TLS/kernel buffers remain outside this automatic scope. \
      Review custody transfers, OS mlock/VirtualLock limits, failure behavior, and deployment quotas. \
      Add feature \"memory-lock-acknowledged\" to confirm this host-level control was audited."

@@ -15,12 +15,17 @@ All notable changes to this project are documented here.
   retained token. Added `Client::try_with_locked_token`,
   `Client::authentication_token_is_memory_locked`, and
   `Error::SecretMemoryProtection`.
+- Enabled `sanitization`'s hardened native profile for required OS locking and
+  OS-random corruption-detection canaries, rejected direct mapped tokens that
+  are not actually locked, and added a 16 KiB authentication-token ceiling.
 
 ### Security
 
 - `memory-lock` now rejects authenticated-client construction when the OS
-  cannot establish locked mapped token storage and rejects token use when
-  mapped-storage integrity verification fails. Ordinary endpoint
+  cannot establish locked mapped token storage or random canaries, rejects
+  direct mapped tokens without an active lock, and rejects token use when
+  canary verification fails. Canaries are not an attacker-resistant integrity
+  boundary. Ordinary endpoint
   request/response secret fields and transport-owned copies remain outside the
   automatic locking scope.
 

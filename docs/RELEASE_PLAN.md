@@ -778,14 +778,16 @@ Stop criteria:
 - all 22 exact OpenBao profiles, endpoint routing, and request and response
   compatibility rules remain unchanged;
 - the non-default acknowledged `memory-lock` feature actively and fail-closed
-  stores authenticated-client tokens in locked mapped memory, with a direct
-  locked-token constructor and a non-secret verification method;
+  stores authentication tokens no larger than 16 KiB in locked mapped memory
+  with required OS-random canaries, rejects direct mapped tokens without an
+  active OS lock, and exposes a non-secret verification method;
 - README, migration, stability, changelog, and release notes consistently
   describe the dependency updates and accepted patch-line compatibility
   exception;
-- `memory-lock` tests prove active authenticated-client token locking while
-  documentation names ordinary response fields and transport buffers that
-  remain outside the automatic scope;
+- `memory-lock` tests prove active authenticated-client token locking, reject
+  unlocked direct custody, and enforce the token-size ceiling while
+  documentation names the non-attacker-resistant canary boundary, ordinary
+  response fields, and transport buffers outside the automatic scope;
 - `scripts/release_2_1_1_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.1`.

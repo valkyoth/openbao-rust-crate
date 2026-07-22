@@ -27,7 +27,8 @@ contracts are unchanged.
 - All 690 logical operation identities and 15,180 operation/profile cells are
   unchanged from `2.1.0`.
 - Normal builds require no source migration from `2.1.0`. `memory-lock` builds
-  receive the compatibility exception described below.
+  receive the compatibility exception described below. Every build now rejects
+  authentication tokens larger than 16 KiB.
 
 ## Dependency Refresh
 
@@ -45,11 +46,18 @@ In `2.1.0`, `memory-lock` enabled dependency support but did not move the
 authenticated client's retained token into mapped storage. `2.1.1` corrects
 that semantic gap: `try_with_token` transfers the validated token into
 `sanitization::LockedSecretString` and fails with
-`Error::SecretMemoryProtection` if OS locking cannot be established.
-`try_with_locked_token` accepts existing mapped custody directly, and
+`Error::SecretMemoryProtection` if OS locking or random-canary setup cannot be
+established. The feature selects `sanitization`'s reviewed hardened native
+profile. `try_with_locked_token` accepts existing mapped custody directly only
+when the supplied mapping reports an active OS lock, and
 `authentication_token_is_memory_locked` supports fallible deployment
 assertions. A safe mutex around the mapped token preserves the authenticated
-client's `Send + Sync` contract while serializing integrity verification.
+client's `Send + Sync` contract while serializing canary verification.
+
+All authentication paths enforce a 16 KiB token ceiling before header or
+mapped-storage allocation. OS-random canaries detect accidental or adjacent
+mapping corruption; they are defense in depth and do not resist an attacker
+that can arbitrarily write process memory.
 
 This is an intentional compatibility exception in a non-default,
 acknowledgement-gated feature. Other public `SecretString`/`SecretVec` values

@@ -116,7 +116,7 @@ tokio-helpers = ["dep:tokio"]
 tracing = ["dep:tracing"]
 # Stores the authenticated Client's retained token in sanitization locked
 # mapped memory and exposes the mapped-memory types for explicit custody use.
-memory-lock = ["sanitization/memory-lock"]
+memory-lock = ["sanitization/profile-hardened-native"]
 memory-lock-acknowledged = []
 kani = []
 tls12-acknowledged = []
