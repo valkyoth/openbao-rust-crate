@@ -373,21 +373,30 @@ according to the host runtime. Classified or high-assurance key wrapping must
 not use this software helper; perform wrapping in an HSM or equivalent audited
 boundary instead.
 
-The `memory-lock` feature enables and exposes `sanitization`'s mapped-memory
-secret types through the crate's `sanitization` re-export. It does **not**
-transparently replace SDK-owned `SecretString` or `SecretVec` fields with
-`LockedSecretString`, `LockedSecretVec`, guarded variants, or their bounded
-wrappers. Consequently, enabling the feature alone does not lock root tokens,
-unseal or recovery shares, authentication credentials, KV values, or other
-secrets held by the SDK. Applications that need this control must explicitly
-move reviewed values into mapped-memory types at their own ownership boundary.
+The `memory-lock` feature changes authenticated client custody. After token
+header validation, `Client::try_with_token` transfers the token into
+`sanitization::LockedSecretString`; `Client::try_with_locked_token` accepts an
+already mapped token without ordinary SDK heap restaging. Client construction
+fails with `Error::SecretMemoryProtection` if mapping or OS locking cannot be
+established, and request construction fails if mapped-storage integrity
+verification or its synchronization lock fails.
+`Client::authentication_token_is_memory_locked` provides a fallible,
+non-secret deployment assertion for the retained allocation.
+
+This automatic scope is deliberately limited to the long-lived token retained
+by an authenticated `Client`. Tokens initially supplied as `SecretString`,
+environment variables, or login responses exist transiently in sanitizing
+ordinary storage before transfer. Operator responses, unseal and recovery
+shares, KV values, request/response fields, and other public `SecretString` or
+`SecretVec` values are not transparently converted because feature unification
+must not silently change every endpoint's public Rust type. Move those values
+into `openbao::sanitization` mapped types at the application custody boundary.
 
 The feature is disabled by default and requires `memory-lock-acknowledged`
 because mlock/VirtualLock limits, container permissions, swap policy, and
-failure behavior are deployment-specific. Even for explicitly mapped values,
-memory locking is a host hardening control, not a guarantee that SDK-owned or
-dependency-owned HTTP, TLS, kernel, allocator, or device buffers avoid swap or
-crash dumps.
+failure behavior are deployment-specific. Memory locking is a host hardening
+control, not a guarantee that transient HTTP header, TLS, kernel, allocator,
+or device buffers avoid swap or crash dumps.
 
 The `radius-auth` feature is not enabled by default. RADIUS relies on
 MD5-based authenticators and is retained only for audited legacy compatibility.

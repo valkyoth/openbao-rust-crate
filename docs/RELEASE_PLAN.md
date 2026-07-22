@@ -765,7 +765,7 @@ Stop criteria:
 - the complete release gate, all-release GitHub workflow, CodeQL, and final
   exact-commit pentests pass before tagging `v2.1.0`.
 
-### 2.1.1 - Security Dependency Maintenance
+### 2.1.1 - Security Dependency And Memory-Lock Correction
 
 Stop criteria:
 
@@ -775,12 +775,17 @@ Stop criteria:
   repository lockfile;
 - `base64-ng` is updated from `1.3.8` to `1.3.9` in the manifest and every
   workspace lockfile where the optional dependency is active;
-- the public API, all 22 exact OpenBao profiles, endpoint routing, request and
-  response compatibility rules, and security feature gates remain unchanged;
+- all 22 exact OpenBao profiles, endpoint routing, and request and response
+  compatibility rules remain unchanged;
+- the non-default acknowledged `memory-lock` feature actively and fail-closed
+  stores authenticated-client tokens in locked mapped memory, with a direct
+  locked-token constructor and a non-secret verification method;
 - README, migration, stability, changelog, and release notes consistently
-  describe the dependency-only patch;
-- `memory-lock` documentation and compile diagnostics explicitly state that
-  the feature exposes mapped types without changing SDK-owned secret storage;
+  describe the dependency updates and accepted patch-line compatibility
+  exception;
+- `memory-lock` tests prove active authenticated-client token locking while
+  documentation names ordinary response fields and transport buffers that
+  remain outside the automatic scope;
 - `scripts/release_2_1_1_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.1`.

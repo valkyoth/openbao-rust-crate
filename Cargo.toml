@@ -114,9 +114,8 @@ http2 = ["reqwest/http2"]
 time = ["dep:time"]
 tokio-helpers = ["dep:tokio"]
 tracing = ["dep:tracing"]
-# Exposes sanitization's mapped-memory secret types through this crate's
-# sanitization re-export. It does not change SDK-owned SecretString/SecretVec
-# fields into locked or guarded allocations.
+# Stores the authenticated Client's retained token in sanitization locked
+# mapped memory and exposes the mapped-memory types for explicit custody use.
 memory-lock = ["sanitization/memory-lock"]
 memory-lock-acknowledged = []
 kani = []

@@ -122,9 +122,10 @@ compile_error!(
 
 #[cfg(all(feature = "memory-lock", not(feature = "memory-lock-acknowledged")))]
 compile_error!(
-    "The memory-lock feature exposes sanitization mapped-memory secret types; it does not replace \
-     SDK-owned SecretString/SecretVec storage with locked or guarded allocations. Review explicit \
-     mapped-type use, OS mlock/VirtualLock limits, failure behavior, and deployment quotas. \
+    "The memory-lock feature stores the authenticated Client's retained token in OS-locked mapped \
+     memory and fails client construction when that protection cannot be established. Other \
+     SecretString/SecretVec values and HTTP/TLS/kernel buffers remain outside this automatic scope. \
+     Review custody transfers, OS mlock/VirtualLock limits, failure behavior, and deployment quotas. \
      Add feature \"memory-lock-acknowledged\" to confirm this host-level control was audited."
 );
 

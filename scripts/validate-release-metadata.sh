@@ -130,8 +130,10 @@ check_grep 'unauthenticated-workflows-acknowledged = \[\]' Cargo.toml
 check_grep 'identity-template-overrides-acknowledged = \[\]' Cargo.toml
 check_grep 'dev-bootstrap-acknowledged = \[\]' Cargo.toml
 check_grep 'No production exception is currently approved' docs/PANIC_POLICY.md
-check_grep 'transparently replace SDK-owned' SECURITY.md
-check_grep 'does \*\*not\*\* replace SDK-owned' README.md
+check_grep 'Client::try_with_token.*transfers the token' SECURITY.md
+check_grep 'Other request/response.*not automatically locked' README.md
+check_grep 'struct ClientToken(std::sync::Mutex<sanitization::LockedSecretString>)' src/client.rs
+check_grep 'authentication_token_is_memory_locked' src/client.rs
 check_grep 'scripts/release_2_1_gate.sh' release-notes/RELEASE_NOTES_2.1.0.md
 check_grep 'scripts/release_2_1_1_gate.sh' release-notes/RELEASE_NOTES_2.1.1.md
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
@@ -161,7 +163,7 @@ check_grep '2.0.0 - Multi-Version OpenBao Compatibility' docs/RELEASE_PLAN.md
 check_grep '2.0.1 - Compatibility Documentation Correction' docs/RELEASE_PLAN.md
 check_grep '2.0.2 - Focused crates.io Source Package' docs/RELEASE_PLAN.md
 check_grep '2.1.0 - OpenBao 2.6.0 Compatibility' docs/RELEASE_PLAN.md
-check_grep '2.1.1 - Security Dependency Maintenance' docs/RELEASE_PLAN.md
+check_grep '2.1.1 - Security Dependency And Memory-Lock Correction' docs/RELEASE_PLAN.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.12.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.13.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_1.0.0.md

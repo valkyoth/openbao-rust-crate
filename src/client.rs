@@ -1130,7 +1130,7 @@ pub struct Client<State = Unauthenticated> {
     pub(crate) http: reqwest::Client,
     pub(crate) sensitive_http: reqwest::Client,
     pub(crate) tls_backend: TlsBackend,
-    pub(crate) token: Option<SecretString>,
+    token: Option<ClientToken>,
     compatibility: Arc<ClientCompatibility>,
     pub(crate) _state: PhantomData<State>,
 }
@@ -1151,7 +1151,8 @@ impl Client<Unauthenticated> {
     /// Creates an authenticated client from common OpenBao/Vault environment variables.
     ///
     /// The token is read from `OPENBAO_TOKEN`, `BAO_TOKEN`, or `VAULT_TOKEN`,
-    /// in that order, and is stored as [`SecretString`].
+    /// in that order. With `memory-lock`, the validated token is transferred
+    /// into locked mapped storage before this method returns.
     pub fn from_env_with_token() -> Result<Client<Authenticated>> {
         let client = Self::from_env()?;
         let token = openbao_token_from_env_lookup(|key| env::var(key).ok())?;
@@ -1163,7 +1164,7 @@ impl Client<Unauthenticated> {
         ClientBuilder::new(config).build()
     }
 
-    fn with_token_deferred_validation(self, token: SecretString) -> Client<Authenticated> {
+    fn with_validated_token(self, token: ClientToken) -> Client<Authenticated> {
         Client {
             config: self.config,
             http: self.http,
@@ -1186,7 +1187,29 @@ impl Client<Unauthenticated> {
     /// the token can be represented safely in the configured auth header.
     pub fn try_with_token(self, token: SecretString) -> Result<Client<Authenticated>> {
         validate_token_for_header(&token, self.config.header_mode)?;
-        Ok(self.with_token_deferred_validation(token))
+        let token = ClientToken::from_secret_string(token)?;
+        Ok(self.with_validated_token(token))
+    }
+
+    /// Converts the client into an authenticated client using an already
+    /// locked token allocation.
+    ///
+    /// This avoids staging the retained token in an ordinary SDK-owned heap
+    /// allocation. Header construction and the HTTP stack still create
+    /// transient non-lockable copies; see the crate security documentation.
+    #[cfg(feature = "memory-lock")]
+    pub fn try_with_locked_token(
+        self,
+        token: sanitization::LockedSecretString,
+    ) -> Result<Client<Authenticated>> {
+        token
+            .try_with_secret(|value| {
+                validate_token_value_for_header(value, self.config.header_mode)
+            })
+            .map_err(|_| {
+                Error::SecretMemoryProtection("authentication token integrity verification failed")
+            })??;
+        Ok(self.with_validated_token(ClientToken::from_locked(token)))
     }
 
     #[cfg(any(
@@ -3044,6 +3067,19 @@ impl<State> Client<State> {
 }
 
 impl Client<Authenticated> {
+    /// Reports whether the retained authentication token is in an
+    /// OS-locked mapped allocation.
+    ///
+    /// This reports the SDK-owned long-lived token allocation only. It does
+    /// not cover transient HTTP header, TLS, kernel, or device buffers.
+    #[cfg(feature = "memory-lock")]
+    pub fn authentication_token_is_memory_locked(&self) -> Result<bool> {
+        self.token
+            .as_ref()
+            .ok_or(Error::MissingToken)?
+            .is_memory_locked()
+    }
+
     /// Creates a response-wrapping context for JSON requests.
     ///
     /// Requests sent through the returned context include `X-Vault-Wrap-TTL`.
@@ -3473,14 +3509,24 @@ fn validate_user_agent(user_agent: &str) -> Result<()> {
 }
 
 fn validate_token_for_header(token: &SecretString, header_mode: HeaderMode) -> Result<()> {
-    token_header_for(token, header_mode).map(|_| ())
+    validate_token_value_for_header(token.expose_secret(), header_mode)
 }
 
 fn token_header_for(
-    token: &SecretString,
+    token: &ClientToken,
     header_mode: HeaderMode,
 ) -> Result<(HeaderName, HeaderValue)> {
-    let token_value = token.expose_secret();
+    token.try_with_secret(|token_value| token_header_for_value(token_value, header_mode))?
+}
+
+fn validate_token_value_for_header(token_value: &str, header_mode: HeaderMode) -> Result<()> {
+    token_header_for_value(token_value, header_mode).map(|_| ())
+}
+
+fn token_header_for_value(
+    token_value: &str,
+    header_mode: HeaderMode,
+) -> Result<(HeaderName, HeaderValue)> {
     let trimmed = token_value.trim();
     if trimmed.is_empty() {
         return Err(Error::InvalidHeader(
@@ -3508,6 +3554,61 @@ fn token_header_for(
             let value = value?;
             Ok((reqwest::header::AUTHORIZATION, value))
         }
+    }
+}
+
+#[cfg(feature = "memory-lock")]
+struct ClientToken(std::sync::Mutex<sanitization::LockedSecretString>);
+
+#[cfg(not(feature = "memory-lock"))]
+struct ClientToken(SecretString);
+
+impl ClientToken {
+    #[cfg(feature = "memory-lock")]
+    fn from_secret_string(token: SecretString) -> Result<Self> {
+        let staged = token.expose_secret().to_owned();
+        drop(token);
+        let locked = sanitization::LockedSecretString::from_string(staged).map_err(|_| {
+            Error::SecretMemoryProtection(
+                "operating-system token memory locking could not be established",
+            )
+        })?;
+        Ok(Self(std::sync::Mutex::new(locked)))
+    }
+
+    #[cfg(not(feature = "memory-lock"))]
+    fn from_secret_string(token: SecretString) -> Result<Self> {
+        Ok(Self(token))
+    }
+
+    #[cfg(feature = "memory-lock")]
+    fn from_locked(token: sanitization::LockedSecretString) -> Self {
+        Self(std::sync::Mutex::new(token))
+    }
+
+    #[cfg(feature = "memory-lock")]
+    fn try_with_secret<R>(&self, inspect: impl FnOnce(&str) -> R) -> Result<R> {
+        let token = self
+            .0
+            .lock()
+            .map_err(|_| Error::SecretMemoryProtection("authentication token lock was poisoned"))?;
+        token.try_with_secret(inspect).map_err(|_| {
+            Error::SecretMemoryProtection("authentication token integrity verification failed")
+        })
+    }
+
+    #[cfg(not(feature = "memory-lock"))]
+    fn try_with_secret<R>(&self, inspect: impl FnOnce(&str) -> R) -> Result<R> {
+        Ok(inspect(self.0.expose_secret()))
+    }
+
+    #[cfg(feature = "memory-lock")]
+    fn is_memory_locked(&self) -> Result<bool> {
+        let token = self
+            .0
+            .lock()
+            .map_err(|_| Error::SecretMemoryProtection("authentication token lock was poisoned"))?;
+        Ok(token.is_memory_locked())
     }
 }
 
@@ -5072,6 +5173,39 @@ mod tests {
         let debug = format!("{client:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("root-token"));
+    }
+
+    #[cfg(feature = "memory-lock")]
+    #[test]
+    fn authenticated_client_retains_token_in_locked_memory() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<Client<crate::Authenticated>>();
+
+        let client = Client::new("https://bao.example.com")
+            .and_then(|client| client.try_with_token(SecretString::from("locked-token")))
+            .unwrap_or_else(|error| panic!("failed to construct locked-token client: {error}"));
+
+        assert!(
+            client
+                .authentication_token_is_memory_locked()
+                .unwrap_or_else(|error| panic!("failed to inspect token storage: {error}"))
+        );
+    }
+
+    #[cfg(feature = "memory-lock")]
+    #[test]
+    fn authenticated_client_accepts_already_locked_token_without_heap_restaging() {
+        let token = sanitization::LockedSecretString::from_secret_str("locked-token")
+            .unwrap_or_else(|error| panic!("failed to lock test token: {error}"));
+        let client = Client::new("https://bao.example.com")
+            .and_then(|client| client.try_with_locked_token(token))
+            .unwrap_or_else(|error| panic!("failed to construct locked-token client: {error}"));
+
+        assert!(
+            client
+                .authentication_token_is_memory_locked()
+                .unwrap_or_else(|error| panic!("failed to inspect token storage: {error}"))
+        );
     }
 
     #[test]

@@ -9,11 +9,24 @@ contract dispositions.
 
 ## From `openbao` 2.1.0 To 2.1.1
 
-`2.1.1` is a source-compatible dependency maintenance patch. It updates
-`sanitization` from `2.0.2` to `2.0.3` and `base64-ng` from `1.3.8` to `1.3.9`
-without changing the SDK's public API, OpenBao compatibility profiles,
-endpoint routes, request or response field rules, or feature-gate boundaries.
-No application source migration is required.
+`2.1.1` updates `sanitization` from `2.0.2` to `2.0.3` and `base64-ng` from
+`1.3.8` to `1.3.9`. It also makes an explicit patch-line compatibility
+exception for the non-default, acknowledged `memory-lock` feature. OpenBao
+profiles, endpoint routes, and request/response field rules are unchanged.
+
+Applications that do not enable `memory-lock` require no source migration.
+With `memory-lock`, `Client::try_with_token` keeps its signature but can now
+return `Error::SecretMemoryProtection` when mapped allocation, OS locking, or
+integrity verification fails. Callers that already hold a
+`sanitization::LockedSecretString` should use `try_with_locked_token` to avoid
+restaging the retained token in ordinary SDK heap storage. Deployment checks
+can assert `authentication_token_is_memory_locked()?` after construction.
+
+This change intentionally corrects the ineffective 2.1.0 feature semantics in
+2.1.1 rather than preserving them until a new major release. Public endpoint
+`SecretString` and `SecretVec` fields remain unchanged; transfer root tokens,
+key shares, KV values, and other returned secrets into mapped application
+custody explicitly when required.
 
 ## From `openbao` 2.0.2 To 2.1.0
 

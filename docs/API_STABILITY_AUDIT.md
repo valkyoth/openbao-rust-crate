@@ -34,9 +34,10 @@ make the public API commitments and security boundaries explicit.
   `2.0.2` narrows the crates.io source package while retaining complete release
   evidence in the corresponding signed Git tag. `2.1.0` adds the exact
   OpenBao `2.6.0` profile and its reviewed API additions without changing the
-  21 historical profiles. `2.1.1` is a dependency-only maintenance patch that
-  updates `sanitization` to `2.0.3` and `base64-ng` to `1.3.9` without
-  changing those contracts.
+  21 historical profiles. `2.1.1` updates `sanitization` to `2.0.3` and
+  `base64-ng` to `1.3.9`; it also makes a documented compatibility exception
+  for the non-default `memory-lock` feature so authenticated clients retain
+  tokens in fail-closed locked mapped storage. OpenBao contracts are unchanged.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 688 documented operations, 592 are typed, 93 are typed-gated,
   and three are security-blocked because the exact `2.6.0` server handlers are

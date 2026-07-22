@@ -9,16 +9,20 @@ All notable changes to this project are documented here.
 ### Changed
 
 - Updated `sanitization` from `2.0.2` to `2.0.3`, updated `base64-ng` from
-  `1.3.8` to `1.3.9`, and refreshed the affected repository lockfiles. This
-  patch does not change the public API, OpenBao compatibility profiles,
-  endpoint routing, or feature-gate boundaries.
+  `1.3.8` to `1.3.9`, and refreshed the affected repository lockfiles.
+- Changed the acknowledged `memory-lock` feature from a type-exposure-only
+  switch into active, fail-closed storage for each authenticated `Client`'s
+  retained token. Added `Client::try_with_locked_token`,
+  `Client::authentication_token_is_memory_locked`, and
+  `Error::SecretMemoryProtection`.
 
 ### Security
 
-- Clarified that `memory-lock` exposes `sanitization` mapped-memory types but
-  does not transparently lock SDK-owned `SecretString` or `SecretVec` storage.
-  Compile diagnostics and security documentation now reject the previous
-  implication that enabling the feature alone protects SDK-held secrets.
+- `memory-lock` now rejects authenticated-client construction when the OS
+  cannot establish locked mapped token storage and rejects token use when
+  mapped-storage integrity verification fails. Ordinary endpoint
+  request/response secret fields and transport-owned copies remain outside the
+  automatic locking scope.
 
 ## 2.1.0 - 2026-07-21
 

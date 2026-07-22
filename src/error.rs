@@ -19,6 +19,8 @@ pub enum Error {
     InvalidPath(String),
     /// An HTTP header value could not be represented safely.
     InvalidHeader(String),
+    /// Locked authentication-token storage could not be established or verified.
+    SecretMemoryProtection(&'static str),
     /// TLS configuration is internally inconsistent.
     InvalidTlsConfig(String),
     /// Timeout configuration is invalid.
@@ -103,6 +105,12 @@ impl fmt::Display for Error {
             }
             Self::InvalidPath(message) => write!(formatter, "invalid OpenBao path: {message}"),
             Self::InvalidHeader(message) => write!(formatter, "invalid OpenBao header: {message}"),
+            Self::SecretMemoryProtection(message) => {
+                write!(
+                    formatter,
+                    "OpenBao secret memory protection failed: {message}"
+                )
+            }
             Self::InvalidTlsConfig(message) => {
                 write!(formatter, "invalid OpenBao TLS configuration: {message}")
             }

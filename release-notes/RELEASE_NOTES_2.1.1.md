@@ -10,11 +10,13 @@
 
 ## Summary
 
-`2.1.1` is a dependency maintenance patch for the stable `2.1.x` line. It
+`2.1.1` is a dependency and memory-protection correction for the stable
+`2.1.x` line. It
 updates `sanitization` from `2.0.2` to `2.0.3`, updates `base64-ng` from
-`1.3.8` to `1.3.9`, and refreshes the affected repository lockfiles. There are
-no SDK API, OpenBao profile, route, request-field, response-field, or
-feature-gate changes.
+`1.3.8` to `1.3.9`, refreshes the affected repository lockfiles, and makes the
+acknowledged `memory-lock` feature actively protect each authenticated
+client's retained token. OpenBao profiles, routes, and request/response field
+contracts are unchanged.
 
 ## Compatibility
 
@@ -24,7 +26,8 @@ feature-gate changes.
   supported.
 - All 690 logical operation identities and 15,180 operation/profile cells are
   unchanged from `2.1.0`.
-- No source migration is required from `2.1.0`.
+- Normal builds require no source migration from `2.1.0`. `memory-lock` builds
+  receive the compatibility exception described below.
 
 ## Dependency Refresh
 
@@ -36,15 +39,23 @@ feature-gate changes.
   fixture lockfile binds `sanitization` but does not enable a feature that
   pulls `base64-ng`.
 
-## Security Documentation
+## Memory-Lock Correction
 
-The `memory-lock` feature enables and re-exports `sanitization`'s mapped-memory
-types, but it does not transparently convert SDK-owned `SecretString` or
-`SecretVec` fields into locked or guarded storage. Enabling the feature alone
-therefore does not lock tokens, key shares, credentials, KV values, or other
-SDK-held secrets. Applications requiring this host hardening control must
-explicitly move reviewed values into mapped-memory types and audit allocation
-failure, OS lock limits, swap, and crash-dump policy.
+In `2.1.0`, `memory-lock` enabled dependency support but did not move the
+authenticated client's retained token into mapped storage. `2.1.1` corrects
+that semantic gap: `try_with_token` transfers the validated token into
+`sanitization::LockedSecretString` and fails with
+`Error::SecretMemoryProtection` if OS locking cannot be established.
+`try_with_locked_token` accepts existing mapped custody directly, and
+`authentication_token_is_memory_locked` supports fallible deployment
+assertions. A safe mutex around the mapped token preserves the authenticated
+client's `Send + Sync` contract while serializing integrity verification.
+
+This is an intentional compatibility exception in a non-default,
+acknowledgement-gated feature. Other public `SecretString`/`SecretVec` values
+retain their established types, and transport-owned copies remain outside the
+locking boundary. Applications must still audit OS limits, swap, crash dumps,
+and explicit custody transfer for operator material and returned secrets.
 
 ## Release Gate
 
