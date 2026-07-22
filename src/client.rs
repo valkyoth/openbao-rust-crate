@@ -5371,6 +5371,24 @@ mod tests {
                 .is_ok()
         );
 
+        let hard_maximum = "x".repeat(ABSOLUTE_MAX_AUTH_TOKEN_BYTES);
+        assert!(
+            validate_token_value_for_header(
+                &hard_maximum,
+                HeaderMode::VaultToken,
+                ABSOLUTE_MAX_AUTH_TOKEN_BYTES,
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_token_value_for_header(
+                &hard_maximum,
+                HeaderMode::Bearer,
+                ABSOLUTE_MAX_AUTH_TOKEN_BYTES,
+            )
+            .is_ok()
+        );
+
         assert!(
             OpenBaoConfig::new("https://bao.example.com")
                 .and_then(|config| config.max_auth_token_bytes(0))
@@ -5382,6 +5400,26 @@ mod tests {
                     config.max_auth_token_bytes(ABSOLUTE_MAX_AUTH_TOKEN_BYTES + 1)
                 })
                 .is_err()
+        );
+    }
+
+    #[cfg(feature = "memory-lock")]
+    #[test]
+    fn locked_authentication_token_accepts_exact_hard_ceiling() {
+        let token_value = "x".repeat(ABSOLUTE_MAX_AUTH_TOKEN_BYTES);
+        let token = sanitization::LockedSecretString::from_secret_str(&token_value)
+            .unwrap_or_else(|error| panic!("failed to lock hard-limit token: {error}"));
+        let config = OpenBaoConfig::new("https://bao.example.com")
+            .and_then(|config| config.max_auth_token_bytes(ABSOLUTE_MAX_AUTH_TOKEN_BYTES))
+            .unwrap_or_else(|error| panic!("failed to configure hard token limit: {error}"));
+        let client = Client::from_config(config)
+            .and_then(|client| client.try_with_locked_token(token))
+            .unwrap_or_else(|error| panic!("hard-limit locked token was rejected: {error}"));
+
+        assert!(
+            client
+                .authentication_token_is_memory_locked()
+                .unwrap_or_else(|error| panic!("failed to inspect token storage: {error}"))
         );
     }
 
