@@ -18,7 +18,8 @@ selected policy lifecycle, CAS, or rule fields while preserving omitted
 values. Existing policy write methods remain unchanged.
 
 JWT CEL role PATCH now requires
-`JwtCelClaimValidationAcknowledgement::acknowledge()` through
+`JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel()`
+through
 `patch_cel_role_acknowledged`. It is routable only for exact `2.6.1`, where
 OpenBao preserves audience and leeway constraints. Exact `2.6.0` continues to
 fail locally. The old unacknowledged `patch_cel_role` method is deprecated and

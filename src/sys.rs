@@ -3895,8 +3895,10 @@ pub struct PolicyPatchRequest {
     /// Replacement policy lifetime duration. Mutually exclusive with `expiration`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ttl: Option<String>,
-    /// Check-and-set version. Use `-1` for strict creation, although PATCH
-    /// itself requires the policy to exist.
+    /// Required current policy version for this update.
+    ///
+    /// PATCH requires the policy to exist, so `-1` cannot provide strict
+    /// creation semantics here.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cas: Option<i64>,
     /// Replacement check-and-set requirement.

@@ -67,7 +67,8 @@ the reviewed 2.6.1 routes. Existing exact profiles retain their prior route,
 field, and security-block behavior.
 
 Callers using CEL role PATCH should move to
-`patch_cel_role_acknowledged(..., JwtCelClaimValidationAcknowledgement::acknowledge())`.
+`patch_cel_role_acknowledged(...,
+JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel())`.
 The call remains unavailable on exact 2.6.0. ACL policy replacement methods
 are unchanged; use `Sys::patch_policy` only when preserving omitted policy
 fields is required.
