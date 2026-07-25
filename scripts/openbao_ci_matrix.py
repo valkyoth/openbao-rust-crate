@@ -236,7 +236,7 @@ def validate_result_record(
                 raise CiMatrixError("CI operation result is not an object")
             validate_operation(operation)
             should_skip = (
-                release["version"] != "2.6.0"
+                release["version"] not in {"2.6.0", "2.6.1"}
                 and operation["id"] in CORE_OPERATION_IDS[8:]
             )
             if (operation["status"] == "skipped") != should_skip:
@@ -727,11 +727,11 @@ def self_test() -> None:
         "2.3.2",
         "2.4.4",
         "2.5.5",
-        "2.6.0",
+        "2.6.1",
     ]
     if profile_versions("representative", document) != expected_representatives:
         raise CiMatrixError("representative CI profile is not the reviewed release set")
-    if len(profile_versions("all", document)) != 22:
+    if len(profile_versions("all", document)) != 23:
         raise CiMatrixError("all-release CI profile is incomplete")
     for version in ("", "2.5", "v2.5.5", "2.05.5", "2.5.5;echo"):
         expect_rejected(
@@ -808,17 +808,20 @@ def self_test() -> None:
                         "id": operation,
                         "status": (
                             "skipped"
-                            if version != "2.6.0" and operation in CORE_OPERATION_IDS[8:]
+                            if version not in {"2.6.0", "2.6.1"}
+                            and operation in CORE_OPERATION_IDS[8:]
                             else "passed"
                         ),
                         "reason_code": (
                             "server-operation-unavailable"
-                            if version != "2.6.0" and operation in CORE_OPERATION_IDS[8:]
+                            if version not in {"2.6.0", "2.6.1"}
+                            and operation in CORE_OPERATION_IDS[8:]
                             else None
                         ),
                         "classification": (
                             "expected-server-difference"
-                            if version != "2.6.0" and operation in CORE_OPERATION_IDS[8:]
+                            if version not in {"2.6.0", "2.6.1"}
+                            and operation in CORE_OPERATION_IDS[8:]
                             else None
                         ),
                     }

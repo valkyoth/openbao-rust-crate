@@ -19,6 +19,9 @@ change to overwrite the behavior required by an older server.
 
 The follow-up plan for appending the exact OpenBao 2.6.0 profile is
 [`OPENBAO_2_6_0_SUPPORT_PLAN.md`](OPENBAO_2_6_0_SUPPORT_PLAN.md).
+The active append-only inventory now extends that model through OpenBao
+`2.6.1`; current totals and evidence are reported in
+[`OPENBAO_VERSION_SUPPORT_MATRIX.md`](OPENBAO_VERSION_SUPPORT_MATRIX.md).
 
 The companion
 [`OPENBAO_2_5_FULL_SUPPORT_AUDIT.md`](OPENBAO_2_5_FULL_SUPPORT_AUDIT.md)

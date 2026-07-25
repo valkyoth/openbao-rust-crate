@@ -1,6 +1,6 @@
 {
   "schema": "openbao-image-signature-evidence/v1",
-  "observed_on": "2026-07-17",
+  "observed_on": "2026-07-25",
   "repository": "docker.io/openbao/openbao",
   "bundle_format": "application/vnd.dev.sigstore.bundle.v0.3+json newline stream",
   "records": [
@@ -25,6 +25,7 @@
     {"version":"2.5.3","index_bundle_sha256":"sha256:f4cfc76ce84a51995513d1a0339dd06f1d669c741a42919cc26b0a0c8fb6412d","linux_amd64_bundle_sha256":"sha256:2dfda695256f77e921a30b5557e48ae6b88e772a70cc982447564db7bf9d0a96"},
     {"version":"2.5.4","index_bundle_sha256":"sha256:aef3d9b4cc785bc986cf2808e8a3018756cf1e5525c87c79bfc8c6155f2cf6a8","linux_amd64_bundle_sha256":"sha256:788c229acb53ad76f53bb0bb6794b95fe4fa7bc7ebf227250548dfbd30206577"},
     {"version":"2.5.5","index_bundle_sha256":"sha256:626ce6ce4eb7297b68b0ddd0e5756cf26bea8e28561cec2e281775529c66a9a0","linux_amd64_bundle_sha256":"sha256:4e026e2b99045ef30b730f433eac8bd0bc4c860adf1ff82c45e57f47b8a288c3"},
-    {"version":"2.6.0","index_bundle_sha256":"sha256:ecb4a011104c0e7bd5a7f3456ac924ddf03f48e0bd2fe662de567063bcca431c","linux_amd64_bundle_sha256":null}
+    {"version":"2.6.0","index_bundle_sha256":"sha256:ecb4a011104c0e7bd5a7f3456ac924ddf03f48e0bd2fe662de567063bcca431c","linux_amd64_bundle_sha256":null},
+    {"version":"2.6.1","index_bundle_sha256":"sha256:7045e8518c782192db2a9abb8459021562c503213a6b938680c2fa330f6c7366","linux_amd64_bundle_sha256":null}
   ]
 }

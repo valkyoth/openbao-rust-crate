@@ -17,6 +17,7 @@ Kerberos auth coverage was refreshed against official `2.5.x` documentation on
 2026-06-02.
 OpenBao `2.6.0` was reviewed from its exact tagged source, runtime OpenAPI, and
 digest-pinned image on 2026-07-14 and promoted after the complete live matrix.
+OpenBao `2.6.1` was reviewed with the same evidence chain on 2026-07-25.
 The exact endpoint contract baseline is captured from the official OpenBao
 `v2.5.5` tagged source commit and reconciled with the locked-image OpenAPI
 snapshot. It is summarized in `docs/OPENBAO_2_5_ENDPOINT_MATRIX.md`; the
@@ -26,9 +27,9 @@ CSV is a review index. The finalized multi-version source of truth is
 The tagged-source inventory contains `644` documented rows and `663` expanded
 method/path operations. The locked OpenAPI snapshot adds two documented
 operations absent from that extraction, producing 665 current `2.5.5`
-operations. The supported-release union through OpenBao `2.6.0` contains 690
+operations. The supported-release union through OpenBao `2.6.1` contains 691
 logical operation identities. The version contract expands that union to
-15,180 operation/profile cells. It also fixes the old rendered-
+15,893 operation/profile cells. It also fixes the old rendered-
 documentation parser's omission of `HEAD /sys/health`.
 
 Sources:
@@ -93,10 +94,10 @@ operation contract. The original extraction checkpoint recorded:
 - typed claims in that baseline: `0`.
 
 The earlier `597/643` percentage is withdrawn. The finalized registry contains
-690 logical operation identities across all 22 locked releases and 15,180
+691 logical operation identities across all 23 locked releases and 15,893
 operation/profile cells. Every operation available in a supported profile is
-now `typed`, `typed-gated`, or `security-blocked`; the current `2.6.0` profile
-contains 592 typed, 93 typed-gated, and 3 security-blocked operations. Contract
+now `typed`, `typed-gated`, or `security-blocked`; the current `2.6.1` profile
+contains 594 typed, 93 typed-gated, and 2 security-blocked operations. Contract
 and serde evidence
 is endpoint-complete, while live tests remain an explicitly representative
 core-flow subset. See

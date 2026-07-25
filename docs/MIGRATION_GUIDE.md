@@ -1,11 +1,31 @@
 # Migration Guide
 
 This guide tracks migrations between stable OpenBao SDK releases. The current
-contract inventory contains 690 logical operation identities across the
+contract inventory contains 691 logical operation identities across the
 supported OpenBao release union. Every operation available in a supported
 profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
+
+## From `openbao` 2.1.1 To 2.1.2
+
+`2.1.2` appends exact OpenBao `2.6.1` support without changing any historical
+profile. Strict automatic detection recognizes `2.6.1`; callers using an
+explicit profile can select `OpenBaoVersion::new(2, 6, 1)`.
+
+OpenBao `2.6.1` adds ACL policy PATCH. Use `Sys::patch_policy` to update only
+selected policy lifecycle, CAS, or rule fields while preserving omitted
+values. Existing policy write methods remain unchanged.
+
+JWT CEL role PATCH now requires
+`JwtCelClaimValidationAcknowledgement::acknowledge()` through
+`patch_cel_role_acknowledged`. It is routable only for exact `2.6.1`, where
+OpenBao preserves audience and leeway constraints. Exact `2.6.0` continues to
+fail locally. The old unacknowledged `patch_cel_role` method is deprecated and
+fails locally for every profile.
+
+Workflow prefix LIST/SCAN and CAS-selected writes remain blocked on both 2.6
+profiles because OpenBao `2.6.1` does not fix those server behaviors.
 
 ## From `openbao` 2.1.0 To 2.1.1
 

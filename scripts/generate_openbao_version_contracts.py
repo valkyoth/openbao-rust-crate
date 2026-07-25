@@ -35,17 +35,17 @@ REQUEST_RULES_PATH = ROOT / "src/request_compatibility.rs"
 RESPONSE_TEST_PATH = ROOT / "tests/serde_fixtures.rs"
 MAX_INPUT_BYTES = 8 * 1024 * 1024
 MAX_OUTPUT_BYTES = 16 * 1024 * 1024
-EXPECTED_MATRIX_SHA256 = "a6a9b9591ff96f8fa000d45a9acfba51ac6432b51e0988443bbf498a919bb8e3"
-EXPECTED_MARKDOWN_SHA256 = "20aa12c4335dcb0c8e4329f659a616d9473d202de646e81ea8f405e7e3e0cb7c"
+EXPECTED_MATRIX_SHA256 = "e25eb1a3b56672738670ede54f327c0060481be1016e1bcd529a6b6c9be00ec8"
+EXPECTED_MARKDOWN_SHA256 = "bbd3de17092c2005a11a0218ab52e2917541d456db0d735afb39892c717c5574"
 ALLOWED_DISPOSITIONS = {"typed", "typed-gated", "security-blocked"}
-ALLOWED_AVAILABILITY = {"documented", "unavailable"}
+ALLOWED_AVAILABILITY = {"documented", "security-blocked", "unavailable"}
 FORBIDDEN_STATES = {"planned", "decision", "partial", "raw", "external", "rejected", "unlinked"}
 RESPONSE_FAMILIES = ("pki-certificate", "pki-role", "plugin", "policy", "quota")
 EXPECTED_SCOPE = {
     "destructive_test_isolation": "fresh ephemeral OpenBao server per exact profile",
     "external_services_proven": [],
     "external_services_scope": "no external database, directory, cloud, OIDC, MFA, DNS, or broker service was exercised",
-    "live_claim": "eight representative built-in core flows per exact profile plus six OpenBao 2.6-only flows on 2.6.0",
+    "live_claim": "eight representative built-in core flows per exact profile plus six OpenBao 2.6-only flows on 2.6.0 and 2.6.1",
     "response_claim": "five representative public response families per exact profile",
 }
 
@@ -109,8 +109,8 @@ def build_matrix() -> dict[str, Any]:
         registry.get("schema") != "openbao-capability-registry/v1"
         or not isinstance(versions, list)
         or not isinstance(operations, list)
-        or len(versions) != 22
-        or len(operations) != 690
+        or len(versions) != 23
+        or len(operations) != 691
     ):
         raise ContractError("capability registry shape is invalid")
     if any(operation.get("disposition") not in ALLOWED_DISPOSITIONS for operation in operations):
@@ -157,9 +157,15 @@ def build_matrix() -> dict[str, Any]:
             item["id"] for item in live_operations if item.get("status") == "skipped"
         ]
         expected_passed = list(
-            CORE_OPERATION_IDS if version == "2.6.0" else CORE_OPERATION_IDS[:8]
+            CORE_OPERATION_IDS
+            if version in {"2.6.0", "2.6.1"}
+            else CORE_OPERATION_IDS[:8]
         )
-        expected_skipped = [] if version == "2.6.0" else list(CORE_OPERATION_IDS[8:])
+        expected_skipped = (
+            []
+            if version in {"2.6.0", "2.6.1"}
+            else list(CORE_OPERATION_IDS[8:])
+        )
         if passed_live_ids != expected_passed or skipped_live_ids != expected_skipped:
             raise ContractError("representative live evidence contradicts the exact profile")
 
@@ -169,11 +175,18 @@ def build_matrix() -> dict[str, Any]:
             availability, endpoint_evidence = state_for(operation, version, version_index)
             if availability not in ALLOWED_AVAILABILITY:
                 raise ContractError("operation/profile availability is unresolved")
+            cell_availability = (
+                "documented" if availability == "security-blocked" else availability
+            )
             if availability == "unavailable":
                 implementation = "not-applicable"
                 request_evidence = "not-applicable-route-unavailable"
             else:
-                implementation = operation["disposition"]
+                implementation = (
+                    "security-blocked"
+                    if availability == "security-blocked"
+                    else operation["disposition"]
+                )
                 request_evidence = {
                     "tagged-documentation": "tagged-contract-fields",
                     "locked-openapi": "locked-openapi-schema",
@@ -184,10 +197,10 @@ def build_matrix() -> dict[str, Any]:
                 counts[implementation] += 1
                 total_documented += 1
                 total_resolved += 1
-            counts[availability] += 1
+            counts[cell_availability] += 1
             cells.append(
                 {
-                    "availability": availability,
+                    "availability": cell_availability,
                     "endpoint_evidence": endpoint_evidence,
                     "implementation": implementation,
                     "live_evidence": "representative-profile-core-flow-only",
@@ -279,7 +292,7 @@ def validate_matrix(matrix: dict[str, Any], expected_versions: list[str]) -> Non
         raise ContractError("version contract evidence source identities are invalid")
     operations = matrix["operations"]
     profiles = matrix["profiles"]
-    if not isinstance(operations, list) or len(operations) != 690:
+    if not isinstance(operations, list) or len(operations) != 691:
         raise ContractError("version contract operation count is invalid")
     if not isinstance(profiles, list) or [item.get("version") for item in profiles] != expected_versions:
         raise ContractError("version contract profile order is invalid")
@@ -311,7 +324,10 @@ def validate_matrix(matrix: dict[str, Any], expected_versions: list[str]) -> Non
             if cell["availability"] == "documented":
                 documented_cells += 1
                 counts["documented"] += 1
-                if cell["implementation"] != operation["disposition"]:
+                if cell["implementation"] not in {
+                    operation["disposition"],
+                    "security-blocked",
+                }:
                     raise ContractError("documented operation disposition is contradictory")
                 if cell["request_shape_evidence"] == "not-applicable-route-unavailable":
                     raise ContractError("documented operation lacks request evidence")
@@ -342,9 +358,15 @@ def validate_matrix(matrix: dict[str, Any], expected_versions: list[str]) -> Non
         response = profile.get("response_fixture_evidence")
         version = profile["version"]
         expected_passed = list(
-            CORE_OPERATION_IDS if version == "2.6.0" else CORE_OPERATION_IDS[:8]
+            CORE_OPERATION_IDS
+            if version in {"2.6.0", "2.6.1"}
+            else CORE_OPERATION_IDS[:8]
         )
-        expected_skipped = [] if version == "2.6.0" else list(CORE_OPERATION_IDS[8:])
+        expected_skipped = (
+            []
+            if version in {"2.6.0", "2.6.1"}
+            else list(CORE_OPERATION_IDS[8:])
+        )
         if live != {
             "claim": "representative core flows only; unavailable operations are explicit skips",
             "operation_ids": expected_passed,
@@ -385,7 +407,7 @@ def markdown(matrix: dict[str, Any]) -> bytes:
         "every documented operation for that exact profile is classified as typed,",
         "typed-gated, or security-blocked. It does not mean every operation was exercised",
         "live. Live tests cover eight representative built-in core flows on every profile",
-        "and six additional 2.6-only flows on 2.6.0; serde fixtures",
+        "and six additional 2.6-only flows on 2.6.0 and 2.6.1; serde fixtures",
         "cover five representative response families.",
         "",
         "| OpenBao | Documented operations | Typed | Typed-gated | Security-blocked | Unavailable inventory operations | Classified coverage | Live core flows | Response fixture families |",
@@ -536,14 +558,14 @@ def main() -> int:
             print("OpenBao version contracts self-tests: ok")
         elif arguments.verify:
             verify_outputs()
-            print("OpenBao version contracts: 15,180 cells verified")
+            print("OpenBao version contracts: 15,893 cells verified")
         else:
             generated = outputs()
             for path, data in generated.items():
                 if sha256(data) != expected_hashes()[path]:
                     raise ContractError("refusing to write an unanchored version contract")
                 atomic_write(path, data)
-            print("OpenBao version contracts: wrote 15,180 cells")
+            print("OpenBao version contracts: wrote 15,893 cells")
         return 0
     except (ContractError, SnapshotError, OSError, ValueError, KeyError, TypeError) as error:
         print(f"OpenBao version contracts failed: {error}", file=os.sys.stderr)

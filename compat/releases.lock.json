@@ -1,7 +1,7 @@
 {
   "schema": "openbao-release-inventory/v1",
-  "inventory_revision": 2,
-  "observed_on": "2026-07-17",
+  "inventory_revision": 3,
+  "observed_on": "2026-07-25",
   "source_repository": "https://github.com/openbao/openbao.git",
   "image_repository": "docker.io/openbao/openbao",
   "snapshot_lock": "compat/api-snapshots.lock.json",
@@ -17,13 +17,13 @@
     "certificate_oidc_issuer": "https://token.actions.githubusercontent.com",
     "certificate_identity_template": "https://github.com/openbao/openbao/.github/workflows/release.yml@refs/tags/v{version}",
     "signature_bundle_lock": "compat/image-signatures.lock.json",
-    "signature_bundle_lock_sha256": "sha256:2d991b7ffcf37b3256ccf7d6f4918a0d70889282ad23312f9bc5bb22c7c99a3b",
+    "signature_bundle_lock_sha256": "sha256:9d992eeb244f06c7c3d2d0371dea5e0b726749a8824b1ba3d79dc8197025235e",
     "oci_attestation_tags_checked": true,
     "github_attestations_api_checked": true,
     "cosign_claims_validated": true,
     "transparency_log_verified": true,
     "certificate_chain_verified": true,
-    "attestation_observation": "No OCI .att tags were published and the GitHub attestations API returned no provenance attestation for the checked image indexes."
+    "attestation_observation": "OpenBao 2.6 images publish embedded SLSA provenance bound by the signed multi-platform index. Older checked images publish neither OCI .att tags nor GitHub API provenance attestations."
   },
   "records": [
     {
@@ -710,6 +710,41 @@
         "OpenBao 2.6.0 signs the multi-platform index through release-images.yml and does not publish a separate linux/amd64 signature.",
         "The verified signed index binds the locked linux/amd64 descriptor and embedded provenance; the child image is not represented as independently signed.",
         "Detailed provenance and signature-topology evidence remains checksummed under compat/onboarding/2.6.0/."
+      ]
+    },
+    {
+      "version": "2.6.1",
+      "source": {
+        "tag": "v2.6.1",
+        "tag_kind": "lightweight",
+        "tag_object_sha1": "ba7ad8861d0578cd4da4f7b9e5a6756d30484f8f",
+        "peeled_commit_sha1": "ba7ad8861d0578cd4da4f7b9e5a6756d30484f8f",
+        "commit_timestamp": "2026-07-22T16:17:19+02:00",
+        "github_release_published_at": "2026-07-22T14:37:36Z",
+        "tag_signature_status": "not_available_lightweight_tag"
+      },
+      "image": {
+        "tag": "2.6.1",
+        "index_digest": "sha256:5b2486ab0fb90bbc788cc345b0a08616dfb375873ee8be5df3a2fd4d378a67e0",
+        "linux_amd64_digest": "sha256:15e90b578c970ae57b596ed51295380cd54f93860fe36758f05b455d71aae0e0",
+        "index_signature_status": "verified_cosign_keyless",
+        "linux_amd64_signature_status": "not_published_bound_by_verified_index",
+        "certificate_identity": "https://github.com/openbao/openbao/.github/workflows/release-images.yml@refs/tags/v2.6.1",
+        "certificate_oidc_issuer": "https://token.actions.githubusercontent.com",
+        "transparency_log_verified": true,
+        "attestation_status": "embedded_provenance_verified"
+      },
+      "documentation": {
+        "source_commit_sha1": "ba7ad8861d0578cd4da4f7b9e5a6756d30484f8f",
+        "source_path": "website/content/api-docs",
+        "normalized_openapi_status": "pending_commit_03",
+        "normalized_openapi_sha256": null
+      },
+      "compatibility_status": "artifact_locked_api_pending",
+      "security_notes": [
+        "OpenBao 2.6.1 signs the multi-platform index through release-images.yml and does not publish a separate linux/amd64 signature.",
+        "The verified signed index binds the locked linux/amd64 descriptor and embedded SLSA provenance; the child image is not represented as independently signed.",
+        "The embedded provenance subject and source revision bind the locked image to commit ba7ad8861d0578cd4da4f7b9e5a6756d30484f8f."
       ]
     }
   ]

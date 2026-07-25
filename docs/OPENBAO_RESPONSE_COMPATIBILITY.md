@@ -2,7 +2,7 @@
 
 This policy governs reviewed response decoding across every exact OpenBao
 release locked under `compat/api-snapshots/`, currently `2.0.0` through
-`2.6.0`. Response compatibility is evidence-based: optional fields and aliases
+`2.6.1`. Response compatibility is evidence-based: optional fields and aliases
 are added only when tagged documentation or the checksum-locked normalized
 OpenAPI snapshots show the shape.
 
@@ -46,7 +46,7 @@ cargo test --test serde_fixtures --all-features
 
 The generator validates the API snapshot lock first, verifies each OpenAPI
 file against its recorded SHA-256, and emits
-`tests/fixtures/openbao_response_profiles.json`. Each of its 22 profiles
+`tests/fixtures/openbao_response_profiles.json`. Each of its 23 profiles
 records its source digest and exercises reviewed response transitions such as:
 
 - PKI certificate `not_before` from OpenBao `2.1.0`;

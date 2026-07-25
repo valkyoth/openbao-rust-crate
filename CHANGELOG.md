@@ -4,6 +4,30 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.2 - 2026-07-25
+
+### Added
+
+- Added the immutable OpenBao `2.6.1` compatibility profile, API snapshots,
+  adjacent-release diff, source and OCI evidence, response fixtures, and exact
+  live integration result.
+- Added typed ACL policy PATCH through `Sys::patch_policy`, including
+  lifecycle/CAS fields and acknowledged identity-template overrides.
+- Added acknowledged JWT CEL role PATCH routing for OpenBao `2.6.1`.
+
+### Changed
+
+- Expanded the capability registry to 691 operation identities across 23
+  exact OpenBao profiles and 15,893 operation/profile cells.
+- JWT CEL PATCH remains fail-closed on exact OpenBao `2.6.0`, where the server
+  drops claim constraints, and becomes routable only on `2.6.1`, where OpenBao
+  fixed constraint preservation.
+- Prefixed workflow LIST/SCAN and workflow CAS-selected writes remain
+  fail-closed on both OpenBao 2.6 releases because those upstream defects are
+  unchanged.
+- Updated current-status, compatibility, migration, README, and release
+  evidence documentation for OpenBao `2.6.1`.
+
 ## 2.1.1 - 2026-07-22
 
 ### Changed

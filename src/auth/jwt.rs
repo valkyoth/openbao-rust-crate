@@ -676,6 +676,9 @@ impl fmt::Debug for JwtCelRoleRequest {
 /// OpenBao 2.6.0 does not preserve audience and leeway constraints in its
 /// PATCH handler. The SDK therefore reports this operation as security-blocked
 /// for that exact profile; use [`JwtAuthAdmin::write_cel_role`] instead.
+/// OpenBao 2.6.1 fixes the preservation defect, and
+/// [`JwtAuthAdmin::patch_cel_role_acknowledged`] exposes the repaired route
+/// while retaining the CEL claim-validation acknowledgement.
 #[derive(Clone, Default, Serialize)]
 pub struct JwtCelRolePatch {
     /// Replacement CEL program.
@@ -1941,11 +1944,43 @@ impl JwtAuthAdmin<'_> {
         Ok(envelope.data)
     }
 
-    /// Patches an OpenBao JWT CEL role when the selected exact profile is safe.
+    /// Rejects the legacy unacknowledged JWT CEL PATCH call.
     ///
     /// Exact OpenBao 2.6.0 is security-blocked because its PATCH handler drops
-    /// audience and leeway constraints. Use [`Self::write_cel_role`] for 2.6.0.
+    /// audience and leeway constraints. OpenBao 2.6.1 fixes that server defect,
+    /// but PATCH still requires the same explicit claim-validation
+    /// acknowledgement as a full CEL role write. Use
+    /// [`Self::patch_cel_role_acknowledged`] on 2.6.1 or newer reviewed
+    /// profiles.
+    #[deprecated(
+        since = "2.1.2",
+        note = "use patch_cel_role_acknowledged; JWT CEL PATCH requires explicit claim-validation acknowledgement"
+    )]
     pub async fn patch_cel_role(&self, name: &str, patch: &JwtCelRolePatch) -> Result<JwtCelRole> {
+        patch.validate()?;
+        let _ = validate_mount_path(name)?;
+        Err(Error::InvalidParameter(
+            "JWT CEL role PATCH requires explicit claim-validation acknowledgement; use patch_cel_role_acknowledged"
+                .into(),
+        ))
+    }
+
+    /// Patches an OpenBao JWT CEL role with reviewed claim-validation acknowledgement.
+    ///
+    /// OpenBao 2.6.0 is security-blocked because its PATCH handler drops
+    /// `bound_audiences` and leeway constraints that are omitted from the
+    /// patch. OpenBao 2.6.1 fixes that defect. The selected exact compatibility
+    /// profile must therefore be 2.6.1 or a later reviewed profile.
+    ///
+    /// The acknowledgement does not parse or prove the CEL program. It
+    /// confirms that the caller has reviewed the resulting role and that its
+    /// CEL program constrains every authorization-relevant claim.
+    pub async fn patch_cel_role_acknowledged(
+        &self,
+        name: &str,
+        patch: &JwtCelRolePatch,
+        _: JwtCelClaimValidationAcknowledgement,
+    ) -> Result<JwtCelRole> {
         patch.validate()?;
         let name = validate_mount_path(name)?.join("/");
         let envelope: ResponseEnvelope<JwtCelRole> = self

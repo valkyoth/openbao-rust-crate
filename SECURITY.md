@@ -192,13 +192,13 @@ workflow into it require both `unauthenticated-workflows` and
 `unauthenticated-workflows-acknowledged`; the client calls only the conditional
 unauthenticated route and never probes or falls back to authenticated dispatch.
 
-OpenBao 2.6.0 has two confirmed upstream workflow defects. Its update handler
-discards the supplied `cas` value before storage, so strict creation and update
-CAS cannot be relied upon and enabling `cas_required` can make a workflow
-unwritable. Its prefixed LIST and SCAN handlers panic. The SDK models body CAS
-but rejects CAS-selected workflow writes before transport while 2.6.0 is the
-only workflow profile, never retries writes, and classifies prefixed LIST/SCAN
-as security-blocked for exact 2.6.0.
+OpenBao 2.6.0 and 2.6.1 have two confirmed upstream workflow defects. Their
+update handler discards the supplied `cas` value before storage, so strict
+creation and update CAS cannot be relied upon and enabling `cas_required` can
+make a workflow unwritable. Their prefixed LIST and SCAN handlers panic. The
+SDK models body CAS but rejects CAS-selected workflow writes before transport
+for both affected profiles, never retries writes, and classifies prefixed
+LIST/SCAN as security-blocked for exact 2.6.0 and 2.6.1.
 
 ## OpenBao 2.6 Authentication Contracts
 
@@ -224,7 +224,10 @@ or prove CEL; substring and regular-expression inspection would be bypassable.
 Exact OpenBao 2.6.0 JWT CEL PATCH is security-blocked. Tagged runtime source
 constructs a replacement entry without preserving `bound_audiences` or the
 three leeway fields, which can silently weaken a patched role. Use full POST
-replacement through `write_cel_role` for that release.
+replacement through `write_cel_role` for that release. OpenBao 2.6.1 preserves
+those fields; the SDK exposes PATCH for that exact profile only through
+`patch_cel_role_acknowledged`, retaining the explicit claim-validation
+acknowledgement required by full CEL role writes.
 
 `JwtConfig::kubernetes_provider` sets only
 `provider_config.provider = "kubernetes"`. The typed configuration validator
@@ -503,10 +506,10 @@ servers to another host or reuse them for application, staging, or production
 traffic. Passing historical core tests is a compatibility observation, not a
 security endorsement of the server release.
 
-The active matrix covers 22 exact releases from `2.0.0` through `2.6.0`.
+The active matrix covers 23 exact releases from `2.0.0` through `2.6.1`.
 Every profile executes the common eight-operation core flow; exact `2.6.0`
-also executes root-generation routing, sealable namespace, workflow, JWT CEL,
-userpass bcrypt-hash, and changed-response-field flows. The previous
+and `2.6.1` also execute root-generation routing, sealable namespace,
+workflow, JWT CEL, userpass bcrypt-hash, and changed-response-field flows. The previous
 21-release result is retained under `compat/core-flow-history/` so promotion
 does not erase prior evidence.
 

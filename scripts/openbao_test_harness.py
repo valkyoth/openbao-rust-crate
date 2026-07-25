@@ -683,7 +683,7 @@ def read_descriptor(descriptor: int, maximum: int) -> bytes:
 
 
 def validate_attestation(value: dict[str, Any], version: str) -> None:
-    latest = version == "2.6.0"
+    latest = version in {"2.6.0", "2.6.1"}
     expected_executed = list(CORE_OPERATION_IDS if latest else CORE_OPERATION_IDS[:8])
     expected_skipped = [] if latest else list(OPENBAO_2_6_OPERATION_IDS)
     if set(value) != {"schema", "version", "executed", "skipped"}:
@@ -1027,17 +1027,20 @@ def run_integration(version: str) -> dict[str, Any]:
                     "id": operation,
                     "status": (
                         "passed"
-                        if version == "2.6.0" or operation not in OPENBAO_2_6_OPERATION_IDS
+                        if version in {"2.6.0", "2.6.1"}
+                        or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "skipped"
                     ),
                     "reason_code": (
                         None
-                        if version == "2.6.0" or operation not in OPENBAO_2_6_OPERATION_IDS
+                        if version in {"2.6.0", "2.6.1"}
+                        or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "server-operation-unavailable"
                     ),
                     "classification": (
                         None
-                        if version == "2.6.0" or operation not in OPENBAO_2_6_OPERATION_IDS
+                        if version in {"2.6.0", "2.6.1"}
+                        or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "expected-server-difference"
                     ),
                 }
@@ -1155,6 +1158,15 @@ def self_test() -> None:
             "skipped": [],
         },
         "2.6.0",
+    )
+    validate_attestation(
+        {
+            "schema": "openbao-core-flow-attestation/v1",
+            "version": "2.6.1",
+            "executed": list(CORE_OPERATION_IDS),
+            "skipped": [],
+        },
+        "2.6.1",
     )
     for mutation in (
         {**valid_attestation, "executed": []},

@@ -31,11 +31,13 @@ fn capability_selection_never_escapes_selected_interval() {
             first_minimum,
             first_maximum,
             OpenBaoCapabilityEvidence::TaggedDocumentation,
+            false,
         ),
         OpenBaoCapabilityRange::generated(
             second_minimum,
             second_maximum,
             OpenBaoCapabilityEvidence::LockedOpenApi,
+            false,
         ),
     ];
 

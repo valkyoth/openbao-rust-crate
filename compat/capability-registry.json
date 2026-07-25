@@ -1,5 +1,5 @@
 {
-  "api_snapshot_lock_sha256": "92b317b33daa1be8428f48d76caf8d65c6d331874a3a615c79ab2719929d63ba",
+  "api_snapshot_lock_sha256": "00c21e23816cd6ed9cd85392f2a807f5f6fd72790917eabb92a7e05b2d795c6a",
   "contract_matrix_sha256": "853a10e33946a5a9e994dd2e8b854137fef842244ead915b25f2d1fbd16925d4",
   "generator_version": 1,
   "logical_endpoints": [
@@ -12,7 +12,7 @@
           "operation_id": "openbao.delete.sys.generate.root.attempt.a9b55a062f0bddfd"
         },
         {
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0",
           "operation_id": "openbao.delete.sys.generate.root.token.attempt.76b869404ef9c2aa"
         }
@@ -27,7 +27,7 @@
           "operation_id": "openbao.post.sys.generate.root.attempt.970bb5dfc6bba2b2"
         },
         {
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0",
           "operation_id": "openbao.post.sys.generate.root.token.attempt.532d9c8f9c22306d"
         }
@@ -42,7 +42,7 @@
           "operation_id": "openbao.get.sys.generate.root.attempt.f6f4fd06542ba4f7"
         },
         {
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0",
           "operation_id": "openbao.get.sys.generate.root.token.attempt.4c6a9904e9da8d8a"
         }
@@ -57,7 +57,7 @@
           "operation_id": "openbao.post.sys.generate.root.update.1b76d7f10b884e9e"
         },
         {
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0",
           "operation_id": "openbao.post.sys.generate.root.token.update.741304409be7b3ee"
         }
@@ -74,7 +74,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -88,7 +88,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -102,7 +102,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -116,7 +116,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -130,7 +130,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -144,7 +144,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -158,7 +158,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -172,7 +172,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -186,7 +186,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -200,7 +200,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -214,7 +214,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -228,7 +228,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -242,7 +242,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -256,7 +256,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -270,7 +270,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -284,7 +284,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -304,7 +304,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -318,7 +318,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -332,7 +332,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -346,7 +346,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -360,7 +360,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -374,7 +374,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -388,7 +388,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -402,7 +402,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -416,7 +416,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -430,7 +430,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -444,7 +444,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -458,7 +458,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -472,7 +472,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -486,7 +486,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -500,7 +500,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -514,7 +514,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -528,7 +528,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -542,7 +542,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -556,7 +556,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -570,7 +570,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -584,7 +584,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -598,7 +598,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -612,7 +612,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -626,7 +626,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -640,7 +640,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -654,7 +654,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -668,7 +668,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -682,7 +682,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -696,7 +696,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -710,7 +710,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -724,7 +724,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -738,7 +738,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -752,7 +752,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -766,7 +766,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -780,7 +780,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -794,7 +794,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -814,7 +814,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -828,7 +828,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -842,7 +842,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -856,7 +856,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -870,7 +870,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -884,7 +884,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -898,7 +898,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -912,7 +912,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -926,7 +926,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -940,7 +940,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -954,7 +954,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -968,7 +968,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -988,7 +988,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.3.1"
         }
       ]
@@ -1002,7 +1002,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1016,7 +1016,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1030,7 +1030,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1044,7 +1044,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1058,7 +1058,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1072,7 +1072,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1086,7 +1086,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1100,7 +1100,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1114,7 +1114,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1134,7 +1134,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -1148,7 +1148,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1162,7 +1162,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1176,7 +1176,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1196,7 +1196,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -1210,7 +1210,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1224,7 +1224,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1238,7 +1238,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1252,7 +1252,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1266,7 +1266,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1280,7 +1280,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1294,7 +1294,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1308,7 +1308,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1322,7 +1322,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1336,7 +1336,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1350,7 +1350,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1364,7 +1364,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1378,7 +1378,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1398,7 +1398,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -1418,7 +1418,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -1438,7 +1438,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -1458,7 +1458,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -1472,7 +1472,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1486,7 +1486,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1500,7 +1500,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1514,7 +1514,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1528,7 +1528,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1542,7 +1542,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1556,7 +1556,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1570,7 +1570,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1584,7 +1584,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1598,7 +1598,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1612,7 +1612,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1626,7 +1626,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1640,7 +1640,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1654,7 +1654,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1668,7 +1668,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1682,7 +1682,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1702,7 +1702,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -1716,7 +1716,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1730,7 +1730,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1750,7 +1750,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.1.0"
         }
       ]
@@ -1764,7 +1764,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1778,7 +1778,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1792,7 +1792,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1806,7 +1806,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1820,7 +1820,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1834,7 +1834,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1848,7 +1848,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1862,7 +1862,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1876,7 +1876,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1890,7 +1890,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1904,7 +1904,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1918,7 +1918,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1932,7 +1932,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1946,7 +1946,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1960,7 +1960,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1974,7 +1974,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -1988,7 +1988,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2002,7 +2002,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2016,7 +2016,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2030,7 +2030,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2044,7 +2044,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2058,7 +2058,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2072,7 +2072,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2086,7 +2086,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2100,7 +2100,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2114,7 +2114,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2128,7 +2128,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2142,7 +2142,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2156,7 +2156,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2170,7 +2170,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2184,7 +2184,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2198,7 +2198,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2212,7 +2212,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2226,7 +2226,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2240,7 +2240,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2254,7 +2254,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2268,7 +2268,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2282,7 +2282,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2296,7 +2296,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2310,7 +2310,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2324,7 +2324,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2338,7 +2338,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2352,7 +2352,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2366,7 +2366,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2380,7 +2380,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2394,7 +2394,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2408,7 +2408,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2422,7 +2422,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2436,7 +2436,7 @@
         {
           "availability": "documented",
           "evidence": "locked-openapi",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2450,7 +2450,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2464,7 +2464,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2478,7 +2478,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2492,7 +2492,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2506,7 +2506,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2520,7 +2520,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2534,7 +2534,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2548,7 +2548,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2562,7 +2562,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2576,7 +2576,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2590,7 +2590,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2604,7 +2604,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2618,7 +2618,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2632,7 +2632,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2646,7 +2646,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2666,7 +2666,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -2680,7 +2680,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2694,7 +2694,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2708,7 +2708,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2722,7 +2722,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2736,7 +2736,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2750,7 +2750,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2764,7 +2764,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2778,7 +2778,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2792,7 +2792,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2806,7 +2806,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2820,7 +2820,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2834,7 +2834,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2848,7 +2848,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2862,7 +2862,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2876,7 +2876,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2890,7 +2890,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2904,7 +2904,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2918,7 +2918,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2932,7 +2932,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2946,7 +2946,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2960,7 +2960,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2974,7 +2974,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -2988,7 +2988,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3002,7 +3002,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3016,7 +3016,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3030,7 +3030,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3044,7 +3044,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3058,7 +3058,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3072,7 +3072,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3086,7 +3086,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3100,7 +3100,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3114,7 +3114,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3128,7 +3128,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3142,7 +3142,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3156,7 +3156,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3170,7 +3170,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3184,7 +3184,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3198,7 +3198,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3212,7 +3212,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3226,7 +3226,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3240,7 +3240,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3254,7 +3254,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3274,7 +3274,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.3.1"
         }
       ]
@@ -3288,7 +3288,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3308,7 +3308,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.3.1"
         }
       ]
@@ -3328,7 +3328,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.3.1"
         }
       ]
@@ -3342,7 +3342,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3356,7 +3356,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3370,7 +3370,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3384,7 +3384,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3398,7 +3398,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3412,7 +3412,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3426,7 +3426,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3440,7 +3440,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3454,7 +3454,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3468,7 +3468,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3482,7 +3482,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3496,7 +3496,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3510,7 +3510,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3530,7 +3530,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -3544,7 +3544,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3558,7 +3558,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3572,7 +3572,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3586,7 +3586,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3600,7 +3600,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3614,7 +3614,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3628,7 +3628,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3654,7 +3654,7 @@
         {
           "availability": "unavailable",
           "evidence": "none",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -3668,7 +3668,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3682,7 +3682,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3696,7 +3696,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3710,7 +3710,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3724,7 +3724,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3744,7 +3744,7 @@
         {
           "availability": "unavailable",
           "evidence": "none",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.5.0"
         }
       ]
@@ -3758,7 +3758,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3772,7 +3772,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3786,7 +3786,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3800,7 +3800,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3814,7 +3814,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3828,7 +3828,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3842,7 +3842,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3856,7 +3856,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3870,7 +3870,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3884,7 +3884,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3898,7 +3898,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3912,7 +3912,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3926,7 +3926,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3940,7 +3940,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3954,7 +3954,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3968,7 +3968,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -3982,7 +3982,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4002,7 +4002,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -4016,7 +4016,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4030,7 +4030,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4044,7 +4044,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4058,7 +4058,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4072,7 +4072,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4086,7 +4086,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4100,7 +4100,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4114,7 +4114,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4128,7 +4128,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4142,7 +4142,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4156,7 +4156,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4170,7 +4170,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4184,7 +4184,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4198,7 +4198,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4212,7 +4212,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4226,7 +4226,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4240,7 +4240,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4254,7 +4254,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4268,7 +4268,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4282,7 +4282,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4296,7 +4296,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4310,7 +4310,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4324,7 +4324,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4338,7 +4338,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4352,7 +4352,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4366,7 +4366,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4380,7 +4380,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4394,7 +4394,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4408,7 +4408,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4422,7 +4422,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4436,7 +4436,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4456,7 +4456,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -4482,7 +4482,7 @@
         {
           "availability": "documented",
           "evidence": "locked-openapi",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -4502,7 +4502,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -4522,7 +4522,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -4536,7 +4536,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4550,7 +4550,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4564,7 +4564,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4578,7 +4578,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4592,7 +4592,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4612,7 +4612,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -4626,7 +4626,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4640,7 +4640,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4654,7 +4654,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4668,7 +4668,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4682,7 +4682,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4696,7 +4696,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4710,7 +4710,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4724,7 +4724,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4738,7 +4738,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4752,7 +4752,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4766,7 +4766,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4780,7 +4780,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4794,7 +4794,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4808,7 +4808,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4828,7 +4828,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -4842,7 +4842,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4856,7 +4856,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4870,7 +4870,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4884,7 +4884,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4898,7 +4898,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4912,7 +4912,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4926,7 +4926,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4940,7 +4940,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4954,7 +4954,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4968,7 +4968,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4982,7 +4982,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -4996,7 +4996,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5010,7 +5010,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5024,7 +5024,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5038,7 +5038,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5052,7 +5052,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5066,7 +5066,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5080,7 +5080,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5094,7 +5094,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5108,7 +5108,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5122,7 +5122,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5136,7 +5136,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5150,7 +5150,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5164,7 +5164,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5178,7 +5178,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5192,7 +5192,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5206,7 +5206,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5220,7 +5220,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5234,7 +5234,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5248,7 +5248,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5262,7 +5262,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5276,7 +5276,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5296,7 +5296,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -5310,7 +5310,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5330,7 +5330,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -5344,7 +5344,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5358,7 +5358,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5372,7 +5372,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5386,7 +5386,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5400,7 +5400,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5414,7 +5414,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5428,7 +5428,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5448,7 +5448,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -5462,7 +5462,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5476,7 +5476,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5496,7 +5496,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.3.1"
         }
       ]
@@ -5510,7 +5510,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5524,7 +5524,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5538,7 +5538,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5552,7 +5552,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5566,7 +5566,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5580,7 +5580,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5594,7 +5594,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5608,7 +5608,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5628,7 +5628,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -5648,7 +5648,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.5.0"
         }
       ]
@@ -5668,7 +5668,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.5.0"
         }
       ]
@@ -5682,7 +5682,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5702,7 +5702,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -5716,7 +5716,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5730,7 +5730,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5744,7 +5744,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5764,7 +5764,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -5784,7 +5784,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -5798,7 +5798,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5812,13 +5812,13 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
     },
     {
-      "disposition": "security-blocked",
+      "disposition": "typed",
       "id": "openbao.patch.auth.jwt.cel.role.name.c4134af7e81e8027",
       "method": "PATCH",
       "path_template": "/auth/jwt/cel/role/:name",
@@ -5830,10 +5830,16 @@
           "minimum": "2.0.0"
         },
         {
-          "availability": "documented",
+          "availability": "security-blocked",
           "evidence": "tagged-documentation",
           "maximum": "2.6.0",
           "minimum": "2.6.0"
+        },
+        {
+          "availability": "documented",
+          "evidence": "tagged-documentation",
+          "maximum": "2.6.1",
+          "minimum": "2.6.1"
         }
       ]
     },
@@ -5852,7 +5858,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -5866,7 +5872,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5880,7 +5886,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5894,7 +5900,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5908,7 +5914,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5922,8 +5928,28 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
+          "maximum": "2.6.1",
+          "minimum": "2.0.0"
+        }
+      ]
+    },
+    {
+      "disposition": "typed",
+      "id": "openbao.patch.sys.policies.acl.name.641acbe603646b96",
+      "method": "PATCH",
+      "path_template": "/sys/policies/acl/:name",
+      "ranges": [
+        {
+          "availability": "unavailable",
+          "evidence": "none",
           "maximum": "2.6.0",
           "minimum": "2.0.0"
+        },
+        {
+          "availability": "documented",
+          "evidence": "tagged-documentation",
+          "maximum": "2.6.1",
+          "minimum": "2.6.1"
         }
       ]
     },
@@ -5936,7 +5962,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5950,7 +5976,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5964,7 +5990,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5978,7 +6004,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -5992,7 +6018,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6006,7 +6032,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6020,7 +6046,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6034,7 +6060,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6048,7 +6074,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6062,7 +6088,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6076,7 +6102,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6090,7 +6116,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6104,7 +6130,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6118,7 +6144,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6132,7 +6158,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6146,7 +6172,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6160,7 +6186,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6174,7 +6200,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6188,7 +6214,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6202,7 +6228,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6216,7 +6242,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6230,7 +6256,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6244,7 +6270,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6264,7 +6290,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -6284,7 +6310,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -6298,7 +6324,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6312,7 +6338,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6326,7 +6352,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6340,7 +6366,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6354,7 +6380,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6368,7 +6394,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6382,7 +6408,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6396,7 +6422,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6410,7 +6436,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6424,7 +6450,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6438,7 +6464,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6452,7 +6478,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6466,7 +6492,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6480,7 +6506,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6494,7 +6520,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6508,7 +6534,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6522,7 +6548,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6536,7 +6562,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6550,7 +6576,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6564,7 +6590,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6578,7 +6604,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6592,7 +6618,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6606,7 +6632,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6620,7 +6646,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6634,7 +6660,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6648,7 +6674,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6662,7 +6688,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6676,7 +6702,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6690,7 +6716,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6704,7 +6730,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6718,7 +6744,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6732,7 +6758,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6746,7 +6772,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6760,7 +6786,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6774,7 +6800,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6788,7 +6814,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6802,7 +6828,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6816,7 +6842,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6830,7 +6856,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6844,7 +6870,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6858,7 +6884,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6872,7 +6898,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6886,7 +6912,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6900,7 +6926,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6914,7 +6940,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6928,7 +6954,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6942,7 +6968,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6956,7 +6982,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6970,7 +6996,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6984,7 +7010,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -6998,7 +7024,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7012,7 +7038,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7026,7 +7052,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7040,7 +7066,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7054,7 +7080,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7068,7 +7094,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7082,7 +7108,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7096,7 +7122,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7110,7 +7136,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7124,7 +7150,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7138,7 +7164,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7152,7 +7178,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7166,7 +7192,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7180,7 +7206,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7194,7 +7220,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7208,7 +7234,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7222,7 +7248,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7236,7 +7262,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7250,7 +7276,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7264,7 +7290,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7278,7 +7304,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7292,7 +7318,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7306,7 +7332,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7320,7 +7346,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7334,7 +7360,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7348,7 +7374,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7362,7 +7388,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7376,7 +7402,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7390,7 +7416,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7404,7 +7430,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7418,7 +7444,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7432,7 +7458,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7446,7 +7472,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7460,7 +7486,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7474,7 +7500,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7488,7 +7514,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7502,7 +7528,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7516,7 +7542,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7530,7 +7556,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7544,7 +7570,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7558,7 +7584,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7578,7 +7604,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -7598,7 +7624,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -7618,7 +7644,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -7632,7 +7658,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7646,7 +7672,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7660,7 +7686,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7674,7 +7700,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7688,7 +7714,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7702,7 +7728,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7716,7 +7742,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7730,7 +7756,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7744,7 +7770,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7758,7 +7784,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7772,7 +7798,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7786,7 +7812,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7800,7 +7826,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7814,7 +7840,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7828,7 +7854,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7842,7 +7868,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7856,7 +7882,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7870,7 +7896,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7884,7 +7910,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7898,7 +7924,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7912,7 +7938,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7926,7 +7952,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7940,7 +7966,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7954,7 +7980,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7968,7 +7994,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7982,7 +8008,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -7996,7 +8022,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8010,7 +8036,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8024,7 +8050,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8038,7 +8064,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8052,7 +8078,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8066,7 +8092,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8080,7 +8106,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8094,7 +8120,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8108,7 +8134,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8122,7 +8148,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8136,7 +8162,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8150,7 +8176,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8164,7 +8190,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8178,7 +8204,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8192,7 +8218,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8206,7 +8232,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8220,7 +8246,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8234,7 +8260,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8248,7 +8274,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8262,7 +8288,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8276,7 +8302,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8290,7 +8316,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8304,7 +8330,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8318,7 +8344,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8332,7 +8358,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8346,7 +8372,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8360,7 +8386,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8374,7 +8400,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8394,7 +8420,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.3.1"
         }
       ]
@@ -8408,7 +8434,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8422,7 +8448,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8436,7 +8462,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8456,7 +8482,7 @@
         {
           "availability": "documented",
           "evidence": "locked-openapi",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.3.1"
         }
       ]
@@ -8476,7 +8502,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.3.1"
         }
       ]
@@ -8490,7 +8516,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8504,7 +8530,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8518,7 +8544,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8532,7 +8558,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8546,7 +8572,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8560,7 +8586,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8574,7 +8600,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8588,7 +8614,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8602,7 +8628,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8616,7 +8642,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8630,7 +8656,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8644,7 +8670,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8658,7 +8684,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8672,7 +8698,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8686,7 +8712,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8700,7 +8726,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8714,7 +8740,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8734,7 +8760,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -8754,7 +8780,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -8768,7 +8794,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8782,7 +8808,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8796,7 +8822,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8810,7 +8836,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8824,7 +8850,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8838,7 +8864,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8852,7 +8878,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8866,7 +8892,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8880,7 +8906,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8894,7 +8920,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8908,7 +8934,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8922,7 +8948,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8936,7 +8962,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8950,7 +8976,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8964,7 +8990,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -8984,7 +9010,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -9004,7 +9030,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -9018,7 +9044,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9032,7 +9058,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9046,7 +9072,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9060,7 +9086,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9074,7 +9100,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9088,7 +9114,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9102,7 +9128,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9116,7 +9142,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9130,7 +9156,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9144,7 +9170,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9158,7 +9184,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9172,7 +9198,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9186,7 +9212,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9200,7 +9226,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9214,7 +9240,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9228,7 +9254,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9242,7 +9268,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9262,7 +9288,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -9282,7 +9308,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -9308,7 +9334,7 @@
         {
           "availability": "documented",
           "evidence": "locked-openapi",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -9328,7 +9354,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -9354,7 +9380,7 @@
         {
           "availability": "documented",
           "evidence": "locked-openapi",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -9374,7 +9400,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.4.0"
         }
       ]
@@ -9388,7 +9414,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9402,7 +9428,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9416,7 +9442,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9430,7 +9456,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9450,7 +9476,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -9464,7 +9490,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9484,7 +9510,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -9498,7 +9524,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9512,7 +9538,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9526,7 +9552,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9540,7 +9566,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9554,7 +9580,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9568,7 +9594,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9588,7 +9614,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -9608,7 +9634,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -9628,7 +9654,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -9648,7 +9674,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -9662,7 +9688,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9676,7 +9702,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9690,7 +9716,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9704,7 +9730,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9718,7 +9744,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9732,7 +9758,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9746,7 +9772,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9760,7 +9786,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9774,7 +9800,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9788,7 +9814,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9802,7 +9828,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9816,7 +9842,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9830,7 +9856,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9844,7 +9870,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9858,7 +9884,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9878,7 +9904,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.1.0"
         }
       ]
@@ -9892,7 +9918,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9906,7 +9932,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9920,7 +9946,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9940,7 +9966,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.1.0"
         }
       ]
@@ -9954,7 +9980,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9968,7 +9994,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9982,7 +10008,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -9996,7 +10022,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -10010,7 +10036,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -10024,7 +10050,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -10038,7 +10064,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -10052,7 +10078,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.0.0"
         }
       ]
@@ -10072,7 +10098,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -10092,7 +10118,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -10112,7 +10138,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.2.0"
         }
       ]
@@ -10132,7 +10158,7 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
@@ -10152,22 +10178,22 @@
         {
           "availability": "documented",
           "evidence": "tagged-documentation",
-          "maximum": "2.6.0",
+          "maximum": "2.6.1",
           "minimum": "2.6.0"
         }
       ]
     }
   ],
-  "release_inventory_sha256": "5300cf4eb4fdce36eab24d35ae6b4ccf8809af543bc4de9d854b55158aec0abc",
+  "release_inventory_sha256": "6ee7703360007856aa671391a65b99c7e91ac7b11b7776c3867dd2dff6366bed",
   "schema": "openbao-capability-registry/v1",
   "summary": {
     "dispositions": {
-      "security-blocked": 3,
-      "typed": 592,
+      "security-blocked": 2,
+      "typed": 594,
       "typed-gated": 95
     },
-    "operation_count": 690,
-    "profile_count": 22
+    "operation_count": 691,
+    "profile_count": 23
   },
   "versions": [
     "2.0.0",
@@ -10191,6 +10217,7 @@
     "2.5.3",
     "2.5.4",
     "2.5.5",
-    "2.6.0"
+    "2.6.0",
+    "2.6.1"
   ]
 }

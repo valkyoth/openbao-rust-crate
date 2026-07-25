@@ -110,28 +110,33 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
 
     let result = run_flow(&client, &kv1_mount, &kv2_mount, &auth_mount, &policy_name).await;
     #[cfg(feature = "operator-ops")]
-    let latest_result = if result.is_ok() && expected_version == "2.6.0" {
+    let latest_result = if result.is_ok() && is_openbao_2_6(&expected_version) {
         run_2_6_flow(
             (&client, &unauthenticated),
-            &kv1_mount,
-            &auth_mount,
-            &jwt_mount,
-            &namespace,
-            &workflow,
-            &hashed_user,
+            OpenBao26Flow {
+                kv1_mount: &kv1_mount,
+                userpass_mount: &auth_mount,
+                jwt_mount: &jwt_mount,
+                namespace: &namespace,
+                workflow: &workflow,
+                hashed_user: &hashed_user,
+                policy_name: &policy_name,
+                expected_version: &expected_version,
+            },
         )
         .await
     } else {
         Ok(())
     };
     #[cfg(not(feature = "operator-ops"))]
-    let latest_result: Result<(), Box<dyn std::error::Error>> = if expected_version == "2.6.0" {
-        Err(io::Error::other("OpenBao 2.6.0 integration requires the operator-ops feature").into())
+    let latest_result: Result<(), Box<dyn std::error::Error>> = if is_openbao_2_6(&expected_version)
+    {
+        Err(io::Error::other("OpenBao 2.6 integration requires the operator-ops feature").into())
     } else {
         Ok(())
     };
     #[cfg(feature = "operator-ops")]
-    if expected_version == "2.6.0" {
+    if is_openbao_2_6(&expected_version) {
         cleanup_2_6_flow(
             &client,
             &jwt_mount,
@@ -200,6 +205,10 @@ const OPENBAO_2_6_OPERATION_IDS: [&str; 6] = [
     "changed-response-fields",
 ];
 
+fn is_openbao_2_6(version: &str) -> bool {
+    matches!(version, "2.6.0" | "2.6.1")
+}
+
 #[derive(Serialize)]
 struct CoreFlowAttestation<'a> {
     schema: &'static str,
@@ -212,7 +221,7 @@ fn write_core_flow_attestation(
     result_file: &str,
     expected_version: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let is_2_6 = expected_version == "2.6.0";
+    let is_2_6 = is_openbao_2_6(expected_version);
     let encoded = serde_json::to_vec(&CoreFlowAttestation {
         schema: "openbao-core-flow-attestation/v1",
         version: expected_version,
@@ -232,19 +241,36 @@ fn write_core_flow_attestation(
 }
 
 #[cfg(feature = "operator-ops")]
+struct OpenBao26Flow<'a> {
+    kv1_mount: &'a str,
+    userpass_mount: &'a str,
+    jwt_mount: &'a str,
+    namespace: &'a str,
+    workflow: &'a str,
+    hashed_user: &'a str,
+    policy_name: &'a str,
+    expected_version: &'a str,
+}
+
+#[cfg(feature = "operator-ops")]
 async fn run_2_6_flow(
     clients: (
         &Client<openbao::Authenticated>,
         &Client<openbao::Unauthenticated>,
     ),
-    kv1_mount: &str,
-    userpass_mount: &str,
-    jwt_mount: &str,
-    namespace: &str,
-    workflow: &str,
-    hashed_user: &str,
+    flow: OpenBao26Flow<'_>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (client, unauthenticated) = clients;
+    let OpenBao26Flow {
+        kv1_mount,
+        userpass_mount,
+        jwt_mount,
+        namespace,
+        workflow,
+        hashed_user,
+        policy_name,
+        expected_version,
+    } = flow;
     eprintln!("OpenBao integration stage: root-generation-routing");
     assert!(!client.sys().operator_generate_root_status().await?.started);
     let started = client
@@ -336,8 +362,40 @@ async fn run_2_6_flow(
     );
     let mut role = role;
     role.bound_audiences = vec!["openbao-rust-integration".to_owned()];
+    role.clock_skew_leeway = Some(openbao::auth::jwt::JwtLeeway::seconds(17));
+    role.expiration_leeway = Some(openbao::auth::jwt::JwtLeeway::seconds(23));
+    role.not_before_leeway = Some(openbao::auth::jwt::JwtLeeway::seconds(29));
     eprintln!("OpenBao integration stage: jwt-cel-write");
     assert_eq!(jwt.write_cel_role("service", &role).await?.name, "service");
+    if expected_version == "2.6.1" {
+        eprintln!("OpenBao integration stage: jwt-cel-patch-preservation");
+        let patched = jwt
+            .patch_cel_role_acknowledged(
+                "service",
+                &openbao::auth::jwt::JwtCelRolePatch {
+                    message: Some("patched without dropping constraints".to_owned()),
+                    ..openbao::auth::jwt::JwtCelRolePatch::default()
+                },
+                openbao::auth::jwt::JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel(),
+            )
+            .await?;
+        assert_eq!(
+            patched.bound_audiences,
+            ["openbao-rust-integration".to_owned()]
+        );
+        assert_eq!(
+            patched.clock_skew_leeway,
+            Some(openbao::auth::jwt::JwtLeeway::seconds(17))
+        );
+        assert_eq!(
+            patched.expiration_leeway,
+            Some(openbao::auth::jwt::JwtLeeway::seconds(23))
+        );
+        assert_eq!(
+            patched.not_before_leeway,
+            Some(openbao::auth::jwt::JwtLeeway::seconds(29))
+        );
+    }
     eprintln!("OpenBao integration stage: jwt-cel-read-list");
     assert_eq!(jwt.read_cel_role("service").await?.name, "service");
     assert!(
@@ -383,9 +441,27 @@ async fn run_2_6_flow(
         .update_password_hash(hashed_user, &second_hash)
         .await?;
 
+    if expected_version == "2.6.1" {
+        eprintln!("OpenBao integration stage: acl-policy-patch-preservation");
+        let before = client.sys().read_policy(policy_name).await?;
+        client
+            .sys()
+            .patch_policy(
+                policy_name,
+                &openbao::sys::PolicyPatchRequest {
+                    cas_required: Some(true),
+                    ..openbao::sys::PolicyPatchRequest::new()
+                },
+            )
+            .await?;
+        let after = client.sys().read_policy(policy_name).await?;
+        assert_eq!(after.rules, before.rules);
+        assert!(after.cas_required);
+    }
+
     eprintln!("OpenBao integration stage: changed-response-fields");
     let seal = client.sys().seal_status_details().await?;
-    assert_eq!(seal.status.version, "2.6.0");
+    assert_eq!(seal.status.version, expected_version);
     assert!(seal.commit_date.is_some());
     Ok(())
 }

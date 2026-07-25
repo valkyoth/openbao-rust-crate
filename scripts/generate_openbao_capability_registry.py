@@ -46,19 +46,19 @@ MAX_INPUT_BYTES = 32 * 1024 * 1024
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 MAX_OPERATIONS = 2048
 MAX_PATH_BYTES = 4096
-EXPECTED_OPERATION_COUNT = 690
+EXPECTED_OPERATION_COUNT = 691
 EXPECTED_STAGED_OPERATION_COUNT = 690
-EXPECTED_REGISTRY_SHA256 = "31325842ac84d7db0100bb2d1f4ffdfba7c0029fb3f8745c5c42058f89dac893"
+EXPECTED_REGISTRY_SHA256 = "2f2f0e4fc64e31745e94fc072c2a48c0032c5cc1d98d6cc9901c79ac14e55e96"
 EXPECTED_STAGED_REGISTRY_SHA256 = "397f94126d3756d51cd779bbbef91aa8f993287f85561d4330a3734902f2a87e"
-EXPECTED_RUST_SHA256 = "7a659d4dc1a60039c2dffb24a49590338fc33efc8aadd79eee25bdf65809d159"
+EXPECTED_RUST_SHA256 = "d5eef1c1ee2f6de055c95332651e8356e779cda818f3b054595162c3290b6d09"
 HISTORICAL_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
     "2.4.4", "2.5.0", "2.5.1", "2.5.2", "2.5.3", "2.5.4", "2.5.5",
 )
 STAGED_VERSION = "2.6.0"
-EXPECTED_VERSIONS = (*HISTORICAL_VERSIONS, STAGED_VERSION)
-EXPECTED_STAGED_VERSIONS = EXPECTED_VERSIONS
+EXPECTED_VERSIONS = (*HISTORICAL_VERSIONS, STAGED_VERSION, "2.6.1")
+EXPECTED_STAGED_VERSIONS = (*HISTORICAL_VERSIONS, STAGED_VERSION)
 
 # These routes are present in the locked OpenAPI documents but are absent from
 # the tagged MDX operation extraction because their surrounding documentation
@@ -102,7 +102,7 @@ STAGED_DISPOSITIONS = {
     ("DELETE", "/auth/jwt/cel/role/:name"): "typed",
     ("GET", "/auth/jwt/cel/role/:name"): "typed",
     ("LIST", "/auth/jwt/cel/role"): "typed",
-    ("PATCH", "/auth/jwt/cel/role/:name"): "security-blocked",
+    ("PATCH", "/auth/jwt/cel/role/:name"): "typed",
     ("POST", "/auth/jwt/cel/login"): "typed",
     ("POST", "/auth/jwt/cel/role/:name"): "typed",
     ("DELETE", "/sys/generate-root-token/attempt"): "typed-gated",
@@ -123,11 +123,17 @@ STAGED_DISPOSITIONS = {
     ("POST", "/sys/workflows/unauthed-execute/:path"): "typed-gated",
     ("SCAN", "/sys/workflows/manage"): "typed",
     ("SCAN", "/sys/workflows/manage/:prefix"): "security-blocked",
+    ("PATCH", "/sys/policies/acl/:name"): "typed",
 }
 SECURITY_BLOCKED = frozenset(
     f"{method} {path}"
     for (method, path), disposition in STAGED_DISPOSITIONS.items()
     if disposition == "security-blocked"
+)
+PROFILE_SECURITY_BLOCKED = frozenset(
+    {
+        ("PATCH", "/auth/jwt/cel/role/:name", "2.6.0"),
+    }
 )
 PENDING_DISPOSITIONS = {
     "pending-typed",
@@ -266,10 +272,10 @@ def documented_operations(document: dict[str, Any], version: str) -> set[tuple[s
 
 
 def candidate_documented_operations(
-    document: dict[str, Any],
+    document: dict[str, Any], version: str = STAGED_VERSION,
 ) -> tuple[set[tuple[str, str]], set[tuple[str, str]]]:
     """Return reviewed 2.6 routes and the subset corrected from tagged docs."""
-    tagged = documented_operations(document, STAGED_VERSION)
+    tagged = documented_operations(document, version)
     result: set[tuple[str, str]] = set()
     corrected: set[tuple[str, str]] = set()
     for method, path in tagged:
@@ -351,7 +357,7 @@ def root_generation_endpoints() -> list[dict[str, Any]]:
                     {
                         "operation_id": stable_id(*current),
                         "minimum": STAGED_VERSION,
-                        "maximum": STAGED_VERSION,
+                        "maximum": EXPECTED_VERSIONS[-1],
                     },
                 ],
             }
@@ -388,9 +394,9 @@ def build_registry() -> dict[str, Any]:
         version = record["version"]
         documentation_path = ROOT / record["documentation"]["path"]
         openapi_path = ROOT / record["openapi"]["path"]
-        if version == STAGED_VERSION:
+        if version_tuple(version) >= version_tuple(STAGED_VERSION):
             tagged, corrected = candidate_documented_operations(
-                load_json(documentation_path)
+                load_json(documentation_path), version
             )
             openapi = CANDIDATE_OPENAPI_SUPPLEMENTS | corrected
         else:
@@ -428,6 +434,17 @@ def build_registry() -> dict[str, Any]:
                 states.append(("documented", "corrected-2.5.5-contract"))
             else:
                 states.append(("documented", "tagged-documentation"))
+            if (
+                method,
+                path,
+                version,
+            ) in PROFILE_SECURITY_BLOCKED:
+                availability, evidence = states[-1]
+                if availability != "documented":
+                    raise RegistryError(
+                        "profile security block targets an undocumented route"
+                    )
+                states[-1] = ("security-blocked", evidence)
         operations.append(
             {
                 "id": stable_id(method, path),
@@ -646,15 +663,17 @@ def validate_registry(registry: dict[str, Any]) -> None:
                     ("documented", "tagged-documentation"),
                     ("documented", "locked-openapi"),
                     ("documented", "corrected-2.5.5-contract"),
+                    ("security-blocked", "tagged-documentation"),
+                    ("security-blocked", "locked-openapi"),
                 }
                 or state == previous_state
             ):
                 raise RegistryError("capability ranges overlap, contain gaps, or contradict evidence")
             expected_start = maximum + 1
             previous_state = state
-            ever_available |= state[0] == "documented"
+            ever_available |= state[0] in {"documented", "security-blocked"}
             if maximum == len(versions) - 1:
-                latest_available = state[0] == "documented"
+                latest_available = state[0] in {"documented", "security-blocked"}
         if expected_start != len(versions):
             raise RegistryError("capability ranges do not cover every exact profile")
         historical_disposition = HISTORICAL_DISPOSITIONS.get((method, path))
@@ -933,6 +952,7 @@ def rust_output(registry: dict[str, Any]) -> bytes:
                     f"                {rust_version(item['minimum'])},",
                     f"                {rust_version(item['maximum'])},",
                     f"                OpenBaoCapabilityEvidence::{evidence_names[item['evidence']]},",
+                    f"                {str(item['availability'] == 'security-blocked').lower()},",
                     "            ),",
                 ]
             )

@@ -10,14 +10,14 @@ the [README](../README.md). For endpoint-level classifications, see
 
 The current stable line is `2.1.x`. It provides explicit, fail-closed OpenBao
 server-version compatibility for every published stable release from `2.0.0`
-through `2.6.0`. The active registry contains 690 operation identities across
-22 exact profiles and 15,180 explicit operation/profile cells.
+through `2.6.1`. The active registry contains 691 operation identities across
+23 exact profiles and 15,893 explicit operation/profile cells.
 
-Exact OpenBao `2.6.0` resolves all 688 documented operations: 592 typed, 93
-typed-gated, and three security-blocked because of confirmed upstream defects.
+Exact OpenBao `2.6.1` resolves all 689 documented operations: 594 typed, 93
+typed-gated, and two security-blocked because of confirmed upstream defects.
 No operation is postponed or left in a planning state.
 
-Every digest-pinned release from `2.0.0` through `2.6.0` passes its own
+Every digest-pinned release from `2.0.0` through `2.6.1` passes its own
 exact-profile live matrix. OpenBao 2.6 response additions use semver-safe
 `*Details` types and methods, including `seal_status_details`,
 `lookup_lease_details`, `version_history_details`, `read_policy_details`, and
@@ -25,6 +25,9 @@ engine-specific detailed role/config reads. Existing constructible 2.0 structs
 keep their original field sets. Explicit methods such as
 `configure_with_decode_pac` and `write_cors_config_with_credentials` send
 2.6-only request fields after exact profile validation.
+OpenBao `2.6.1` additionally exposes typed ACL policy PATCH and fixes JWT CEL
+PATCH constraint preservation. CEL PATCH remains blocked for exact `2.6.0`
+and requires explicit claim-validation acknowledgement on `2.6.1`.
 
 ## Implemented Capabilities
 
@@ -97,7 +100,8 @@ keep their original field sets. Explicit methods such as
 - Response wrapping lookup, wrap, unwrap, and rewrap helpers.
 - Typed response wrapping through `Client::wrapping`, `WrappingContext`, and
   `WrappedResponse<T>`.
-- ACL policy list, read, write, delete, and prefix list helpers.
+- ACL policy list, read, write, 2.6.1 merge-patch, delete, and prefix list
+  helpers.
 - Bounded ACL policy builder helpers for common KV v2 and Transit
   least-privilege rules, including response-wrapping TTL constraints.
 - Idempotent admin bootstrap plan builder for KV v2 mounts, Transit mounts,
@@ -135,8 +139,8 @@ keep their original field sets. Explicit methods such as
   for application-specific OpenBao plugin APIs.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Version-locked real OpenBao integration harness plus a committed core-flow
-  baseline covering all 22 exact releases from `2.0.0` through `2.6.0`.
-- Generated read-only capability profiles with 690 stable, secret-free
+  baseline covering all 23 exact releases from `2.0.0` through `2.6.1`.
+- Generated read-only capability profiles with 691 stable, secret-free
   operation identities and complete exact-release range coverage.
 
 ## Evidence And History

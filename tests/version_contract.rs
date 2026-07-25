@@ -57,8 +57,8 @@ fn public_profiles_match_every_generated_contract_cell() -> Result<(), Box<dyn E
     let matrix: ContractMatrix =
         serde_json::from_str(include_str!("../compat/version-contract-matrix.json"))?;
     assert_eq!(matrix.schema, "openbao-version-contract-matrix/v1");
-    assert_eq!(matrix.operations.len(), 690);
-    assert_eq!(matrix.profiles.len(), 22);
+    assert_eq!(matrix.operations.len(), 691);
+    assert_eq!(matrix.profiles.len(), 23);
 
     for profile_fixture in matrix.profiles {
         assert_eq!(
@@ -81,7 +81,7 @@ fn public_profiles_match_every_generated_contract_cell() -> Result<(), Box<dyn E
                 .ok_or_else(|| io::Error::other("historical operation identity was removed"))?;
             assert_eq!(status.operation().id(), operation.id);
             let expected_availability =
-                match (cell.availability.as_str(), operation.disposition.as_str()) {
+                match (cell.availability.as_str(), cell.implementation.as_str()) {
                     ("documented", "security-blocked") => {
                         OpenBaoCapabilityAvailability::SecurityBlocked
                     }
@@ -102,6 +102,8 @@ fn public_profiles_match_every_generated_contract_cell() -> Result<(), Box<dyn E
                 cell.implementation,
                 if expected_availability == OpenBaoCapabilityAvailability::NotDocumented {
                     "not-applicable"
+                } else if expected_availability == OpenBaoCapabilityAvailability::SecurityBlocked {
+                    "security-blocked"
                 } else {
                     operation.disposition.as_str()
                 }

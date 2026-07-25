@@ -5,7 +5,7 @@
 //! exact reviewed server release.
 //!
 //! This module also exposes a generated read-only registry of secret-free route
-//! templates across 22 locked OpenBao releases from 2.0.0 through 2.6.0.
+//! templates across 23 locked OpenBao releases from 2.0.0 through 2.6.1.
 //! Registry evidence reports what exact tagged documentation contains. Client
 //! compatibility policies can verify and cache the stable
 //! version returned by `/sys/health`, or explicitly select an assumed promoted
@@ -604,6 +604,7 @@ pub struct OpenBaoCapabilityRange {
     minimum: OpenBaoVersion,
     maximum: OpenBaoVersion,
     evidence: OpenBaoCapabilityEvidence,
+    security_blocked: bool,
 }
 
 impl OpenBaoCapabilityRange {
@@ -611,11 +612,13 @@ impl OpenBaoCapabilityRange {
         minimum: OpenBaoVersion,
         maximum: OpenBaoVersion,
         evidence: OpenBaoCapabilityEvidence,
+        security_blocked: bool,
     ) -> Self {
         Self {
             minimum,
             maximum,
             evidence,
+            security_blocked,
         }
     }
 
@@ -632,6 +635,11 @@ impl OpenBaoCapabilityRange {
     /// Evidence attached to this range.
     pub const fn evidence(self) -> OpenBaoCapabilityEvidence {
         self.evidence
+    }
+
+    /// Whether this exact range is blocked by a reviewed client security policy.
+    pub const fn is_security_blocked(self) -> bool {
+        self.security_blocked
     }
 
     fn contains(self, version: OpenBaoVersion) -> bool {
@@ -708,7 +716,9 @@ impl OpenBaoOperation {
         if range.evidence == OpenBaoCapabilityEvidence::None {
             return Some(OpenBaoCapabilityAvailability::NotDocumented);
         }
-        if self.disposition == OpenBaoOperationDisposition::SecurityBlocked {
+        if range.security_blocked
+            || self.disposition == OpenBaoOperationDisposition::SecurityBlocked
+        {
             return Some(OpenBaoCapabilityAvailability::SecurityBlocked);
         }
         Some(OpenBaoCapabilityAvailability::DocumentedRoute)
@@ -982,7 +992,7 @@ mod tests {
     #[test]
     fn compatibility_policies_require_runtime_approved_profiles() -> Result<()> {
         let previous = OpenBaoVersion::new(2, 5, 5);
-        let known = OpenBaoVersion::new(2, 6, 0);
+        let known = OpenBaoVersion::new(2, 6, 1);
         let unpublished = OpenBaoVersion::new(2, 4, 2);
 
         assert_eq!(
@@ -1007,7 +1017,7 @@ mod tests {
     #[test]
     fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
         let strict = OpenBaoCompatibilityPolicy::automatic_strict();
-        let unknown = OpenBaoVersion::new(2, 6, 1);
+        let unknown = OpenBaoVersion::new(2, 6, 2);
         assert_eq!(
             strict.evaluate_detected(unknown),
             Err(OpenBaoCompatibilityFailure::UnknownVersion(unknown))
@@ -1025,7 +1035,7 @@ mod tests {
         assert_eq!(acknowledged.detected_version(), Some(unknown));
         assert_eq!(
             acknowledged.profile_version(),
-            Some(OpenBaoVersion::new(2, 6, 0))
+            Some(OpenBaoVersion::new(2, 6, 1))
         );
         Ok(())
     }
@@ -1177,17 +1187,19 @@ mod tests {
         let operations = openbao_operations();
         let versions = openbao_profile_versions();
 
-        assert_eq!(operations.len(), 690);
-        assert_eq!(versions.len(), 22);
+        assert_eq!(operations.len(), 691);
+        assert_eq!(versions.len(), 23);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
         assert_eq!(versions[21], OpenBaoVersion::new(2, 6, 0));
+        assert_eq!(versions[22], OpenBaoVersion::new(2, 6, 1));
         assert_eq!(
             latest_routable_profile(),
-            Some(OpenBaoVersion::new(2, 6, 0))
+            Some(OpenBaoVersion::new(2, 6, 1))
         );
         assert!(is_routable_profile(OpenBaoVersion::new(2, 5, 5)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 0)));
+        assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 1)));
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 6, 0)).is_some());
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 4, 2)).is_none());
 
@@ -1237,7 +1249,7 @@ mod tests {
             (
                 OpenBaoHttpMethod::Patch,
                 "/auth/jwt/cel/role/:name",
-                OpenBaoOperationDisposition::SecurityBlocked,
+                OpenBaoOperationDisposition::Typed,
             ),
             (
                 OpenBaoHttpMethod::Post,
@@ -1280,14 +1292,19 @@ mod tests {
                 operation.availability(OpenBaoVersion::new(2, 5, 5)),
                 Some(OpenBaoCapabilityAvailability::NotDocumented)
             );
-            let expected = if disposition == OpenBaoOperationDisposition::SecurityBlocked {
-                OpenBaoCapabilityAvailability::SecurityBlocked
-            } else {
-                OpenBaoCapabilityAvailability::DocumentedRoute
-            };
+            let expected =
+                if method == OpenBaoHttpMethod::Patch && path == "/auth/jwt/cel/role/:name" {
+                    OpenBaoCapabilityAvailability::SecurityBlocked
+                } else {
+                    OpenBaoCapabilityAvailability::DocumentedRoute
+                };
             assert_eq!(
                 operation.availability(OpenBaoVersion::new(2, 6, 0)),
                 Some(expected)
+            );
+            assert_eq!(
+                operation.availability(OpenBaoVersion::new(2, 6, 1)),
+                Some(OpenBaoCapabilityAvailability::DocumentedRoute)
             );
         }
     }
@@ -1307,7 +1324,7 @@ mod tests {
             assert_eq!(variants[0].minimum(), OpenBaoVersion::new(2, 0, 0));
             assert_eq!(variants[0].maximum(), OpenBaoVersion::new(2, 5, 5));
             assert_eq!(variants[1].minimum(), OpenBaoVersion::new(2, 6, 0));
-            assert_eq!(variants[1].maximum(), OpenBaoVersion::new(2, 6, 0));
+            assert_eq!(variants[1].maximum(), OpenBaoVersion::new(2, 6, 1));
             assert_ne!(variants[0].operation_id(), variants[1].operation_id());
             for (variant, version) in [
                 (variants[0], OpenBaoVersion::new(2, 5, 5)),

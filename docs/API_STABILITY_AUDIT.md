@@ -20,10 +20,10 @@ make the public API commitments and security boundaries explicit.
 - Major boundary: `2.0.0` combines multi-version OpenBao compatibility with
   intentionally breaking raw-transport, JWT/OIDC secret-metadata, and base-URL
   hardening. See the migration guide before updating from 1.x.
-- Final coverage: the compatibility union has 690 logical operation identities
-  and 15,180 operation/profile cells. All operations available in supported
-  profiles are typed, typed-gated, or security-blocked. The current `2.6.0`
-  profile has 688 documented operations: 592 typed, 93 typed-gated, and 3
+- Final coverage: the compatibility union has 691 logical operation identities
+  and 15,893 operation/profile cells. All operations available in supported
+  profiles are typed, typed-gated, or security-blocked. The current `2.6.1`
+  profile has 689 documented operations: 594 typed, 93 typed-gated, and 2
   security-blocked.
 - Evidence boundary: contract and serde evidence is complete; live integration
   coverage is representative rather than an endpoint-by-endpoint execution
@@ -41,12 +41,14 @@ make the public API commitments and security boundaries explicit.
   Authentication tokens have a 16 KiB secure default limit, an explicit
   configuration override, and a 1 MiB hard ceiling. Direct mapped-token input
   must report an active OS lock; canaries are not an attacker-resistant
-  integrity boundary. OpenBao contracts are unchanged.
+  integrity boundary. `2.1.2` appends exact OpenBao `2.6.1`, typed ACL policy
+  PATCH, and acknowledged JWT CEL PATCH after the upstream constraint-
+  preservation fix without changing historical profile behavior.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
-  deferred. Of 688 documented operations, 592 are typed, 93 are typed-gated,
-  and three are security-blocked because the exact `2.6.0` server handlers are
-  unsafe. Two older union operations are correctly unavailable because those
-  routes do not exist in the `2.6.0` profile.
+  deferred. Of 689 operations documented for exact `2.6.1`, 594 are typed, 93
+  are typed-gated, and two are security-blocked because the workflow prefix
+  handlers remain unsafe. JWT CEL PATCH is separately blocked only on exact
+  `2.6.0`, where the server drops claim constraints.
 
 ## Stabilization Rules
 
@@ -95,7 +97,7 @@ and now have current API or documentation coverage:
 | Admin bootstrap | Common service bootstrap and preview now include KV v2/Transit/PKI/database/SSH mount convergence, Transit keys, ACL policies, KV v2 values, PKI/database/SSH/AppRole role convergence, Identity entity/group convergence, and explicit credential issuance. | Reject PKI CA setup, database connection configuration, SSH CA setup, and KV v1 convergence for stable bootstrap scope. |
 | Custom plugins | Raw JSON transport and typed wrapper docs exist; `PluginMount`, public path validators, and bounded string-list helpers provide the same safety rails used internally. | Reject generic `Plugin`/`SecretEngine` traits, codegen, and macro approaches for stable scope; plugin schemas are deployment-specific. |
 | Identity | Entity/group/alias lifecycle, lookup, merge, OIDC admin/discovery/token/introspection, MFA method/login-enforcement management, and MFA login validation are implemented. | `0.10.0` resolves the Identity OIDC/MFA implementation scope; keep named-provider `/authorize`, `/token`, and `/userinfo` browser protocol flows external. |
-| JWT/OIDC auth | Configuration, ordinary roles, browser/direct/device helpers, and OpenBao 2.6 JWT CEL role/login contracts are typed. CEL source uses `SecretString`; CEL success bodies are decoded from sanitizing storage and failure bodies are discarded because server errors can echo policy source. | Keep CEL role writes acknowledgement-gated, exact 2.6.0 CEL PATCH security-blocked, and callback query credentials behind `oidc-get-callback-acknowledged`. |
+| JWT/OIDC auth | Configuration, ordinary roles, browser/direct/device helpers, and OpenBao 2.6 JWT CEL role/login contracts are typed. CEL source uses `SecretString`; CEL success bodies are decoded from sanitizing storage and failure bodies are discarded because server errors can echo policy source. | Keep CEL role writes and PATCH acknowledgement-gated, exact 2.6.0 CEL PATCH security-blocked, and callback query credentials behind `oidc-get-callback-acknowledged`. |
 | PKI | Core CA, issuer/key, role, tidy, ACME administration, issue/sign/revoke, public CA/certificate/CRL reads, raw OCSP transport, authority lifecycle, CEL, and gated destructive/signing operations are typed. | `DELETE /pki/root` requires `PkiRootDeletion::confirm()`. ACME account/order/authorization/challenge state machines remain a dedicated ACME client's responsibility, while all OpenBao HTTP operation identities have typed or typed-gated transport coverage. |
 | Transit | Lifecycle, batch, byte, signing, wrapping-key, import/import-version, BYOK export, soft-delete/restore, cache/global config, CSR, and certificate-install helpers are implemented. Import wrappers accept pre-wrapped `SecretString` ciphertext or public-key-only import material with non-empty constructors and redacted `Debug`; raw private or symmetric key bytes stay outside default endpoint wrappers. The optional `transit-import` helper performs AES-KWP/RSA-OAEP software wrapping behind feature-gated `openssl` and `aes-kw` dependencies. | Keep the helper documented as an ergonomic software helper with no OpenBao, HSM, FIPS, certification, or post-quantum security claims. |
 | System backend | Version-aware sys coverage includes ACL, lease, auth-mount, rotation, bounded monitor streaming with a 64-chunk per-poll work budget, exact-length `raft-stream` restore helpers, and gated internal diagnostics. | Operator ceremonies stay behind `operator-ops` plus `operator-ops-acknowledged`; unstable internals additionally require `unstable-internal-ops-acknowledged`. Generated-token decoding is local because OpenBao documents no HTTP decode endpoint. |
@@ -137,7 +139,7 @@ must now have an explicit current decision.
 ## Deferred Work Template
 
 This template records historical scope decisions and future OpenBao onboarding
-rules. It does not represent unfinished `2.1.0` or OpenBao `2.6.0` work; the
+rules. It does not represent unfinished `2.1.x` or OpenBao `2.6.1` work; the
 active exact profile has no deferred operation disposition.
 
 When moving a feature out of the stable scope, record:

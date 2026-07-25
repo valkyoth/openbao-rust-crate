@@ -43,7 +43,7 @@ use openbao::Client;
 
 The current stable line is `2.1.x`. It provides explicit, fail-closed OpenBao
 server-version compatibility for every published stable release from `2.0.0`
-through `2.6.0`. Rust `1.97.1` is the primary checked toolchain; Rust `1.90.0`
+through `2.6.1`. Rust `1.97.1` is the primary checked toolchain; Rust `1.90.0`
 remains the compatibility floor.
 
 The crate is dual-licensed under MIT or Apache-2.0.
@@ -51,14 +51,14 @@ The crate is dual-licensed under MIT or Apache-2.0.
 ## Current Status
 
 The `2.1.x` line supports every published stable OpenBao release from `2.0.0`
-through `2.6.0` using immutable, fail-closed compatibility profiles. Its
+through `2.6.1` using immutable, fail-closed compatibility profiles. Its
 primary capability areas are:
 
 - typed authentication, secret-engine, Identity, PKI, Transit, and system APIs;
 - exact-version route and request-field selection without fallback probing;
 - secret-aware request, response, error, and debug handling;
 - gated operator, raw transport, and high-risk compatibility features; and
-- live compatibility evidence across all 22 locked OpenBao releases.
+- live compatibility evidence across all 23 locked OpenBao releases.
 
 The complete implemented-capability inventory now lives in
 [Current Capability Status](docs/CURRENT_STATUS.md). Endpoint-level coverage is
@@ -94,9 +94,9 @@ the [GitHub releases](https://github.com/valkyoth/openbao-rust-crate/releases).
 Security details live in [SECURITY.md](SECURITY.md), with production panic
 boundaries in [docs/PANIC_POLICY.md](docs/PANIC_POLICY.md). Release evidence and
 release sequencing live in the
-[signed repository source](https://github.com/valkyoth/openbao-rust-crate/tree/v2.1.1/release-notes)
+[signed repository source](https://github.com/valkyoth/openbao-rust-crate/tree/v2.1.2/release-notes)
 and
-[release plan](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.1/docs/RELEASE_PLAN.md).
+[release plan](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.2/docs/RELEASE_PLAN.md).
 
 ## Rust Version Support
 
@@ -120,26 +120,27 @@ The SDK tracks compatibility evidence across this supported range:
 
 ## OpenBao Server Version Support
 
-The published `2.1.x` line carries immutable profiles through OpenBao `2.6.0`.
+The published `2.1.x` line carries immutable profiles through OpenBao `2.6.1`.
 Historical
 wire compatibility and security endorsement are separate claims:
 
 | SDK release line | Compatibility evidence | Security posture |
 | --- | --- | --- |
 | `0.1.0` through `1.0.2` | Release-tested with OpenBao `2.5.4`. | Historical result only; not a current security endorsement. |
-| `1.1.0` through `1.1.2` | Release-tested with OpenBao `2.5.5`. | Historical result for that SDK line; upgrade to `2.1.1` for the newest reviewed OpenBao profile. |
+| `1.1.0` through `1.1.2` | Release-tested with OpenBao `2.5.5`. | Historical result for that SDK line; upgrade to `2.1.2` for the newest reviewed OpenBao profile. |
 | `2.0.0` through `2.0.2` | Exact contract profiles and representative live core flows for all 21 published releases from `2.0.0` through `2.5.5`. | Use the newest reviewed OpenBao patch for production. Exact profiles `2.0.0` through `2.5.4` are security-deprecated compatibility targets and do not include all fixes present in `2.5.5`. |
-| `2.1.0` through `2.1.1` | Exact contract profiles and representative live core flows for all 22 published releases from `2.0.0` through `2.6.0`; six additional 2.6-only flows run on exact `2.6.0`. | OpenBao `2.6.0` is the newest reviewed server. Older profiles remain compatibility targets, not security endorsements. |
+| `2.1.0` through `2.1.1` | Exact contract profiles and representative live core flows for all 22 published releases from `2.0.0` through `2.6.0`; six additional 2.6-only flows run on exact `2.6.0`. | Historical result for those SDK releases. |
+| `2.1.2` | Exact contract profiles and representative live core flows for all 23 published releases from `2.0.0` through `2.6.1`; six additional 2.6-only flows run on exact `2.6.0` and `2.6.1`. | OpenBao `2.6.1` is the newest reviewed server. Older profiles remain compatibility targets, not security endorsements. |
 
 The immutable source and OCI artifact inventory for those historical releases
 is committed under
-[`compat/`](https://github.com/valkyoth/openbao-rust-crate/tree/v2.1.1/compat),
+[`compat/`](https://github.com/valkyoth/openbao-rust-crate/tree/v2.1.2/compat),
 together with deterministic
 tagged-documentation snapshots, normalized server-generated OpenAPI snapshots,
 adjacent-release contract diffs, a generated capability registry, and
 machine-readable live core-flow results.
 Reviewed response-shape transitions are additionally compiled into
-[`tests/fixtures/openbao_response_profiles.json`](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.1/tests/fixtures/openbao_response_profiles.json)
+[`tests/fixtures/openbao_response_profiles.json`](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.2/tests/fixtures/openbao_response_profiles.json)
 and deserialized by the public Rust response types for every locked release.
 See [the response compatibility policy](docs/OPENBAO_RESPONSE_COMPATIBILITY.md)
 for alias, unknown-field, enum, bounds, and secret-handling rules.
@@ -149,7 +150,7 @@ representative live and serde evidence.
 The live result is explicitly a tested subset of health, mount, KV, policy,
 token, capability, and response-wrapping behavior on every release, plus root
 generation routing, sealable namespaces, workflows, JWT CEL, userpass hashes,
-and changed response fields on `2.6.0`. Contract classification is
+and changed response fields on both `2.6.0` and `2.6.1`. Contract classification is
 complete, but it is not a claim that every typed helper was exercised live on
 every historical release.
 
@@ -411,18 +412,19 @@ backend. The default Rustls feature set does not compile OpenSSL.
 
 The generated
 [exact-version support matrix](docs/OPENBAO_VERSION_SUPPORT_MATRIX.md) covers
-690 logical operation identities across 22 locked OpenBao releases and 15,180
+691 logical operation identities across 23 locked OpenBao releases and 15,893
 operation/profile cells. Every operation documented for a supported profile is
-typed, typed-gated, or security-blocked. OpenBao `2.6.0` has 688 documented
-operations: 592 typed, 93 typed-gated, and 3 security-blocked.
-The blocked operations are JWT CEL PATCH and prefixed workflow LIST/SCAN,
-which fail locally because exact OpenBao `2.6.0` has confirmed unsafe handlers.
-The matrix contains no planned or deferred `2.6.0` operation.
+typed, typed-gated, or security-blocked. OpenBao `2.6.1` has 689 documented
+operations: 594 typed, 93 typed-gated, and 2 security-blocked. JWT CEL PATCH
+is acknowledged and routable on `2.6.1` after OpenBao fixed constraint
+preservation; exact `2.6.0` remains blocked. Prefixed workflow LIST/SCAN remain
+blocked on both 2.6 releases because their upstream handlers remain unsafe.
+The matrix contains no planned or deferred `2.6.1` operation.
 
 The original exact-source extraction remains available in
-[docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.1/docs/OPENBAO_2_5_ENDPOINT_MATRIX.md)
+[docs/OPENBAO_2_5_ENDPOINT_MATRIX.md](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.2/docs/OPENBAO_2_5_ENDPOINT_MATRIX.md)
 and
-[`docs/openbao-2.5-contract-matrix.json`](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.1/docs/openbao-2.5-contract-matrix.json).
+[`docs/openbao-2.5-contract-matrix.json`](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.2/docs/openbao-2.5-contract-matrix.json).
 Its 644 tagged-documentation rows and 663 expanded operations are historical
 audit inputs, not the final support report. Two additional operations came from
 the locked OpenAPI evidence, and one operation exists only in an older profile.
@@ -466,7 +468,7 @@ Selected unsupported fields fail locally and are never silently omitted.
 | Token lifecycle helpers | Yes | Lookup, accessor lookup/list, create/create-orphan, renew/renew-accessor, revoke, revoke-self, and revoke-accessor helpers. |
 | Kubernetes auth | Yes | Login, auth method config, and role administration helpers. |
 | TLS certificate auth | Yes | Login, auth method config, CA role administration, and CRL helpers. |
-| JWT/OIDC | Gated GET flows | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL helpers, and 2.6 CEL role/login and Kubernetes provider support. Exact 2.6.0 CEL PATCH is security-blocked because it drops constraints. GET callback redemption and direct/device polling require `oidc-get-callback-acknowledged` because credentials or correlation values enter URL query strings. |
+| JWT/OIDC | Gated GET flows | JWT login plus JWT/OIDC auth method config, role administration, browser auth URL helpers, and 2.6 CEL role/login and Kubernetes provider support. CEL PATCH requires explicit claim-validation acknowledgement; exact 2.6.0 is security-blocked because it drops constraints, while 2.6.1 is routable after the server fix. GET callback redemption and direct/device polling require `oidc-get-callback-acknowledged` because credentials or correlation values enter URL query strings. |
 | LDAP auth | Yes | Login, method config, user/group create/read/list/delete policy mapping helpers. |
 | RADIUS auth | Gated | Login, method config, user create/read/list/delete, paginated user list helpers. Available only with `radius-auth` plus `radius-auth-acknowledged` because legacy RADIUS uses MD5-based authenticators. |
 | Kerberos auth | Yes | SPNEGO login, service-account/keytab config, Kerberos LDAP config, group create/read/list/delete mappings, and 2.6 `decode_pac`. |
@@ -1910,9 +1912,9 @@ async fn main() -> Result<()> {
 }
 ```
 
-OpenBao `2.6.0` itself discards workflow CAS before storage. The SDK therefore
+OpenBao `2.6.0` and `2.6.1` discard workflow CAS before storage. The SDK therefore
 rejects writes selecting `WorkflowWriteRequest::with_cas` or `cas_required`
-before transport while `2.6.0` is the only workflow-capable profile. Trace and
+before transport for both workflow-capable profiles. Trace and
 token-free execution additionally require their paired acknowledgment features.
 
 Discover OpenBao's OpenAPI document:
@@ -1950,7 +1952,7 @@ plugin schemas are deployment-specific.
 The development, compatibility, Kani, and release commands below are
 repository-only tooling and are intentionally not copied into the crates.io
 source package. Run them from a checkout of the
-[`v2.1.1` signed source](https://github.com/valkyoth/openbao-rust-crate/tree/v2.1.1).
+[`v2.1.2` signed source](https://github.com/valkyoth/openbao-rust-crate/tree/v2.1.2).
 
 The local dev stack uses Podman, TLS, a private CA, and loopback-only ports in
 the requested `994x` range.
@@ -2093,7 +2095,7 @@ OPENBAO_KANI_TOOLCHAIN=<supported-rust-toolchain> scripts/check_kani.sh
 The normal `scripts/checks.sh` gate also invokes `scripts/check_kani.sh`. When
 the compatible Rust toolchain or `cargo-kani` is not installed, the Kani script
 prints a skip message instead of failing local development checks. See
-[Kani documentation](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.1/kani/README.md)
+[Kani documentation](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.2/kani/README.md)
 for the exact proof scope and current
 limitations.
 

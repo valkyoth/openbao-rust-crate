@@ -23,8 +23,8 @@ ONBOARDING_LOCK_PATH = ROOT / "compat" / "onboarding" / "2.6.0" / "release-evide
 ONBOARDING_CHECKSUM_PATH = (
     ROOT / "compat" / "onboarding" / "2.6.0" / "release-evidence.sha256"
 )
-EXPECTED_LOCK_SHA256 = "5300cf4eb4fdce36eab24d35ae6b4ccf8809af543bc4de9d854b55158aec0abc"
-EXPECTED_SIGNATURE_LOCK_SHA256 = "2d991b7ffcf37b3256ccf7d6f4918a0d70889282ad23312f9bc5bb22c7c99a3b"
+EXPECTED_LOCK_SHA256 = "6ee7703360007856aa671391a65b99c7e91ac7b11b7776c3867dd2dff6366bed"
+EXPECTED_SIGNATURE_LOCK_SHA256 = "9d992eeb244f06c7c3d2d0371dea5e0b726749a8824b1ba3d79dc8197025235e"
 EXPECTED_ONBOARDING_LOCK_SHA256 = (
     "4deb3988ea9693e0412445bcb7e9ba6d8669ff6e024586bed55e06f5628219ba"
 )
@@ -57,6 +57,7 @@ EXPECTED_RELEASES = (
     ("2.5.4", "4f6d47246a053375271a5fd8af85c3b75695aa46", "436eaf9778cad75507ff70ea26ace30dcbe15606e619ac3823495663d7f7c115", "d0424c95859f7b4c1e308abf57c4cd72b9cba835bb946eb397172b799fba9477"),
     ("2.5.5", "028992583c693c4de6350b8aa52ff85e30375a99", "6150c4a6b62067db6141c8da7a6a6b5763f4f47c315343d0c848b40fecdfd452", "e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9"),
     ("2.6.0", "03e3a243b6f07d17c60ce0a182adee7cf4c424eb", "900bb64d0671cd1d82b693c56206f7263b582445f3a3bb6ba6e5213f524a6653", "80b71b06de94d9b11da83fd1cdb70cbd84b375739620c18b12d76b4f5ffe95ab"),
+    ("2.6.1", "ba7ad8861d0578cd4da4f7b9e5a6756d30484f8f", "5b2486ab0fb90bbc788cc345b0a08616dfb375873ee8be5df3a2fd4d378a67e0", "15e90b578c970ae57b596ed51295380cd54f93860fe36758f05b455d71aae0e0"),
 )
 
 TOP_LEVEL_KEYS = {
@@ -358,9 +359,9 @@ def validate_document(document: dict[str, Any]) -> None:
     require_exact_keys(document, TOP_LEVEL_KEYS, "release lock")
     if document["schema"] != "openbao-release-inventory/v1":
         raise LockValidationError("release lock schema is unsupported")
-    if document["inventory_revision"] != 2:
+    if document["inventory_revision"] != 3:
         raise LockValidationError("release lock revision is unsupported")
-    if document["observed_on"] != "2026-07-17":
+    if document["observed_on"] != "2026-07-25":
         raise LockValidationError("release lock observation date changed")
     if document["source_repository"] != "https://github.com/openbao/openbao.git":
         raise LockValidationError("source repository is not the official immutable origin")
@@ -446,19 +447,25 @@ def validate_document(document: dict[str, Any]) -> None:
             raise LockValidationError("locked image digest changed")
         expected_child_signature = (
             "not_published_bound_by_verified_index"
-            if version == "2.6.0"
+            if version in {"2.6.0", "2.6.1"}
             else "verified_cosign_keyless"
         )
         if image["index_signature_status"] != "verified_cosign_keyless" or image["linux_amd64_signature_status"] != expected_child_signature:
             raise LockValidationError("image signature verification status was downgraded")
-        workflow = "release-images.yml" if version == "2.6.0" else "release.yml"
+        workflow = (
+            "release-images.yml"
+            if version in {"2.6.0", "2.6.1"}
+            else "release.yml"
+        )
         expected_identity = f"https://github.com/openbao/openbao/.github/workflows/{workflow}@refs/tags/v{version}"
         if image["certificate_identity"] != expected_identity or image["certificate_oidc_issuer"] != "https://token.actions.githubusercontent.com":
             raise LockValidationError("image signer identity changed")
         if image["transparency_log_verified"] is not True:
             raise LockValidationError("image transparency-log verification was downgraded")
         expected_attestation = (
-            "embedded_provenance_verified" if version == "2.6.0" else "not_published"
+            "embedded_provenance_verified"
+            if version in {"2.6.0", "2.6.1"}
+            else "not_published"
         )
         if image["attestation_status"] != expected_attestation:
             raise LockValidationError("image attestation status changed without a reviewed schema update")
@@ -487,7 +494,7 @@ def validate_signature_document(document: dict[str, Any]) -> None:
     require_exact_keys(document, SIGNATURE_TOP_LEVEL_KEYS, "signature evidence lock")
     if document["schema"] != "openbao-image-signature-evidence/v1":
         raise LockValidationError("signature evidence schema is unsupported")
-    if document["observed_on"] != "2026-07-17":
+    if document["observed_on"] != "2026-07-25":
         raise LockValidationError("signature evidence observation date changed")
     if document["repository"] != "docker.io/openbao/openbao":
         raise LockValidationError("signature evidence repository changed")
@@ -507,7 +514,7 @@ def validate_signature_document(document: dict[str, Any]) -> None:
             record["index_bundle_sha256"], f"index signature bundle {expected[0]}"
         )
         amd64_value = record["linux_amd64_bundle_sha256"]
-        if expected[0] == "2.6.0":
+        if expected[0] in {"2.6.0", "2.6.1"}:
             if amd64_value is not None:
                 raise LockValidationError("unsigned amd64 image has a signature bundle")
             amd64_hash = None
@@ -990,7 +997,7 @@ def main() -> int:
             raise LockValidationError("unsupported validator argument")
         else:
             print(
-                "OpenBao release lock: 22 active artifacts verified"
+                "OpenBao release lock: 23 active artifacts verified"
             )
         return 0
     except (LockValidationError, OSError) as error:

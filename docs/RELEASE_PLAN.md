@@ -794,3 +794,29 @@ Stop criteria:
 - `scripts/release_2_1_1_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.1`.
+
+### 2.1.2 - OpenBao 2.6.1 Compatibility
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.2`;
+- exact OpenBao `2.6.1` source, OCI, provenance, tagged documentation,
+  normalized OpenAPI, capability, response, and live evidence are append-only
+  locked and cross-bound;
+- all 23 exact profiles from `2.0.0` through `2.6.1` pass their own
+  digest-pinned live compatibility matrix;
+- all 689 operations documented for exact `2.6.1` are typed, typed-gated, or
+  explicitly security-blocked, with no planned or deferred operation;
+- ACL policy PATCH preserves omitted values and applies profile-validated CAS,
+  lifecycle, and acknowledged identity-template fields;
+- JWT CEL PATCH requires explicit claim-validation acknowledgement, remains
+  blocked on exact `2.6.0`, and is live-verified to preserve constraints on
+  exact `2.6.1`;
+- workflow prefix LIST/SCAN and CAS-selected writes remain fail-closed because
+  their upstream defects persist in `2.6.1`;
+- README, migration, stability, coverage, changelog, and release notes
+  describe the same 2.6.1 compatibility and security boundaries;
+- `scripts/release_2_1_2_gate.sh`, GitHub CI, CodeQL, the all-release
+  compatibility workflow, and exact-commit pentests pass before tagging
+  `v2.1.2`.

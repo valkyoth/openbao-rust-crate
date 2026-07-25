@@ -1392,7 +1392,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"initialized":true,"sealed":false,"version":"2.6.1"}"#,
+                r#"{"initialized":true,"sealed":false,"version":"2.6.2"}"#,
             );
         });
         let policy = if acknowledged {
@@ -1414,7 +1414,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
                 report.status(),
                 OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
             );
-            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 6, 0)));
+            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 6, 1)));
         } else {
             assert!(matches!(result, Err(Error::UnknownOpenBaoVersion(_))));
         }
@@ -3742,6 +3742,84 @@ async fn authentication_2_6_contracts_reject_old_profiles_before_transport() {
     ));
 }
 
+#[tokio::test]
+async fn jwt_cel_patch_requires_acknowledgement_and_a_fixed_profile() {
+    let patch = openbao::auth::jwt::JwtCelRolePatch {
+        message: Some("reviewed patch".to_owned()),
+        ..openbao::auth::jwt::JwtCelRolePatch::default()
+    };
+    let acknowledgement =
+        openbao::auth::jwt::JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_in_cel();
+
+    let vulnerable_policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 0))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let vulnerable_client = Client::from_config(
+        OpenBaoConfig::new("https://127.0.0.1:1")
+            .map(|config| config.compatibility_policy(vulnerable_policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(SecretString::from("test-token"));
+    assert!(matches!(
+        vulnerable_client
+            .jwt_admin()
+            .unwrap_or_else(|error| panic!("{error}"))
+            .patch_cel_role_acknowledged("service", &patch, acknowledgement)
+            .await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("PATCH /v1/auth/jwt/cel/role/service HTTP/1.1"));
+        assert!(
+            request
+                .to_ascii_lowercase()
+                .contains("content-type: application/merge-patch+json")
+        );
+        assert!(request.contains(r#""message":"reviewed patch""#));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"data":{"name":"service","cel_program":{"expression":"claims.sub == 'service'"},"message":"reviewed patch","bound_audiences":["service"],"clock_skew_leeway":17,"expiration_leeway":23,"not_before_leeway":29}}"#,
+        );
+    });
+    let fixed_policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 1))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let fixed_config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(fixed_policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let fixed_client = Client::from_config(fixed_config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    let role = fixed_client
+        .jwt_admin()
+        .unwrap_or_else(|error| panic!("{error}"))
+        .patch_cel_role_acknowledged("service", &patch, acknowledgement)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert_eq!(role.bound_audiences, ["service"]);
+    assert_eq!(
+        role.clock_skew_leeway,
+        Some(openbao::auth::jwt::JwtLeeway::seconds(17))
+    );
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+
+    #[allow(deprecated)]
+    let unacknowledged = fixed_client
+        .jwt_admin()
+        .unwrap_or_else(|error| panic!("{error}"))
+        .patch_cel_role("service", &patch)
+        .await;
+    assert!(matches!(unacknowledged, Err(Error::InvalidParameter(_))));
+}
+
 #[cfg(feature = "identity-template-overrides-acknowledged")]
 #[tokio::test]
 async fn identity_template_overrides_reject_old_profiles_before_transport() {
@@ -4395,6 +4473,69 @@ async fn sys_policy_write_sends_documented_path() {
         .unwrap_or_else(|error| panic!("{error}"));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn sys_policy_patch_is_2_6_1_only_and_preserves_omitted_fields() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("PATCH /v1/sys/policies/acl/app-read HTTP/1.1"));
+        assert!(
+            request
+                .to_ascii_lowercase()
+                .contains("content-type: application/merge-patch+json")
+        );
+        assert!(request.contains(r#""cas_required":true"#));
+        assert!(!request.contains(r#""policy""#));
+        write_json_response(&mut stream, "204 No Content", "");
+    });
+
+    let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 1))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(SecretString::from("test-token"));
+    client
+        .sys()
+        .patch_policy(
+            "app-read",
+            &openbao::sys::PolicyPatchRequest {
+                cas_required: Some(true),
+                ..openbao::sys::PolicyPatchRequest::new()
+            },
+        )
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+
+    let old_policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 0))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let old_client = Client::from_config(
+        OpenBaoConfig::new("https://127.0.0.1:1")
+            .map(|config| config.compatibility_policy(old_policy))
+            .unwrap_or_else(|error| panic!("{error}")),
+    )
+    .unwrap_or_else(|error| panic!("{error}"))
+    .with_token(SecretString::from("test-token"));
+    assert!(matches!(
+        old_client
+            .sys()
+            .patch_policy(
+                "app-read",
+                &openbao::sys::PolicyPatchRequest::new().with_policy("path \"secret/*\" {}"),
+            )
+            .await,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
 }
 
 #[tokio::test]

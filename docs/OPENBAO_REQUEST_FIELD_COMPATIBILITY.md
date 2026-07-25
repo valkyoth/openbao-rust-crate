@@ -1,9 +1,7 @@
 # OpenBao Request-Field Compatibility
 
 The typed client validates caller-selected fields whose availability changes
-across the 22 immutable OpenBao profiles from `2.0.0` through the staged
-`2.6.0` candidate. The candidate rules become reachable only when that profile
-is promoted into the routable inventory.
+across the 23 immutable OpenBao profiles from `2.0.0` through `2.6.1`.
 Validation uses the selected compatibility profile and runs before a
 secret-bearing payload is constructed or serialized. An unavailable selected
 field returns `Error::UnsupportedOpenBaoRequestField` containing only a stable
@@ -37,6 +35,13 @@ field to make a request appear compatible.
 | `sys.policy.write` | `cas_required` | `2.3.1` | `-` |
 | `sys.policy.write` | `allow_slashes_in_identity_templates` | `2.6.0` | `-` |
 | `sys.policy.write` | `allow_wildcards_in_identity_templates` | `2.6.0` | `-` |
+| `sys.policy.patch` | `policy` | `2.6.1` | `-` |
+| `sys.policy.patch` | `expiration` | `2.6.1` | `-` |
+| `sys.policy.patch` | `ttl` | `2.6.1` | `-` |
+| `sys.policy.patch` | `cas` | `2.6.1` | `-` |
+| `sys.policy.patch` | `cas_required` | `2.6.1` | `-` |
+| `sys.policy.patch` | `allow_slashes_in_identity_templates` | `2.6.1` | `-` |
+| `sys.policy.patch` | `allow_wildcards_in_identity_templates` | `2.6.1` | `-` |
 | `sys.init` | `stored_shares` | `2.0.0` | `2.5.5` |
 | `sys.rekey` | `stored_shares` | `2.0.0` | `2.5.5` |
 | `sys.config.cors` | `allow_credentials` | `2.6.0` | `-` |
@@ -89,9 +94,11 @@ proof when tagged documentation or live behavior contradicts it.
   mount. Omitting it preserves the server's default-issuer behavior.
 - ACL `cas`, `cas_required`, `expiration`, and `ttl` are policy lifecycle and
   concurrency controls. `expiration` and `ttl` remain mutually exclusive.
+  Policy PATCH is available only from `2.6.1` and preserves omitted fields.
 - OpenBao 2.6 ACL template overrides permit `/`, `*`, or `+` in rendered
   identity metadata; PKI permits `*` in templated allowed domains and URI SANs;
-  SSH permits `,` in templated users and domains. Each can expand the resource
+  SSH permits `,` in templated users and domains. ACL policy writes and
+  `2.6.1` patches both require the same acknowledgement. Each can expand the resource
   selected by untrusted metadata. Typed writes require the non-default
   `identity-template-overrides-acknowledged` feature and an explicit marker.
   Ordinary request serialization cannot emit these flags. Bootstrap preview

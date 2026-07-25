@@ -34,6 +34,10 @@ check_file compat/onboarding/2.6.0/release-evidence.json
 check_file compat/onboarding/2.6.0/release-evidence.sha256
 check_file compat/api-snapshots.lock.json
 check_file compat/api-snapshots.lock.sha256
+check_file compat/api-snapshots/2.6.1/documentation.json
+check_file compat/api-snapshots/2.6.1/openapi.json
+check_file compat/api-diffs/2.6.0--2.6.1.json
+check_file compat/rendered-api-cross-checks/2.6.1-current.json
 check_file compat/api-contracts/2.5.5-tagged-contract.json
 check_file compat/core-flow-results.json
 check_file compat/core-flow-results.sha256
@@ -72,6 +76,7 @@ check_file release-notes/RELEASE_NOTES_2.0.1.md
 check_file release-notes/RELEASE_NOTES_2.0.2.md
 check_file release-notes/RELEASE_NOTES_2.1.0.md
 check_file release-notes/RELEASE_NOTES_2.1.1.md
+check_file release-notes/RELEASE_NOTES_2.1.2.md
 check_file scripts/release_0_6_gate.sh
 check_file scripts/release_0_7_gate.sh
 check_file scripts/release_0_8_gate.sh
@@ -86,6 +91,7 @@ check_file scripts/release_1_0_gate.sh
 check_file scripts/release_2_0_gate.sh
 check_file scripts/release_2_1_gate.sh
 check_file scripts/release_2_1_1_gate.sh
+check_file scripts/release_2_1_2_gate.sh
 check_file scripts/check_kani.sh
 check_file scripts/validate_openbao_release_lock.py
 check_file scripts/openbao_api_snapshots.py
@@ -98,7 +104,7 @@ check_file .github/workflows/ci.yml
 check_file .github/workflows/openbao-compatibility.yml
 
 check_grep 'name = "openbao"' Cargo.toml
-check_grep 'version = "2.1.1"' Cargo.toml
+check_grep 'version = "2.1.2"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep '"/tests/http_client.rs"' Cargo.toml
@@ -121,8 +127,8 @@ check_grep 'workflow_dispatch:' .github/workflows/openbao-compatibility.yml
 check_grep 'persist-credentials: false' .github/workflows/openbao-compatibility.yml
 check_grep 'openbao_ci_matrix.py aggregate' .github/workflows/openbao-compatibility.yml
 check_grep 'scripts/release_2_0_gate.sh' release-notes/RELEASE_NOTES_2.0.0.md
-check_grep 'version = "=2.1.1"' fuzz/Cargo.toml
-check_grep 'version = "=2.1.1"' tests/fixtures/reqwest-native-unification/Cargo.toml
+check_grep 'version = "=2.1.2"' fuzz/Cargo.toml
+check_grep 'version = "=2.1.2"' tests/fixtures/reqwest-native-unification/Cargo.toml
 check_grep 'Unique documented rows: `644`' docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
 check_grep 'oidc-get-callback-acknowledged = \[\]' Cargo.toml
 check_grep 'workflow-trace-acknowledged = \[\]' Cargo.toml
@@ -142,6 +148,7 @@ check_grep 'if !token.is_memory_locked()' src/client.rs
 check_grep 'Canaries are not an attacker-resistant' SECURITY.md
 check_grep 'scripts/release_2_1_gate.sh' release-notes/RELEASE_NOTES_2.1.0.md
 check_grep 'scripts/release_2_1_1_gate.sh' release-notes/RELEASE_NOTES_2.1.1.md
+check_grep 'scripts/release_2_1_2_gate.sh' release-notes/RELEASE_NOTES_2.1.2.md
 check_grep 'license = "MIT OR Apache-2.0"' Cargo.toml
 check_grep 'unsafe_code = "forbid"' Cargo.toml
 check_grep '0.1.0 - Secure Core And KV v2' docs/RELEASE_PLAN.md
@@ -170,6 +177,7 @@ check_grep '2.0.1 - Compatibility Documentation Correction' docs/RELEASE_PLAN.md
 check_grep '2.0.2 - Focused crates.io Source Package' docs/RELEASE_PLAN.md
 check_grep '2.1.0 - OpenBao 2.6.0 Compatibility' docs/RELEASE_PLAN.md
 check_grep '2.1.1 - Security Dependency And Memory-Lock Correction' docs/RELEASE_PLAN.md
+check_grep '2.1.2 - OpenBao 2.6.1 Compatibility' docs/RELEASE_PLAN.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.12.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_0.13.0.md
 check_grep 'Release date: 2026-06-04' release-notes/RELEASE_NOTES_1.0.0.md
@@ -188,11 +196,17 @@ check_grep 'Version: 2.1.0' release-notes/RELEASE_NOTES_2.1.0.md
 check_grep 'Release date: 2026-07-21' release-notes/RELEASE_NOTES_2.1.0.md
 check_grep 'Version: 2.1.1' release-notes/RELEASE_NOTES_2.1.1.md
 check_grep 'Release date: 2026-07-22' release-notes/RELEASE_NOTES_2.1.1.md
+check_grep 'Version: 2.1.2' release-notes/RELEASE_NOTES_2.1.2.md
+check_grep 'Release date: 2026-07-25' release-notes/RELEASE_NOTES_2.1.2.md
+check_grep '"version": "2.6.1"' compat/releases.lock.json
+check_grep '"version":"2.6.1"' compat/image-signatures.lock.json
+check_grep '"version": "2.6.1"' compat/core-flow-results.json
 check_grep '2.0.0 - 2026-07-11' CHANGELOG.md
 check_grep '2.0.1 - 2026-07-11' CHANGELOG.md
 check_grep '2.0.2 - 2026-07-12' CHANGELOG.md
 check_grep '2.1.0 - 2026-07-21' CHANGELOG.md
 check_grep '2.1.1 - 2026-07-22' CHANGELOG.md
+check_grep '2.1.2 - 2026-07-25' CHANGELOG.md
 check_grep 'Audit status:' docs/API_STABILITY_AUDIT.md
 check_grep 'From `vaultrs`' docs/MIGRATION_GUIDE.md
 

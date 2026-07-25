@@ -37,8 +37,8 @@ SNAPSHOT_LOCK_PATH = COMPAT_ROOT / "api-snapshots.lock.json"
 SNAPSHOT_CHECKSUM_PATH = COMPAT_ROOT / "api-snapshots.lock.sha256"
 
 GENERATOR_VERSION = 1
-OBSERVED_ON = "2026-07-17"
-EXPECTED_SNAPSHOT_LOCK_SHA256 = "92b317b33daa1be8428f48d76caf8d65c6d331874a3a615c79ab2719929d63ba"
+OBSERVED_ON = "2026-07-25"
+EXPECTED_SNAPSHOT_LOCK_SHA256 = "00c21e23816cd6ed9cd85392f2a807f5f6fd72790917eabb92a7e05b2d795c6a"
 EXPECTED_SNAPSHOT_RECORDS = (
     ("2.0.0", "edc1e8daae71bba48e1656555a82a3ad5f80b497ce87918a0a1a7cc564627081", "6251b7f9e971bd5d791ccab4e43775228c27461883a1ed6587af22aa9a56dd95", None),
     ("2.0.1", "1ae9535ec91318fe990ae71aa93dfa9ea1ea81506c85a092965eca92bb9b07e6", "4b32092b3a8a9bcdcc25ff1e9182d9cd7fdaba91a7b781e575420e32b1a91e95", "5b9424973f9fcaa0e5a64f481a956425b23f32dfeb59504ca4e6522f10a64272"),
@@ -62,6 +62,7 @@ EXPECTED_SNAPSHOT_RECORDS = (
     ("2.5.4", "412840864974eff0b65f8506681a275483da285cd82822719bab92cee7e36822", "d8e2dcc85f8bf50076abe9fa7635aa5bfa7750f3dc27dc9baa4c0b4bc43c9430", "d95b39e69411e409cd93d707b7c510e1b063106ce4efeeab9e10db875dd76841"),
     ("2.5.5", "511d18f9bf894cba50c857c247cf3a22b8fd3529144039f27c3552209557be63", "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4", "88b414dfdb76a17a0cb92a6d52da07ce24cd83903d7ffb6ca00d4de692234e5e"),
     ("2.6.0", "d6ab7dfebcad55bed1c2fb383af00d1141018a4373571c850705f8e684eb934d", "3479568c017fa999258a9e1022299d8be6283b1b02c8994bdcd88c27afd10442", "be2a87012e39b8c66ef07ec51b0014b1ffafc5849a9a7b1215ab3b24f2fa7865"),
+    ("2.6.1", "1b701c5b5003e5636cb14fb820c5f0b50ed5b526a647d1d4bbee05e19c1e4a2b", "5c3c40f104961544d64680bbb0f4e0477d13f7e921334cf6974f7f154237e344", "3f0dc7a8e262f8d56b84b48f9ed6ea791dbcaa136302df651f9531f73188926f"),
 )
 MAX_LOCK_BYTES = 256 * 1024
 MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024
@@ -177,6 +178,19 @@ class SnapshotError(ValueError):
 
 def canonical_json(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=True, separators=(",", ":"), sort_keys=True) + "\n").encode()
+
+
+def version_tuple(value: str) -> tuple[int, int, int]:
+    parts = value.split(".")
+    if (
+        len(parts) != 3
+        or any(
+            not part.isdigit() or (len(part) > 1 and part.startswith("0"))
+            for part in parts
+        )
+    ):
+        raise SnapshotError("OpenBao release version is invalid")
+    return tuple(int(part) for part in parts)  # type: ignore[return-value]
 
 
 def sha256(data: bytes) -> str:
@@ -380,6 +394,26 @@ def write_immutable(path: Path, data: bytes) -> None:
         if existing != data:
             raise SnapshotError(f"existing snapshot would change: {path.relative_to(ROOT)}")
         return
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary = Path(temporary_name)
+    try:
+        os.fchmod(descriptor, 0o644)
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def replace_generated_lock(path: Path, data: bytes, maximum: int) -> None:
+    ensure_output_parent(path)
+    if path.is_symlink():
+        raise SnapshotError(f"generated lock is a symbolic link: {path.relative_to(ROOT)}")
+    if path.exists():
+        read_regular_file(path, maximum)
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     temporary = Path(temporary_name)
     try:
@@ -968,9 +1002,19 @@ def rendered_line(version: str) -> tuple[str, tuple[str, ...]] | None:
         return ("2.4.x", ("/api-docs/2.4.x/auth/", "/api-docs/2.4.x/secret/", "/api-docs/2.4.x/system/"))
     if minor == "2.5":
         return ("2.5.x-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
-    if minor == "2.6":
+    if version == "2.6.0":
         return ("2.6.x-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
+    if minor == "2.6":
+        return ("2.6.1-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
     return None
+
+
+def rendered_observed_on(line: str) -> str:
+    if line in {"2.3.x", "2.4.x", "2.5.x-current"}:
+        return "2026-07-10"
+    if line == "2.6.x-current":
+        return "2026-07-17"
+    return OBSERVED_ON
 
 
 def fetch_rendered_page(path: str) -> bytes:
@@ -1197,71 +1241,74 @@ def release_records() -> list[dict[str, Any]]:
 def generate(source_repository: str) -> None:
     repository = validate_source_repository(source_repository)
     releases = release_records()
-    rendered_artifacts: dict[str, tuple[str, bytes, dict[str, Any]]] = {}
-    for release in releases:
-        line = rendered_line(release["version"])
-        if line is None or line[0] in rendered_artifacts:
-            continue
-        relative = f"compat/rendered-api-cross-checks/{line[0]}.json"
-        artifact_path = ROOT / relative
-        if artifact_path.exists():
-            data = read_regular_file(artifact_path, MAX_SNAPSHOT_BYTES)
-            document = parse_json(data, MAX_SNAPSHOT_BYTES)
-            if (
-                document.get("schema") != "openbao-rendered-api-cross-check/v1"
-                or document.get("line") != line[0]
-                or document.get("observed_on") != OBSERVED_ON
-            ):
-                raise SnapshotError("existing rendered cross-check metadata changed")
-        else:
-            document = capture_rendered_cross_check(*line)
-            data = canonical_json(document)
-            write_immutable(artifact_path, data)
-        rendered_artifacts[line[0]] = (relative, data, document)
+    existing_lock_data = read_regular_file(SNAPSHOT_LOCK_PATH, MAX_LOCK_BYTES)
+    existing_lock = parse_json(existing_lock_data, MAX_LOCK_BYTES)
+    existing_records = existing_lock.get("records")
+    if not isinstance(existing_records, list) or len(existing_records) >= len(releases):
+        raise SnapshotError("snapshot generation requires one or more appended releases")
+    existing_versions = [record.get("version") for record in existing_records]
+    release_versions = [release["version"] for release in releases]
+    if existing_versions != release_versions[: len(existing_versions)]:
+        raise SnapshotError("existing snapshot history is not an exact release prefix")
 
-    generated: list[tuple[dict[str, Any], dict[str, Any], bytes, dict[str, Any], bytes]] = []
-    for release in releases:
+    lock_records = copy.deepcopy(existing_records)
+    previous_record = existing_records[-1]
+    previous_release = releases[len(existing_records) - 1]
+    previous_documentation_data = read_regular_file(
+        ROOT / previous_record["documentation"]["path"], MAX_SNAPSHOT_BYTES
+    )
+    previous_openapi_data = read_regular_file(
+        ROOT / previous_record["openapi"]["path"], MAX_OPENAPI_BYTES
+    )
+    previous: tuple[dict[str, Any], dict[str, Any], bytes, dict[str, Any], bytes] = (
+        previous_release,
+        parse_json(previous_documentation_data, MAX_SNAPSHOT_BYTES),
+        previous_documentation_data,
+        parse_json(previous_openapi_data, MAX_OPENAPI_BYTES),
+        previous_openapi_data,
+    )
+
+    for release in releases[len(existing_records) :]:
         version = release["version"]
         documentation = extract_documentation(repository, release)
         documentation_data = canonical_json(documentation)
-        # The active lock contains immutable v1-normalized evidence. Keep its
-        # historical regeneration byte-identical while onboarding uses v2.
-        openapi = capture_openapi(release, legacy_annotation_collisions=True)
+        openapi = capture_openapi(release)
         openapi_data = canonical_json(openapi)
         write_immutable(SNAPSHOT_ROOT / version / "documentation.json", documentation_data)
         write_immutable(SNAPSHOT_ROOT / version / "openapi.json", openapi_data)
-        generated.append((release, documentation, documentation_data, openapi, openapi_data))
-
-    lock_records: list[dict[str, Any]] = []
-    previous: tuple[dict[str, Any], dict[str, Any], bytes, dict[str, Any], bytes] | None = None
-    for item in generated:
-        release, documentation, documentation_data, openapi, openapi_data = item
         version = release["version"]
         documentation_hash = sha256(documentation_data)
         openapi_hash = sha256(openapi_data)
-        diff_record: dict[str, Any] | None = None
-        if previous is not None:
-            previous_release, previous_docs, previous_docs_data, previous_openapi, previous_openapi_data = previous
-            previous_version = previous_release["version"]
-            diff = build_diff(
-                previous_version,
-                previous_docs,
-                previous_openapi,
-                version,
-                documentation,
-                openapi,
-                {"documentation": sha256(previous_docs_data), "openapi": sha256(previous_openapi_data)},
-                {"documentation": documentation_hash, "openapi": openapi_hash},
-            )
-            diff_data = canonical_json(diff)
-            diff_path = f"compat/api-diffs/{previous_version}--{version}.json"
-            write_immutable(ROOT / diff_path, diff_data)
-            diff_record = {
-                "path": diff_path,
-                "sha256": sha256(diff_data),
-                "bytes": len(diff_data),
-                "change_count": diff["change_count"],
-            }
+        (
+            previous_release,
+            previous_docs,
+            previous_docs_data,
+            previous_openapi,
+            previous_openapi_data,
+        ) = previous
+        previous_version = previous_release["version"]
+        diff = build_diff(
+            previous_version,
+            previous_docs,
+            previous_openapi,
+            version,
+            documentation,
+            openapi,
+            {
+                "documentation": sha256(previous_docs_data),
+                "openapi": sha256(previous_openapi_data),
+            },
+            {"documentation": documentation_hash, "openapi": openapi_hash},
+        )
+        diff_data = canonical_json(diff)
+        diff_path = f"compat/api-diffs/{previous_version}--{version}.json"
+        write_immutable(ROOT / diff_path, diff_data)
+        diff_record: dict[str, Any] = {
+            "path": diff_path,
+            "sha256": sha256(diff_data),
+            "bytes": len(diff_data),
+            "change_count": diff["change_count"],
+        }
 
         line = rendered_line(version)
         if line is None:
@@ -1275,9 +1322,27 @@ def generate(source_repository: str) -> None:
                 "rendered_only_operation_count": None,
             }
         else:
-            if line[0] not in rendered_artifacts:
-                raise SnapshotError("rendered cross-check artifact was not captured")
-            rendered_path, rendered_data, rendered_document = rendered_artifacts[line[0]]
+            rendered_path = f"compat/rendered-api-cross-checks/{line[0]}.json"
+            rendered_artifact_path = ROOT / rendered_path
+            if rendered_artifact_path.exists():
+                rendered_data = read_regular_file(
+                    rendered_artifact_path, MAX_SNAPSHOT_BYTES
+                )
+                rendered_document = parse_json(rendered_data, MAX_SNAPSHOT_BYTES)
+                if (
+                    rendered_document.get("schema")
+                    != "openbao-rendered-api-cross-check/v1"
+                    or rendered_document.get("line") != line[0]
+                    or rendered_document.get("observed_on")
+                    != rendered_observed_on(line[0])
+                ):
+                    raise SnapshotError("existing rendered cross-check metadata changed")
+            else:
+                rendered_document = capture_rendered_cross_check(
+                    *line, observed_on=rendered_observed_on(line[0])
+                )
+                rendered_data = canonical_json(rendered_document)
+                write_immutable(rendered_artifact_path, rendered_data)
             tagged = set(operation_index(documentation))
             rendered = {
                 f"{operation['method']} {operation['path']}"
@@ -1317,7 +1382,13 @@ def generate(source_repository: str) -> None:
                 "diff_from_previous": diff_record,
             }
         )
-        previous = item
+        previous = (
+            release,
+            documentation,
+            documentation_data,
+            openapi,
+            openapi_data,
+        )
     lock = {
         "schema": "openbao-api-snapshot-lock/v1",
         "generator_version": GENERATOR_VERSION,
@@ -1326,9 +1397,11 @@ def generate(source_repository: str) -> None:
         "records": lock_records,
     }
     lock_data = canonical_json(lock)
-    write_immutable(SNAPSHOT_LOCK_PATH, lock_data)
+    if lock_records[: len(existing_records)] != existing_records:
+        raise SnapshotError("snapshot generation attempted to modify immutable history")
+    replace_generated_lock(SNAPSHOT_LOCK_PATH, lock_data, MAX_LOCK_BYTES)
     checksum = f"{sha256(lock_data)}  api-snapshots.lock.json\n".encode()
-    write_immutable(SNAPSHOT_CHECKSUM_PATH, checksum)
+    replace_generated_lock(SNAPSHOT_CHECKSUM_PATH, checksum, 256)
     print(f"generated {len(lock_records)} immutable OpenBao API evidence profiles")
 
 
@@ -1713,7 +1786,7 @@ def verify() -> dict[str, Any]:
             record,
             expected_schema=(
                 "openbao-normalized-openapi/v2"
-                if version == "2.6.0"
+                if version_tuple(version) >= version_tuple("2.6.0")
                 else "openbao-normalized-openapi/v1"
             ),
         )
@@ -1756,11 +1829,7 @@ def verify() -> dict[str, Any]:
                 rendered_document,
                 rendered_data,
                 rendered_record["line"],
-                observed_on=(
-                    OBSERVED_ON
-                    if version == "2.6.0"
-                    else "2026-07-10"
-                ),
+                observed_on=rendered_observed_on(rendered_record["line"]),
             )
             tagged_operations = set(operation_index(documentation))
             rendered_operations = {

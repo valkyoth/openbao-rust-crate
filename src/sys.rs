@@ -3387,10 +3387,10 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
 /// Create or update parameters for an OpenBao workflow.
 ///
 /// Workflow definitions can embed request templates and literal values, so
-/// `Debug` always redacts the definition. OpenBao 2.6.0 contains an upstream
-/// handler defect that discards the `cas` field. The SDK models the wire field
-/// but rejects CAS-selected writes locally while 2.6.0 is the only workflow
-/// profile, and never retries workflow writes.
+/// `Debug` always redacts the definition. OpenBao 2.6.0 and 2.6.1 contain an
+/// upstream handler defect that discards the `cas` field. The SDK models the
+/// wire field but rejects CAS-selected writes locally for affected profiles,
+/// and never retries workflow writes.
 pub struct WorkflowWriteRequest {
     workflow: SecretString,
     description: Option<String>,
@@ -3879,11 +3879,47 @@ pub struct PolicyWriteRequest {
     pub cas_required: Option<bool>,
 }
 
+/// ACL policy JSON Merge Patch request (OpenBao 2.6.1+).
+///
+/// Every field is optional because omission preserves the stored value.
+/// This differs from [`PolicyWriteRequest`], where an omitted expiration on
+/// POST/PUT clears the previous expiration.
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct PolicyPatchRequest {
+    /// Replacement policy document. Omission preserves the current document.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy: Option<String>,
+    /// Replacement expiration timestamp. Mutually exclusive with `ttl`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration: Option<String>,
+    /// Replacement policy lifetime duration. Mutually exclusive with `expiration`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ttl: Option<String>,
+    /// Check-and-set version. Use `-1` for strict creation, although PATCH
+    /// itself requires the policy to exist.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cas: Option<i64>,
+    /// Replacement check-and-set requirement.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cas_required: Option<bool>,
+}
+
 #[cfg(feature = "identity-template-overrides-acknowledged")]
 #[derive(Serialize)]
 struct PolicyWriteWithIdentityTemplateOverrides<'a> {
     #[serde(flatten)]
     request: &'a PolicyWriteRequest,
+    #[serde(skip_serializing_if = "is_false")]
+    allow_slashes_in_identity_templates: bool,
+    #[serde(skip_serializing_if = "is_false")]
+    allow_wildcards_in_identity_templates: bool,
+}
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Serialize)]
+struct PolicyPatchWithIdentityTemplateOverrides<'a> {
+    #[serde(flatten)]
+    request: &'a PolicyPatchRequest,
     #[serde(skip_serializing_if = "is_false")]
     allow_slashes_in_identity_templates: bool,
     #[serde(skip_serializing_if = "is_false")]
@@ -3912,6 +3948,56 @@ impl PolicyWriteRequest {
     }
 
     fn validate(&self) -> Result<()> {
+        if self.expiration.is_some() && self.ttl.is_some() {
+            return Err(Error::InvalidParameter(
+                "policy expiration and ttl are mutually exclusive".into(),
+            ));
+        }
+        if let Some(ttl) = &self.ttl {
+            crate::validation::validate_duration_parameter(ttl, "policy ttl")?;
+        }
+        Ok(())
+    }
+}
+
+impl PolicyPatchRequest {
+    /// Creates an empty patch. Select at least one field before sending it.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            policy: None,
+            expiration: None,
+            ttl: None,
+            cas: None,
+            cas_required: None,
+        }
+    }
+
+    /// Replaces the policy document while preserving omitted metadata.
+    #[must_use]
+    pub fn with_policy(mut self, policy: impl Into<String>) -> Self {
+        self.policy = Some(policy.into());
+        self
+    }
+
+    /// Replaces the policy lifetime duration while preserving other fields.
+    #[must_use]
+    pub fn with_ttl(mut self, ttl: impl Into<String>) -> Self {
+        self.ttl = Some(ttl.into());
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.policy.is_none()
+            && self.expiration.is_none()
+            && self.ttl.is_none()
+            && self.cas.is_none()
+            && self.cas_required.is_none()
+        {
+            return Err(Error::InvalidParameter(
+                "ACL policy patch must select at least one field".into(),
+            ));
+        }
         if self.expiration.is_some() && self.ttl.is_some() {
             return Err(Error::InvalidParameter(
                 "policy expiration and ttl are mutually exclusive".into(),
@@ -7214,6 +7300,103 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
+    /// Patches selected ACL policy fields without clearing omitted metadata.
+    ///
+    /// This endpoint is available from OpenBao 2.6.1. The policy must already
+    /// exist. In contrast to [`Self::write_policy`], omitted expiration and
+    /// identity-template settings are preserved.
+    pub async fn patch_policy(&self, name: &str, request: &PolicyPatchRequest) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::POLICY_EXPIRATION,
+                    request.expiration.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_TTL,
+                    request.ttl.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_CAS,
+                    request.cas.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_CAS_REQUIRED,
+                    request.cas_required.is_some(),
+                ),
+            ])
+            .await?;
+        self.client
+            .request_sys_json_headers_accepting(
+                Method::PATCH,
+                &sys_path("sys/policies/acl", name, None)?,
+                &[(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/merge-patch+json"),
+                )],
+                Some(request),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Patches an ACL policy while enabling reviewed identity-template delimiters.
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    pub async fn patch_policy_with_identity_template_overrides(
+        &self,
+        name: &str,
+        request: &PolicyPatchRequest,
+        overrides: AclIdentityTemplateOverrides,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::POLICY_EXPIRATION,
+                    request.expiration.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_TTL,
+                    request.ttl.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_CAS,
+                    request.cas.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_CAS_REQUIRED,
+                    request.cas_required.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_ALLOW_TEMPLATE_SLASHES,
+                    overrides.allow_slashes,
+                ),
+                (
+                    &crate::request_compatibility::fields::POLICY_ALLOW_TEMPLATE_WILDCARDS,
+                    overrides.allow_wildcards,
+                ),
+            ])
+            .await?;
+        let payload = PolicyPatchWithIdentityTemplateOverrides {
+            request,
+            allow_slashes_in_identity_templates: overrides.allow_slashes,
+            allow_wildcards_in_identity_templates: overrides.allow_wildcards,
+        };
+        self.client
+            .request_sys_json_headers_accepting(
+                Method::PATCH,
+                &sys_path("sys/policies/acl", name, None)?,
+                &[(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("application/merge-patch+json"),
+                )],
+                Some(&payload),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
     /// Creates or updates an ACL policy while enabling reviewed identity-template delimiters.
     ///
     /// OpenBao 2.6 rejects `/`, `*`, and `+` in rendered identity-template
@@ -9555,7 +9738,7 @@ fn validate_workflow_write_request(request: &WorkflowWriteRequest) -> Result<()>
     validate_workflow_definition(request.workflow.expose_secret())?;
     if request.cas.is_some() || request.cas_required {
         return Err(Error::InvalidParameter(
-            "workflow CAS is unsafe on OpenBao 2.6.0 because the server discards the cas field"
+            "workflow CAS is unsafe on OpenBao 2.6.0 and 2.6.1 because the server discards the cas field"
                 .into(),
         ));
     }
@@ -10472,18 +10655,18 @@ mod tests {
         AuditEnableRequest, AuditedRequestHeaders, AuthEnableRequest, Capabilities, Capability,
         CorsConfig, CorsConfigRequest, GeneratedPassword, HaStatus, LeaseDuration, LockedUsers,
         LoggerLevel, MAX_SYSTEM_RESPONSE_METADATA_BYTES, MfaValidateAuth, MfaValidateRequest,
-        MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList, PolicyWriteRequest,
-        RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest, RaftPeerRequest,
-        RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest, RemountRequest,
-        ResultantAcl, SysHashAlgorithm, SysHashRequest, SysRandomRequest, SysRandomResponse,
-        SysRandomSource, UiMounts, UiNamespaces, VersionHistory, WorkflowData, WorkflowInfo,
-        WorkflowList, WorkflowWritePayload, WorkflowWriteRequest, audited_request_header_path,
-        internal_ui_mount_path, locked_user_unlock_path, namespace_path, rate_limit_quota_path,
-        remount_status_path, sys_hash_path, sys_path, sys_random_path, validate_capability_paths,
-        validate_dev_bootstrap_options, validate_lease_id, validate_namespace_request,
-        validate_raft_server_id, validate_raft_snapshot, validate_raft_snapshot_length,
-        validate_rate_limit_quota_config, validate_rate_limit_quota_request, validate_sha256_hex,
-        validate_wrapping_ttl,
+        MountEnableRequest, NamespaceList, NamespaceRequest, PolicyList, PolicyPatchRequest,
+        PolicyWriteRequest, RaftAutopilotConfig, RaftConfiguration, RaftJoinRequest,
+        RaftPeerRequest, RateLimitQuotaConfig, RateLimitQuotaList, RateLimitQuotaRequest,
+        RemountRequest, ResultantAcl, SysHashAlgorithm, SysHashRequest, SysRandomRequest,
+        SysRandomResponse, SysRandomSource, UiMounts, UiNamespaces, VersionHistory, WorkflowData,
+        WorkflowInfo, WorkflowList, WorkflowWritePayload, WorkflowWriteRequest,
+        audited_request_header_path, internal_ui_mount_path, locked_user_unlock_path,
+        namespace_path, rate_limit_quota_path, remount_status_path, sys_hash_path, sys_path,
+        sys_random_path, validate_capability_paths, validate_dev_bootstrap_options,
+        validate_lease_id, validate_namespace_request, validate_raft_server_id,
+        validate_raft_snapshot, validate_raft_snapshot_length, validate_rate_limit_quota_config,
+        validate_rate_limit_quota_request, validate_sha256_hex, validate_wrapping_ttl,
     };
     #[cfg(feature = "operator-ops")]
     use super::{
@@ -12131,6 +12314,16 @@ mod tests {
             .unwrap_or_else(|| panic!("conflicting policy lifetime unexpectedly accepted"));
         assert!(error.to_string().contains("mutually exclusive"));
         assert!(!error.to_string().contains("2030"));
+
+        assert!(PolicyPatchRequest::new().validate().is_err());
+        let patch = PolicyPatchRequest::new().with_policy("path \"secret/*\" {}");
+        assert!(patch.validate().is_ok());
+        let conflicting_patch = PolicyPatchRequest {
+            expiration: Some("2030-01-01T00:00:00Z".to_owned()),
+            ttl: Some("1h".to_owned()),
+            ..PolicyPatchRequest::new()
+        };
+        assert!(conflicting_patch.validate().is_err());
     }
 
     #[test]
