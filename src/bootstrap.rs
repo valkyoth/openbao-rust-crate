@@ -13,7 +13,7 @@ use subtle::{Choice, ConstantTimeEq};
 #[cfg(feature = "approle")]
 use crate::auth::approle::{AppRoleRoleRequest, AppRoleSecretId, AppRoleSecretIdRequest};
 #[cfg(feature = "database")]
-use crate::secrets::database::{DatabaseRole, DatabaseStaticRole};
+use crate::secrets::database::{DatabaseCredentialConfig, DatabaseRole, DatabaseStaticRole};
 #[cfg(feature = "identity")]
 use crate::secrets::identity::{
     IdentityEntityInfo, IdentityEntityRequest, IdentityGroupInfo, IdentityGroupRequest,
@@ -1949,7 +1949,7 @@ fn database_role_matches_desired(existing: &DatabaseRole, desired: &DatabaseRole
             .credential_type
             .as_ref()
             .is_none_or(|value| existing.credential_type.as_ref() == Some(value))
-        && map_empty_or_contains(&existing.credential_config, &desired.credential_config)
+        && secret_map_empty_or_contains(&existing.credential_config, &desired.credential_config)
 }
 
 #[cfg(feature = "database")]
@@ -1968,7 +1968,7 @@ fn database_static_role_matches_desired(
             .credential_type
             .as_ref()
             .is_none_or(|value| existing.credential_type.as_ref() == Some(value))
-        && map_empty_or_contains(&existing.credential_config, &desired.credential_config)
+        && secret_map_empty_or_contains(&existing.credential_config, &desired.credential_config)
 }
 
 #[cfg(feature = "ssh")]
@@ -2107,7 +2107,7 @@ fn vec_empty_or_equal(existing: &[String], desired: &[String]) -> bool {
     desired.is_empty() || existing == desired
 }
 
-#[cfg(any(feature = "database", feature = "identity"))]
+#[cfg(feature = "identity")]
 fn map_empty_or_contains(
     existing: &BTreeMap<String, String>,
     desired: &BTreeMap<String, String>,
@@ -2115,6 +2115,18 @@ fn map_empty_or_contains(
     desired
         .iter()
         .all(|(key, value)| existing.get(key) == Some(value))
+}
+
+#[cfg(feature = "database")]
+fn secret_map_empty_or_contains(
+    existing: &DatabaseCredentialConfig,
+    desired: &DatabaseCredentialConfig,
+) -> bool {
+    desired.iter().all(|(key, desired_value)| {
+        existing.get(key).is_some_and(|current_value| {
+            secret_values_equal(current_value.expose_secret(), desired_value.expose_secret())
+        })
+    })
 }
 
 #[cfg(test)]

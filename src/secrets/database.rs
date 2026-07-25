@@ -15,8 +15,7 @@ use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{
-        Empty, ListEntries, ListPageOptions, ResponseEnvelope,
-        deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
+        Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_vec,
     },
 };
 
@@ -1072,8 +1071,114 @@ impl ListEntries for DatabaseList {
     }
 }
 
+/// Secret-aware configuration for generated database credential types.
+///
+/// OpenBao permits credential-type-specific values such as the
+/// `client_certificate` CA private key in this map. All values therefore fail
+/// closed as [`SecretString`], including values that are not confidential for
+/// a particular credential type.
+#[derive(Clone, Default)]
+pub struct DatabaseCredentialConfig {
+    values: BTreeMap<String, SecretString>,
+}
+
+impl DatabaseCredentialConfig {
+    /// Creates an empty credential configuration.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            values: BTreeMap::new(),
+        }
+    }
+
+    /// Returns the number of configured fields.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    /// Returns whether no credential fields are configured.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
+    /// Inserts a secret-aware credential configuration value.
+    pub fn insert(&mut self, key: impl Into<String>, value: SecretString) -> Option<SecretString> {
+        self.values.insert(key.into(), value)
+    }
+
+    /// Returns a configured value without exposing it.
+    #[must_use]
+    pub fn get(&self, key: &str) -> Option<&SecretString> {
+        self.values.get(key)
+    }
+
+    /// Iterates over field names and secret-aware values.
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &SecretString)> {
+        self.values.iter()
+    }
+
+    /// Returns the underlying secret-aware map.
+    #[must_use]
+    pub fn into_inner(self) -> BTreeMap<String, SecretString> {
+        self.values
+    }
+}
+
+impl From<BTreeMap<String, SecretString>> for DatabaseCredentialConfig {
+    fn from(values: BTreeMap<String, SecretString>) -> Self {
+        Self { values }
+    }
+}
+
+impl FromIterator<(String, SecretString)> for DatabaseCredentialConfig {
+    fn from_iter<T: IntoIterator<Item = (String, SecretString)>>(iter: T) -> Self {
+        Self {
+            values: iter.into_iter().collect(),
+        }
+    }
+}
+
+impl fmt::Debug for DatabaseCredentialConfig {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DatabaseCredentialConfig")
+            .field("entry_count", &self.values.len())
+            .field("values", &"<redacted>")
+            .finish()
+    }
+}
+
+impl Serialize for DatabaseCredentialConfig {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if self.values.len() > crate::response::MAX_RESPONSE_STRINGS {
+            return Err(<S::Error as serde::ser::Error>::custom(
+                "database credential configuration exceeds item limit",
+            ));
+        }
+        let mut map = serializer.serialize_map(Some(self.values.len()))?;
+        for (key, value) in &self.values {
+            map.serialize_entry(key, value.expose_secret())?;
+        }
+        map.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for DatabaseCredentialConfig {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_bounded_secret_string_map(deserializer).map(Self::from)
+    }
+}
+
 /// Dynamic database role request and response.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct DatabaseRole {
     /// Database connection name used by this role.
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -1112,13 +1217,9 @@ pub struct DatabaseRole {
     /// `client_certificate`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credential_type: Option<String>,
-    /// Credential-type-specific string configuration.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_bounded_string_map_or_default"
-    )]
-    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub credential_config: BTreeMap<String, String>,
+    /// Credential-type-specific secret-aware configuration.
+    #[serde(default, skip_serializing_if = "DatabaseCredentialConfig::is_empty")]
+    pub credential_config: DatabaseCredentialConfig,
 }
 
 impl DatabaseRole {
@@ -1138,8 +1239,28 @@ impl DatabaseRole {
     }
 }
 
+impl fmt::Debug for DatabaseRole {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DatabaseRole")
+            .field("db_name", &self.db_name)
+            .field("creation_statement_count", &self.creation_statements.len())
+            .field("default_ttl", &self.default_ttl)
+            .field("max_ttl", &self.max_ttl)
+            .field(
+                "revocation_statement_count",
+                &self.revocation_statements.len(),
+            )
+            .field("rollback_statement_count", &self.rollback_statements.len())
+            .field("renew_statement_count", &self.renew_statements.len())
+            .field("credential_type", &self.credential_type)
+            .field("credential_config", &self.credential_config)
+            .finish()
+    }
+}
+
 /// Static database role request and response.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct DatabaseStaticRole {
     /// Database connection name used by this static role.
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -1161,13 +1282,9 @@ pub struct DatabaseStaticRole {
     /// Credential type.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credential_type: Option<String>,
-    /// Credential-type-specific string configuration.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_bounded_string_map_or_default"
-    )]
-    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub credential_config: BTreeMap<String, String>,
+    /// Credential-type-specific secret-aware configuration.
+    #[serde(default, skip_serializing_if = "DatabaseCredentialConfig::is_empty")]
+    pub credential_config: DatabaseCredentialConfig,
 }
 
 impl DatabaseStaticRole {
@@ -1178,6 +1295,20 @@ impl DatabaseStaticRole {
             username: username.into(),
             ..Self::default()
         }
+    }
+}
+
+impl fmt::Debug for DatabaseStaticRole {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DatabaseStaticRole")
+            .field("db_name", &self.db_name)
+            .field("username", &self.username)
+            .field("rotation_period", &self.rotation_period)
+            .field("rotation_statement_count", &self.rotation_statements.len())
+            .field("credential_type", &self.credential_type)
+            .field("credential_config", &self.credential_config)
+            .finish()
     }
 }
 
@@ -1917,9 +2048,10 @@ mod tests {
         CassandraConnectionOptions, DATABASE_BUILTIN_CONNECTION_FIELDS,
         DATABASE_CONNECTION_CONFIG_FIELDS, DATABASE_CONNECTION_EXTRA_COLLISION_ERROR,
         DatabaseBuiltinConnectionConfig, DatabaseConnectionConfig, DatabaseConnectionInfo,
-        DatabaseCredentials, DatabaseList, DatabaseRole, DatabaseStaticCredentials,
-        InfluxDbConnectionOptions, MySqlConnectionOptions, MySqlPlugin,
-        PostgreSqlConnectionOptions, REVIEWED_BUILTIN_DATABASE_PLUGINS, ValkeyConnectionOptions,
+        DatabaseCredentialConfig, DatabaseCredentials, DatabaseList, DatabaseRole,
+        DatabaseStaticCredentials, DatabaseStaticRole, InfluxDbConnectionOptions,
+        MySqlConnectionOptions, MySqlPlugin, PostgreSqlConnectionOptions,
+        REVIEWED_BUILTIN_DATABASE_PLUGINS, ValkeyConnectionOptions,
         postgres_dsn_uses_hardened_tcp_tls,
     };
 
@@ -1954,6 +2086,76 @@ mod tests {
             info.connection_details["private_key"].expose_secret(),
             "returned-plugin-private-key"
         );
+    }
+
+    #[test]
+    fn database_role_credential_configuration_is_secret_and_debug_redacted() {
+        let mut credential_config = DatabaseCredentialConfig::new();
+        credential_config.insert(
+            "ca_private_key",
+            SecretString::from("fixture-ca-private-key"),
+        );
+        let role = DatabaseRole {
+            creation_statements: vec!["CREATE USER WITH SECRET".to_owned()],
+            credential_type: Some("client_certificate".to_owned()),
+            credential_config: credential_config.clone(),
+            ..DatabaseRole::new("postgres")
+        };
+        let static_role = DatabaseStaticRole {
+            rotation_statements: vec!["ROTATE USER WITH SECRET".to_owned()],
+            credential_type: Some("client_certificate".to_owned()),
+            credential_config,
+            ..DatabaseStaticRole::new("postgres", "service")
+        };
+
+        for debug in [format!("{role:?}"), format!("{static_role:?}")] {
+            assert!(!debug.contains("fixture-ca-private-key"));
+            assert!(!debug.contains("ca_private_key"));
+            assert!(!debug.contains("WITH SECRET"));
+            assert!(debug.contains("<redacted>"));
+        }
+
+        let serialized = serde_json::to_value(&role).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            serialized["credential_config"]["ca_private_key"],
+            "fixture-ca-private-key"
+        );
+        let decoded: DatabaseRole =
+            serde_json::from_value(serialized).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(
+            decoded
+                .credential_config
+                .get("ca_private_key")
+                .map(SecretString::expose_secret),
+            Some("fixture-ca-private-key")
+        );
+    }
+
+    #[test]
+    fn database_role_credential_configuration_is_bounded_and_rejects_duplicates() {
+        let mut credential_config = DatabaseCredentialConfig::new();
+        for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
+            credential_config.insert(format!("field-{index}"), SecretString::from("secret-value"));
+        }
+        let role = DatabaseRole {
+            credential_config,
+            ..DatabaseRole::new("postgres")
+        };
+        let error = serde_json::to_value(&role)
+            .err()
+            .unwrap_or_else(|| panic!("oversized database credential config serialized"));
+        assert!(error.to_string().contains("exceeds item limit"));
+        assert!(!error.to_string().contains("secret-value"));
+
+        let error = serde_json::from_str::<DatabaseRole>(
+            r#"{"db_name":"postgres","credential_config":{"ca_private_key":"first-private-key","ca_private_key":"second-private-key"}}"#,
+        )
+        .err()
+        .unwrap_or_else(|| panic!("duplicate database credential config decoded"));
+        assert!(error.to_string().contains("contain duplicate keys"));
+        assert!(!error.to_string().contains("ca_private_key"));
+        assert!(!error.to_string().contains("first-private-key"));
+        assert!(!error.to_string().contains("second-private-key"));
     }
 
     #[test]

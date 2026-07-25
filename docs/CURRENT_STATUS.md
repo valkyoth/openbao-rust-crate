@@ -65,7 +65,8 @@ and requires explicit claim-validation acknowledgement on `2.6.1`.
 - RabbitMQ secrets engine connection config, lease config, role
   create/read/list/delete, and dynamic credential helpers.
 - Database connection config, dynamic roles, static roles, root/static
-  rotation, and credential helpers.
+  rotation, and credential helpers, with secret-aware role credential
+  configuration for client-certificate CA private keys.
 - Identity entity, group, entity-alias, and group-alias lifecycle, lookup,
   entity merge, OIDC token backend config, signing key CRUD/rotate, role CRUD,
   signed ID token generation, token introspection, discovery, JWKS, OIDC

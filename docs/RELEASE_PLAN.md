@@ -813,6 +813,10 @@ Stop criteria:
 - JWT CEL PATCH requires explicit claim-validation acknowledgement, remains
   blocked on exact `2.6.0`, and is live-verified to preserve constraints on
   exact `2.6.1`;
+- database role credential configuration uses bounded `SecretString` values,
+  and database-role plus ACL-policy diagnostics redact sensitive definitions;
+- ACL policy PATCH rejects non-positive existing-policy CAS versions before
+  transport;
 - workflow prefix LIST/SCAN and CAS-selected writes remain fail-closed because
   their upstream defects persist in `2.6.1`;
 - README, migration, stability, coverage, changelog, and release notes

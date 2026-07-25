@@ -4,8 +4,8 @@
 
 - Version: 2.1.2
 - Release date: 2026-07-25
-- Git tag: `v2.1.2`
-- Git commit: see the signed `v2.1.2` tag object
+- Release tag: `v2.1.2`, created only after every release gate passes
+- Release commit: bound by the signed `v2.1.2` tag object
 - License: MIT OR Apache-2.0
 
 ## Summary
@@ -37,6 +37,18 @@ security-blocked.
   exact `2.6.1` permits it after the upstream fix.
 - Deprecated the legacy unacknowledged CEL PATCH method and made it fail
   locally, preserving the security gate for all profiles.
+
+## Security Hardening
+
+- Dynamic and static database role credential configuration now uses bounded
+  `SecretString` values. OpenBao permits
+  `credential_config.ca_private_key` to contain a PEM CA private key, so the
+  former ordinary string map was not an acceptable custody type.
+- Database roles and ACL policy request/readback types redact credential
+  configuration, statements, and policy documents from `Debug`.
+- ACL policy PATCH rejects zero and negative CAS versions before transport.
+- The security-support policy now follows the latest published stable SDK
+  release without embedding a minor line that can become stale.
 
 ## Retained Security Blocks
 
@@ -72,6 +84,11 @@ JwtCelClaimValidationAcknowledgement::all_authorization_claims_are_constrained_i
 The call remains unavailable on exact 2.6.0. ACL policy replacement methods
 are unchanged; use `Sys::patch_policy` only when preserving omitted policy
 fields is required.
+
+Database role callers must migrate `credential_config` values from `String`
+to `SecretString` through `DatabaseCredentialConfig`. This deliberate
+source-compatibility correction prevents PEM CA private keys from entering
+ordinary, non-zeroizing role storage.
 
 ## Release Gate
 

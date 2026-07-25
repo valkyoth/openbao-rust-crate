@@ -28,6 +28,29 @@ fails locally for every profile.
 Workflow prefix LIST/SCAN and CAS-selected writes remain blocked on both 2.6
 profiles because OpenBao `2.6.1` does not fix those server behaviors.
 
+Database role credential configuration now uses
+`DatabaseCredentialConfig`, whose values are `SecretString`. This is an
+intentional source-compatibility correction in 2.1.2: OpenBao permits
+`credential_config.ca_private_key` to contain a PEM CA private key, so the
+former `BTreeMap<String, String>` could leak key material through `Debug` and
+non-zeroizing storage. Populate the map explicitly:
+
+```rust
+use openbao::{SecretString, prelude::DatabaseCredentialConfig};
+
+let mut credential_config = DatabaseCredentialConfig::new();
+credential_config.insert(
+    "ca_private_key",
+    SecretString::from(ca_private_key_pem),
+);
+```
+
+`DatabaseRole`, `DatabaseStaticRole`, `PolicyWriteRequest`,
+`PolicyPatchRequest`, `PolicyInfo`, and `PolicyInfoDetails` now redact their
+sensitive definitions from `Debug`. ACL policy PATCH additionally rejects
+zero and negative CAS values locally because PATCH requires a positive
+existing policy version.
+
 ## From `openbao` 2.1.0 To 2.1.1
 
 `2.1.1` updates `sanitization` from `2.0.2` to `2.0.3` and `base64-ng` from

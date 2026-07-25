@@ -163,6 +163,7 @@ fn locked_openbao_response_profiles_deserialize() -> Result<(), Box<dyn Error>> 
         let policy: PolicyInfo = serde_json::from_value(fixture.policy)?;
         assert!(!policy.rules.is_empty());
         assert_eq!(policy.version.is_some(), index >= 9);
+        assert!(!format!("{policy:?}").contains(&policy.rules));
 
         let quota: RateLimitQuotaInfo = serde_json::from_value(fixture.quota)?;
         assert_eq!(quota.inheritable, (index >= 9).then_some(true));
@@ -210,6 +211,7 @@ fn openbao_2_6_system_contract_fixtures_preserve_old_responses() -> Result<(), B
     let policy: PolicyInfoDetails = serde_json::from_value(fixtures.acl_policy_2_6_0)?;
     assert!(policy.allow_slashes_in_identity_templates);
     assert!(!policy.allow_wildcards_in_identity_templates);
+    assert!(!format!("{policy:?}").contains(&policy.policy.rules));
 
     let pki_role: PkiRoleDetails = serde_json::from_value(fixtures.pki_role_2_6_0)?;
     assert!(pki_role.allow_globs_in_identity_templates);

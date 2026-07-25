@@ -4516,6 +4516,21 @@ async fn sys_policy_patch_is_2_6_1_only_and_preserves_omitted_fields() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
+    for cas in [i64::MIN, -1, 0] {
+        assert!(matches!(
+            client
+                .sys()
+                .patch_policy(
+                    "app-read",
+                    &openbao::sys::PolicyPatchRequest {
+                        cas: Some(cas),
+                        ..openbao::sys::PolicyPatchRequest::new()
+                    },
+                )
+                .await,
+            Err(Error::InvalidParameter(_))
+        ));
+    }
 
     let old_policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 0))
         .unwrap_or_else(|error| panic!("{error}"));

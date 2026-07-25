@@ -43,7 +43,10 @@ make the public API commitments and security boundaries explicit.
   must report an active OS lock; canaries are not an attacker-resistant
   integrity boundary. `2.1.2` appends exact OpenBao `2.6.1`, typed ACL policy
   PATCH, and acknowledged JWT CEL PATCH after the upstream constraint-
-  preservation fix without changing historical profile behavior.
+  preservation fix without changing historical profile behavior. It also
+  makes a security-driven source correction from ordinary string database-role
+  credential maps to `DatabaseCredentialConfig` with `SecretString` values
+  because those maps can hold PEM CA private keys.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 689 operations documented for exact `2.6.1`, 594 are typed, 93
   are typed-gated, and two are security-blocked because the workflow prefix

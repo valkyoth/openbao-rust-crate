@@ -4,10 +4,11 @@ Security is the primary design constraint for this crate.
 
 ## Supported Versions
 
-Only the latest published stable `2.0.x` release receives security fixes. An
-older OpenBao server profile can remain wire-compatible without making either
-that server release or an older SDK patch eligible for security maintenance.
-Upgrade the SDK independently of the selected OpenBao compatibility profile.
+Only the latest published stable SDK release receives security fixes. Older
+SDK releases may remain wire-compatible but are not security-supported. An
+older OpenBao server profile can remain wire-compatible without making that
+server release eligible for security maintenance. Upgrade the SDK
+independently of the selected OpenBao compatibility profile.
 
 ## Reporting A Vulnerability
 
@@ -43,6 +44,9 @@ Please include:
   the explicit `native-tls-acknowledged` feature.
 - Token accessors are treated as secret material.
 - Namespace header values are treated as sensitive metadata.
+- Database role credential configuration values are treated as secret
+  material because `client_certificate` roles can contain a PEM CA private
+  key.
 - Plain HTTP is allowed only by explicit numeric loopback IP opt-in, and
   credential-bearing or request-body requests still require HTTPS. This crate's
   own HTTP mock tests use a separate explicit test-only opt-in for numeric

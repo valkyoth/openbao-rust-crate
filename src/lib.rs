@@ -374,8 +374,9 @@ pub mod prelude {
     #[cfg(feature = "database")]
     pub use crate::secrets::database::{
         CassandraConnectionOptions, Database, DatabaseBuiltinConnectionConfig,
-        DatabaseConnectionConfig, DatabaseCredentials, DatabaseRole, InfluxDbConnectionOptions,
-        MySqlConnectionOptions, MySqlPlugin, PostgreSqlConnectionOptions, ValkeyConnectionOptions,
+        DatabaseConnectionConfig, DatabaseCredentialConfig, DatabaseCredentials, DatabaseRole,
+        InfluxDbConnectionOptions, MySqlConnectionOptions, MySqlPlugin,
+        PostgreSqlConnectionOptions, ValkeyConnectionOptions,
     };
     #[cfg(feature = "identity")]
     pub use crate::secrets::identity::{

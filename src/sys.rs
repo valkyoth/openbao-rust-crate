@@ -3707,7 +3707,7 @@ impl ListEntries for PolicyList {
 }
 
 /// ACL policy read response.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Serialize)]
 pub struct PolicyInfo {
     /// Policy name.
     pub name: String,
@@ -3725,6 +3725,20 @@ pub struct PolicyInfo {
     /// Whether check-and-set is required for future updates.
     #[serde(default)]
     pub cas_required: bool,
+}
+
+impl fmt::Debug for PolicyInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PolicyInfo")
+            .field("name", &self.name)
+            .field("rules", &"<redacted>")
+            .field("expiration", &self.expiration)
+            .field("modified", &self.modified)
+            .field("version", &self.version)
+            .field("cas_required", &self.cas_required)
+            .finish()
+    }
 }
 
 impl<'de> Deserialize<'de> for PolicyInfo {
@@ -3763,7 +3777,7 @@ impl<'de> Deserialize<'de> for PolicyInfo {
 }
 
 /// ACL policy readback including OpenBao 2.6 identity-template overrides.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Serialize)]
 pub struct PolicyInfoDetails {
     /// Policy fields available across supported OpenBao releases.
     #[serde(flatten)]
@@ -3772,6 +3786,23 @@ pub struct PolicyInfoDetails {
     pub allow_slashes_in_identity_templates: bool,
     /// Whether rendered identity-template values may contain `*` or `+`.
     pub allow_wildcards_in_identity_templates: bool,
+}
+
+impl fmt::Debug for PolicyInfoDetails {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PolicyInfoDetails")
+            .field("policy", &self.policy)
+            .field(
+                "allow_slashes_in_identity_templates",
+                &self.allow_slashes_in_identity_templates,
+            )
+            .field(
+                "allow_wildcards_in_identity_templates",
+                &self.allow_wildcards_in_identity_templates,
+            )
+            .finish()
+    }
 }
 
 impl<'de> Deserialize<'de> for PolicyInfoDetails {
@@ -3861,7 +3892,7 @@ impl AclIdentityTemplateOverrides {
 }
 
 /// ACL policy create/update request.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Default, Serialize)]
 pub struct PolicyWriteRequest {
     /// Policy document.
     pub policy: String,
@@ -3879,12 +3910,25 @@ pub struct PolicyWriteRequest {
     pub cas_required: Option<bool>,
 }
 
+impl fmt::Debug for PolicyWriteRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PolicyWriteRequest")
+            .field("policy", &"<redacted>")
+            .field("expiration", &self.expiration)
+            .field("ttl", &self.ttl)
+            .field("cas", &self.cas)
+            .field("cas_required", &self.cas_required)
+            .finish()
+    }
+}
+
 /// ACL policy JSON Merge Patch request (OpenBao 2.6.1+).
 ///
 /// Every field is optional because omission preserves the stored value.
 /// This differs from [`PolicyWriteRequest`], where an omitted expiration on
 /// POST/PUT clears the previous expiration.
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Default, Serialize)]
 pub struct PolicyPatchRequest {
     /// Replacement policy document. Omission preserves the current document.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -3904,6 +3948,19 @@ pub struct PolicyPatchRequest {
     /// Replacement check-and-set requirement.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cas_required: Option<bool>,
+}
+
+impl fmt::Debug for PolicyPatchRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("PolicyPatchRequest")
+            .field("policy", &self.policy.as_ref().map(|_| "<redacted>"))
+            .field("expiration", &self.expiration)
+            .field("ttl", &self.ttl)
+            .field("cas", &self.cas)
+            .field("cas_required", &self.cas_required)
+            .finish()
+    }
 }
 
 #[cfg(feature = "identity-template-overrides-acknowledged")]
@@ -4007,6 +4064,11 @@ impl PolicyPatchRequest {
         }
         if let Some(ttl) = &self.ttl {
             crate::validation::validate_duration_parameter(ttl, "policy ttl")?;
+        }
+        if self.cas.is_some_and(|cas| cas < 1) {
+            return Err(Error::InvalidParameter(
+                "ACL policy PATCH cas must be a positive existing policy version".into(),
+            ));
         }
         Ok(())
     }
@@ -12316,16 +12378,41 @@ mod tests {
             .unwrap_or_else(|| panic!("conflicting policy lifetime unexpectedly accepted"));
         assert!(error.to_string().contains("mutually exclusive"));
         assert!(!error.to_string().contains("2030"));
+        let strict_create = PolicyWriteRequest {
+            cas: Some(-1),
+            ..PolicyWriteRequest::new("path \"secret/*\" {}")
+        };
+        assert!(strict_create.validate().is_ok());
 
         assert!(PolicyPatchRequest::new().validate().is_err());
         let patch = PolicyPatchRequest::new().with_policy("path \"secret/*\" {}");
         assert!(patch.validate().is_ok());
+        assert!(!format!("{patch:?}").contains("secret/*"));
         let conflicting_patch = PolicyPatchRequest {
             expiration: Some("2030-01-01T00:00:00Z".to_owned()),
             ttl: Some("1h".to_owned()),
             ..PolicyPatchRequest::new()
         };
         assert!(conflicting_patch.validate().is_err());
+        for cas in [i64::MIN, -1, 0] {
+            let invalid_cas = PolicyPatchRequest {
+                cas: Some(cas),
+                ..PolicyPatchRequest::new()
+            };
+            assert!(invalid_cas.validate().is_err());
+        }
+        let valid_cas = PolicyPatchRequest {
+            cas: Some(1),
+            ..PolicyPatchRequest::new()
+        };
+        assert!(valid_cas.validate().is_ok());
+        assert!(
+            !format!(
+                "{:?}",
+                PolicyWriteRequest::new("path \"secret/private\" {}")
+            )
+            .contains("secret/private")
+        );
     }
 
     #[test]
@@ -12582,6 +12669,7 @@ mod tests {
         .unwrap_or_else(|error| panic!("{error}"));
         assert!(policy.allow_slashes_in_identity_templates);
         assert!(policy.allow_wildcards_in_identity_templates);
+        assert!(!format!("{policy:?}").contains("identity.entity.name"));
     }
 
     #[cfg(feature = "identity-template-overrides-acknowledged")]

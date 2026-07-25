@@ -25,6 +25,13 @@ All notable changes to this project are documented here.
 - Prefixed workflow LIST/SCAN and workflow CAS-selected writes remain
   fail-closed on both OpenBao 2.6 releases because those upstream defects are
   unchanged.
+- Changed dynamic and static database role `credential_config` values from
+  ordinary strings to bounded `SecretString` storage because OpenBao permits a
+  PEM CA private key in that map. Role and ACL policy diagnostics now redact
+  statements, credential configuration, and policy documents.
+- ACL policy PATCH now rejects non-positive CAS versions before transport.
+- Corrected the security-support policy to follow the latest published stable
+  SDK release rather than naming a stale minor line.
 - Updated current-status, compatibility, migration, README, and release
   evidence documentation for OpenBao `2.6.1`.
 
