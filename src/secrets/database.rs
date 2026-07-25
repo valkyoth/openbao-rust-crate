@@ -1177,6 +1177,15 @@ impl<'de> Deserialize<'de> for DatabaseCredentialConfig {
     }
 }
 
+fn deserialize_database_credential_config_or_default<'de, D>(
+    deserializer: D,
+) -> core::result::Result<DatabaseCredentialConfig, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(Option::<DatabaseCredentialConfig>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 /// Dynamic database role request and response.
 #[derive(Clone, Default, Deserialize, Serialize)]
 pub struct DatabaseRole {
@@ -1218,7 +1227,11 @@ pub struct DatabaseRole {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credential_type: Option<String>,
     /// Credential-type-specific secret-aware configuration.
-    #[serde(default, skip_serializing_if = "DatabaseCredentialConfig::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_database_credential_config_or_default",
+        skip_serializing_if = "DatabaseCredentialConfig::is_empty"
+    )]
     pub credential_config: DatabaseCredentialConfig,
 }
 
@@ -1283,7 +1296,11 @@ pub struct DatabaseStaticRole {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub credential_type: Option<String>,
     /// Credential-type-specific secret-aware configuration.
-    #[serde(default, skip_serializing_if = "DatabaseCredentialConfig::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_database_credential_config_or_default",
+        skip_serializing_if = "DatabaseCredentialConfig::is_empty"
+    )]
     pub credential_config: DatabaseCredentialConfig,
 }
 
@@ -2156,6 +2173,31 @@ mod tests {
         assert!(!error.to_string().contains("ca_private_key"));
         assert!(!error.to_string().contains("first-private-key"));
         assert!(!error.to_string().contains("second-private-key"));
+    }
+
+    #[test]
+    fn database_role_credential_configuration_accepts_compatible_empty_shapes() {
+        for credential_config in ["null", "{}"] {
+            let dynamic: DatabaseRole = serde_json::from_str(&format!(
+                r#"{{"db_name":"postgres","credential_config":{credential_config}}}"#
+            ))
+            .unwrap_or_else(|error| panic!("{error}"));
+            assert!(dynamic.credential_config.is_empty());
+
+            let static_role: DatabaseStaticRole = serde_json::from_str(&format!(
+                r#"{{"db_name":"postgres","username":"service","credential_config":{credential_config}}}"#
+            ))
+            .unwrap_or_else(|error| panic!("{error}"));
+            assert!(static_role.credential_config.is_empty());
+        }
+
+        let dynamic: DatabaseRole = serde_json::from_str(r#"{"db_name":"postgres"}"#)
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(dynamic.credential_config.is_empty());
+        let static_role: DatabaseStaticRole =
+            serde_json::from_str(r#"{"db_name":"postgres","username":"service"}"#)
+                .unwrap_or_else(|error| panic!("{error}"));
+        assert!(static_role.credential_config.is_empty());
     }
 
     #[test]

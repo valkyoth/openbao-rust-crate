@@ -49,6 +49,10 @@ security-blocked.
 - ACL policy PATCH rejects zero and negative CAS versions before transport.
 - The security-support policy now follows the latest published stable SDK
   release without embedding a minor line that can become stale.
+- Database bootstrap convergence compares equal-length secret configuration
+  values without the KV-specific 4 KiB ceiling, and database role response
+  decoding accepts omitted, null, empty, and populated credential
+  configuration.
 
 ## Retained Security Blocks
 

@@ -32,6 +32,9 @@ All notable changes to this project are documented here.
 - ACL policy PATCH now rejects non-positive CAS versions before transport.
 - Corrected the security-support policy to follow the latest published stable
   SDK release rather than naming a stale minor line.
+- Database bootstrap convergence now compares credential configuration values
+  of every transport-accepted size, and database role responses continue to
+  accept omitted, null, or empty credential configuration.
 - Updated current-status, compatibility, migration, README, and release
   evidence documentation for OpenBao `2.6.1`.
 

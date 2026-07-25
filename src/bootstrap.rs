@@ -2124,9 +2124,21 @@ fn secret_map_empty_or_contains(
 ) -> bool {
     desired.iter().all(|(key, desired_value)| {
         existing.get(key).is_some_and(|current_value| {
-            secret_values_equal(current_value.expose_secret(), desired_value.expose_secret())
+            database_secret_values_equal(
+                current_value.expose_secret(),
+                desired_value.expose_secret(),
+            )
         })
     })
+}
+
+#[cfg(feature = "database")]
+fn database_secret_values_equal(current: &str, desired: &str) -> bool {
+    // Database credential configuration can contain PEM material larger than
+    // the fixed KV bootstrap value bound. Length is already observable in the
+    // caller-supplied request and OpenBao response; equal-length contents are
+    // still compared without content-dependent early exit.
+    current.len() == desired.len() && bool::from(current.as_bytes().ct_eq(desired.as_bytes()))
 }
 
 #[cfg(test)]
@@ -2139,7 +2151,7 @@ mod tests {
     use secrecy::SecretString;
 
     #[cfg(feature = "database")]
-    use crate::secrets::database::{DatabaseRole, DatabaseStaticRole};
+    use crate::secrets::database::{DatabaseCredentialConfig, DatabaseRole, DatabaseStaticRole};
     #[cfg(feature = "identity")]
     use crate::secrets::identity::{
         IdentityEntityInfo, IdentityEntityRequest, IdentityGroupInfo, IdentityGroupRequest,
@@ -2427,6 +2439,32 @@ mod tests {
         assert!(!super::database_static_role_matches_desired(
             &existing_static,
             &different_static
+        ));
+
+        for length in [4_096, 4_097, 16 * 1_024] {
+            let value = "a".repeat(length);
+            let mut existing_config = DatabaseCredentialConfig::new();
+            existing_config.insert("ca_private_key", SecretString::from(value.clone()));
+            let mut desired_config = DatabaseCredentialConfig::new();
+            desired_config.insert("ca_private_key", SecretString::from(value));
+            let existing = DatabaseRole {
+                credential_config: existing_config,
+                ..DatabaseRole::new("postgres")
+            };
+            let desired = DatabaseRole {
+                credential_config: desired_config,
+                ..DatabaseRole::new("postgres")
+            };
+            assert!(super::database_role_matches_desired(&existing, &desired));
+        }
+
+        assert!(!super::database_secret_values_equal(
+            &"a".repeat(16 * 1_024),
+            &"b".repeat(16 * 1_024)
+        ));
+        assert!(!super::database_secret_values_equal(
+            &"a".repeat(16 * 1_024),
+            &"a".repeat(16 * 1_024 + 1)
         ));
     }
 

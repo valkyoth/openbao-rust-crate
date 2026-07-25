@@ -49,7 +49,8 @@ credential_config.insert(
 `PolicyPatchRequest`, `PolicyInfo`, and `PolicyInfoDetails` now redact their
 sensitive definitions from `Debug`. ACL policy PATCH additionally rejects
 zero and negative CAS values locally because PATCH requires a positive
-existing policy version.
+existing policy version. Database role response decoding remains compatible
+with omitted, null, empty, and populated `credential_config` objects.
 
 ## From `openbao` 2.1.0 To 2.1.1
 
