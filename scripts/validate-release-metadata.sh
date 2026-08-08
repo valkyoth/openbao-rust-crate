@@ -149,6 +149,8 @@ check_grep 'pub fn max_auth_token_bytes' src/client.rs
 check_grep 'if !token.is_memory_locked()' src/client.rs
 check_grep 'Canaries are not an attacker-resistant' docs/SECURITY_MODEL.md
 check_grep 'Only the latest published stable SDK release receives security fixes' SECURITY.md
+check_grep 'base64_ng::ct::STANDARD_NO_PAD' src/sys.rs
+check_grep 'base64_ng::ct::STANDARD' src/secrets/transit.rs
 check_grep 'DatabaseCredentialConfig' docs/MIGRATION_GUIDE.md
 check_grep 'DatabaseCredentialConfig' release-notes/RELEASE_NOTES_2.1.2.md
 check_grep 'scripts/release_2_1_gate.sh' release-notes/RELEASE_NOTES_2.1.0.md

@@ -832,8 +832,8 @@ Stop criteria:
 - package, fuzz-workspace, and standalone fixture metadata are updated to
   `2.1.3`;
 - `base64-ng` is updated from `1.3.9` to `2.0.1` with its redacted
-  secret-buffer encode/decode behavior retained and covered by all-feature
-  tests;
+  secret-buffer behavior retained, secret-bearing decode paths migrated to its
+  constant-time-oriented API, and the result covered by all-feature tests;
 - `time` and pinned GitHub Actions are updated to the latest versions reported
   by `scripts/checks.sh`, with Actions still pinned by immutable commit SHA;
 - exact OpenBao profiles, capability classifications, and live compatibility

@@ -7,7 +7,11 @@ the authoritative vulnerability-reporting policy distributed with the crate.
 
 ## Security Baseline
 
-- `unsafe_code = "forbid"`.
+- `unsafe_code = "forbid"` applies to this crate's own Rust sources. It does
+  not apply transitively: TLS and cryptographic dependencies can contain unsafe
+  Rust, FFI, assembly, or native C code and remain part of the trusted
+  computing base. Release review includes the generated SBOM, dependency
+  policy, and RustSec results for that complete graph.
 - All token-bearing APIs accept `secrecy::SecretString`.
 - Secret values must never be logged by this crate.
 - Any new auth method must include tests proving token redaction.
@@ -519,14 +523,11 @@ trust with a private CA when pinning would otherwise be required.
 
 ## Pentest Gate
 
-Every release tag requires a pentest report from the project owner before tag
-creation. The release notes must record:
-
-- report identifier or local evidence path;
-- tested commit;
-- scope;
-- unresolved findings;
-- accepted risks, if any.
+Every release tag requires the project owner's independent pentest review of
+the exact release candidate before tag creation. Reports can contain sensitive
+local evidence and are not required to be committed or duplicated in release
+notes. Automated release gates intentionally do not claim that this human
+review occurred; signed tag creation remains the manual enforcement point.
 
 ## OpenBao Compatibility
 

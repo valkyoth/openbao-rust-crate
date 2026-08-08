@@ -10,7 +10,8 @@
 
 ## Summary
 
-`2.1.3` is a source-compatible dependency and CI-tooling maintenance release.
+`2.1.3` is a source-compatible dependency, CI-tooling, and security-hardening
+maintenance release.
 It updates `base64-ng` to `2.0.1`, adopts the current `time` patch release, and
 refreshes pinned GitHub Actions. It does not add or remove OpenBao operations,
 change public SDK types, or alter exact-version routing.
@@ -28,8 +29,9 @@ remains the newest reviewed server profile.
 ## Dependency Updates
 
 - Updated `base64-ng` from `1.3.9` to `2.0.1`. The SDK retains the existing
-  redacted secret-buffer encode/decode integration and does not expose
-  `base64-ng` types in its public API.
+  redacted secret-buffer integration, uses its constant-time-oriented decoder
+  for secret-bearing Transit, system-tool, and operator-token outputs, and does
+  not expose `base64-ng` types in its public API.
 - Updated `time` from `0.3.54` to `0.3.55`.
 - Refreshed the root, fuzz, and TLS-unification fixture lockfiles to the newest
   semver-compatible transitive dependency versions available to their Rust
@@ -58,6 +60,21 @@ OpenBao support is unchanged from `2.1.2`:
 - exact `2.6.1` remains the newest reviewed server;
 - no route, request-field, response-field, capability, or security-block
   classification changes in this release.
+
+## Security Clarifications
+
+- Secret-bearing Base64 decode paths now use `base64-ng::ct` with opaque error
+  mapping and sanitizing result buffers. This is the dependency's
+  constant-time-oriented best-effort boundary, not a formal cross-target
+  constant-time guarantee.
+- Documentation now states precisely that `unsafe_code = "forbid"` applies to
+  this crate's Rust sources. Unsafe Rust, FFI, assembly, and native code in TLS
+  or cryptographic dependencies remain part of the reviewed trusted computing
+  base and generated SBOM.
+- The pentest policy records the existing manual control: the project owner
+  reviews the exact candidate before signing the tag. Sensitive reports are
+  not required in committed release notes, and automated checks do not claim
+  to attest that human review.
 
 ## Migration
 

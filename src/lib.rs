@@ -2,7 +2,7 @@
 //!
 //! This crate is intentionally conservative:
 //!
-//! - unsafe Rust is forbidden;
+//! - this crate's Rust sources forbid unsafe code;
 //! - tokens are stored as [`secrecy::SecretString`];
 //! - HTTPS is required by default;
 //! - OpenBao API URLs are assembled with structured URL path segments;

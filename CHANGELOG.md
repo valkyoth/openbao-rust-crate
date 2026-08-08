@@ -27,6 +27,13 @@ All notable changes to this project are documented here.
   sections with a compact consumer guide and version-tagged repository links.
   Detailed security guidance moved to `docs/SECURITY_MODEL.md`; the packaged
   `SECURITY.md` retains the reporting policy and security baseline.
+- Switched Transit byte output, system-tool byte output, and local operator
+  token decoding to `base64-ng`'s constant-time-oriented secret decoders while
+  retaining opaque errors and sanitizing output buffers.
+- Clarified that `unsafe_code = "forbid"` covers this crate's Rust sources, not
+  unsafe Rust, FFI, assembly, or native code inside the dependency trust
+  boundary. The pentest policy now accurately describes the existing manual
+  pre-tag review without requiring sensitive reports in release metadata.
 
 ## 2.1.2 - 2026-07-25
 

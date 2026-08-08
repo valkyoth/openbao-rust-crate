@@ -3157,7 +3157,7 @@ fn base64_encode_secret(input: &[u8]) -> Result<SecretString> {
 
 #[cfg(feature = "transit-bytes")]
 fn decode_base64_secret(input: &SecretString) -> Result<SecretVec> {
-    let decoded = base64_ng::STANDARD
+    let decoded = base64_ng::ct::STANDARD
         .decode_secret(input.expose_secret().as_bytes())
         .map_err(|_| Error::Decode("OpenBao response contained invalid base64".into()))?;
     let exposed = decoded.into_exposed_vec();
@@ -3632,11 +3632,16 @@ mod tests {
         assert_eq!(hash.input.expose_secret(), "cGF5bG9hZA==");
 
         let response = TransitDecryptResponse {
-            plaintext: SecretString::from("c2VjcmV0"),
+            plaintext: SecretString::from("AA=="),
         };
         let bytes = response
             .plaintext_bytes()
             .unwrap_or_else(|error| panic!("{error}"));
-        bytes.with_secret(|decoded| assert_eq!(decoded, b"secret"));
+        bytes.with_secret(|decoded| assert_eq!(decoded, &[0]));
+
+        let malformed = TransitDecryptResponse {
+            plaintext: SecretString::from("AA%"),
+        };
+        assert!(malformed.plaintext_bytes().is_err());
     }
 }

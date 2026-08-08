@@ -9200,7 +9200,7 @@ fn decode_operator_token(request: &DecodeTokenRequest) -> Result<DecodeTokenResp
         ));
     }
 
-    let decoded = base64_ng::STANDARD_NO_PAD
+    let decoded = base64_ng::ct::STANDARD_NO_PAD
         .decode_secret(encoded.as_bytes())
         .map_err(|_| Error::Decode("encoded operator token is not valid unpadded base64".into()))?;
     let exposed = decoded.into_exposed_vec();
@@ -9242,7 +9242,7 @@ fn encode_sys_base64_secret(input: &[u8]) -> Result<SecretString> {
 
 #[cfg(feature = "transit-bytes")]
 fn decode_sys_base64_secret(input: &SecretString) -> Result<SecretVec> {
-    let decoded = base64_ng::STANDARD
+    let decoded = base64_ng::ct::STANDARD
         .decode_secret(input.expose_secret().as_bytes())
         .map_err(|_| Error::Decode("OpenBao response contained invalid base64".into()))?;
     let exposed = decoded.into_exposed_vec();
@@ -11215,6 +11215,12 @@ mod tests {
         assert!(!debug.contains("encoded-root-token"));
         assert!(!debug.contains("otp-secret"));
 
+        let malformed_decode_request = DecodeTokenRequest::new(
+            SecretString::from("encoded%token"),
+            SecretString::from("otp-secret"),
+        );
+        assert!(super::decode_operator_token(&malformed_decode_request).is_err());
+
         let decoded = DecodeTokenResponse {
             token: SecretString::from("root-token"),
         };
@@ -11545,6 +11551,22 @@ mod tests {
         let debug = format!("{response:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("random-secret"));
+
+        #[cfg(feature = "transit-bytes")]
+        {
+            let valid = SysRandomResponse {
+                random_bytes: SecretString::from("AA=="),
+            };
+            let bytes = valid
+                .random_bytes()
+                .unwrap_or_else(|error| panic!("{error}"));
+            bytes.with_secret(|decoded| assert_eq!(decoded, &[0]));
+
+            let malformed = SysRandomResponse {
+                random_bytes: SecretString::from("AA%"),
+            };
+            assert!(malformed.random_bytes().is_err());
+        }
     }
 
     #[test]

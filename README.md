@@ -159,7 +159,9 @@ the detailed security model before enabling one.
 
 Key defaults and controls:
 
-- `unsafe_code = "forbid"`;
+- `unsafe_code = "forbid"` for this crate's own Rust sources; TLS and
+  cryptographic dependencies can contain unsafe Rust, FFI, assembly, or native
+  code and remain part of the trusted computing base;
 - Rustls and TLS 1.3 by default;
 - root-only private-CA trust and static CRL support;
 - redirects disabled;

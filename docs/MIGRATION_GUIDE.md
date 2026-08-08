@@ -9,11 +9,13 @@ contract dispositions.
 
 ## From `openbao` 2.1.2 To 2.1.3
 
-`2.1.3` is a source-compatible dependency and CI-tooling maintenance release.
+`2.1.3` is a source-compatible dependency, CI-tooling, and security-hardening
+maintenance release.
 It updates `base64-ng` from `1.3.9` to `2.0.1` and `time` from `0.3.54` to
 `0.3.55`. The SDK continues to use `base64-ng`'s redacted secret-buffer
 encode/decode surface; no OpenBao SDK public type or method changes as part of
-this update.
+this update. Secret-bearing Base64 decode paths use `base64-ng`'s
+constant-time-oriented API; return types and error variants are unchanged.
 
 OpenBao profiles, capability classifications, routes, request fields,
 response fields, and security blocks are unchanged from `2.1.2`. No

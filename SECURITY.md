@@ -25,7 +25,9 @@ include real tokens, private keys, unseal material, or production secrets.
 
 ## Security Baseline
 
-- Unsafe Rust is forbidden.
+- `unsafe_code = "forbid"` applies to this crate's own Rust sources. TLS and
+  cryptographic dependencies can contain unsafe Rust, FFI, assembly, or native
+  code and remain part of the trusted computing base.
 - HTTPS, TLS verification, TLS 1.3, and disabled redirects are the defaults.
 - TLS 1.2, native TLS, raw transports, operator operations, software Transit
   import wrapping, and other high-risk capabilities require explicit feature
