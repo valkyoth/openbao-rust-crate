@@ -148,8 +148,11 @@ and requires explicit claim-validation acknowledgement on `2.6.1`.
 
 Repository-only compatibility evidence, CI workflows, release tooling, and
 historical planning files remain available from the signed Git tag without
-being copied into every crates.io download. Feature history and release
-details live in the [changelog](../CHANGELOG.md) and
+being copied into every crates.io download. The registry archive retains the
+runtime source, compiled examples, compact consumer/security documentation,
+and a public-API package smoke test. Full repository tests run before the
+extracted archive is tested and are retained in the signed source tag. Feature
+history and release details live in the [changelog](../CHANGELOG.md) and
 [GitHub releases](https://github.com/valkyoth/openbao-rust-crate/releases).
 
 See the [API coverage document](OPENBAO_API_COVERAGE.md),

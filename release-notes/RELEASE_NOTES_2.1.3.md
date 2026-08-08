@@ -15,6 +15,12 @@ It updates `base64-ng` to `2.0.1`, adopts the current `time` patch release, and
 refreshes pinned GitHub Actions. It does not add or remove OpenBao operations,
 change public SDK types, or alter exact-version routing.
 
+The crates.io source package is also reduced without weakening the release
+gate. Full integration tests, fixtures, compatibility evidence, and detailed
+engineering documentation remain in the signed source tag and run before
+packaging. The extracted archive runs a focused public-API smoke test and
+compiles every packaged example with all features.
+
 The OpenBao compatibility inventory remains 691 operation identities across
 23 exact profiles and 15,893 operation/profile cells. Exact OpenBao `2.6.1`
 remains the newest reviewed server profile.
@@ -57,6 +63,22 @@ OpenBao support is unchanged from `2.1.2`:
 
 No application source migration is required. Existing feature selections and
 OpenBao version-selection behavior remain valid.
+
+Registry archives no longer carry the complete upstream test and documentation
+trees. Distro packagers that run the complete upstream suite should use the
+signed `v2.1.3` source tag. Cargo consumers and docs.rs builds are unaffected.
+
+## Package Contents
+
+- Replaced the 550 KB repository HTTP integration test and fixture payload
+  with a small public-API package smoke test.
+- Kept compiled examples, `README.md`, `CHANGELOG.md`, the compact security
+  reporting policy, licenses, runtime source, and build metadata.
+- Moved detailed security controls and residual-risk guidance to
+  `docs/SECURITY_MODEL.md` in the signed repository source.
+- Added release checks that reject repository-only docs, fixtures, and full
+  integration tests from the archive, cap the README at 600 lines, cap the
+  packaged security policy at 8 KiB, and cap the compressed archive at 512 KiB.
 
 ## Release Gate
 

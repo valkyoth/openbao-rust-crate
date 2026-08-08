@@ -20,6 +20,13 @@ All notable changes to this project are documented here.
 - Refreshed release metadata and current-source documentation for `2.1.3`.
   OpenBao endpoint contracts and exact-version behavior are unchanged from
   `2.1.2`.
+- Reduced the crates.io archive by replacing the packaged full integration and
+  fixture suites with a focused public-API package smoke test. Repository CI
+  continues to run the complete tests before validating the extracted archive.
+- Replaced the crates.io README's duplicated example and engineering-process
+  sections with a compact consumer guide and version-tagged repository links.
+  Detailed security guidance moved to `docs/SECURITY_MODEL.md`; the packaged
+  `SECURITY.md` retains the reporting policy and security baseline.
 
 ## 2.1.2 - 2026-07-25
 

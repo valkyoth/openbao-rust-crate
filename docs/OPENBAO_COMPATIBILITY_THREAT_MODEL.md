@@ -1,8 +1,9 @@
 # OpenBao Compatibility Threat Model
 
 This document defines the security boundary for selecting and dispatching an
-OpenBao server profile. It complements `SECURITY.md`; it is not a claim that an
-older OpenBao release remains secure merely because its API contract is known.
+OpenBao server profile. It complements `docs/SECURITY_MODEL.md`; it is not a
+claim that an older OpenBao release remains secure merely because its API
+contract is known.
 
 ## Protected Properties
 

@@ -838,6 +838,10 @@ Stop criteria:
   by `scripts/checks.sh`, with Actions still pinned by immutable commit SHA;
 - exact OpenBao profiles, capability classifications, and live compatibility
   evidence remain unchanged from `2.1.2`;
+- the crates.io archive contains runtime source, compiled examples, a compact
+  README and security policy, and a focused public-API package smoke test;
+  complete tests, fixtures, and engineering documentation remain in the signed
+  source tag and run before extracted-package verification;
 - README, migration, stability, changelog, and release notes describe the same
   maintenance-only compatibility boundary;
 - `scripts/release_2_1_3_gate.sh`, GitHub CI, CodeQL, the all-release

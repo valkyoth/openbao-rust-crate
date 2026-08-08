@@ -19,6 +19,13 @@ OpenBao profiles, capability classifications, routes, request fields,
 response fields, and security blocks are unchanged from `2.1.2`. No
 application source migration is required.
 
+The crates.io source archive is smaller: full repository tests, fixtures, and
+engineering documentation remain in the signed source tag, while the archive
+retains compiled examples, a public-API smoke test, a compact README, and the
+security reporting policy. This does not change Cargo builds or docs.rs API
+documentation. Distro packaging that requires the complete upstream test suite
+should build from the signed source tag rather than the registry archive.
+
 ## From `openbao` 2.1.1 To 2.1.2
 
 `2.1.2` appends exact OpenBao `2.6.1` support without changing any historical
@@ -396,7 +403,7 @@ Recommended checks before deploying the stable release:
 - run your existing `0.15.0` integration tests with `openbao = "1"`;
 - keep feature selections explicit for operator APIs, legacy TLS, RADIUS,
   Transit import software wrapping, and test-only HTTP escape hatches;
-- review `SECURITY.md` for accepted residuals around transport buffers,
+- review `docs/SECURITY_MODEL.md` for accepted residuals around transport buffers,
   bootstrap locking, and software BYOK wrapping;
 - use `docs/API_STABILITY_AUDIT.md` for the historical stable boundary and
   `docs/openbao-2.5-contract-matrix.json` for the exact `2.0.0` contract
