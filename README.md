@@ -1,3 +1,26 @@
+<p align="center">
+  <b>Secure, typed, async Rust SDK for OpenBao.</b><br>
+  Memory-safe Rust API. Reviewed dependency surface. Built for audited secret workflows.
+</p>
+
+<div align="center">
+  <a href="https://openbao.org/">OpenBao</a>
+  ·
+  <a href="https://docs.rs/openbao">API Documentation</a>
+  ·
+  <a href="https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.3/docs/CURRENT_STATUS.md">Current Status</a>
+  ·
+  <a href="https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.3/docs/OPENBAO_API_COVERAGE.md">API Coverage</a>
+  ·
+  <a href="https://github.com/valkyoth/openbao-rust-crate/security">Security</a>
+</div>
+
+<br>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/valkyoth/openbao-rust-crate/v2.1.3/.github/images/openbao_rust_crate.webp" alt="OpenBao Rust crate overview">
+</p>
+
 # OpenBao Rust SDK
 
 Secure, typed, async Rust SDK for
