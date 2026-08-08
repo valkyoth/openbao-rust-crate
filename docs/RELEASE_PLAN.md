@@ -824,3 +824,22 @@ Stop criteria:
 - `scripts/release_2_1_2_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.2`.
+
+### 2.1.3 - Dependency And CI Tooling Maintenance
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.3`;
+- `base64-ng` is updated from `1.3.9` to `2.0.1` with its redacted
+  secret-buffer encode/decode behavior retained and covered by all-feature
+  tests;
+- `time` and pinned GitHub Actions are updated to the latest versions reported
+  by `scripts/checks.sh`, with Actions still pinned by immutable commit SHA;
+- exact OpenBao profiles, capability classifications, and live compatibility
+  evidence remain unchanged from `2.1.2`;
+- README, migration, stability, changelog, and release notes describe the same
+  maintenance-only compatibility boundary;
+- `scripts/release_2_1_3_gate.sh`, GitHub CI, CodeQL, the all-release
+  compatibility workflow, and exact-commit pentests pass before tagging
+  `v2.1.3`.

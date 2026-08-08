@@ -4,6 +4,8 @@
 /fuzz/target/
 /tests/fixtures/*/target/
 /ci-artifacts/
+__pycache__/
+*.py[cod]
 /.env
 /.env.*
 !/deploy/podman/openbao.dev.env.example

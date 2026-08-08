@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.3 - 2026-08-08
+
+### Changed
+
+- Updated `base64-ng` from `1.3.9` to `2.0.1` while retaining the existing
+  redacted secret encode/decode integration and Rust `1.90.0` MSRV.
+- Updated `time` from `0.3.54` to `0.3.55`.
+- Refreshed the root, fuzz, and TLS-unification fixture lockfiles to the newest
+  semver-compatible transitive dependency versions available to their Rust
+  toolchains.
+- Updated `Swatinem/rust-cache` from `2.9.1` to `2.9.2` and
+  `taiki-e/install-action` from `2.85.1` to `2.85.10`, retaining immutable
+  commit-SHA pins.
+- Refreshed release metadata and current-source documentation for `2.1.3`.
+  OpenBao endpoint contracts and exact-version behavior are unchanged from
+  `2.1.2`.
+
 ## 2.1.2 - 2026-07-25
 
 ### Added

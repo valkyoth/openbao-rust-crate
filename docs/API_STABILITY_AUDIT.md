@@ -46,7 +46,9 @@ make the public API commitments and security boundaries explicit.
   preservation fix without changing historical profile behavior. It also
   makes a security-driven source correction from ordinary string database-role
   credential maps to `DatabaseCredentialConfig` with `SecretString` values
-  because those maps can hold PEM CA private keys.
+  because those maps can hold PEM CA private keys. `2.1.3` updates
+  `base64-ng` to `2.0.1`, `time` to `0.3.55`, and pinned CI tooling without
+  changing the public SDK or any OpenBao compatibility profile.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 689 operations documented for exact `2.6.1`, 594 are typed, 93
   are typed-gated, and two are security-blocked because the workflow prefix

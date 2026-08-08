@@ -7,6 +7,18 @@ profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
 
+## From `openbao` 2.1.2 To 2.1.3
+
+`2.1.3` is a source-compatible dependency and CI-tooling maintenance release.
+It updates `base64-ng` from `1.3.9` to `2.0.1` and `time` from `0.3.54` to
+`0.3.55`. The SDK continues to use `base64-ng`'s redacted secret-buffer
+encode/decode surface; no OpenBao SDK public type or method changes as part of
+this update.
+
+OpenBao profiles, capability classifications, routes, request fields,
+response fields, and security blocks are unchanged from `2.1.2`. No
+application source migration is required.
+
 ## From `openbao` 2.1.1 To 2.1.2
 
 `2.1.2` appends exact OpenBao `2.6.1` support without changing any historical

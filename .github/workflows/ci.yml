@@ -30,15 +30,15 @@ jobs:
         run: scripts/ci_install_rust.sh
 
       - name: Cache Rust build output
-        # Swatinem/rust-cache v2.9.1
-        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4
+        # Swatinem/rust-cache v2.9.2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
           cache-on-failure: true
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
 
       - name: Install security tools
-        # taiki-e/install-action v2.85.1
-        uses: taiki-e/install-action@3d7d7cd5ac7f994c1892ae0c06165095b9139094
+        # taiki-e/install-action v2.85.10
+        uses: taiki-e/install-action@6c6fd71fe4fb72c3697d269963d0e15df8adedad
         with:
           tool: cargo-deny@0.20.2,cargo-audit@0.22.2,cargo-sbom@0.10.0
 
