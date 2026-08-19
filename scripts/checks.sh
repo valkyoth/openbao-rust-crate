@@ -59,6 +59,11 @@ cargo check --manifest-path fuzz/Cargo.toml --locked --bins
 echo "checks: clippy default"
 cargo clippy --all-targets -- -D warnings
 
+echo "checks: clippy unauthenticated workflows without operator operations"
+cargo clippy --all-targets \
+  --features unauthenticated-workflows,unauthenticated-workflows-acknowledged \
+  -- -D warnings
+
 echo "checks: clippy all features"
 cargo clippy --all-targets --all-features -- -D warnings
 

@@ -18,7 +18,7 @@ use openbao::{Client, OpenBaoCompatibilityPolicy, OpenBaoConfig, OpenBaoVersion}
 #[cfg(feature = "operator-ops")]
 use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa, sign::Signer};
 use reqwest::Certificate;
-#[cfg(feature = "unauthenticated-workflows")]
+#[cfg(all(feature = "operator-ops", feature = "unauthenticated-workflows"))]
 use reqwest::StatusCode;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
