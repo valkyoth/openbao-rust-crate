@@ -5996,10 +5996,10 @@ impl Sys<'_, Authenticated> {
 
     /// Creates or updates one workflow without automatic retry.
     ///
-    /// OpenBao 2.6.0 has a server-side CAS propagation defect. CAS-selected
-    /// writes are rejected before transport while that release is the only
-    /// workflow-capable profile. A future fixed profile can safely enable the
-    /// already-modelled body field without changing this request type.
+    /// OpenBao 2.6.0 through 2.6.2 discard the supplied workflow `cas` value.
+    /// The SDK therefore rejects CAS-selected writes before transport for
+    /// those reviewed profiles. Support for a future fixed profile must update
+    /// both compatibility dispatch and this validation rule.
     pub async fn write_workflow(
         &self,
         path: &str,

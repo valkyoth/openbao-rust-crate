@@ -18,6 +18,8 @@ use openbao::{Client, OpenBaoCompatibilityPolicy, OpenBaoConfig, OpenBaoVersion}
 #[cfg(feature = "operator-ops")]
 use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa, sign::Signer};
 use reqwest::Certificate;
+#[cfg(feature = "unauthenticated-workflows")]
+use reqwest::StatusCode;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -365,6 +367,13 @@ async fn run_2_6_flow(
                 )),
             )
             .await?;
+        let _ = unauthenticated
+            .userpass_at(userpass_mount)?
+            .login(
+                &internal_user,
+                SecretString::from(internal_password.clone()),
+            )
+            .await?;
         let internal_definition = r#"
 flow "authentication" {
   request "login" {
@@ -388,20 +397,25 @@ output {
         .replace("INTEGRATION_MOUNT", userpass_mount)
         .replace("INTEGRATION_USER", &internal_user)
         .replace("INTEGRATION_PASSWORD", &internal_password);
+        let internal_request =
+            openbao::sys::WorkflowWriteRequest::new(SecretString::from(internal_definition))?
+                .allow_unauthenticated(true);
         client
             .sys()
-            .write_workflow(
-                &internal_name,
-                &openbao::sys::WorkflowWriteRequest::new(SecretString::from(internal_definition))?,
-            )
+            .write_workflow(&internal_name, &internal_request)
             .await?;
-        let blocked = client
+        let blocked = unauthenticated
             .sys()
-            .execute_workflow(&internal_name, &openbao::sys::WorkflowData::empty())
+            .execute_unauthenticated_workflow(&internal_name, &openbao::sys::WorkflowData::empty())
             .await;
+        // OpenBao 2.6.2 maps the core's internal-operation rejection to HTTP 500
+        // at the workflow boundary. Require that exact result after proving both
+        // the unauthenticated workflow route and target login work independently.
         assert!(
-            blocked.is_err(),
-            "OpenBao 2.6.2 dispatched an internal workflow operation"
+            blocked
+                .as_ref()
+                .is_err_and(|error| error.status() == Some(StatusCode::INTERNAL_SERVER_ERROR)),
+            "OpenBao 2.6.2 did not explicitly reject an unauthenticated internal workflow operation: {blocked:?}"
         );
     }
 
