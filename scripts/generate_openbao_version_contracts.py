@@ -35,8 +35,8 @@ REQUEST_RULES_PATH = ROOT / "src/request_compatibility.rs"
 RESPONSE_TEST_PATH = ROOT / "tests/serde_fixtures.rs"
 MAX_INPUT_BYTES = 8 * 1024 * 1024
 MAX_OUTPUT_BYTES = 16 * 1024 * 1024
-EXPECTED_MATRIX_SHA256 = "60a68e5c5ad4a56973c1e70394cdfcc6967137cfc7b9de67a0fdd2dbf52c8110"
-EXPECTED_MARKDOWN_SHA256 = "bbd3de17092c2005a11a0218ab52e2917541d456db0d735afb39892c717c5574"
+EXPECTED_MATRIX_SHA256 = "ea465334746732c400b32256e47a43e0c3a671ee7058e5ac999690b37a6a0415"
+EXPECTED_MARKDOWN_SHA256 = "58123d071d309b09f90bb4e0409dfaea29e3d02744921e9c41316fb8d9b52055"
 ALLOWED_DISPOSITIONS = {"typed", "typed-gated", "security-blocked"}
 ALLOWED_AVAILABILITY = {"documented", "security-blocked", "unavailable"}
 FORBIDDEN_STATES = {"planned", "decision", "partial", "raw", "external", "rejected", "unlinked"}
@@ -45,7 +45,7 @@ EXPECTED_SCOPE = {
     "destructive_test_isolation": "fresh ephemeral OpenBao server per exact profile",
     "external_services_proven": [],
     "external_services_scope": "no external database, directory, cloud, OIDC, MFA, DNS, or broker service was exercised",
-    "live_claim": "eight representative built-in core flows per exact profile plus six OpenBao 2.6-only flows on 2.6.0 and 2.6.1",
+    "live_claim": "eight representative built-in core flows per exact profile plus six OpenBao 2.6-only flows on 2.6.0, 2.6.1, and 2.6.2",
     "response_claim": "five representative public response families per exact profile",
 }
 
@@ -109,7 +109,7 @@ def build_matrix() -> dict[str, Any]:
         registry.get("schema") != "openbao-capability-registry/v1"
         or not isinstance(versions, list)
         or not isinstance(operations, list)
-        or len(versions) != 23
+        or len(versions) != 24
         or len(operations) != 691
     ):
         raise ContractError("capability registry shape is invalid")
@@ -158,12 +158,12 @@ def build_matrix() -> dict[str, Any]:
         ]
         expected_passed = list(
             CORE_OPERATION_IDS
-            if version in {"2.6.0", "2.6.1"}
+            if version in {"2.6.0", "2.6.1", "2.6.2"}
             else CORE_OPERATION_IDS[:8]
         )
         expected_skipped = (
             []
-            if version in {"2.6.0", "2.6.1"}
+            if version in {"2.6.0", "2.6.1", "2.6.2"}
             else list(CORE_OPERATION_IDS[8:])
         )
         if passed_live_ids != expected_passed or skipped_live_ids != expected_skipped:
@@ -359,12 +359,12 @@ def validate_matrix(matrix: dict[str, Any], expected_versions: list[str]) -> Non
         version = profile["version"]
         expected_passed = list(
             CORE_OPERATION_IDS
-            if version in {"2.6.0", "2.6.1"}
+            if version in {"2.6.0", "2.6.1", "2.6.2"}
             else CORE_OPERATION_IDS[:8]
         )
         expected_skipped = (
             []
-            if version in {"2.6.0", "2.6.1"}
+            if version in {"2.6.0", "2.6.1", "2.6.2"}
             else list(CORE_OPERATION_IDS[8:])
         )
         if live != {
@@ -407,7 +407,7 @@ def markdown(matrix: dict[str, Any]) -> bytes:
         "every documented operation for that exact profile is classified as typed,",
         "typed-gated, or security-blocked. It does not mean every operation was exercised",
         "live. Live tests cover eight representative built-in core flows on every profile",
-        "and six additional 2.6-only flows on 2.6.0 and 2.6.1; serde fixtures",
+        "and six additional 2.6-only flows on 2.6.0, 2.6.1, and 2.6.2; serde fixtures",
         "cover five representative response families.",
         "",
         "| OpenBao | Documented operations | Typed | Typed-gated | Security-blocked | Unavailable inventory operations | Classified coverage | Live core flows | Response fixture families |",
@@ -558,14 +558,14 @@ def main() -> int:
             print("OpenBao version contracts self-tests: ok")
         elif arguments.verify:
             verify_outputs()
-            print("OpenBao version contracts: 15,893 cells verified")
+            print("OpenBao version contracts: 16,584 cells verified")
         else:
             generated = outputs()
             for path, data in generated.items():
                 if sha256(data) != expected_hashes()[path]:
                     raise ContractError("refusing to write an unanchored version contract")
                 atomic_write(path, data)
-            print("OpenBao version contracts: wrote 15,893 cells")
+            print("OpenBao version contracts: wrote 16,584 cells")
         return 0
     except (ContractError, SnapshotError, OSError, ValueError, KeyError, TypeError) as error:
         print(f"OpenBao version contracts failed: {error}", file=os.sys.stderr)

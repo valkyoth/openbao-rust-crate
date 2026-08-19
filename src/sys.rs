@@ -3387,7 +3387,7 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
 /// Create or update parameters for an OpenBao workflow.
 ///
 /// Workflow definitions can embed request templates and literal values, so
-/// `Debug` always redacts the definition. OpenBao 2.6.0 and 2.6.1 contain an
+/// `Debug` always redacts the definition. OpenBao 2.6.0 through 2.6.2 contain an
 /// upstream handler defect that discards the `cas` field. The SDK models the
 /// wire field but rejects CAS-selected writes locally for affected profiles,
 /// and never retries workflow writes.
@@ -9802,7 +9802,7 @@ fn validate_workflow_write_request(request: &WorkflowWriteRequest) -> Result<()>
     validate_workflow_definition(request.workflow.expose_secret())?;
     if request.cas.is_some() || request.cas_required {
         return Err(Error::InvalidParameter(
-            "workflow CAS is unsafe on OpenBao 2.6.0 and 2.6.1 because the server discards the cas field"
+            "workflow CAS is unsafe on OpenBao 2.6.0 through 2.6.2 because the server discards the cas field"
                 .into(),
         ));
     }

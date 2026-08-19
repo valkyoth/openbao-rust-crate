@@ -35,7 +35,7 @@ HISTORICAL_RESULTS_PATH = ROOT / "compat/core-flow-history/through-2.5.5.json"
 HISTORICAL_CHECKSUM_PATH = ROOT / "compat/core-flow-history/through-2.5.5.sha256"
 HARNESS_PATH = ROOT / "scripts/openbao_test_harness.py"
 TEST_PATH = ROOT / "tests/openbao_integration.rs"
-EXPECTED_RESULTS_SHA256 = "fbfbfd1fec6ffd9088ec64fc6f1b58fc22c9f39f4bdaa19a5fe977f9cdf908c4"
+EXPECTED_RESULTS_SHA256 = "f0db6f68f7643e5a0a0457504db6737f20246cc34774faaa5124f6f43b19d6a0"
 HISTORICAL_RESULTS_SHA256 = "d7aa0b1f07d535ae8b762587ae8221cefb073ff5acba12fec3d7d5b03e1e3d8c"
 MAX_RESULTS_BYTES = 512 * 1024
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
@@ -277,7 +277,7 @@ def validate_matrix(
             else:
                 raise MatrixError("core-flow operation status is invalid")
             should_skip = (
-                record["version"] not in {"2.6.0", "2.6.1"}
+                record["version"] not in {"2.6.0", "2.6.1", "2.6.2"}
                 and operation_id in CORE_OPERATION_IDS[8:]
             )
             if (operation["status"] == "skipped") != should_skip:

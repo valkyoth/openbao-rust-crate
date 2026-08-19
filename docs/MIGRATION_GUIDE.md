@@ -7,6 +7,23 @@ profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
 
+## From `openbao` 2.1.3 To 2.1.4
+
+`2.1.4` appends exact OpenBao `2.6.2` support without changing any historical
+profile or public SDK type. Strict automatic detection recognizes `2.6.2`;
+callers using an explicit profile can select `OpenBaoVersion::new(2, 6, 2)`.
+
+The tagged 2.6.2 API diff contains no added or removed routes or request and
+response fields. The SDK retains the 2.6.1 ACL policy and acknowledged JWT CEL
+PATCH routing on 2.6.2. Workflow prefix LIST/SCAN and CAS-selected writes stay
+locally blocked because those two upstream defects remain present in 2.6.2.
+
+The exact 2.6.2 live profile additionally verifies the upstream fixes for
+internal operation dispatch from unauthenticated workflows, CSR IP-SAN CIDR
+enforcement, and non-default Transit HMAC verification. No application source
+migration is required. `futures-core` and the pinned install Action are patch
+updates only.
+
 ## From `openbao` 2.1.2 To 2.1.3
 
 `2.1.3` is a source-compatible dependency, CI-tooling, and security-hardening

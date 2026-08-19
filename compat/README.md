@@ -12,8 +12,8 @@ ranges, mixed clusters, assumed mode, and future-release onboarding, is in
 
 ## Release Lock
 
-`releases.lock.json` records the 23 published OpenBao releases from `2.0.0`
-through `2.6.1` selected for the active compatibility range. Each record contains:
+`releases.lock.json` records the 24 published OpenBao releases from `2.0.0`
+through `2.6.2` selected for the active compatibility range. Each record contains:
 
 - the exact official Git tag ref object and peeled source commit;
 - the published, non-draft, non-prerelease GitHub Release timestamp;
@@ -177,7 +177,7 @@ the file in memory and rejects any stale or manually detached fixture.
 
 `version-contract-matrix.json` joins the capability registry, exact tagged
 contracts, request-field rules, response fixtures, and representative live
-core-flow results into all 15,893 operation/profile cells. Its generated
+core-flow results into all 16,584 operation/profile cells. Its generated
 summary and the user-facing `docs/OPENBAO_VERSION_SUPPORT_MATRIX.md` derive
 coverage percentages mechanically. Live and fixture evidence remains labeled
 as representative so a profile pass cannot be misreported as an endpoint-level
@@ -258,7 +258,7 @@ listener twice.
 ## Historical Core-Flow Results
 
 `core-flow-results.json` records a successful live run against every one of the
-23 exact releases in `releases.lock.json`, from `2.0.0` through `2.6.1`. Each
+24 exact releases in `releases.lock.json`, from `2.0.0` through `2.6.2`. Each
 run verifies the reported server version and executes the same core subset:
 
 - health and seal status;
@@ -269,7 +269,7 @@ run verifies the reported server version and executes the same core subset:
 - caller, token, and accessor capability checks;
 - response wrapping, lookup, and unwrap.
 
-Exact `2.6.0` and `2.6.1` additionally exercise root-token route selection,
+Exact `2.6.0`, `2.6.1`, and `2.6.2` additionally exercise root-token route selection,
 sealable namespaces, workflow CRUD/execution, JWT CEL role CRUD, userpass
 bcrypt-hash administration, and changed response fields. Earlier profiles
 record those six operations as explicit `server-operation-unavailable` skips.
@@ -296,7 +296,7 @@ tokens or raw server errors cannot enter committed evidence.
 `scripts/generate_openbao_capability_registry.py`. The registry assigns 691
 stable operation identifiers across the union of exact tagged documentation
 and reviewed contract corrections. Every operation has a contiguous,
-non-overlapping range partition covering all 23 locked releases.
+non-overlapping range partition covering all 24 locked releases.
 
 Availability means only that an exact tagged route is documented. It is not a
 live-behavior result or a typed-SDK support claim. The pre-2.0 matrix's typed
@@ -323,7 +323,7 @@ python3 -B scripts/generate_openbao_capability_registry.py --self-test
 `.github/workflows/openbao-compatibility.yml` obtains every matrix value from
 the validated release inventory through `scripts/openbao_ci_matrix.py`. Pull
 requests run `2.0.0` plus the latest patch in each OpenBao minor line. Scheduled
-nightly runs, manual pre-release gates, and version-tag runs cover all 23 exact
+nightly runs, manual pre-release gates, and version-tag runs cover all 24 exact
 releases.
 
 Compatibility jobs do not use a shared Cargo cache or repository secrets. They

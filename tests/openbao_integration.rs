@@ -100,6 +100,10 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     let auth_mount = format!("obrs-auth-{suffix}");
     #[cfg(feature = "operator-ops")]
     let jwt_mount = format!("obrs-jwt-{suffix}");
+    #[cfg(feature = "operator-ops")]
+    let transit_mount = format!("obrs-transit-{suffix}");
+    #[cfg(feature = "operator-ops")]
+    let pki_mount = format!("obrs-pki-{suffix}");
     let policy_name = format!("obrs-policy-{suffix}");
     #[cfg(feature = "operator-ops")]
     let namespace = format!("obrs-ns-{suffix}");
@@ -110,21 +114,21 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
 
     let result = run_flow(&client, &kv1_mount, &kv2_mount, &auth_mount, &policy_name).await;
     #[cfg(feature = "operator-ops")]
+    let latest_flow = OpenBao26Flow {
+        kv1_mount: &kv1_mount,
+        userpass_mount: &auth_mount,
+        jwt_mount: &jwt_mount,
+        transit_mount: &transit_mount,
+        pki_mount: &pki_mount,
+        namespace: &namespace,
+        workflow: &workflow,
+        hashed_user: &hashed_user,
+        policy_name: &policy_name,
+        expected_version: &expected_version,
+    };
+    #[cfg(feature = "operator-ops")]
     let latest_result = if result.is_ok() && is_openbao_2_6(&expected_version) {
-        run_2_6_flow(
-            (&client, &unauthenticated),
-            OpenBao26Flow {
-                kv1_mount: &kv1_mount,
-                userpass_mount: &auth_mount,
-                jwt_mount: &jwt_mount,
-                namespace: &namespace,
-                workflow: &workflow,
-                hashed_user: &hashed_user,
-                policy_name: &policy_name,
-                expected_version: &expected_version,
-            },
-        )
-        .await
+        run_2_6_flow((&client, &unauthenticated), latest_flow).await
     } else {
         Ok(())
     };
@@ -137,15 +141,7 @@ async fn real_openbao_default_feature_flow() -> Result<(), Box<dyn std::error::E
     };
     #[cfg(feature = "operator-ops")]
     if is_openbao_2_6(&expected_version) {
-        cleanup_2_6_flow(
-            &client,
-            &jwt_mount,
-            &namespace,
-            &workflow,
-            &auth_mount,
-            &hashed_user,
-        )
-        .await?;
+        cleanup_2_6_flow(&client, latest_flow).await?;
     }
     cleanup_flow(&client, &kv1_mount, &kv2_mount, &auth_mount, &policy_name).await?;
     result?;
@@ -206,7 +202,7 @@ const OPENBAO_2_6_OPERATION_IDS: [&str; 6] = [
 ];
 
 fn is_openbao_2_6(version: &str) -> bool {
-    matches!(version, "2.6.0" | "2.6.1")
+    matches!(version, "2.6.0" | "2.6.1" | "2.6.2")
 }
 
 #[derive(Serialize)]
@@ -241,10 +237,13 @@ fn write_core_flow_attestation(
 }
 
 #[cfg(feature = "operator-ops")]
+#[derive(Clone, Copy)]
 struct OpenBao26Flow<'a> {
     kv1_mount: &'a str,
     userpass_mount: &'a str,
     jwt_mount: &'a str,
+    transit_mount: &'a str,
+    pki_mount: &'a str,
     namespace: &'a str,
     workflow: &'a str,
     hashed_user: &'a str,
@@ -265,6 +264,8 @@ async fn run_2_6_flow(
         kv1_mount,
         userpass_mount,
         jwt_mount,
+        transit_mount,
+        pki_mount,
         namespace,
         workflow,
         hashed_user,
@@ -331,6 +332,79 @@ async fn run_2_6_flow(
         .execute_workflow(workflow, &openbao::sys::WorkflowData::empty())
         .await?;
 
+    #[cfg(feature = "unauthenticated-workflows")]
+    if expected_version == "2.6.2" {
+        eprintln!("OpenBao integration stage: workflow-unauthenticated-regression");
+        let unauthenticated_name = format!("{workflow}-unauthed");
+        let request = openbao::sys::WorkflowWriteRequest::new(SecretString::from(
+            "flow \"check\" { request \"status\" { operation = \"read\" path = \"sys/seal-status\" } }",
+        ))?
+        .allow_unauthenticated(true);
+        client
+            .sys()
+            .write_workflow(&unauthenticated_name, &request)
+            .await?;
+        let _ = unauthenticated
+            .sys()
+            .execute_unauthenticated_workflow(
+                &unauthenticated_name,
+                &openbao::sys::WorkflowData::empty(),
+            )
+            .await?;
+
+        eprintln!("OpenBao integration stage: workflow-internal-operation-regression");
+        let internal_name = format!("{workflow}-internal");
+        let internal_user = format!("{hashed_user}-internal");
+        let internal_password = format!("{hashed_user}-password");
+        client
+            .userpass_admin_at(userpass_mount)?
+            .write_user(
+                &internal_user,
+                &openbao::auth::userpass::UserpassUserRequest::new(SecretString::from(
+                    internal_password.clone(),
+                )),
+            )
+            .await?;
+        let internal_definition = r#"
+flow "authentication" {
+  request "login" {
+    operation = "alias-lookahead"
+    path = "auth/INTEGRATION_MOUNT/login/INTEGRATION_USER"
+    data = { password = "INTEGRATION_PASSWORD" }
+  }
+}
+output {
+  data = {
+    token = {
+      eval_type = "string"
+      eval_source = "response"
+      flow_name = "authentication"
+      response_name = "login"
+      field_selector = ["auth", "client_token"]
+    }
+  }
+}
+"#
+        .replace("INTEGRATION_MOUNT", userpass_mount)
+        .replace("INTEGRATION_USER", &internal_user)
+        .replace("INTEGRATION_PASSWORD", &internal_password);
+        client
+            .sys()
+            .write_workflow(
+                &internal_name,
+                &openbao::sys::WorkflowWriteRequest::new(SecretString::from(internal_definition))?,
+            )
+            .await?;
+        let blocked = client
+            .sys()
+            .execute_workflow(&internal_name, &openbao::sys::WorkflowData::empty())
+            .await;
+        assert!(
+            blocked.is_err(),
+            "OpenBao 2.6.2 dispatched an internal workflow operation"
+        );
+    }
+
     eprintln!("OpenBao integration stage: jwt-cel");
     client
         .sys()
@@ -367,7 +441,7 @@ async fn run_2_6_flow(
     role.not_before_leeway = Some(openbao::auth::jwt::JwtLeeway::seconds(29));
     eprintln!("OpenBao integration stage: jwt-cel-write");
     assert_eq!(jwt.write_cel_role("service", &role).await?.name, "service");
-    if expected_version == "2.6.1" {
+    if matches!(expected_version, "2.6.1" | "2.6.2") {
         eprintln!("OpenBao integration stage: jwt-cel-patch-preservation");
         let patched = jwt
             .patch_cel_role_acknowledged(
@@ -441,7 +515,7 @@ async fn run_2_6_flow(
         .update_password_hash(hashed_user, &second_hash)
         .await?;
 
-    if expected_version == "2.6.1" {
+    if matches!(expected_version, "2.6.1" | "2.6.2") {
         eprintln!("OpenBao integration stage: acl-policy-patch-preservation");
         let before = client.sys().read_policy(policy_name).await?;
         client
@@ -457,6 +531,87 @@ async fn run_2_6_flow(
         let after = client.sys().read_policy(policy_name).await?;
         assert_eq!(after.rules, before.rules);
         assert!(after.cas_required);
+    }
+
+    #[cfg(all(feature = "transit", feature = "transit-bytes"))]
+    if expected_version == "2.6.2" {
+        eprintln!("OpenBao integration stage: transit-non-default-hmac-regression");
+        client
+            .sys()
+            .enable_mount(transit_mount, &kv_request("transit", BTreeMap::new()))
+            .await?;
+        let transit = client.transit(transit_mount)?;
+        transit
+            .create_key(
+                "hmac-regression",
+                &openbao::secrets::transit::TransitCreateKeyRequest::default(),
+            )
+            .await?;
+        let input = b"openbao-2.6.2-hmac-regression";
+        let generated = transit
+            .hmac(
+                "hmac-regression",
+                Some(openbao::secrets::transit::TransitHashAlgorithm::Sha2_384),
+                &openbao::secrets::transit::TransitHmacRequest::from_input_bytes(input)?,
+            )
+            .await?;
+        let verification = transit
+            .verify(
+                "hmac-regression",
+                Some(openbao::secrets::transit::TransitHashAlgorithm::Sha2_384),
+                &openbao::secrets::transit::TransitVerifyRequest::from_input_bytes_with_hmac(
+                    input,
+                    generated.hmac,
+                )?,
+            )
+            .await?;
+        assert!(
+            verification.valid,
+            "OpenBao 2.6.2 rejected a valid SHA2-384 Transit HMAC"
+        );
+    }
+
+    #[cfg(feature = "pki")]
+    if expected_version == "2.6.2" {
+        eprintln!("OpenBao integration stage: pki-csr-ip-san-cidr-regression");
+        client
+            .sys()
+            .enable_mount(pki_mount, &kv_request("pki", BTreeMap::new()))
+            .await?;
+        let pki = client.pki(pki_mount)?;
+        pki.generate_root(
+            openbao::secrets::pki::PkiKeyGenerationType::Internal,
+            &openbao::secrets::pki::PkiGenerateRootRequest {
+                common_name: "OpenBao 2.6.2 integration root".to_owned(),
+                ..openbao::secrets::pki::PkiGenerateRootRequest::default()
+            },
+        )
+        .await?;
+        pki.write_role(
+            "cidr-regression",
+            &openbao::secrets::pki::PkiRole {
+                allow_any_name: Some(true),
+                allow_ip_sans: Some(true),
+                allowed_ip_sans_cidr: vec!["192.0.2.0/24".to_owned()],
+                ..openbao::secrets::pki::PkiRole::default()
+            },
+        )
+        .await?;
+        let signing = pki
+            .sign(
+                "cidr-regression",
+                &openbao::secrets::pki::PkiSignRequest {
+                    csr: csr_with_ip_san("cidr-regression.example", "198.51.100.10")?,
+                    ..openbao::secrets::pki::PkiSignRequest::default()
+                },
+            )
+            .await;
+        assert!(
+            signing
+                .as_ref()
+                .is_err_and(|error| error.is_bad_request() || error.is_permission_denied()),
+            "OpenBao 2.6.2 accepted a CSR IP SAN outside allowed_ip_sans_cidr: {signing:?}"
+        );
     }
 
     eprintln!("OpenBao integration stage: changed-response-fields");
@@ -475,6 +630,26 @@ fn signed_integration_jwts()
     let accepted = sign_integration_jwt(&signing_key, true)?;
     let missing_audience = sign_integration_jwt(&signing_key, false)?;
     Ok((public_key, accepted, missing_audience))
+}
+
+#[cfg(all(feature = "operator-ops", feature = "pki"))]
+fn csr_with_ip_san(common_name: &str, ip_san: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let signing_key = PKey::from_rsa(Rsa::generate(2048)?)?;
+    let mut subject = openssl::x509::X509Name::builder()?;
+    subject.append_entry_by_text("CN", common_name)?;
+
+    let mut request = openssl::x509::X509Req::builder()?;
+    request.set_subject_name(&subject.build())?;
+    request.set_pubkey(&signing_key)?;
+    let mut extensions = openssl::stack::Stack::new()?;
+    extensions.push(
+        openssl::x509::extension::SubjectAlternativeName::new()
+            .ip(ip_san)
+            .build(&request.x509v3_context(None))?,
+    )?;
+    request.add_extensions(&extensions)?;
+    request.sign(&signing_key, MessageDigest::sha256())?;
+    Ok(String::from_utf8(request.build().to_pem()?)?)
 }
 
 #[cfg(feature = "operator-ops")]
@@ -510,14 +685,28 @@ fn sign_integration_jwt(
 #[cfg(feature = "operator-ops")]
 async fn cleanup_2_6_flow(
     client: &Client<openbao::Authenticated>,
-    jwt_mount: &str,
-    namespace: &str,
-    workflow: &str,
-    userpass_mount: &str,
-    hashed_user: &str,
+    flow: OpenBao26Flow<'_>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let OpenBao26Flow {
+        jwt_mount,
+        transit_mount,
+        pki_mount,
+        namespace,
+        workflow,
+        userpass_mount,
+        hashed_user,
+        ..
+    } = flow;
     let _ = client.sys().operator_generate_root_cancel().await;
     let _ = client.sys().delete_workflow(workflow).await;
+    let _ = client
+        .sys()
+        .delete_workflow(&format!("{workflow}-unauthed"))
+        .await;
+    let _ = client
+        .sys()
+        .delete_workflow(&format!("{workflow}-internal"))
+        .await;
     let _ = client
         .jwt_admin_at(jwt_mount)?
         .delete_cel_role("service")
@@ -525,6 +714,10 @@ async fn cleanup_2_6_flow(
     let _ = client
         .userpass_admin_at(userpass_mount)?
         .delete_user(hashed_user)
+        .await;
+    let _ = client
+        .userpass_admin_at(userpass_mount)?
+        .delete_user(&format!("{hashed_user}-internal"))
         .await;
     let _ = client.sys().delete_namespace(namespace).await;
     if client
@@ -541,6 +734,8 @@ async fn cleanup_2_6_flow(
             .await;
     }
     let _ = client.sys().disable_auth_method(jwt_mount).await;
+    let _ = client.sys().disable_mount(transit_mount).await;
+    let _ = client.sys().disable_mount(pki_mount).await;
     Ok(())
 }
 

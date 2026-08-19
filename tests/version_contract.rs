@@ -58,7 +58,7 @@ fn public_profiles_match_every_generated_contract_cell() -> Result<(), Box<dyn E
         serde_json::from_str(include_str!("../compat/version-contract-matrix.json"))?;
     assert_eq!(matrix.schema, "openbao-version-contract-matrix/v1");
     assert_eq!(matrix.operations.len(), 691);
-    assert_eq!(matrix.profiles.len(), 23);
+    assert_eq!(matrix.profiles.len(), 24);
 
     for profile_fixture in matrix.profiles {
         assert_eq!(

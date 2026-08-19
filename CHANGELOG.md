@@ -4,6 +4,39 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.4 - 2026-08-19
+
+### Added
+
+- Added the immutable OpenBao `2.6.2` compatibility profile, exact source and
+  OCI/provenance evidence, API snapshots, adjacent-release diff, rendered-doc
+  cross-check, response fixtures, and digest-pinned live integration result.
+- Added exact 2.6.2 live regressions for unauthenticated workflow internal
+  operation rejection, PKI CSR IP-SAN CIDR enforcement, and non-default
+  Transit HMAC verification.
+
+### Changed
+
+- Expanded the capability registry to 691 operation identities across 24
+  exact OpenBao profiles and 16,584 operation/profile cells. Exact `2.6.2`
+  resolves 594 operations as typed, 93 as typed-gated, and two as
+  security-blocked.
+- Preserved all historical routes and field rules. The 2.6.1-to-2.6.2 API diff
+  changes only generated metadata for `GET /sys/namespaces`; no route or
+  request/response field was added or removed.
+- Retained fail-closed workflow prefix LIST/SCAN and CAS-selected writes for
+  exact `2.6.2` because those upstream defects remain present.
+- Updated the tagged documentation extractor for OpenBao's 2.6.2 source-tree
+  move from `website/content/api-docs` to `website/content/docs/api` and the
+  corresponding rendered `/docs/api/` paths without rewriting old evidence.
+- Updated `futures-core` from `0.3.33` to `0.3.34` and
+  `taiki-e/install-action` from `2.85.10` to `2.86.3`, retaining immutable
+  Action commit-SHA pinning.
+- Updated transitive `h2` from `0.4.15` to `0.4.16` to remediate
+  `RUSTSEC-2026-0258` (unbounded empty DATA frame queuing).
+- Updated current documentation and release metadata for `2.1.4`; Rust
+  `1.97.1` remains primary and Rust `1.90.0` remains the MSRV.
+
 ## 2.1.3 - 2026-08-08
 
 ### Changed

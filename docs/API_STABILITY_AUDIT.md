@@ -21,8 +21,8 @@ make the public API commitments and security boundaries explicit.
   intentionally breaking raw-transport, JWT/OIDC secret-metadata, and base-URL
   hardening. See the migration guide before updating from 1.x.
 - Final coverage: the compatibility union has 691 logical operation identities
-  and 15,893 operation/profile cells. All operations available in supported
-  profiles are typed, typed-gated, or security-blocked. The current `2.6.1`
+  and 16,584 operation/profile cells. All operations available in supported
+  profiles are typed, typed-gated, or security-blocked. The current `2.6.2`
   profile has 689 documented operations: 594 typed, 93 typed-gated, and 2
   security-blocked.
 - Evidence boundary: contract and serde evidence is complete; live integration
@@ -51,9 +51,11 @@ make the public API commitments and security boundaries explicit.
   changing the public SDK or any OpenBao compatibility profile. It also
   replaces the registry archive's full repository test payload with a focused
   public-API package smoke test and links repository-only engineering evidence
-  from a compact crates.io README.
+  from a compact crates.io README. `2.1.4` appends exact OpenBao `2.6.2`,
+  preserving all historical profiles while adding live regressions for the
+  release's workflow, PKI, and Transit fixes.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
-  deferred. Of 689 operations documented for exact `2.6.1`, 594 are typed, 93
+  deferred. Of 689 operations documented for exact `2.6.2`, 594 are typed, 93
   are typed-gated, and two are security-blocked because the workflow prefix
   handlers remain unsafe. JWT CEL PATCH is separately blocked only on exact
   `2.6.0`, where the server drops claim constraints.
@@ -147,7 +149,7 @@ must now have an explicit current decision.
 ## Deferred Work Template
 
 This template records historical scope decisions and future OpenBao onboarding
-rules. It does not represent unfinished `2.1.x` or OpenBao `2.6.1` work; the
+rules. It does not represent unfinished `2.1.x` or OpenBao `2.6.2` work; the
 active exact profile has no deferred operation disposition.
 
 When moving a feature out of the stable scope, record:

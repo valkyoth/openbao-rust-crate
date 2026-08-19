@@ -23,8 +23,8 @@ ONBOARDING_LOCK_PATH = ROOT / "compat" / "onboarding" / "2.6.0" / "release-evide
 ONBOARDING_CHECKSUM_PATH = (
     ROOT / "compat" / "onboarding" / "2.6.0" / "release-evidence.sha256"
 )
-EXPECTED_LOCK_SHA256 = "6ee7703360007856aa671391a65b99c7e91ac7b11b7776c3867dd2dff6366bed"
-EXPECTED_SIGNATURE_LOCK_SHA256 = "9d992eeb244f06c7c3d2d0371dea5e0b726749a8824b1ba3d79dc8197025235e"
+EXPECTED_LOCK_SHA256 = "7dfdd02312284c96e33f0695f5be82a76860cbde89caa88668aec550ffb748ad"
+EXPECTED_SIGNATURE_LOCK_SHA256 = "6700ecc25ee843387fffd20aff5f95fefdaf4bed9f7854c3a017a6fbcb878060"
 EXPECTED_ONBOARDING_LOCK_SHA256 = (
     "4deb3988ea9693e0412445bcb7e9ba6d8669ff6e024586bed55e06f5628219ba"
 )
@@ -58,6 +58,7 @@ EXPECTED_RELEASES = (
     ("2.5.5", "028992583c693c4de6350b8aa52ff85e30375a99", "6150c4a6b62067db6141c8da7a6a6b5763f4f47c315343d0c848b40fecdfd452", "e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9"),
     ("2.6.0", "03e3a243b6f07d17c60ce0a182adee7cf4c424eb", "900bb64d0671cd1d82b693c56206f7263b582445f3a3bb6ba6e5213f524a6653", "80b71b06de94d9b11da83fd1cdb70cbd84b375739620c18b12d76b4f5ffe95ab"),
     ("2.6.1", "ba7ad8861d0578cd4da4f7b9e5a6756d30484f8f", "5b2486ab0fb90bbc788cc345b0a08616dfb375873ee8be5df3a2fd4d378a67e0", "15e90b578c970ae57b596ed51295380cd54f93860fe36758f05b455d71aae0e0"),
+    ("2.6.2", "dd9c19c37a878cf4a81b18efb8d6f0599c7da923", "11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641", "e29524ba7c3f20d01f562c481e3eccbad6c91df45a2f2531433da4951e408cff"),
 )
 
 TOP_LEVEL_KEYS = {
@@ -361,7 +362,7 @@ def validate_document(document: dict[str, Any]) -> None:
         raise LockValidationError("release lock schema is unsupported")
     if document["inventory_revision"] != 3:
         raise LockValidationError("release lock revision is unsupported")
-    if document["observed_on"] != "2026-07-25":
+    if document["observed_on"] != "2026-08-19":
         raise LockValidationError("release lock observation date changed")
     if document["source_repository"] != "https://github.com/openbao/openbao.git":
         raise LockValidationError("source repository is not the official immutable origin")
@@ -372,16 +373,16 @@ def validate_document(document: dict[str, Any]) -> None:
 
     verification = require_exact_keys(document["verification"], VERIFICATION_KEYS, "verification")
     expected_verification = {
-        "git_version": "2.54.0",
-        "go_version": "1.26.4",
-        "skopeo_version": "1.22.2",
-        "github_cli_version": "2.95.0",
+        "git_version": "2.55.0",
+        "go_version": "1.26.6",
+        "skopeo_version": "1.23.0",
+        "github_cli_version": "2.97.0",
         "github_releases_api_checked": True,
-        "cosign_version": "3.1.1",
-        "cosign_module": "github.com/sigstore/cosign/v3@v3.1.1",
-        "cosign_source_commit_sha1": "7914231b348c4057891edeb321772aad3ed04fce",
+        "cosign_version": "3.1.2",
+        "cosign_module": "github.com/sigstore/cosign/v3@v3.1.2",
+        "cosign_source_commit_sha1": "193d2153431f8bb0d945a4c1ee721872f73add67",
         "certificate_oidc_issuer": "https://token.actions.githubusercontent.com",
-        "certificate_identity_template": "https://github.com/openbao/openbao/.github/workflows/release.yml@refs/tags/v{version}",
+        "certificate_identity_template": "https://github.com/openbao/openbao/.github/workflows/{workflow}@refs/tags/v{version}",
         "signature_bundle_lock": "compat/image-signatures.lock.json",
         "signature_bundle_lock_sha256": f"sha256:{EXPECTED_SIGNATURE_LOCK_SHA256}",
         "oci_attestation_tags_checked": True,
@@ -447,14 +448,14 @@ def validate_document(document: dict[str, Any]) -> None:
             raise LockValidationError("locked image digest changed")
         expected_child_signature = (
             "not_published_bound_by_verified_index"
-            if version in {"2.6.0", "2.6.1"}
+            if version in {"2.6.0", "2.6.1", "2.6.2"}
             else "verified_cosign_keyless"
         )
         if image["index_signature_status"] != "verified_cosign_keyless" or image["linux_amd64_signature_status"] != expected_child_signature:
             raise LockValidationError("image signature verification status was downgraded")
         workflow = (
             "release-images.yml"
-            if version in {"2.6.0", "2.6.1"}
+            if version in {"2.6.0", "2.6.1", "2.6.2"}
             else "release.yml"
         )
         expected_identity = f"https://github.com/openbao/openbao/.github/workflows/{workflow}@refs/tags/v{version}"
@@ -464,7 +465,7 @@ def validate_document(document: dict[str, Any]) -> None:
             raise LockValidationError("image transparency-log verification was downgraded")
         expected_attestation = (
             "embedded_provenance_verified"
-            if version in {"2.6.0", "2.6.1"}
+            if version in {"2.6.0", "2.6.1", "2.6.2"}
             else "not_published"
         )
         if image["attestation_status"] != expected_attestation:
@@ -477,7 +478,12 @@ def validate_document(document: dict[str, Any]) -> None:
         documentation = require_exact_keys(record["documentation"], DOCUMENTATION_KEYS, f"documentation {version}")
         if require_sha1(documentation["source_commit_sha1"], f"documentation commit {version}") != peeled_commit:
             raise LockValidationError("documentation source does not match the locked release commit")
-        if require_safe_relative_path(documentation["source_path"], f"documentation path {version}") != "website/content/api-docs":
+        expected_documentation_path = (
+            "website/content/docs/api" if version == "2.6.2" else "website/content/api-docs"
+        )
+        if require_safe_relative_path(
+            documentation["source_path"], f"documentation path {version}"
+        ) != expected_documentation_path:
             raise LockValidationError("documentation source path changed")
         if documentation["normalized_openapi_status"] != "pending_commit_03" or documentation["normalized_openapi_sha256"] is not None:
             raise LockValidationError("API snapshot state must remain pending until the separate snapshot lock lands")
@@ -494,7 +500,7 @@ def validate_signature_document(document: dict[str, Any]) -> None:
     require_exact_keys(document, SIGNATURE_TOP_LEVEL_KEYS, "signature evidence lock")
     if document["schema"] != "openbao-image-signature-evidence/v1":
         raise LockValidationError("signature evidence schema is unsupported")
-    if document["observed_on"] != "2026-07-25":
+    if document["observed_on"] != "2026-08-19":
         raise LockValidationError("signature evidence observation date changed")
     if document["repository"] != "docker.io/openbao/openbao":
         raise LockValidationError("signature evidence repository changed")
@@ -514,7 +520,7 @@ def validate_signature_document(document: dict[str, Any]) -> None:
             record["index_bundle_sha256"], f"index signature bundle {expected[0]}"
         )
         amd64_value = record["linux_amd64_bundle_sha256"]
-        if expected[0] in {"2.6.0", "2.6.1"}:
+        if expected[0] in {"2.6.0", "2.6.1", "2.6.2"}:
             if amd64_value is not None:
                 raise LockValidationError("unsigned amd64 image has a signature bundle")
             amd64_hash = None
@@ -997,7 +1003,7 @@ def main() -> int:
             raise LockValidationError("unsupported validator argument")
         else:
             print(
-                "OpenBao release lock: 23 active artifacts verified"
+                f"OpenBao release lock: {len(EXPECTED_RELEASES)} active artifacts verified"
             )
         return 0
     except (LockValidationError, OSError) as error:

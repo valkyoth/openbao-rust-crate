@@ -37,8 +37,8 @@ SNAPSHOT_LOCK_PATH = COMPAT_ROOT / "api-snapshots.lock.json"
 SNAPSHOT_CHECKSUM_PATH = COMPAT_ROOT / "api-snapshots.lock.sha256"
 
 GENERATOR_VERSION = 1
-OBSERVED_ON = "2026-07-25"
-EXPECTED_SNAPSHOT_LOCK_SHA256 = "00c21e23816cd6ed9cd85392f2a807f5f6fd72790917eabb92a7e05b2d795c6a"
+OBSERVED_ON = "2026-08-19"
+EXPECTED_SNAPSHOT_LOCK_SHA256 = "a1ea8bd342c0b45d8cd60fa5f0d2240ee84493d447ed36206340b2c3e591665e"
 EXPECTED_SNAPSHOT_RECORDS = (
     ("2.0.0", "edc1e8daae71bba48e1656555a82a3ad5f80b497ce87918a0a1a7cc564627081", "6251b7f9e971bd5d791ccab4e43775228c27461883a1ed6587af22aa9a56dd95", None),
     ("2.0.1", "1ae9535ec91318fe990ae71aa93dfa9ea1ea81506c85a092965eca92bb9b07e6", "4b32092b3a8a9bcdcc25ff1e9182d9cd7fdaba91a7b781e575420e32b1a91e95", "5b9424973f9fcaa0e5a64f481a956425b23f32dfeb59504ca4e6522f10a64272"),
@@ -63,6 +63,7 @@ EXPECTED_SNAPSHOT_RECORDS = (
     ("2.5.5", "511d18f9bf894cba50c857c247cf3a22b8fd3529144039f27c3552209557be63", "e959918796dd3b67b1ecd3562841e949d1db35af278d3519622cc690b0c696d4", "88b414dfdb76a17a0cb92a6d52da07ce24cd83903d7ffb6ca00d4de692234e5e"),
     ("2.6.0", "d6ab7dfebcad55bed1c2fb383af00d1141018a4373571c850705f8e684eb934d", "3479568c017fa999258a9e1022299d8be6283b1b02c8994bdcd88c27afd10442", "be2a87012e39b8c66ef07ec51b0014b1ffafc5849a9a7b1215ab3b24f2fa7865"),
     ("2.6.1", "1b701c5b5003e5636cb14fb820c5f0b50ed5b526a647d1d4bbee05e19c1e4a2b", "5c3c40f104961544d64680bbb0f4e0477d13f7e921334cf6974f7f154237e344", "3f0dc7a8e262f8d56b84b48f9ed6ea791dbcaa136302df651f9531f73188926f"),
+    ("2.6.2", "e7f36deffe6d7cb80bab79318bc6ecfc313ba81597e99d8c11b991b458e4a4fb", "508afb1b50295df67cf13b59d2a873f03fc52333a515b18a74d6b5058626ec48", "9d5010e45aedf7d17d1325a3d03781c7894386b1676aab55eb9a43a08cd51b0d"),
 )
 MAX_LOCK_BYTES = 256 * 1024
 MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024
@@ -104,7 +105,6 @@ CONTAINER_RESOURCE_OPTIONS = (
     "nproc=256:256",
 )
 
-DOC_PREFIX = "website/content/api-docs"
 HTTP_METHODS = frozenset(("delete", "get", "head", "options", "patch", "post", "put", "trace"))
 DOCUMENTED_METHODS = frozenset(
     ("ACME", "DELETE", "GET", "HEAD", "LIST", "PATCH", "POST", "PUT", "SCAN")
@@ -600,12 +600,19 @@ def parse_doc_block(source: str, block: list[str]) -> list[dict[str, Any]]:
 def extract_documentation(repository: Path, release: dict[str, Any]) -> dict[str, Any]:
     version = release["version"]
     commit = release["source"]["peeled_commit_sha1"]
+    documentation_source = release.get("documentation")
+    if not isinstance(documentation_source, dict):
+        raise SnapshotError("release documentation evidence is unavailable")
+    source_path = documentation_source.get("source_path")
+    if not isinstance(source_path, str):
+        raise SnapshotError("release documentation source path is unavailable")
+    source_prefix = safe_relative_path(source_path, "tagged documentation root").parts
     resolved = git_output(repository, ["rev-parse", "--verify", f"{commit}^{{commit}}"], 128).strip().decode()
     if resolved != commit:
         raise SnapshotError("tagged documentation commit does not match the release lock")
     tree = git_output(
         repository,
-        ["ls-tree", "-r", "-z", "--long", commit, "--", DOC_PREFIX],
+        ["ls-tree", "-r", "-z", "--long", commit, "--", source_path],
         2 * 1024 * 1024,
     )
     rows = GIT_TREE_ROW.findall(tree)
@@ -623,7 +630,7 @@ def extract_documentation(repository: Path, release: dict[str, Any]) -> dict[str
         except (UnicodeDecodeError, ValueError) as error:
             raise SnapshotError("tagged documentation tree metadata is invalid") from error
         pure = safe_relative_path(path_text, "tagged documentation path")
-        if pure.parts[:3] != ("website", "content", "api-docs") or pure.suffix != ".mdx":
+        if pure.parts[: len(source_prefix)] != source_prefix or pure.suffix != ".mdx":
             raise SnapshotError("tagged documentation tree contains an unexpected file")
         if size > MAX_DOC_FILE_BYTES:
             raise SnapshotError("tagged documentation file exceeds its byte limit")
@@ -664,7 +671,7 @@ def extract_documentation(repository: Path, release: dict[str, Any]) -> dict[str
         "generator_version": GENERATOR_VERSION,
         "version": version,
         "source_commit_sha1": commit,
-        "source_path": DOC_PREFIX,
+        "source_path": source_path,
         "files": files,
         "operations": operations,
     }
@@ -1004,8 +1011,10 @@ def rendered_line(version: str) -> tuple[str, tuple[str, ...]] | None:
         return ("2.5.x-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
     if version == "2.6.0":
         return ("2.6.x-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
-    if minor == "2.6":
+    if version == "2.6.1":
         return ("2.6.1-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
+    if version == "2.6.2":
+        return ("2.6.2-current", ("/docs/api/auth/", "/docs/api/secret/", "/docs/api/system/"))
     return None
 
 
@@ -1014,6 +1023,8 @@ def rendered_observed_on(line: str) -> str:
         return "2026-07-10"
     if line == "2.6.x-current":
         return "2026-07-17"
+    if line == "2.6.1-current":
+        return "2026-07-25"
     return OBSERVED_ON
 
 
@@ -1424,7 +1435,11 @@ def require_nonnegative_int(value: Any, label: str) -> int:
 
 
 def validate_documentation_snapshot(
-    document: dict[str, Any], data: bytes, version: str, source_commit: str
+    document: dict[str, Any],
+    data: bytes,
+    version: str,
+    source_commit: str,
+    expected_source_path: str,
 ) -> None:
     require_keys(
         document,
@@ -1444,7 +1459,7 @@ def validate_documentation_snapshot(
         or document["generator_version"] != GENERATOR_VERSION
         or document["version"] != version
         or document["source_commit_sha1"] != source_commit
-        or document["source_path"] != DOC_PREFIX
+        or document["source_path"] != expected_source_path
         or canonical_json(document) != data
     ):
         raise SnapshotError("documentation snapshot metadata or canonical form changed")
@@ -1454,6 +1469,9 @@ def validate_documentation_snapshot(
         raise SnapshotError("documentation snapshot file count is outside its bound")
     if not isinstance(operations, list) or len(operations) > MAX_OPERATIONS:
         raise SnapshotError("documentation snapshot operation count exceeds its bound")
+    expected_prefix = safe_relative_path(
+        expected_source_path, "documentation snapshot root"
+    ).parts
     source_paths: set[str] = set()
     previous_file = ""
     for index, file_value in enumerate(files):
@@ -1466,7 +1484,7 @@ def validate_documentation_snapshot(
         if not isinstance(path_text, str):
             raise SnapshotError("documentation source path is not text")
         pure = safe_relative_path(path_text, "documentation source path")
-        if pure.parts[:3] != ("website", "content", "api-docs") or pure.suffix != ".mdx":
+        if pure.parts[: len(expected_prefix)] != expected_prefix or pure.suffix != ".mdx":
             raise SnapshotError("documentation source path escaped the tagged API tree")
         if path_text <= previous_file or path_text in source_paths:
             raise SnapshotError("documentation source files are duplicated or unordered")
@@ -1592,12 +1610,23 @@ def validate_rendered_snapshot(
         {"schema", "generator_version", "observed_on", "line", "authority", "roots", "pages", "operations"},
         "rendered cross-check snapshot",
     )
+    if line in {"2.3.x", "2.4.x"}:
+        expected_roots = [
+            f"/api-docs/{line}/auth/",
+            f"/api-docs/{line}/secret/",
+            f"/api-docs/{line}/system/",
+        ]
+    elif line == "2.6.2-current":
+        expected_roots = ["/docs/api/auth/", "/docs/api/secret/", "/docs/api/system/"]
+    else:
+        expected_roots = ["/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"]
     if (
         document["schema"] != "openbao-rendered-api-cross-check/v1"
         or document["generator_version"] != GENERATOR_VERSION
         or document["observed_on"] != observed_on
         or document["line"] != line
         or document["authority"] != "secondary-only; tagged source remains primary"
+        or document["roots"] != expected_roots
         or canonical_json(document) != data
     ):
         raise SnapshotError("rendered cross-check metadata or canonical form changed")
@@ -1611,7 +1640,7 @@ def validate_rendered_snapshot(
     for index, page_value in enumerate(pages):
         page = require_keys(page_value, {"bytes", "path", "sha256"}, f"rendered page {index}")
         path_text = validate_text(page["path"], "rendered page path")
-        if not path_text.startswith("/api-docs/"):
+        if not any(path_text.startswith(root) for root in expected_roots):
             raise SnapshotError("rendered page path escaped the API documentation tree")
         require_hash(page["sha256"], "rendered page digest")
         if require_nonnegative_int(page["bytes"], "rendered page size") > MAX_RENDERED_PAGE_BYTES:
@@ -1779,6 +1808,7 @@ def verify() -> dict[str, Any]:
             documentation_data,
             version,
             record["source_commit_sha1"],
+            release["documentation"]["source_path"],
         )
         validate_openapi_snapshot(
             openapi,

@@ -1,23 +1,23 @@
 {
   "schema": "openbao-release-inventory/v1",
   "inventory_revision": 3,
-  "observed_on": "2026-07-25",
+  "observed_on": "2026-08-19",
   "source_repository": "https://github.com/openbao/openbao.git",
   "image_repository": "docker.io/openbao/openbao",
   "snapshot_lock": "compat/api-snapshots.lock.json",
   "verification": {
-    "git_version": "2.54.0",
-    "go_version": "1.26.4",
-    "skopeo_version": "1.22.2",
-    "github_cli_version": "2.95.0",
+    "git_version": "2.55.0",
+    "go_version": "1.26.6",
+    "skopeo_version": "1.23.0",
+    "github_cli_version": "2.97.0",
     "github_releases_api_checked": true,
-    "cosign_version": "3.1.1",
-    "cosign_module": "github.com/sigstore/cosign/v3@v3.1.1",
-    "cosign_source_commit_sha1": "7914231b348c4057891edeb321772aad3ed04fce",
+    "cosign_version": "3.1.2",
+    "cosign_module": "github.com/sigstore/cosign/v3@v3.1.2",
+    "cosign_source_commit_sha1": "193d2153431f8bb0d945a4c1ee721872f73add67",
     "certificate_oidc_issuer": "https://token.actions.githubusercontent.com",
-    "certificate_identity_template": "https://github.com/openbao/openbao/.github/workflows/release.yml@refs/tags/v{version}",
+    "certificate_identity_template": "https://github.com/openbao/openbao/.github/workflows/{workflow}@refs/tags/v{version}",
     "signature_bundle_lock": "compat/image-signatures.lock.json",
-    "signature_bundle_lock_sha256": "sha256:9d992eeb244f06c7c3d2d0371dea5e0b726749a8824b1ba3d79dc8197025235e",
+    "signature_bundle_lock_sha256": "sha256:6700ecc25ee843387fffd20aff5f95fefdaf4bed9f7854c3a017a6fbcb878060",
     "oci_attestation_tags_checked": true,
     "github_attestations_api_checked": true,
     "cosign_claims_validated": true,
@@ -745,6 +745,42 @@
         "OpenBao 2.6.1 signs the multi-platform index through release-images.yml and does not publish a separate linux/amd64 signature.",
         "The verified signed index binds the locked linux/amd64 descriptor and embedded SLSA provenance; the child image is not represented as independently signed.",
         "The embedded provenance subject and source revision bind the locked image to commit ba7ad8861d0578cd4da4f7b9e5a6756d30484f8f."
+      ]
+    },
+    {
+      "version": "2.6.2",
+      "source": {
+        "tag": "v2.6.2",
+        "tag_kind": "lightweight",
+        "tag_object_sha1": "dd9c19c37a878cf4a81b18efb8d6f0599c7da923",
+        "peeled_commit_sha1": "dd9c19c37a878cf4a81b18efb8d6f0599c7da923",
+        "commit_timestamp": "2026-08-18T10:43:05-05:00",
+        "github_release_published_at": "2026-08-18T16:21:00Z",
+        "tag_signature_status": "not_available_lightweight_tag"
+      },
+      "image": {
+        "tag": "2.6.2",
+        "index_digest": "sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641",
+        "linux_amd64_digest": "sha256:e29524ba7c3f20d01f562c481e3eccbad6c91df45a2f2531433da4951e408cff",
+        "index_signature_status": "verified_cosign_keyless",
+        "linux_amd64_signature_status": "not_published_bound_by_verified_index",
+        "certificate_identity": "https://github.com/openbao/openbao/.github/workflows/release-images.yml@refs/tags/v2.6.2",
+        "certificate_oidc_issuer": "https://token.actions.githubusercontent.com",
+        "transparency_log_verified": true,
+        "attestation_status": "embedded_provenance_verified"
+      },
+      "documentation": {
+        "source_commit_sha1": "dd9c19c37a878cf4a81b18efb8d6f0599c7da923",
+        "source_path": "website/content/docs/api",
+        "normalized_openapi_status": "pending_commit_03",
+        "normalized_openapi_sha256": null
+      },
+      "compatibility_status": "artifact_locked_api_pending",
+      "security_notes": [
+        "OpenBao 2.6.2 signs the multi-platform index through release-images.yml and does not publish a separate linux/amd64 signature.",
+        "The verified signed index binds the locked linux/amd64 descriptor and embedded SLSA provenance; the child image is not represented as independently signed.",
+        "The embedded provenance subject and source revision bind the locked image to commit dd9c19c37a878cf4a81b18efb8d6f0599c7da923.",
+        "OpenBao 2.6.2 fixes internal operation dispatch from inline authentication and workflows (GHSA-rh46-vc3j-w2w3) and enforces PKI allowed_ip_sans_cidr on CSR IP SANs (GHSA-g892-p242-8g86)."
       ]
     }
   ]

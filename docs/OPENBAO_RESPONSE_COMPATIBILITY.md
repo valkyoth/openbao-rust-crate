@@ -46,7 +46,7 @@ cargo test --test serde_fixtures --all-features
 
 The generator validates the API snapshot lock first, verifies each OpenAPI
 file against its recorded SHA-256, and emits
-`tests/fixtures/openbao_response_profiles.json`. Each of its 23 profiles
+`tests/fixtures/openbao_response_profiles.json`. Each of its 24 profiles
 records its source digest and exercises reviewed response transitions such as:
 
 - PKI certificate `not_before` from OpenBao `2.1.0`;

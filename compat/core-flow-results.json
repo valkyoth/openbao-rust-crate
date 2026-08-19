@@ -1,6 +1,6 @@
 {
   "generator_version": 1,
-  "harness_sha256": "7b8d74408649e241d649bdde43241a91e9216eeb2c19e804ff1a69b209334f59",
+  "harness_sha256": "20eabb5a9e3ed6fd464809de2f3eb863b978f59ff4f605b57b842c649c732734",
   "records": [
     {
       "compatibility_status": "tested-subset",
@@ -2209,9 +2209,105 @@
       "reported_version": "2.6.1",
       "test_count": 1,
       "version": "2.6.1"
+    },
+    {
+      "compatibility_status": "tested-subset",
+      "failure_class": null,
+      "failure_reason_code": null,
+      "image_linux_amd64_digest": "sha256:e29524ba7c3f20d01f562c481e3eccbad6c91df45a2f2531433da4951e408cff",
+      "operations": [
+        {
+          "classification": null,
+          "id": "health",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "mount-management",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv1",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "kv2",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "policy",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "token",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "capabilities",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "response-wrapping",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "root-generation-routing",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "sealable-namespace",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "workflow",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "jwt-cel",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "userpass-password-hash",
+          "reason_code": null,
+          "status": "passed"
+        },
+        {
+          "classification": null,
+          "id": "changed-response-fields",
+          "reason_code": null,
+          "status": "passed"
+        }
+      ],
+      "outcome": "passed",
+      "reported_version": "2.6.2",
+      "test_count": 1,
+      "version": "2.6.2"
     }
   ],
-  "release_inventory_sha256": "6ee7703360007856aa671391a65b99c7e91ac7b11b7776c3867dd2dff6366bed",
+  "release_inventory_sha256": "7dfdd02312284c96e33f0695f5be82a76860cbde89caa88668aec550ffb748ad",
   "schema": "openbao-core-flow-results/v1",
   "scope": {
     "claim": "only the listed core SDK operations were executed",
@@ -2235,9 +2331,9 @@
   },
   "summary": {
     "failed": 0,
-    "passed": 23,
-    "release_count": 23,
+    "passed": 24,
+    "release_count": 24,
     "skipped_operations": 126
   },
-  "test_definition_sha256": "22103c0ae96ebfed51c4a786ce8edab9fec80e7a9c8f47e94ee8fecc6ee7a418"
+  "test_definition_sha256": "63701b1315b2d3c17e38888e03835fbc37eb750ffd2b2d6c52b2cd9f77cbdcd9"
 }

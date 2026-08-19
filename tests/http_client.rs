@@ -1392,7 +1392,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"initialized":true,"sealed":false,"version":"2.6.2"}"#,
+                r#"{"initialized":true,"sealed":false,"version":"2.6.3"}"#,
             );
         });
         let policy = if acknowledged {
@@ -1414,7 +1414,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
                 report.status(),
                 OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
             );
-            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 6, 1)));
+            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 6, 2)));
         } else {
             assert!(matches!(result, Err(Error::UnknownOpenBaoVersion(_))));
         }

@@ -5,7 +5,7 @@
 //! exact reviewed server release.
 //!
 //! This module also exposes a generated read-only registry of secret-free route
-//! templates across 23 locked OpenBao releases from 2.0.0 through 2.6.1.
+//! templates across 24 locked OpenBao releases from 2.0.0 through 2.6.2.
 //! Registry evidence reports what exact tagged documentation contains. Client
 //! compatibility policies can verify and cache the stable
 //! version returned by `/sys/health`, or explicitly select an assumed promoted
@@ -992,7 +992,7 @@ mod tests {
     #[test]
     fn compatibility_policies_require_runtime_approved_profiles() -> Result<()> {
         let previous = OpenBaoVersion::new(2, 5, 5);
-        let known = OpenBaoVersion::new(2, 6, 1);
+        let known = OpenBaoVersion::new(2, 6, 2);
         let unpublished = OpenBaoVersion::new(2, 4, 2);
 
         assert_eq!(
@@ -1017,7 +1017,7 @@ mod tests {
     #[test]
     fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
         let strict = OpenBaoCompatibilityPolicy::automatic_strict();
-        let unknown = OpenBaoVersion::new(2, 6, 2);
+        let unknown = OpenBaoVersion::new(2, 6, 3);
         assert_eq!(
             strict.evaluate_detected(unknown),
             Err(OpenBaoCompatibilityFailure::UnknownVersion(unknown))
@@ -1035,7 +1035,7 @@ mod tests {
         assert_eq!(acknowledged.detected_version(), Some(unknown));
         assert_eq!(
             acknowledged.profile_version(),
-            Some(OpenBaoVersion::new(2, 6, 1))
+            Some(OpenBaoVersion::new(2, 6, 2))
         );
         Ok(())
     }
@@ -1188,18 +1188,20 @@ mod tests {
         let versions = openbao_profile_versions();
 
         assert_eq!(operations.len(), 691);
-        assert_eq!(versions.len(), 23);
+        assert_eq!(versions.len(), 24);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
         assert_eq!(versions[21], OpenBaoVersion::new(2, 6, 0));
         assert_eq!(versions[22], OpenBaoVersion::new(2, 6, 1));
+        assert_eq!(versions[23], OpenBaoVersion::new(2, 6, 2));
         assert_eq!(
             latest_routable_profile(),
-            Some(OpenBaoVersion::new(2, 6, 1))
+            Some(OpenBaoVersion::new(2, 6, 2))
         );
         assert!(is_routable_profile(OpenBaoVersion::new(2, 5, 5)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 0)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 1)));
+        assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 2)));
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 6, 0)).is_some());
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 4, 2)).is_none());
 
@@ -1306,6 +1308,10 @@ mod tests {
                 operation.availability(OpenBaoVersion::new(2, 6, 1)),
                 Some(OpenBaoCapabilityAvailability::DocumentedRoute)
             );
+            assert_eq!(
+                operation.availability(OpenBaoVersion::new(2, 6, 2)),
+                Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+            );
         }
     }
 
@@ -1324,7 +1330,7 @@ mod tests {
             assert_eq!(variants[0].minimum(), OpenBaoVersion::new(2, 0, 0));
             assert_eq!(variants[0].maximum(), OpenBaoVersion::new(2, 5, 5));
             assert_eq!(variants[1].minimum(), OpenBaoVersion::new(2, 6, 0));
-            assert_eq!(variants[1].maximum(), OpenBaoVersion::new(2, 6, 1));
+            assert_eq!(variants[1].maximum(), OpenBaoVersion::new(2, 6, 2));
             assert_ne!(variants[0].operation_id(), variants[1].operation_id());
             for (variant, version) in [
                 (variants[0], OpenBaoVersion::new(2, 5, 5)),

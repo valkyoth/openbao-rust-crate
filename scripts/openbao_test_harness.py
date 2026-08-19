@@ -387,10 +387,9 @@ def generate_tls(root: Path, openssl: str, environment: dict[str, str]) -> tuple
     return tls, ca_cert
 
 
-def write_server_config(root: Path) -> Path:
+def write_server_config(root: Path, version: str) -> Path:
     config = root / "openbao.hcl"
-    write_private(
-        config,
+    configuration = (
         b'ui = false\n'
         b'disable_mlock = true\n'
         b'storage "inmem" {}\n'
@@ -402,7 +401,13 @@ def write_server_config(root: Path) -> Path:
         b'  tls_min_version = "tls13"\n'
         b'}\n'
         b'api_addr = "https://127.0.0.1:8200"\n'
-        b'cluster_addr = "https://127.0.0.1:8201"\n',
+        b'cluster_addr = "https://127.0.0.1:8201"\n'
+    )
+    if version == "2.6.2":
+        configuration += b'allow_unauthenticated_workflows = true\n'
+    write_private(
+        config,
+        configuration,
         0o640,
     )
     return config
@@ -683,7 +688,7 @@ def read_descriptor(descriptor: int, maximum: int) -> bytes:
 
 
 def validate_attestation(value: dict[str, Any], version: str) -> None:
-    latest = version in {"2.6.0", "2.6.1"}
+    latest = version in {"2.6.0", "2.6.1", "2.6.2"}
     expected_executed = list(CORE_OPERATION_IDS if latest else CORE_OPERATION_IDS[:8])
     expected_skipped = [] if latest else list(OPENBAO_2_6_OPERATION_IDS)
     if set(value) != {"schema", "version", "executed", "skipped"}:
@@ -944,7 +949,7 @@ def run_integration(version: str) -> dict[str, Any]:
     try:
         test_binary = compile_integration_test(root)
         tls, ca_cert = generate_tls(root, openssl, command_environment(root))
-        config = write_server_config(root)
+        config = write_server_config(root, version)
         image = inspect_image(podman, release, podman_env)
         try:
             run_bounded(
@@ -1027,19 +1032,19 @@ def run_integration(version: str) -> dict[str, Any]:
                     "id": operation,
                     "status": (
                         "passed"
-                        if version in {"2.6.0", "2.6.1"}
+                        if version in {"2.6.0", "2.6.1", "2.6.2"}
                         or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "skipped"
                     ),
                     "reason_code": (
                         None
-                        if version in {"2.6.0", "2.6.1"}
+                        if version in {"2.6.0", "2.6.1", "2.6.2"}
                         or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "server-operation-unavailable"
                     ),
                     "classification": (
                         None
-                        if version in {"2.6.0", "2.6.1"}
+                        if version in {"2.6.0", "2.6.1", "2.6.2"}
                         or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "expected-server-difference"
                     ),

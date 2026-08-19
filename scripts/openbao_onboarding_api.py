@@ -424,7 +424,11 @@ def verify() -> dict[str, Any]:
         "image_linux_amd64_digest": openapi["image_linux_amd64_digest"],
     }
     snapshots.validate_documentation_snapshot(
-        documentation, documentation_data, VERSION, SOURCE_COMMIT
+        documentation,
+        documentation_data,
+        VERSION,
+        SOURCE_COMMIT,
+        "website/content/api-docs",
     )
     snapshots.validate_openapi_snapshot(
         openapi,

@@ -847,3 +847,29 @@ Stop criteria:
 - `scripts/release_2_1_3_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.3`.
+
+### 2.1.4 - OpenBao 2.6.2 Compatibility
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.4`;
+- exact OpenBao `2.6.2` source, OCI, provenance, tagged documentation,
+  normalized OpenAPI, capability, response, and live evidence are append-only
+  locked and cross-bound;
+- all 24 exact profiles from `2.0.0` through `2.6.2` pass their own
+  digest-pinned live compatibility matrix;
+- all 689 operations documented for exact `2.6.2` are typed, typed-gated, or
+  explicitly security-blocked, with no planned or deferred operation;
+- live 2.6.2 regressions verify rejection of internal token-creating workflow
+  operations, CSR IP-SAN CIDR enforcement, and non-default Transit HMAC
+  verification;
+- workflow prefix LIST/SCAN and CAS-selected writes remain fail-closed because
+  their upstream defects persist in `2.6.2`;
+- `futures-core` and pinned GitHub Actions are updated to the latest versions
+  reported by `scripts/checks.sh` without raising the Rust `1.90.0` MSRV;
+- README, migration, stability, coverage, changelog, and release notes
+  describe the same 2.6.2 compatibility and security boundaries;
+- `scripts/release_2_1_4_gate.sh`, GitHub CI, CodeQL, the all-release
+  compatibility workflow, and exact-commit pentests pass before tagging
+  `v2.1.4`.

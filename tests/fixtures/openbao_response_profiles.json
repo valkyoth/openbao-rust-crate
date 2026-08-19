@@ -1025,8 +1025,58 @@
         "type": "rate-limit"
       },
       "version": "2.6.1"
+    },
+    {
+      "openapi_sha256": "508afb1b50295df67cf13b59d2a873f03fc52333a515b18a74d6b5058626ec48",
+      "pki_certificate": {
+        "certificate": "fixture-certificate",
+        "expiration": 2000000000,
+        "not_before": 1700000000,
+        "private_key": "fixture-private-key"
+      },
+      "pki_role": {
+        "allowed_domains": [
+          "example.test"
+        ],
+        "allowed_ip_sans_cidr": [
+          "192.0.2.0/24"
+        ],
+        "max_ttl": 7200,
+        "not_before_duration": 30,
+        "ttl": 3600
+      },
+      "plugin": {
+        "args": [
+          "fixture-secret-argument"
+        ],
+        "builtin": false,
+        "command": "fixture-plugin",
+        "declarative": true,
+        "env": [
+          "FIXTURE_SECRET=value"
+        ],
+        "name": "fixture-plugin",
+        "oci": true
+      },
+      "policy": {
+        "cas_required": true,
+        "expiration": "2030-01-01T00:00:00Z",
+        "modified": "2026-01-01T00:00:00Z",
+        "name": "fixture",
+        "rules": "path \"secret/data/fixture\" { capabilities = [\"read\"] }",
+        "version": 2
+      },
+      "quota": {
+        "inheritable": true,
+        "interval": 1,
+        "name": "fixture",
+        "path": "auth/approle",
+        "rate": 10.0,
+        "type": "rate-limit"
+      },
+      "version": "2.6.2"
     }
   ],
   "schema": "openbao-versioned-response-fixtures/v1",
-  "snapshot_lock_sha256": "00c21e23816cd6ed9cd85392f2a807f5f6fd72790917eabb92a7e05b2d795c6a"
+  "snapshot_lock_sha256": "a1ea8bd342c0b45d8cd60fa5f0d2240ee84493d447ed36206340b2c3e591665e"
 }

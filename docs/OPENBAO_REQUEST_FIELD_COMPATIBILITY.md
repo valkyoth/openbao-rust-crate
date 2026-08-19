@@ -1,7 +1,7 @@
 # OpenBao Request-Field Compatibility
 
 The typed client validates caller-selected fields whose availability changes
-across the 23 immutable OpenBao profiles from `2.0.0` through `2.6.1`.
+across the 24 immutable OpenBao profiles from `2.0.0` through `2.6.2`.
 Validation uses the selected compatibility profile and runs before a
 secret-bearing payload is constructed or serialized. An unavailable selected
 field returns `Error::UnsupportedOpenBaoRequestField` containing only a stable

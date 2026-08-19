@@ -4,7 +4,7 @@ This table is generated from committed compatibility evidence. `100.00%` means
 every documented operation for that exact profile is classified as typed,
 typed-gated, or security-blocked. It does not mean every operation was exercised
 live. Live tests cover eight representative built-in core flows on every profile
-and six additional 2.6-only flows on 2.6.0 and 2.6.1; serde fixtures
+and six additional 2.6-only flows on 2.6.0, 2.6.1, and 2.6.2; serde fixtures
 cover five representative response families.
 
 | OpenBao | Documented operations | Typed | Typed-gated | Security-blocked | Unavailable inventory operations | Classified coverage | Live core flows | Response fixture families |
@@ -32,6 +32,7 @@ cover five representative response families.
 | `2.5.5` | 665 | 580 | 85 | 0 | 26 | 100.00% | 8 | 5 |
 | `2.6.0` | 688 | 592 | 93 | 3 | 3 | 100.00% | 14 | 5 |
 | `2.6.1` | 689 | 594 | 93 | 2 | 2 | 100.00% | 14 | 5 |
+| `2.6.2` | 689 | 594 | 93 | 2 | 2 | 100.00% | 14 | 5 |
 
 ## Evidence Boundary
 
