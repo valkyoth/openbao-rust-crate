@@ -38,7 +38,7 @@ jobs:
 
       - name: Install security tools
         # taiki-e/install-action v2.86.3
-        uses: taiki-e/install-action@5b4d68e2e660441203ab128a23676f1e4faf1532
+        uses: taiki-e/install-action@6cd13508893c0e7eab5f273c2575d3859bd7229a
         with:
           tool: cargo-deny@0.20.2,cargo-audit@0.22.2,cargo-sbom@0.10.0
 
