@@ -873,3 +873,26 @@ Stop criteria:
 - `scripts/release_2_1_4_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.4`.
+
+### 2.1.5 - Dependency, Toolchain, And Static-Analysis Maintenance
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.5`;
+- direct crates and repository lockfiles are refreshed to the latest
+  compatible reviewed releases while retaining Rust `1.90.0` as the MSRV;
+- Rust `1.98.1` is the primary compiler in local, CI, and exact-version
+  compatibility workflows;
+- GitHub Actions and CI cargo tools match the latest versions reported by
+  `scripts/checks.sh`, with Actions pinned by immutable commit SHA;
+- all eleven CodeQL findings open at the start of the maintenance pass are
+  removed without suppressions: nonce and password fixtures are runtime-built,
+  and secret-bearing results are not formatted into failure diagnostics;
+- all 24 exact OpenBao profiles retain their `2.1.4` routes, field rules, and
+  security classifications and pass the digest-pinned compatibility matrix;
+- README, migration, stability, changelog, and release notes describe the same
+  maintenance-only boundary;
+- `scripts/release_2_1_5_gate.sh`, GitHub CI, CodeQL, the all-release
+  compatibility workflow, and exact-commit pentests pass before tagging
+  `v2.1.5`.

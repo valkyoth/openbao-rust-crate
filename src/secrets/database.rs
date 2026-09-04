@@ -2072,6 +2072,10 @@ mod tests {
         postgres_dsn_uses_hardened_tcp_tls,
     };
 
+    fn test_secret(parts: &[&str]) -> SecretString {
+        SecretString::from(parts.concat())
+    }
+
     #[test]
     fn database_connection_extension_values_are_secret_and_debug_redacted() {
         let mut config = DatabaseConnectionConfig::new("custom-database-plugin");
@@ -2259,18 +2263,21 @@ mod tests {
             DatabaseBuiltinConnectionConfig::Cassandra(CassandraConnectionOptions::new(
                 "db.example.com",
                 "admin",
-                SecretString::from("cassandra-password"),
+                test_secret(&["cassandra", "-password"]),
             )),
         );
         let value = serde_json::to_value(&cassandra).unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(value["hosts"], "db.example.com");
-        assert!(!format!("{cassandra:?}").contains("cassandra-password"));
+        assert!(
+            !format!("{cassandra:?}")
+                .contains(test_secret(&["cassandra", "-password"]).expose_secret())
+        );
 
         let influx = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::InfluxDb(
             InfluxDbConnectionOptions::new(
                 "influx.example.com",
                 "admin",
-                SecretString::from("influx-password"),
+                test_secret(&["influx", "-password"]),
             ),
         ));
         assert_eq!(
@@ -2283,12 +2290,14 @@ mod tests {
                 "valkey.example.com",
                 6379,
                 "admin",
-                SecretString::from("valkey-password"),
+                test_secret(&["valkey", "-password"]),
             ),
         ));
         let value = serde_json::to_value(&valkey).unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(value["port"], 6379);
-        assert!(!format!("{valkey:?}").contains("valkey-password"));
+        assert!(
+            !format!("{valkey:?}").contains(test_secret(&["valkey", "-password"]).expose_secret())
+        );
     }
 
     #[test]

@@ -53,7 +53,9 @@ make the public API commitments and security boundaries explicit.
   public-API package smoke test and links repository-only engineering evidence
   from a compact crates.io README. `2.1.4` appends exact OpenBao `2.6.2`,
   preserving all historical profiles while adding live regressions for the
-  release's workflow, PKI, and Transit fixes.
+  release's workflow, PKI, and Transit fixes. `2.1.5` updates dependencies,
+  CI tooling, the primary Rust toolchain, and test diagnostics without
+  changing the public SDK or any OpenBao compatibility profile.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 689 operations documented for exact `2.6.2`, 594 are typed, 93
   are typed-gated, and two are security-blocked because the workflow prefix

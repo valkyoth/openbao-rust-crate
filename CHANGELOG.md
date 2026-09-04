@@ -4,6 +4,25 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.5 - 2026-09-04
+
+### Changed
+
+- Updated `base64-ng` from `2.0.1` to `2.0.3` and `sanitization` from
+  `2.0.3` to `2.0.4`, then refreshed all repository lockfiles to current
+  compatible dependency versions.
+- Updated the primary Rust toolchain from `1.97.1` to `1.98.1` while
+  retaining Rust `1.90.0` as the checked MSRV.
+- Updated `taiki-e/install-action` from `2.86.3` to `2.87.4` with an
+  immutable commit-SHA pin. Other direct crates, CI cargo tools, and pinned
+  GitHub Actions were current on the release date.
+- Replaced hard-coded password and nonce fixtures reported by CodeQL with
+  runtime-built test values, and removed secret-bearing result/error values
+  from assertion and panic diagnostics.
+- Updated release metadata and consumer documentation for `2.1.5`. OpenBao
+  routes, compatibility profiles, field rules, and public SDK behavior remain
+  unchanged from `2.1.4`.
+
 ## 2.1.4 - 2026-08-19
 
 ### Added

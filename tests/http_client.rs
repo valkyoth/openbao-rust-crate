@@ -17,7 +17,6 @@ use std::{
     thread,
     time::Duration,
 };
-#[cfg(feature = "operator-ops")]
 use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
@@ -674,8 +673,10 @@ async fn versioned_operator_rotation_extensions_use_documented_paths() {
     .unwrap_or_else(|error| panic!("{error}"))
     .with_token(SecretString::from("test-token"));
     let sys = client.sys();
-    let update =
-        openbao::sys::OperatorKeyShareUpdateRequest::new(SecretString::from("key-share"), "nonce");
+    let update = openbao::sys::OperatorKeyShareUpdateRequest::new(
+        SecretString::from("key-share"),
+        test_operation_id(),
+    );
     assert_eq!(
         sys.operator_rekey_backup()
             .await
@@ -828,7 +829,6 @@ fn http_request_is_complete(request: &[u8]) -> bool {
     request.len() >= body_start + content_length
 }
 
-#[cfg(feature = "operator-ops")]
 fn test_operation_id() -> String {
     static NEXT_TEST_OPERATION_ID: AtomicU64 = AtomicU64::new(0);
     let sequence = NEXT_TEST_OPERATION_ID.fetch_add(1, Ordering::Relaxed);
@@ -7445,6 +7445,7 @@ async fn identity_oidc_protocol_uses_secret_aware_oauth_transport() {
         IdentityOidcAuthorizeRequest, IdentityOidcProviderTokenRequest,
     };
 
+    let request_nonce = test_operation_id();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
         .local_addr()
@@ -7510,7 +7511,7 @@ async fn identity_oidc_protocol_uses_secret_aware_oauth_transport() {
                 "openid profile",
             )
             .with_state("opaque-state")
-            .with_nonce("request-nonce")
+            .with_nonce(request_nonce)
             .with_pkce("pkce-challenge", "S256"),
         )
         .await
@@ -7548,6 +7549,8 @@ async fn identity_oidc_protocol_uses_secret_aware_oauth_transport() {
 async fn identity_oidc_authorize_get_requires_acknowledged_query_transport() {
     use openbao::secrets::identity::IdentityOidcAuthorizeRequest;
 
+    let request_nonce = test_operation_id();
+    let expected_nonce = request_nonce.clone();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
         .local_addr()
@@ -7555,9 +7558,10 @@ async fn identity_oidc_authorize_get_requires_acknowledged_query_transport() {
     let server = thread::spawn(move || {
         let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
         let request = read_http_request(&mut stream);
-        assert!(request.starts_with(
-            "GET /v1/identity/oidc/provider/app/authorize?response_type=code&client_id=client&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=openid+profile&state=opaque-state&nonce=request-nonce HTTP/1.1"
-        ));
+        let expected_path = format!(
+            "GET /v1/identity/oidc/provider/app/authorize?response_type=code&client_id=client&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=openid+profile&state=opaque-state&nonce={expected_nonce} HTTP/1.1"
+        );
+        assert!(request.starts_with(&expected_path));
         assert!(request.contains("x-vault-token: openbao-identity-token"));
         write_json_response(
             &mut stream,
@@ -7584,7 +7588,7 @@ async fn identity_oidc_authorize_get_requires_acknowledged_query_transport() {
                 "openid profile",
             )
             .with_state("opaque-state")
-            .with_nonce("request-nonce"),
+            .with_nonce(request_nonce),
         )
         .await
         .unwrap_or_else(|error| panic!("{error}"));

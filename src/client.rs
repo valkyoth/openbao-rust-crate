@@ -5289,10 +5289,10 @@ mod tests {
     #[test]
     fn authenticated_client_accepts_already_locked_token_without_heap_restaging() {
         let token = sanitization::LockedSecretString::from_secret_str("locked-token")
-            .unwrap_or_else(|error| panic!("failed to lock test token: {error}"));
+            .unwrap_or_else(|_| panic!("failed to lock test token"));
         let client = Client::new("https://bao.example.com")
             .and_then(|client| client.try_with_locked_token(token))
-            .unwrap_or_else(|error| panic!("failed to construct locked-token client: {error}"));
+            .unwrap_or_else(|_| panic!("failed to construct locked-token client"));
 
         assert!(
             client
@@ -5408,13 +5408,13 @@ mod tests {
     fn locked_authentication_token_accepts_exact_hard_ceiling() {
         let token_value = "x".repeat(ABSOLUTE_MAX_AUTH_TOKEN_BYTES);
         let token = sanitization::LockedSecretString::from_secret_str(&token_value)
-            .unwrap_or_else(|error| panic!("failed to lock hard-limit token: {error}"));
+            .unwrap_or_else(|_| panic!("failed to lock hard-limit token"));
         let config = OpenBaoConfig::new("https://bao.example.com")
             .and_then(|config| config.max_auth_token_bytes(ABSOLUTE_MAX_AUTH_TOKEN_BYTES))
             .unwrap_or_else(|error| panic!("failed to configure hard token limit: {error}"));
         let client = Client::from_config(config)
             .and_then(|client| client.try_with_locked_token(token))
-            .unwrap_or_else(|error| panic!("hard-limit locked token was rejected: {error}"));
+            .unwrap_or_else(|_| panic!("hard-limit locked token was rejected"));
 
         assert!(
             client

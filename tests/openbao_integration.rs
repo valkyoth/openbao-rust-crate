@@ -415,7 +415,7 @@ output {
             blocked
                 .as_ref()
                 .is_err_and(|error| error.status() == Some(StatusCode::INTERNAL_SERVER_ERROR)),
-            "OpenBao 2.6.2 did not explicitly reject an unauthenticated internal workflow operation: {blocked:?}"
+            "OpenBao 2.6.2 did not explicitly reject an unauthenticated internal workflow operation"
         );
     }
 
@@ -507,7 +507,7 @@ output {
         rejected
             .as_ref()
             .is_err_and(|error| error.is_bad_request() || error.is_permission_denied()),
-        "JWT CEL login unexpectedly accepted a validly signed JWT without aud: {rejected:?}"
+        "JWT CEL login unexpectedly accepted a validly signed JWT without aud"
     );
 
     eprintln!("OpenBao integration stage: userpass-password-hash");
@@ -624,7 +624,7 @@ output {
             signing
                 .as_ref()
                 .is_err_and(|error| error.is_bad_request() || error.is_permission_denied()),
-            "OpenBao 2.6.2 accepted a CSR IP SAN outside allowed_ip_sans_cidr: {signing:?}"
+            "OpenBao 2.6.2 accepted a CSR IP SAN outside allowed_ip_sans_cidr"
         );
     }
 

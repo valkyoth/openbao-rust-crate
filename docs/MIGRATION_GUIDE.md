@@ -7,6 +7,19 @@ profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
 
+## From `openbao` 2.1.4 To 2.1.5
+
+`2.1.5` is a source-compatible dependency, toolchain, and static-analysis
+maintenance release. It updates `base64-ng` to `2.0.3`, `sanitization` to
+`2.0.4`, and the primary checked Rust toolchain to `1.98.1`; Rust `1.90.0`
+remains the MSRV.
+
+OpenBao profiles, routes, request and response field rules, capability
+classifications, and security blocks are unchanged from `2.1.4`. Test-only
+password and nonce fixtures are now constructed at runtime, and failure
+diagnostics no longer format secret-bearing results. No application source
+migration is required.
+
 ## From `openbao` 2.1.3 To 2.1.4
 
 `2.1.4` appends exact OpenBao `2.6.2` support without changing any historical
