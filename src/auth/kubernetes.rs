@@ -38,7 +38,7 @@ pub struct KubernetesConfig {
     /// Expected service-account token issuer.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub issuer: Option<String>,
-    /// Kubernetes API host, host:port pair, or URL.
+    /// Absolute HTTPS Kubernetes API URL without embedded credentials.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kubernetes_host: Option<String>,
     /// PEM-encoded CA certificate used by OpenBao to reach Kubernetes.
@@ -54,6 +54,15 @@ pub struct KubernetesConfig {
     /// Disable default local CA/JWT discovery when OpenBao runs in Kubernetes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disable_local_ca_jwt: Option<bool>,
+}
+
+impl KubernetesConfig {
+    fn validate(&self) -> Result<()> {
+        if let Some(host) = self.kubernetes_host.as_deref() {
+            crate::validation::validate_https_endpoint(host, "kubernetes auth kubernetes_host")?;
+        }
+        Ok(())
+    }
 }
 
 /// Kubernetes auth role configuration.
@@ -308,6 +317,7 @@ impl KubernetesAuth<'_> {
 impl KubernetesAuthAdmin<'_> {
     /// Configures the Kubernetes auth method.
     pub async fn configure(&self, config: &KubernetesConfig) -> Result<Empty> {
+        config.validate()?;
         let payload = KubernetesConfigPayload {
             disable_iss_validation: config.disable_iss_validation,
             issuer: config.issuer.as_deref(),
@@ -435,7 +445,37 @@ mod tests {
 
     use secrecy::ExposeSecret;
 
-    use super::{KubernetesLoginResponse, KubernetesRoleList};
+    use super::{KubernetesConfig, KubernetesLoginResponse, KubernetesRoleList};
+
+    #[test]
+    fn kubernetes_auth_api_host_requires_https() {
+        let secure = KubernetesConfig {
+            kubernetes_host: Some("https://kubernetes.example.test:6443".into()),
+            ..KubernetesConfig::default()
+        };
+        assert!(secure.validate().is_ok());
+
+        for host in [
+            "http://kubernetes.example.test:6443",
+            "https://kubernetes.example.test:6443/api#fragment",
+        ] {
+            let config = KubernetesConfig {
+                kubernetes_host: Some(host.into()),
+                ..KubernetesConfig::default()
+            };
+            assert!(config.validate().is_err());
+        }
+        let credential_host = format!(
+            "https://{}:{}@kubernetes.example.test:6443",
+            ["test", "-user"].concat(),
+            ["test", "-password"].concat()
+        );
+        let config = KubernetesConfig {
+            kubernetes_host: Some(credential_host),
+            ..KubernetesConfig::default()
+        };
+        assert!(config.validate().is_err());
+    }
 
     #[test]
     fn kubernetes_login_auth_deserializes_secret_token_fields() {

@@ -18,7 +18,10 @@ use crate::{
         Empty, ListEntries, ListPageOptions, ResponseEnvelope,
         deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
     },
-    validation::{validate_duration_string, validate_optional_ldap_tls_version},
+    validation::{
+        validate_duration_string, validate_ldap_urls_use_encrypted_transport,
+        validate_optional_ldap_tls_version,
+    },
 };
 
 /// Handle for Kerberos auth login at a configured mount.
@@ -145,6 +148,9 @@ impl fmt::Debug for KerberosConfig {
 #[derive(Clone, Default, Deserialize)]
 pub struct KerberosLdapConfig {
     /// LDAP server URL or comma-separated URL list.
+    ///
+    /// Use `ldaps://`, or set `starttls=true`. Bind credentials may never be
+    /// sent over plaintext or unverified LDAP transport.
     #[serde(default)]
     pub url: Option<String>,
     /// Whether local group policy mapping names are case-sensitive.
@@ -332,6 +338,14 @@ impl KerberosLdapConfig {
             return Err(Error::InvalidParameter(
                 "Kerberos LDAP insecure_tls=true requires the insecure-ldap-tls-acknowledged Cargo feature because it disables LDAP TLS certificate verification".into(),
             ));
+        }
+        if self.insecure_tls == Some(true) && self.bindpass.is_some() {
+            return Err(Error::InvalidParameter(
+                "Kerberos LDAP insecure_tls=true must not be combined with bindpass because credentials would cross an unverified TLS connection".into(),
+            ));
+        }
+        if cfg!(not(feature = "insecure-ldap-tls-acknowledged")) || self.bindpass.is_some() {
+            validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "Kerberos LDAP")?;
         }
         crate::validation::validate_cidr_list(
             &self.token_bound_cidrs,
@@ -1011,6 +1025,7 @@ mod tests {
     #[test]
     fn kerberos_ldap_config_validates_tls_duration_and_cidr_inputs() {
         let mut config = KerberosLdapConfig::new()
+            .with_url("ldaps://ldap.example.test")
             .with_token_bound_cidr("10.0.0.0/8")
             .unwrap_or_else(|error| panic!("{error}"));
         config.tls_min_version = Some("tls12".to_owned());
@@ -1022,6 +1037,33 @@ mod tests {
 
         config.tls_min_version = Some("ssl3".to_owned());
         assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn kerberos_ldap_bind_credentials_require_verified_encrypted_transport() {
+        let bind_password = || test_secret(&["bind", "-password"]);
+        let secure = KerberosLdapConfig::new()
+            .with_url("ldaps://ldap.example.test")
+            .with_bind("cn=openbao,dc=example,dc=test", bind_password());
+        assert!(secure.validate().is_ok());
+
+        let starttls = KerberosLdapConfig::new()
+            .with_url("ldap://ldap.example.test")
+            .with_bind("cn=openbao,dc=example,dc=test", bind_password());
+        let mut starttls = starttls;
+        starttls.starttls = Some(true);
+        assert!(starttls.validate().is_ok());
+
+        let plaintext = KerberosLdapConfig::new()
+            .with_url("ldap://ldap.example.test")
+            .with_bind("cn=openbao,dc=example,dc=test", bind_password());
+        assert!(plaintext.validate().is_err());
+
+        let mut unverified = KerberosLdapConfig::new()
+            .with_url("ldaps://ldap.example.test")
+            .with_bind("cn=openbao,dc=example,dc=test", bind_password());
+        unverified.insecure_tls = Some(true);
+        assert!(unverified.validate().is_err());
     }
 
     #[test]

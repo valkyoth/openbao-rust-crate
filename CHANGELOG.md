@@ -19,9 +19,20 @@ All notable changes to this project are documented here.
 - Replaced hard-coded password and nonce fixtures reported by CodeQL with
   runtime-built test values, and removed secret-bearing result/error values
   from assertion and panic diagnostics.
-- Updated release metadata and consumer documentation for `2.1.5`. OpenBao
-  routes, compatibility profiles, field rules, and public SDK behavior remain
-  unchanged from `2.1.4`.
+- Added fail-closed HTTPS validation for JWT/OIDC discovery and JWKS URLs,
+  Kubernetes auth and secrets API hosts, and RabbitMQ management endpoints.
+- Required encrypted LDAP transport for Kerberos and LDAP bind credentials,
+  and prohibited unverified LDAP transport whenever bind credentials or a
+  client private key are present.
+- Required every reviewed built-in database configuration to prove encrypted
+  TCP transport. The existing acknowledgement feature may permit skipped peer
+  verification, but no longer permits plaintext database credential transport.
+- Hardened environment CA-file loading with a 1 MiB ceiling, regular-file
+  requirement, Unix nonblocking/no-follow opens, and Windows reparse-point
+  rejection.
+- Corrected isolated `kerberos-auth` feature builds and added regressions for
+  every new transport and filesystem boundary. OpenBao routes, compatibility
+  profiles, and field rules remain unchanged from `2.1.4`.
 
 ## 2.1.4 - 2026-08-19
 

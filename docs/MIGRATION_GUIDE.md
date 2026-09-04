@@ -9,16 +9,29 @@ contract dispositions.
 
 ## From `openbao` 2.1.4 To 2.1.5
 
-`2.1.5` is a source-compatible dependency, toolchain, and static-analysis
-maintenance release. It updates `base64-ng` to `2.0.3`, `sanitization` to
-`2.0.4`, and the primary checked Rust toolchain to `1.98.1`; Rust `1.90.0`
-remains the MSRV.
+`2.1.5` is a source-compatible dependency, toolchain, static-analysis, and
+transport-hardening maintenance release. It updates `base64-ng` to `2.0.3`,
+`sanitization` to `2.0.4`, and the primary checked Rust toolchain to `1.98.1`;
+Rust `1.90.0` remains the MSRV.
 
 OpenBao profiles, routes, request and response field rules, capability
 classifications, and security blocks are unchanged from `2.1.4`. Test-only
 password and nonce fixtures are now constructed at runtime, and failure
-diagnostics no longer format secret-bearing results. No application source
-migration is required.
+diagnostics no longer format secret-bearing results.
+
+No application source migration is required, but insecure backend
+configuration now fails before request serialization:
+
+- replace HTTP OIDC discovery, JWKS, Kubernetes, and RabbitMQ URLs with
+  absolute HTTPS URLs; keep credentials in their dedicated typed fields;
+- configure LDAP and Kerberos LDAP with `ldaps://` or `starttls=true`, and do
+  not combine bind credentials or a client key with `insecure_tls=true`;
+- configure reviewed database plugins with encrypted TCP transport. Use
+  PostgreSQL `sslmode=verify-full`, MySQL `tls=true` or `tls_ca`, Cassandra and
+  InfluxDB TLS defaults/`tls=true`, and Valkey `tls=true`. The acknowledged
+  database feature permits encrypted but incompletely verified transport only;
+- ensure `OPENBAO_CACERT`, `BAO_CACERT`, or `VAULT_CACERT` identifies a regular,
+  non-symlink/reparse-point PEM file no larger than 1 MiB.
 
 ## From `openbao` 2.1.3 To 2.1.4
 

@@ -28,7 +28,7 @@ pub struct RabbitMq<'a> {
 /// RabbitMQ connection configuration request.
 #[derive(Clone)]
 pub struct RabbitMqConnectionConfig {
-    /// RabbitMQ management API URI.
+    /// HTTPS RabbitMQ management API URI without embedded credentials.
     ///
     /// This is secret-aware because URIs may embed credentials.
     pub connection_uri: SecretString,
@@ -80,6 +80,13 @@ impl RabbitMqConnectionConfig {
     pub fn with_username_template(mut self, username_template: impl Into<String>) -> Self {
         self.username_template = Some(username_template.into());
         self
+    }
+
+    fn validate(&self) -> Result<()> {
+        crate::validation::validate_secret_https_endpoint(
+            self.connection_uri.expose_secret(),
+            "RabbitMQ connection_uri",
+        )
     }
 }
 
@@ -237,6 +244,7 @@ impl Client<Authenticated> {
 impl RabbitMq<'_> {
     /// Creates or updates the RabbitMQ connection configuration.
     pub async fn configure_connection(&self, config: &RabbitMqConnectionConfig) -> Result<Empty> {
+        config.validate()?;
         self.request(
             Method::POST,
             &self.path(&["config", "connection"])?,
@@ -489,15 +497,18 @@ mod tests {
     #[test]
     fn rabbitmq_debug_redacts_secret_fields() {
         let admin_password = ["admin", "-", "password"].concat();
+        let uri_secret = ["uri", "-", "secret"].concat();
         let config = RabbitMqConnectionConfig::new(
-            SecretString::from("https://admin:secret@example.test:15672"),
+            SecretString::from(format!(
+                "https://rabbit.example.test:15671/api?opaque={uri_secret}"
+            )),
             "admin",
             SecretString::from(admin_password.clone()),
         );
         let config_debug = format!("{config:?}");
         assert!(config_debug.contains("RabbitMqConnectionConfig"));
         assert!(!config_debug.contains(&admin_password));
-        assert!(!config_debug.contains("secret@example"));
+        assert!(!config_debug.contains(&uri_secret));
 
         let credentials = RabbitMqCredentials {
             username: "generated-user".to_owned(),
@@ -510,6 +521,40 @@ mod tests {
         assert!(credentials_debug.contains("generated-user"));
         assert!(!credentials_debug.contains(credentials.password.expose_secret()));
         assert!(!credentials_debug.contains(credentials.lease_id.expose_secret()));
+    }
+
+    #[test]
+    fn rabbitmq_management_uri_requires_https_without_embedded_credentials() {
+        let administrative_password = || SecretString::from(["admin", "-password"].concat());
+        let secure = RabbitMqConnectionConfig::new(
+            SecretString::from("https://rabbitmq.example.test:15671"),
+            "admin",
+            administrative_password(),
+        );
+        assert!(secure.validate().is_ok());
+
+        for uri in [
+            "http://rabbitmq.example.test:15672",
+            "https://rabbitmq.example.test:15671/api#fragment",
+        ] {
+            let config = RabbitMqConnectionConfig::new(
+                SecretString::from(uri),
+                "admin",
+                administrative_password(),
+            );
+            assert!(config.validate().is_err());
+        }
+        let credential_uri = format!(
+            "https://{}:{}@rabbitmq.example.test:15671",
+            ["test", "-user"].concat(),
+            ["test", "-password"].concat()
+        );
+        let config = RabbitMqConnectionConfig::new(
+            SecretString::from(credential_uri),
+            "admin",
+            administrative_password(),
+        );
+        assert!(config.validate().is_err());
     }
 
     #[test]

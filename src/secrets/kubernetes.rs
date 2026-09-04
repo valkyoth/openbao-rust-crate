@@ -30,7 +30,7 @@ pub struct KubernetesSecrets<'a> {
 /// Kubernetes secrets engine configuration.
 #[derive(Clone, Default, Deserialize)]
 pub struct KubernetesSecretsConfig {
-    /// Kubernetes API URL.
+    /// Absolute HTTPS Kubernetes API URL without embedded credentials.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kubernetes_host: Option<String>,
     /// PEM-encoded Kubernetes API CA certificate.
@@ -42,6 +42,15 @@ pub struct KubernetesSecretsConfig {
     /// Disable local pod CA and service account JWT discovery.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disable_local_ca_jwt: Option<bool>,
+}
+
+impl KubernetesSecretsConfig {
+    fn validate(&self) -> Result<()> {
+        if let Some(host) = self.kubernetes_host.as_deref() {
+            crate::validation::validate_https_endpoint(host, "kubernetes secrets kubernetes_host")?;
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Debug for KubernetesSecretsConfig {
@@ -337,6 +346,7 @@ impl Client<Authenticated> {
 impl KubernetesSecrets<'_> {
     /// Creates or updates the Kubernetes secrets engine configuration.
     pub async fn write_config(&self, config: &KubernetesSecretsConfig) -> Result<Empty> {
+        config.validate()?;
         self.request(Method::POST, &self.path(&["config"])?, Some(config))
             .await
     }
@@ -698,6 +708,36 @@ mod tests {
         KubernetesCredentials, KubernetesSecretsConfig, KubernetesSecretsRole,
         KubernetesSecretsRoleList,
     };
+
+    #[test]
+    fn kubernetes_secrets_api_host_requires_https() {
+        let secure = KubernetesSecretsConfig {
+            kubernetes_host: Some("https://kubernetes.example.test:6443".into()),
+            ..KubernetesSecretsConfig::default()
+        };
+        assert!(secure.validate().is_ok());
+
+        for host in [
+            "http://kubernetes.example.test:6443",
+            "https://kubernetes.example.test:6443/api#fragment",
+        ] {
+            let config = KubernetesSecretsConfig {
+                kubernetes_host: Some(host.into()),
+                ..KubernetesSecretsConfig::default()
+            };
+            assert!(config.validate().is_err());
+        }
+        let credential_host = format!(
+            "https://{}:{}@kubernetes.example.test:6443",
+            ["test", "-user"].concat(),
+            ["test", "-password"].concat()
+        );
+        let config = KubernetesSecretsConfig {
+            kubernetes_host: Some(credential_host),
+            ..KubernetesSecretsConfig::default()
+        };
+        assert!(config.validate().is_err());
+    }
 
     #[test]
     fn kubernetes_secrets_paths_are_validated() {

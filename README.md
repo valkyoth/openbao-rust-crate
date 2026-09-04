@@ -29,6 +29,11 @@ workflows: HTTPS and TLS 1.3 by default, disabled redirects, strict path and
 response bounds, secret-aware values, and fail-closed server-version
 compatibility.
 
+Credential-bearing OIDC/JWKS, Kubernetes, RabbitMQ, LDAP, Kerberos LDAP, and
+reviewed database configurations also require encrypted service-side
+transport; the SDK validates both the client-to-OpenBao and configured
+OpenBao-to-backend boundaries.
+
 [API documentation](https://docs.rs/openbao) | [Source](https://github.com/valkyoth/openbao-rust-crate) | [Security](https://github.com/valkyoth/openbao-rust-crate/security) | [Releases](https://github.com/valkyoth/openbao-rust-crate/releases)
 
 The current `2.1.x` line supports every published stable OpenBao release from

@@ -47,13 +47,13 @@ pub struct JwtAuthAdmin<'a> {
 /// JWT/OIDC auth method configuration.
 #[derive(Clone, Default, Deserialize)]
 pub struct JwtConfig {
-    /// OIDC discovery base URL.
+    /// HTTPS OIDC discovery base URL without embedded credentials or a fragment.
     #[serde(default)]
     pub oidc_discovery_url: Option<String>,
     /// PEM CA bundle for the OIDC discovery URL.
     #[serde(default)]
     pub oidc_discovery_ca_pem: Option<String>,
-    /// JWKS endpoint URL.
+    /// HTTPS JWKS endpoint URL without embedded credentials or a fragment.
     #[serde(default)]
     pub jwks_url: Option<String>,
     /// PEM CA bundle for the JWKS URL.
@@ -150,6 +150,12 @@ impl JwtConfig {
     }
 
     fn validate(&self) -> Result<()> {
+        if let Some(value) = self.oidc_discovery_url.as_deref() {
+            crate::validation::validate_https_endpoint(value, "oidc_discovery_url")?;
+        }
+        if let Some(value) = self.jwks_url.as_deref() {
+            crate::validation::validate_https_endpoint(value, "jwks_url")?;
+        }
         if !self.uses_kubernetes_provider() {
             return Ok(());
         }
@@ -2148,6 +2154,44 @@ mod tests {
         let debug = format!("{config:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("client-secret"));
+    }
+
+    #[test]
+    fn jwt_remote_key_sources_require_https_without_url_credentials() {
+        for config in [
+            JwtConfig {
+                oidc_discovery_url: Some(
+                    "https://issuer.example.test/.well-known/openid-configuration".into(),
+                ),
+                ..JwtConfig::default()
+            },
+            JwtConfig {
+                jwks_url: Some("https://keys.example.test/jwks.json".into()),
+                ..JwtConfig::default()
+            },
+        ] {
+            assert!(config.validate().is_ok());
+        }
+        for endpoint in [
+            "http://issuer.example.test/.well-known/openid-configuration",
+            "https://issuer.example.test/config#fragment",
+        ] {
+            let config = JwtConfig {
+                oidc_discovery_url: Some(endpoint.into()),
+                ..JwtConfig::default()
+            };
+            assert!(config.validate().is_err());
+        }
+        let credential_endpoint = format!(
+            "https://{}:{}@issuer.example.test/.well-known/openid-configuration",
+            ["test", "-user"].concat(),
+            ["test", "-password"].concat()
+        );
+        let config = JwtConfig {
+            oidc_discovery_url: Some(credential_endpoint),
+            ..JwtConfig::default()
+        };
+        assert!(config.validate().is_err());
     }
 
     #[test]

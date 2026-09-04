@@ -15,7 +15,7 @@ use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec},
-    validation::validate_duration_string,
+    validation::{validate_duration_string, validate_ldap_urls_use_encrypted_transport},
 };
 
 /// Handle for a mounted LDAP secrets engine.
@@ -33,6 +33,9 @@ pub struct LdapConfig {
     /// Password used with `binddn`.
     pub bindpass: SecretString,
     /// LDAP server URL or comma-separated URL list.
+    ///
+    /// Use `ldaps://`, or set `starttls=true`. This configuration always
+    /// carries bind credentials and therefore rejects unverified transport.
     #[serde(default)]
     pub url: Option<String>,
     /// Password policy used for generated LDAP passwords.
@@ -125,7 +128,6 @@ impl LdapConfig {
                 "ldap insecure_tls=true must not be combined with bindpass because credentials would cross an unverified TLS connection".into(),
             ));
         }
-        #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
         validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "LDAP")?;
         if let Some(value) = &self.connection_timeout {
             validate_duration_or_seconds(value, "LDAP connection_timeout", true)?;
@@ -984,35 +986,6 @@ fn validate_duration_or_seconds(value: &str, field: &'static str, allow_zero: bo
     Err(Error::InvalidParameter(format!(
         "{field} must be a duration such as 30s, 5m, or 1h or an unsigned second count"
     )))
-}
-
-#[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
-fn validate_ldap_urls_use_encrypted_transport(
-    urls: &Option<String>,
-    starttls: Option<bool>,
-    label: &'static str,
-) -> Result<()> {
-    let Some(urls) = urls else {
-        return Ok(());
-    };
-    if starttls == Some(true) {
-        return Ok(());
-    }
-    for url in urls.split(',') {
-        let url = url.trim();
-        if url.is_empty() {
-            continue;
-        }
-        if !url
-            .get(..8)
-            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("ldaps://"))
-        {
-            return Err(Error::InvalidParameter(format!(
-                "{label} URL must use ldaps:// or starttls=true unless insecure LDAP TLS is explicitly acknowledged"
-            )));
-        }
-    }
-    Ok(())
 }
 
 fn validate_count(count: usize, field: &'static str, require_non_empty: bool) -> Result<()> {

@@ -174,32 +174,25 @@ impl DatabaseConnectionConfig {
                 Ok(())
             }
         };
-        let disables_tls_verification = match self.builtin_options.as_ref() {
-            Some(DatabaseBuiltinConnectionConfig::PostgreSql(options)) => {
-                !postgres_dsn_uses_hardened_tcp_tls(options.connection_url.expose_secret())
-            }
-            Some(DatabaseBuiltinConnectionConfig::MySql(options)) => {
-                options.tls_skip_verify == Some(true)
-            }
-            Some(DatabaseBuiltinConnectionConfig::Cassandra(options)) => {
-                options.insecure_tls == Some(true)
-            }
-            Some(DatabaseBuiltinConnectionConfig::InfluxDb(options)) => {
-                options.insecure_tls == Some(true)
-            }
-            Some(DatabaseBuiltinConnectionConfig::Valkey(options)) => {
-                options.insecure_tls == Some(true)
-            }
-            _ => false,
-        };
+        let transport_security = self
+            .builtin_options
+            .as_ref()
+            .map(DatabaseBuiltinConnectionConfig::transport_security);
+        if transport_security.is_some_and(|security| !security.encrypted) {
+            return Err(Error::InvalidParameter(
+                "reviewed built-in database plugins require encrypted TCP transport".into(),
+            ));
+        }
+        let lacks_peer_verification =
+            transport_security.is_some_and(|security| !security.peer_verified);
         #[cfg(not(feature = "insecure-database-tls-acknowledged"))]
-        if disables_tls_verification {
+        if lacks_peer_verification {
             return Err(Error::InvalidParameter(
                 "database TLS verification bypass requires the insecure-database-tls-acknowledged Cargo feature".into(),
             ));
         }
         #[cfg(feature = "insecure-database-tls-acknowledged")]
-        let _ = disables_tls_verification;
+        let _ = lacks_peer_verification;
         match self.builtin_options.as_ref() {
             Some(DatabaseBuiltinConnectionConfig::PostgreSql(options)) => {
                 required(
@@ -346,6 +339,39 @@ impl DatabaseBuiltinConnectionConfig {
             Self::Valkey(_) => "valkey-database-plugin",
         }
     }
+
+    fn transport_security(&self) -> DatabaseTransportSecurity {
+        match self {
+            Self::PostgreSql(options) => {
+                let dsn = options.connection_url.expose_secret();
+                DatabaseTransportSecurity {
+                    encrypted: postgres_dsn_requires_encrypted_tcp_tls(dsn),
+                    peer_verified: postgres_dsn_uses_hardened_tcp_tls(dsn),
+                }
+            }
+            Self::MySql(options) => mysql_transport_security(options),
+            Self::Cassandra(options) => DatabaseTransportSecurity {
+                // OpenBao defaults Cassandra TLS to true when omitted.
+                encrypted: options.tls != Some(false),
+                peer_verified: options.tls != Some(false) && options.insecure_tls != Some(true),
+            },
+            Self::InfluxDb(options) => DatabaseTransportSecurity {
+                // OpenBao defaults InfluxDB TLS to true when omitted.
+                encrypted: options.tls != Some(false),
+                peer_verified: options.tls != Some(false) && options.insecure_tls != Some(true),
+            },
+            Self::Valkey(options) => DatabaseTransportSecurity {
+                encrypted: options.tls == Some(true),
+                peer_verified: options.tls == Some(true) && options.insecure_tls != Some(true),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct DatabaseTransportSecurity {
+    encrypted: bool,
+    peer_verified: bool,
 }
 
 impl fmt::Debug for DatabaseBuiltinConnectionConfig {
@@ -386,12 +412,12 @@ impl MySqlPlugin {
 pub struct PostgreSqlConnectionOptions {
     /// Templated PostgreSQL DSN.
     ///
-    /// The DSN must explicitly select `sslmode=verify-full` and an effective
-    /// TCP host. Missing, empty, duplicated, service-file-indirect, Unix-socket,
-    /// unsupported URI, or weaker TLS configurations require the
-    /// `insecure-database-tls-acknowledged` Cargo feature. Both URI query
-    /// parameters and PostgreSQL keyword/value DSNs are checked using pgx's
-    /// case-sensitive parameter spellings.
+    /// The DSN must select encrypted TCP transport. `sslmode=verify-full` is
+    /// required unless `insecure-database-tls-acknowledged` is enabled; that
+    /// feature permits `require` or `verify-ca`, but never plaintext transport.
+    /// Missing, empty, duplicated, service-file-indirect, Unix-socket, and
+    /// unsupported URI configurations are rejected. Both URI query parameters
+    /// and PostgreSQL keyword/value DSNs use pgx's case-sensitive spellings.
     pub connection_url: SecretString,
     /// Root username.
     pub username: Option<String>,
@@ -439,13 +465,80 @@ impl fmt::Debug for PostgreSqlConnectionOptions {
 }
 
 fn postgres_dsn_uses_hardened_tcp_tls(dsn: &str) -> bool {
+    postgres_dsn_uses_tcp_tls_modes(dsn, &[b"verify-full"])
+}
+
+fn postgres_dsn_requires_encrypted_tcp_tls(dsn: &str) -> bool {
+    postgres_dsn_uses_tcp_tls_modes(dsn, &[b"require", b"verify-ca", b"verify-full"])
+}
+
+fn mysql_transport_security(options: &MySqlConnectionOptions) -> DatabaseTransportSecurity {
+    let dsn_tls = mysql_dsn_tcp_tls_mode(options.connection_url.expose_secret());
+    let configured_ca = options
+        .tls_ca
+        .as_deref()
+        .is_some_and(|certificate| !certificate.trim().is_empty());
+    let encrypted = configured_ca || dsn_tls.is_some();
+    let peer_verified = encrypted
+        && options.tls_skip_verify != Some(true)
+        && (configured_ca || dsn_tls == Some(MySqlDsnTlsMode::Verified));
+    DatabaseTransportSecurity {
+        encrypted,
+        peer_verified,
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum MySqlDsnTlsMode {
+    EncryptedWithoutVerification,
+    Verified,
+}
+
+fn mysql_dsn_tcp_tls_mode(dsn: &str) -> Option<MySqlDsnTlsMode> {
+    if dsn.is_empty()
+        || dsn
+            .bytes()
+            .any(|byte| byte.is_ascii_control() || byte.is_ascii_whitespace())
+    {
+        return None;
+    }
+    let network = dsn.rsplit_once('@')?.1;
+    let (host, remainder) = network.strip_prefix("tcp(")?.split_once(')')?;
+    if !remainder.starts_with('/') {
+        return None;
+    }
+    if !postgres_hosts_are_explicit_tcp(host.as_bytes()) {
+        return None;
+    }
+    let query = dsn.split_once('?')?.1;
+    let mut mode = None;
+    for parameter in query.split('&') {
+        let (key, value) = parameter.split_once('=').unwrap_or((parameter, ""));
+        let key = percent_decode_strict(key)?;
+        if key != b"tls" {
+            continue;
+        }
+        if mode.is_some() {
+            return None;
+        }
+        let value = percent_decode_strict(value)?;
+        mode = match value.as_slice() {
+            b"true" => Some(MySqlDsnTlsMode::Verified),
+            b"skip-verify" => Some(MySqlDsnTlsMode::EncryptedWithoutVerification),
+            _ => return None,
+        };
+    }
+    mode
+}
+
+fn postgres_dsn_uses_tcp_tls_modes(dsn: &str, allowed_modes: &[&[u8]]) -> bool {
     if postgres_dsn_uses_uri_syntax(dsn) {
-        return postgres_uri_uses_hardened_tcp_tls(dsn);
+        return postgres_uri_uses_tcp_tls_modes(dsn, allowed_modes);
     }
     if postgres_dsn_has_unsupported_uri_like_prefix(dsn) {
         return false;
     }
-    postgres_keyword_dsn_uses_hardened_tcp_tls(dsn)
+    postgres_keyword_dsn_uses_tcp_tls_modes(dsn, allowed_modes)
 }
 
 fn postgres_dsn_uses_uri_syntax(dsn: &str) -> bool {
@@ -464,7 +557,7 @@ fn postgres_dsn_has_unsupported_uri_like_prefix(dsn: &str) -> bool {
         .is_none_or(|assignment| scheme_separator < assignment)
 }
 
-fn postgres_uri_uses_hardened_tcp_tls(dsn: &str) -> bool {
+fn postgres_uri_uses_tcp_tls_modes(dsn: &str, allowed_modes: &[&[u8]]) -> bool {
     let Some(uri) = dsn
         .strip_prefix("postgresql://")
         .or_else(|| dsn.strip_prefix("postgres://"))
@@ -485,7 +578,7 @@ fn postgres_uri_uses_hardened_tcp_tls(dsn: &str) -> bool {
     let Some(authority_host) = postgres_uri_authority_host(&location[..authority_end]) else {
         return false;
     };
-    let mut verify_full = false;
+    let mut tls_mode = false;
     let mut host_override: Option<Vec<u8>> = None;
     for parameter in query.split('&') {
         let (key, value) = match parameter.split_once('=') {
@@ -506,10 +599,13 @@ fn postgres_uri_uses_hardened_tcp_tls(dsn: &str) -> bool {
             return false;
         }
         if key == b"sslmode" {
-            if verify_full || percent_decode_strict(value).as_deref() != Some(b"verify-full") {
+            let Some(value) = percent_decode_strict(value) else {
+                return false;
+            };
+            if tls_mode || !allowed_modes.contains(&value.as_slice()) {
                 return false;
             }
-            verify_full = true;
+            tls_mode = true;
         } else if key == b"host" {
             if host_override.is_some() {
                 return false;
@@ -522,7 +618,7 @@ fn postgres_uri_uses_hardened_tcp_tls(dsn: &str) -> bool {
             return false;
         }
     }
-    if !verify_full {
+    if !tls_mode {
         return false;
     }
     match host_override {
@@ -579,10 +675,10 @@ fn postgres_uri_port_is_valid(port: &str) -> bool {
         && port.parse::<u16>().is_ok_and(|port| port != 0)
 }
 
-fn postgres_keyword_dsn_uses_hardened_tcp_tls(dsn: &str) -> bool {
+fn postgres_keyword_dsn_uses_tcp_tls_modes(dsn: &str, allowed_modes: &[&[u8]]) -> bool {
     let bytes = dsn.as_bytes();
     let mut offset = 0_usize;
-    let mut verify_full = false;
+    let mut tls_mode = false;
     let mut host: Option<Vec<u8>> = None;
     while offset < bytes.len() {
         while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
@@ -657,16 +753,16 @@ fn postgres_keyword_dsn_uses_hardened_tcp_tls(dsn: &str) -> bool {
             return false;
         }
         if key == b"sslmode" {
-            if verify_full {
+            if tls_mode {
                 return false;
             }
             let Some(value) = decode_keyword_value(&bytes[value_start..value_end]) else {
                 return false;
             };
-            if value != b"verify-full" {
+            if !allowed_modes.contains(&value.as_slice()) {
                 return false;
             }
-            verify_full = true;
+            tls_mode = true;
         } else if key == b"host" {
             if host.is_some() {
                 return false;
@@ -679,7 +775,7 @@ fn postgres_keyword_dsn_uses_hardened_tcp_tls(dsn: &str) -> bool {
             return false;
         }
     }
-    verify_full && host.is_some_and(|host| postgres_hosts_are_explicit_tcp(&host))
+    tls_mode && host.is_some_and(|host| postgres_hosts_are_explicit_tcp(&host))
 }
 
 fn decode_keyword_value(value: &[u8]) -> Option<Vec<u8>> {
@@ -767,6 +863,10 @@ pub struct MySqlConnectionOptions {
     /// Built-in MySQL plugin variant.
     pub plugin: MySqlPlugin,
     /// Templated MySQL DSN.
+    ///
+    /// Use a TCP DSN with `tls=true`, or configure [`Self::tls_ca`]. The
+    /// acknowledged insecure-database feature permits `tls=skip-verify` but
+    /// does not permit plaintext transport.
     pub connection_url: SecretString,
     /// Root username.
     pub username: Option<String>,
@@ -842,7 +942,8 @@ pub struct CassandraConnectionOptions {
     pub password: SecretString,
     /// Cassandra port.
     pub port: Option<u16>,
-    /// Enables TLS.
+    /// Enables TLS. OpenBao defaults this to true when omitted; explicit false
+    /// is rejected by this crate.
     pub tls: Option<bool>,
     /// Disables TLS certificate verification.
     pub insecure_tls: Option<bool>,
@@ -911,7 +1012,8 @@ pub struct InfluxDbConnectionOptions {
     pub password: SecretString,
     /// InfluxDB port.
     pub port: Option<u16>,
-    /// Enables TLS.
+    /// Enables TLS. OpenBao defaults this to true when omitted; explicit false
+    /// is rejected by this crate.
     pub tls: Option<bool>,
     /// Disables TLS certificate verification.
     pub insecure_tls: Option<bool>,
@@ -968,7 +1070,7 @@ pub struct ValkeyConnectionOptions {
     pub username: String,
     /// Administrative password.
     pub password: SecretString,
-    /// Enables TLS.
+    /// Enables TLS. This crate requires true for typed Valkey configurations.
     pub tls: Option<bool>,
     /// Disables TLS certificate verification.
     pub insecure_tls: Option<bool>,
@@ -987,7 +1089,7 @@ impl ValkeyConnectionOptions {
             port,
             username: username.into(),
             password,
-            tls: None,
+            tls: Some(true),
             insecure_tls: None,
         }
     }
@@ -2068,8 +2170,8 @@ mod tests {
         DatabaseCredentialConfig, DatabaseCredentials, DatabaseList, DatabaseRole,
         DatabaseStaticCredentials, DatabaseStaticRole, InfluxDbConnectionOptions,
         MySqlConnectionOptions, MySqlPlugin, PostgreSqlConnectionOptions,
-        REVIEWED_BUILTIN_DATABASE_PLUGINS, ValkeyConnectionOptions,
-        postgres_dsn_uses_hardened_tcp_tls,
+        REVIEWED_BUILTIN_DATABASE_PLUGINS, ValkeyConnectionOptions, mysql_dsn_tcp_tls_mode,
+        postgres_dsn_requires_encrypted_tcp_tls, postgres_dsn_uses_hardened_tcp_tls,
     };
 
     fn test_secret(parts: &[&str]) -> SecretString {
@@ -2391,6 +2493,145 @@ mod tests {
     }
 
     #[test]
+    fn database_transport_parsers_reject_plaintext_and_ambiguous_dsns() {
+        for dsn in [
+            "postgresql://db.example/openbao",
+            "postgresql://db.example/openbao?sslmode=disable",
+            "host=db.example sslmode=disable dbname=openbao",
+            "host=/tmp sslmode=require dbname=openbao",
+        ] {
+            assert!(!postgres_dsn_requires_encrypted_tcp_tls(dsn));
+        }
+        for dsn in [
+            "postgresql://db.example/openbao?sslmode=require",
+            "postgresql://db.example/openbao?sslmode=verify-ca",
+            "host=db.example sslmode=verify-full dbname=openbao",
+        ] {
+            assert!(postgres_dsn_requires_encrypted_tcp_tls(dsn));
+        }
+
+        for dsn in [
+            "{{username}}:{{password}}@tcp(db.example:3306)/openbao",
+            "{{username}}:{{password}}@tcp(db.example:3306)/openbao?tls=false",
+            "{{username}}:{{password}}@unix(/run/mysql.sock)/openbao?tls=true",
+            "{{username}}:{{password}}@tcp(db.example:3306)/openbao?tls=true&tls=skip-verify",
+            "{{username}}:{{password}}@tcp(db.example:3306)/openbao?TLS=true",
+        ] {
+            assert!(mysql_dsn_tcp_tls_mode(dsn).is_none());
+        }
+        assert!(
+            mysql_dsn_tcp_tls_mode(
+                "{{username}}:{{password}}@tcp(db.example:3306)/openbao?tls=true"
+            )
+            .is_some()
+        );
+    }
+
+    #[test]
+    fn reviewed_builtin_database_plugins_always_reject_plaintext_transport() {
+        let postgres = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::PostgreSql(PostgreSqlConnectionOptions::new(
+                SecretString::from("postgresql://db.example/openbao?sslmode=disable"),
+            )),
+        );
+        let mysql = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::MySql(
+            MySqlConnectionOptions::new(
+                MySqlPlugin::MySql,
+                SecretString::from(
+                    "{{username}}:{{password}}@tcp(db.example:3306)/openbao?tls=false",
+                ),
+            ),
+        ));
+        let mut cassandra = CassandraConnectionOptions::new(
+            "db.example",
+            "admin",
+            test_secret(&["cassandra", "-transport-secret"]),
+        );
+        cassandra.tls = Some(false);
+        let cassandra = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::Cassandra(cassandra),
+        );
+        let mut influx = InfluxDbConnectionOptions::new(
+            "influx.example",
+            "admin",
+            test_secret(&["influx", "-transport-secret"]),
+        );
+        influx.tls = Some(false);
+        let influx =
+            DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::InfluxDb(influx));
+        let mut valkey = ValkeyConnectionOptions::new(
+            "valkey.example",
+            6379,
+            "admin",
+            test_secret(&["valkey", "-transport-secret"]),
+        );
+        valkey.tls = Some(false);
+        let valkey =
+            DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::Valkey(valkey));
+
+        for config in [postgres, mysql, cassandra, influx, valkey] {
+            let error = config
+                .validate()
+                .err()
+                .unwrap_or_else(|| panic!("plaintext database transport unexpectedly accepted"));
+            assert!(error.to_string().contains("encrypted TCP transport"));
+            assert!(!error.to_string().contains("transport-secret"));
+        }
+    }
+
+    #[test]
+    fn reviewed_builtin_database_plugins_accept_verified_tls() {
+        let postgres = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::PostgreSql(PostgreSqlConnectionOptions::new(
+                SecretString::from("postgresql://db.example/openbao?sslmode=verify-full"),
+            )),
+        );
+        let mysql = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::MySql(
+            MySqlConnectionOptions::new(
+                MySqlPlugin::MySql,
+                SecretString::from(
+                    "{{username}}:{{password}}@tcp(db.example:3306)/openbao?tls=true",
+                ),
+            ),
+        ));
+        let mut mysql_with_ca = MySqlConnectionOptions::new(
+            MySqlPlugin::MySql,
+            SecretString::from("{{username}}:{{password}}@tcp(db.example:3306)/openbao"),
+        );
+        mysql_with_ca.tls_ca =
+            Some("-----BEGIN CERTIFICATE-----\nreviewed-ca\n-----END CERTIFICATE-----".to_owned());
+        let mysql_with_ca = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::MySql(mysql_with_ca),
+        );
+        let cassandra = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::Cassandra(CassandraConnectionOptions::new(
+                "db.example",
+                "admin",
+                test_secret(&["cassandra", "-verified-secret"]),
+            )),
+        );
+        let influx = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::InfluxDb(
+            InfluxDbConnectionOptions::new(
+                "influx.example",
+                "admin",
+                test_secret(&["influx", "-verified-secret"]),
+            ),
+        ));
+        let valkey = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::Valkey(
+            ValkeyConnectionOptions::new(
+                "valkey.example",
+                6379,
+                "admin",
+                test_secret(&["valkey", "-verified-secret"]),
+            ),
+        ));
+
+        for config in [postgres, mysql, mysql_with_ca, cassandra, influx, valkey] {
+            assert!(config.validate().is_ok());
+        }
+    }
+
+    #[test]
     #[cfg(not(feature = "insecure-database-tls-acknowledged"))]
     fn postgres_dsn_tls_bypass_requires_acknowledgement() {
         let config =
@@ -2411,13 +2652,51 @@ mod tests {
 
     #[test]
     #[cfg(feature = "insecure-database-tls-acknowledged")]
-    fn acknowledged_postgres_dsn_may_omit_verify_full() {
+    fn acknowledged_database_tls_may_skip_peer_verification_but_not_encryption() {
         let config = DatabaseConnectionConfig::builtin(
             DatabaseBuiltinConnectionConfig::PostgreSql(PostgreSqlConnectionOptions::new(
-                SecretString::from("postgresql://db.example/openbao"),
+                SecretString::from("postgresql://db.example/openbao?sslmode=require"),
             )),
         );
         assert!(config.validate().is_ok());
+
+        let config = DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::MySql(
+            MySqlConnectionOptions::new(
+                MySqlPlugin::MySql,
+                SecretString::from(
+                    "{{username}}:{{password}}@tcp(db.example:3306)/openbao?tls=skip-verify",
+                ),
+            ),
+        ));
+        assert!(config.validate().is_ok());
+
+        let mut cassandra = CassandraConnectionOptions::new(
+            "db.example",
+            "admin",
+            test_secret(&["cassandra", "-acknowledged-secret"]),
+        );
+        cassandra.insecure_tls = Some(true);
+        let cassandra = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::Cassandra(cassandra),
+        );
+        assert!(cassandra.validate().is_ok());
+
+        let mut influx = InfluxDbConnectionOptions::new(
+            "influx.example",
+            "admin",
+            test_secret(&["influx", "-acknowledged-secret"]),
+        );
+        influx.insecure_tls = Some(true);
+        let influx =
+            DatabaseConnectionConfig::builtin(DatabaseBuiltinConnectionConfig::InfluxDb(influx));
+        assert!(influx.validate().is_ok());
+
+        let config = DatabaseConnectionConfig::builtin(
+            DatabaseBuiltinConnectionConfig::PostgreSql(PostgreSqlConnectionOptions::new(
+                SecretString::from("postgresql://db.example/openbao?sslmode=disable"),
+            )),
+        );
+        assert!(config.validate().is_err());
     }
 
     #[test]

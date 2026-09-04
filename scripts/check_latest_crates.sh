@@ -101,6 +101,7 @@ check_manifest_crate_version getrandom
 check_manifest_crate_version openssl
 check_manifest_crate_version rand
 check_manifest_crate_version reqwest
+check_manifest_crate_version rustix
 check_manifest_crate_version secrecy
 check_manifest_crate_version serde
 check_manifest_crate_version serde_json
@@ -108,6 +109,7 @@ check_manifest_crate_version subtle
 check_manifest_crate_version time
 check_manifest_crate_version tokio
 check_manifest_crate_version tracing
+check_manifest_crate_version windows-sys
 check_manifest_crate_version sanitization
 
 echo "checking CI cargo tool versions"

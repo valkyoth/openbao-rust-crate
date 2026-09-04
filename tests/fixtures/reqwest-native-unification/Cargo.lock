@@ -638,12 +638,14 @@ version = "2.1.5"
 dependencies = [
  "getrandom 0.4.3",
  "reqwest",
+ "rustix",
  "sanitization",
  "secrecy",
  "serde",
  "serde_json",
  "subtle",
  "url",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

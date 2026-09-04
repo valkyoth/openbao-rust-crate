@@ -29,6 +29,9 @@ include real tokens, private keys, unseal material, or production secrets.
   cryptographic dependencies can contain unsafe Rust, FFI, assembly, or native
   code and remain part of the trusted computing base.
 - HTTPS, TLS verification, TLS 1.3, and disabled redirects are the defaults.
+- Credential-bearing external service configuration fails closed on plaintext
+  transport. Typed OIDC/JWKS, Kubernetes, RabbitMQ, LDAP/Kerberos LDAP, and
+  reviewed built-in database connections enforce their documented TLS policy.
 - TLS 1.2, native TLS, raw transports, operator operations, software Transit
   import wrapping, and other high-risk capabilities require explicit feature
   acknowledgements.
@@ -36,6 +39,8 @@ include real tokens, private keys, unseal material, or production secrets.
   types and redacted diagnostics.
 - Paths, headers, durations, collection sizes, request bodies, and response
   bodies are validated or bounded before use.
+- Environment CA certificates must be regular, non-link files no larger than
+  1 MiB and are opened with platform-specific link protections.
 - OpenBao compatibility is selected through immutable, fail-closed profiles;
   unknown newer servers are rejected unless explicitly acknowledged.
 - Third-party GitHub Actions are pinned to immutable commit SHAs, dependencies

@@ -4,6 +4,8 @@ set -eu
 grep -q '^version = "2.1.5"$' Cargo.toml
 grep -q 'base64-ng = { version = "2.0.3"' Cargo.toml
 grep -q 'sanitization = { version = "2.0.4"' Cargo.toml
+grep -q 'rustix = { version = "1.1.4"' Cargo.toml
+grep -q 'windows-sys = { version = "0.61.2"' Cargo.toml
 grep -q 'channel = "1.98.1"' rust-toolchain.toml
 grep -q 'openbao = { path = "..", version = "=2.1.5"' fuzz/Cargo.toml
 grep -q 'openbao = { path = "../../..", version = "=2.1.5"' \

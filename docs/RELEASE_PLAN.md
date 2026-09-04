@@ -889,10 +889,15 @@ Stop criteria:
 - all eleven CodeQL findings open at the start of the maintenance pass are
   removed without suppressions: nonce and password fixtures are runtime-built,
   and secret-bearing results are not formatted into failure diagnostics;
+- credential-bearing OIDC/JWKS, Kubernetes, RabbitMQ, LDAP/Kerberos LDAP, and
+  reviewed built-in database configurations fail closed on plaintext backend
+  transport, with regressions under default and acknowledgement features;
+- environment CA certificate loading rejects links, non-regular files, and
+  files larger than 1 MiB without blocking on Unix FIFOs or disclosing paths;
 - all 24 exact OpenBao profiles retain their `2.1.4` routes, field rules, and
   security classifications and pass the digest-pinned compatibility matrix;
 - README, migration, stability, changelog, and release notes describe the same
-  maintenance-only boundary;
+  maintenance and transport-hardening boundary;
 - `scripts/release_2_1_5_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.5`.

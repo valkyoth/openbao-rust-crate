@@ -14,7 +14,10 @@ use crate::{
         Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_map_or_default,
         deserialize_bounded_string_vec,
     },
-    validation::{validate_duration_string, validate_optional_ldap_tls_version},
+    validation::{
+        validate_duration_string, validate_ldap_urls_use_encrypted_transport,
+        validate_optional_ldap_tls_version,
+    },
 };
 
 /// Handle for LDAP auth login at a configured mount.
@@ -35,6 +38,9 @@ pub struct LdapAuthAdmin<'a> {
 #[derive(Clone, Default, Deserialize)]
 pub struct LdapAuthConfig {
     /// LDAP server URL or comma-separated URL list.
+    ///
+    /// Use `ldaps://`, or set `starttls=true`. Bind credentials and client TLS
+    /// keys may never be sent over plaintext or unverified LDAP transport.
     #[serde(default)]
     pub url: Option<String>,
     /// Whether local user/group policy mapping names are case-sensitive.
@@ -280,8 +286,12 @@ impl LdapAuthConfig {
                 "LDAP auth insecure_tls=true must not be combined with bindpass or client_tls_key because credentials would cross an unverified TLS connection".into(),
             ));
         }
-        #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
-        validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "LDAP auth")?;
+        if cfg!(not(feature = "insecure-ldap-tls-acknowledged"))
+            || self.bindpass.is_some()
+            || self.client_tls_key.is_some()
+        {
+            validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "LDAP auth")?;
+        }
         crate::validation::validate_cidr_list(
             &self.token_bound_cidrs,
             "LDAP auth token_bound_cidrs",
@@ -833,35 +843,6 @@ fn validate_ldap_path_name(name: &str) -> Result<&str> {
     Ok(name)
 }
 
-#[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
-fn validate_ldap_urls_use_encrypted_transport(
-    urls: &Option<String>,
-    starttls: Option<bool>,
-    label: &'static str,
-) -> Result<()> {
-    let Some(urls) = urls else {
-        return Ok(());
-    };
-    if starttls == Some(true) {
-        return Ok(());
-    }
-    for url in urls.split(',') {
-        let url = url.trim();
-        if url.is_empty() {
-            continue;
-        }
-        if !url
-            .get(..8)
-            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("ldaps://"))
-        {
-            return Err(Error::InvalidParameter(format!(
-                "{label} URL must use ldaps:// or starttls=true unless insecure LDAP TLS is explicitly acknowledged"
-            )));
-        }
-    }
-    Ok(())
-}
-
 fn deserialize_optional_string_or_u64<'de, D>(
     deserializer: D,
 ) -> core::result::Result<Option<String>, D::Error>
@@ -1018,6 +999,7 @@ mod tests {
     #[test]
     fn ldap_auth_config_validates_tls_duration_and_cidr_inputs() {
         let mut config = LdapAuthConfig::new()
+            .with_url("ldaps://ldap.example.test")
             .with_token_bound_cidr("10.0.0.0/8")
             .unwrap_or_else(|error| panic!("{error}"));
         config.tls_min_version = Some("tls12".to_owned());

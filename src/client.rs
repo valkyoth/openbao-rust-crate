@@ -9,9 +9,11 @@ use core::{
     time::Duration,
 };
 use std::{
-    env, fs,
-    io::{self, Write},
+    env,
+    fs::File,
+    io::{self, Read, Write},
     net::IpAddr,
+    path::Path,
     sync::{Arc, Mutex},
 };
 #[cfg(feature = "allow-weak-jitter-fallback-acknowledged")]
@@ -60,6 +62,7 @@ const DEFAULT_RETRY_JITTER_PERCENT: u8 = 20;
 const MAX_USER_AGENT_BYTES: usize = 512;
 const DEFAULT_MAX_AUTH_TOKEN_BYTES: usize = 16 * 1024;
 const ABSOLUTE_MAX_AUTH_TOKEN_BYTES: usize = 1024 * 1024;
+const MAX_CA_CERTIFICATE_FILE_BYTES: u64 = 1024 * 1024;
 const MAX_COMPATIBILITY_HEALTH_BYTES: usize = 64 * 1024;
 const MAX_COMPATIBILITY_WAITERS: usize = 4096;
 const MAX_ENDPOINT_ID_BYTES: usize = 192;
@@ -1260,6 +1263,7 @@ impl Client<Unauthenticated> {
         feature = "approle",
         feature = "cert-auth",
         feature = "jwt-auth",
+        feature = "kerberos-auth",
         feature = "kubernetes-auth",
         feature = "ldap-auth",
         feature = "radius-auth",
@@ -3700,6 +3704,82 @@ fn is_cleartext_url(url: &Url) -> bool {
     url.scheme() != "https"
 }
 
+fn read_configured_ca_certificate_file(path: &Path) -> Result<Vec<u8>> {
+    let file = open_ca_certificate_file(path).map_err(|_| {
+        Error::InvalidTlsConfig("failed to read the configured CA certificate file".into())
+    })?;
+    let metadata = file.metadata().map_err(|_| {
+        Error::InvalidTlsConfig("failed to read the configured CA certificate file".into())
+    })?;
+    if !metadata.is_file() || metadata.len() > MAX_CA_CERTIFICATE_FILE_BYTES {
+        return Err(Error::InvalidTlsConfig(
+            "configured CA certificate must be a regular file no larger than 1 MiB".into(),
+        ));
+    }
+
+    let capacity = usize::try_from(metadata.len()).unwrap_or(0);
+    let mut pem = Vec::with_capacity(capacity);
+    file.take(MAX_CA_CERTIFICATE_FILE_BYTES + 1)
+        .read_to_end(&mut pem)
+        .map_err(|_| {
+            Error::InvalidTlsConfig("failed to read the configured CA certificate file".into())
+        })?;
+    if u64::try_from(pem.len()).unwrap_or(u64::MAX) > MAX_CA_CERTIFICATE_FILE_BYTES {
+        return Err(Error::InvalidTlsConfig(
+            "configured CA certificate must be a regular file no larger than 1 MiB".into(),
+        ));
+    }
+    Ok(pem)
+}
+
+#[cfg(unix)]
+fn open_ca_certificate_file(path: &Path) -> io::Result<File> {
+    use rustix::fs::{Mode, OFlags};
+
+    rustix::fs::open(
+        path,
+        OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK,
+        Mode::empty(),
+    )
+    .map(File::from)
+    .map_err(io::Error::from)
+}
+
+#[cfg(windows)]
+fn open_ca_certificate_file(path: &Path) -> io::Result<File> {
+    use std::{
+        fs::OpenOptions,
+        os::windows::fs::{MetadataExt, OpenOptionsExt},
+    };
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_ATTRIBUTE_REPARSE_POINT, FILE_FLAG_OPEN_REPARSE_POINT, FILE_FLAG_SEQUENTIAL_SCAN,
+    };
+
+    let file = OpenOptions::new()
+        .read(true)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_SEQUENTIAL_SCAN)
+        .open(path)?;
+    if file.metadata()?.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "CA certificate path must not be a reparse point",
+        ));
+    }
+    Ok(file)
+}
+
+#[cfg(not(any(unix, windows)))]
+fn open_ca_certificate_file(path: &Path) -> io::Result<File> {
+    let metadata = std::fs::symlink_metadata(path)?;
+    if metadata.file_type().is_symlink() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "CA certificate path must not be a symbolic link",
+        ));
+    }
+    File::open(path)
+}
+
 fn openbao_config_from_env_lookup<F>(mut lookup: F) -> Result<OpenBaoConfig>
 where
     F: FnMut(&str) -> Option<String>,
@@ -3719,9 +3799,7 @@ where
 
     let cert = match first_env_value(&mut lookup, CA_CERT_ENV_KEYS) {
         Some((_key, path)) => {
-            let pem = fs::read(&path).map_err(|_| {
-                Error::InvalidTlsConfig("failed to read the configured CA certificate file".into())
-            })?;
+            let pem = read_configured_ca_certificate_file(Path::new(&path))?;
             Some(Certificate::from_pem(&pem).map_err(|_| {
                 Error::InvalidTlsConfig("failed to parse the configured CA certificate file".into())
             })?)
@@ -4065,9 +4143,11 @@ mod tests {
 
     use std::{
         collections::BTreeMap,
+        fs,
         io::{Read, Write},
         net::TcpListener,
-        sync::atomic::{AtomicBool, Ordering},
+        path::PathBuf,
+        sync::atomic::{AtomicBool, AtomicU64, Ordering},
         thread,
     };
     #[cfg(feature = "sensitive-http-test-only")]
@@ -4090,10 +4170,11 @@ mod tests {
 
     use super::{
         ABSOLUTE_MAX_AUTH_TOKEN_BYTES, Client, DEFAULT_MAX_AUTH_TOKEN_BYTES, HeaderMode,
-        OpenBaoConfig, RegisteredRouteBinding, env_bool, is_cleartext_url,
-        openbao_config_from_env_lookup, openbao_token_from_env_lookup,
-        resolve_openbao_endpoint_for_profile, route_template_matches, validate_token_for_header,
-        validate_token_value_for_header, validate_user_agent,
+        MAX_CA_CERTIFICATE_FILE_BYTES, OpenBaoConfig, RegisteredRouteBinding, env_bool,
+        is_cleartext_url, openbao_config_from_env_lookup, openbao_token_from_env_lookup,
+        read_configured_ca_certificate_file, resolve_openbao_endpoint_for_profile,
+        route_template_matches, validate_token_for_header, validate_token_value_for_header,
+        validate_user_agent,
     };
     use crate::compatibility::{OpenBaoEndpointSpec, OpenBaoEndpointVariant};
 
@@ -4105,6 +4186,15 @@ mod tests {
             OpenBaoVersion::new(2, 6, 0),
         )],
     );
+    static CA_FILE_TEST_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    fn ca_test_path(name: &str) -> PathBuf {
+        let sequence = CA_FILE_TEST_COUNTER.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "openbao-ca-test-{}-{sequence}-{name}",
+            std::process::id()
+        ))
+    }
 
     #[test]
     fn root_token_route_selection_is_exact_and_does_not_fallback() {
@@ -5507,6 +5597,69 @@ mod tests {
             Err(error) => error,
         };
         assert!(matches!(error, Error::InvalidParameter(_)));
+    }
+
+    #[test]
+    fn configured_ca_file_enforces_regular_file_and_size_bounds() {
+        let exact = ca_test_path("exact.pem");
+        let oversized = ca_test_path("oversized.pem");
+        let directory = ca_test_path("directory");
+        fs::write(
+            &exact,
+            vec![b'A'; usize::try_from(MAX_CA_CERTIFICATE_FILE_BYTES).unwrap_or(0)],
+        )
+        .unwrap_or_else(|error| panic!("failed to write exact-limit fixture: {error}"));
+        fs::write(
+            &oversized,
+            vec![b'B'; usize::try_from(MAX_CA_CERTIFICATE_FILE_BYTES + 1).unwrap_or(0)],
+        )
+        .unwrap_or_else(|error| panic!("failed to write oversized fixture: {error}"));
+        fs::create_dir(&directory)
+            .unwrap_or_else(|error| panic!("failed to create directory fixture: {error}"));
+
+        let exact_bytes = read_configured_ca_certificate_file(&exact)
+            .unwrap_or_else(|error| panic!("exact-limit CA file was rejected: {error}"));
+        assert_eq!(
+            u64::try_from(exact_bytes.len()).unwrap_or(u64::MAX),
+            MAX_CA_CERTIFICATE_FILE_BYTES
+        );
+        assert!(read_configured_ca_certificate_file(&oversized).is_err());
+        assert!(read_configured_ca_certificate_file(&directory).is_err());
+
+        fs::remove_file(&exact)
+            .unwrap_or_else(|error| panic!("failed to remove exact-limit fixture: {error}"));
+        fs::remove_file(&oversized)
+            .unwrap_or_else(|error| panic!("failed to remove oversized fixture: {error}"));
+        fs::remove_dir(&directory)
+            .unwrap_or_else(|error| panic!("failed to remove directory fixture: {error}"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn configured_ca_file_rejects_symlinks_and_fifos_without_blocking() {
+        use std::os::unix::fs::symlink;
+
+        use rustix::fs::{CWD, Mode};
+
+        let target = ca_test_path("target.pem");
+        let link = ca_test_path("link.pem");
+        let fifo = ca_test_path("input.fifo");
+        fs::write(&target, b"test CA")
+            .unwrap_or_else(|error| panic!("failed to write symlink target: {error}"));
+        symlink(&target, &link)
+            .unwrap_or_else(|error| panic!("failed to create symlink fixture: {error}"));
+        rustix::fs::mkfifoat(CWD, &fifo, Mode::RUSR | Mode::WUSR)
+            .unwrap_or_else(|error| panic!("failed to create FIFO fixture: {error}"));
+
+        assert!(read_configured_ca_certificate_file(&link).is_err());
+        assert!(read_configured_ca_certificate_file(&fifo).is_err());
+
+        fs::remove_file(&link)
+            .unwrap_or_else(|error| panic!("failed to remove symlink fixture: {error}"));
+        fs::remove_file(&fifo)
+            .unwrap_or_else(|error| panic!("failed to remove FIFO fixture: {error}"));
+        fs::remove_file(&target)
+            .unwrap_or_else(|error| panic!("failed to remove symlink target: {error}"));
     }
 
     #[test]

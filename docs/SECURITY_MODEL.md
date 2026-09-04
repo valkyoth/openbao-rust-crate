@@ -100,20 +100,30 @@ the authoritative vulnerability-reporting policy distributed with the crate.
   the caller-selected raw route exists for that version.
 - Base URLs are origins only. User credentials, application paths, query
   strings, and fragments are rejected before a client is built.
+- Typed JWT/OIDC discovery and JWKS URLs, Kubernetes API hosts, and RabbitMQ
+  management endpoints must be absolute HTTPS URLs without embedded
+  credentials or fragments. This validates the OpenBao-to-service hop, not
+  only the application-to-OpenBao hop.
 - The selected reqwest TLS backend is set explicitly from this crate's feature
   policy so dependency feature unification cannot silently replace Rustls with
   native TLS.
 - Configured certificate revocation lists fail closed unless Rustls is the
   selected backend. Enabling acknowledged native TLS alongside Rustls selects
   native TLS and therefore rejects CRL-bearing client configurations.
-- Reviewed built-in database plugins require typed connection options. Without
-  `insecure-database-tls-acknowledged`, PostgreSQL DSNs must explicitly resolve
-  to one unambiguous, case-exact `sslmode=verify-full` and an effective TCP
-  host. Unix-domain sockets, service-file indirection, duplicate host/security
-  keys, malformed quoting, empty hosts, unsupported URI syntax, or weaker modes
-  fail locally before credential-bearing request serialization. This prevents
-  pgx from silently bypassing TLS because a URI query or keyword DSN selected a
-  local socket.
+- Reviewed built-in database plugins require typed connection options and
+  encrypted TCP transport. PostgreSQL DSNs must resolve to an effective TCP
+  host and `sslmode=require`, `verify-ca`, or `verify-full`; MySQL-family DSNs
+  must select `tls=true`/`tls=skip-verify` or provide a CA; Cassandra and
+  InfluxDB retain OpenBao's secure TLS-on default; and Valkey must explicitly
+  enable TLS. Without `insecure-database-tls-acknowledged`, full peer
+  verification is also required. The acknowledgement permits encrypted but
+  incompletely verified transport, never plaintext. Unix-domain sockets,
+  service-file indirection, duplicate security keys, malformed values, and
+  explicit TLS disablement fail before credential-bearing serialization.
+- Environment CA certificate aliases are limited to regular files no larger
+  than 1 MiB. Unix readers use nonblocking, no-follow opens so FIFOs and
+  symlinks fail; Windows readers open the path itself and reject reparse points.
+  A second post-open size check bounds races and error messages omit paths.
 - Typed fields whose availability changes between locked OpenBao profiles are
   validated before secret payload construction. A selected unsupported field
   fails with a secret-free endpoint, field, and version error; it is never
@@ -419,7 +429,8 @@ protection at the infrastructure layer.
 LDAP `insecure_tls=true` is rejected unless
 `insecure-ldap-tls-acknowledged` is enabled. Even with that acknowledgment, the
 crate rejects `insecure_tls=true` when LDAP bind credentials or client private
-key material would cross an unverified TLS connection.
+key material would cross an unverified TLS connection. LDAP and Kerberos LDAP
+bind configurations must use `ldaps://` or StartTLS.
 
 Transit SHA-1 selection is unavailable unless
 `allow-sha1-acknowledged` is enabled. Do not enable that feature for new or
