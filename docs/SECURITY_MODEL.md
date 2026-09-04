@@ -430,7 +430,9 @@ LDAP `insecure_tls=true` is rejected unless
 `insecure-ldap-tls-acknowledged` is enabled. Even with that acknowledgment, the
 crate rejects `insecure_tls=true` when LDAP bind credentials or client private
 key material would cross an unverified TLS connection. LDAP and Kerberos LDAP
-bind configurations must use `ldaps://` or StartTLS.
+bind configurations must use `ldaps://` or StartTLS. StartTLS configurations
+with explicit URLs require bounded, credential-free `ldap://` URLs; the SDK
+does not expose LDAP URLs through configuration `Debug` output.
 
 Transit SHA-1 selection is unavailable unless
 `allow-sha1-acknowledged` is enabled. Do not enable that feature for new or

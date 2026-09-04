@@ -15,8 +15,7 @@ use crate::{
         deserialize_bounded_string_vec,
     },
     validation::{
-        validate_duration_string, validate_ldap_urls_use_encrypted_transport,
-        validate_optional_ldap_tls_version,
+        validate_duration_string, validate_ldap_urls, validate_optional_ldap_tls_version,
     },
 };
 
@@ -286,12 +285,15 @@ impl LdapAuthConfig {
                 "LDAP auth insecure_tls=true must not be combined with bindpass or client_tls_key because credentials would cross an unverified TLS connection".into(),
             ));
         }
-        if cfg!(not(feature = "insecure-ldap-tls-acknowledged"))
+        let require_encrypted_transport = cfg!(not(feature = "insecure-ldap-tls-acknowledged"))
             || self.bindpass.is_some()
-            || self.client_tls_key.is_some()
-        {
-            validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "LDAP auth")?;
-        }
+            || self.client_tls_key.is_some();
+        validate_ldap_urls(
+            &self.url,
+            self.starttls,
+            "LDAP auth",
+            require_encrypted_transport,
+        )?;
         crate::validation::validate_cidr_list(
             &self.token_bound_cidrs,
             "LDAP auth token_bound_cidrs",
@@ -321,7 +323,7 @@ impl fmt::Debug for LdapAuthConfig {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("LdapAuthConfig")
-            .field("url", &self.url)
+            .field("url", &self.url.as_ref().map(|_| "<redacted-url>"))
             .field("case_sensitive_names", &self.case_sensitive_names)
             .field("connection_timeout", &self.connection_timeout)
             .field("request_timeout", &self.request_timeout)
@@ -977,14 +979,21 @@ mod tests {
         config.insecure_tls = Some(true);
 
         assert!(config.validate().is_err());
+
+        let url_secret = ["ldap-uri", "-credential"].concat();
+        let config =
+            LdapAuthConfig::new().with_url(format!("ldap://test:{url_secret}@ldap.example.test"));
+        assert!(config.validate().is_err());
     }
 
     #[test]
     fn ldap_auth_config_debug_redacts_secret_fields() {
+        let url_secret = ["ldap-uri", "-credential"].concat();
         let mut config = LdapAuthConfig::new().with_bind(
             "cn=openbao,dc=example,dc=com",
             test_secret(&["bind", "-pass"]),
         );
+        config.url = Some(format!("ldap://test:{url_secret}@ldap.example.test"));
         config.certificate =
             Some("-----BEGIN CERTIFICATE-----\nca\n-----END CERTIFICATE-----".to_owned());
         config.client_tls_cert =
@@ -993,6 +1002,7 @@ mod tests {
         assert!(debug.contains("<redacted>"));
         assert!(debug.contains("<redacted-pem>"));
         assert!(!debug.contains("bind-pass"));
+        assert!(!debug.contains(&url_secret));
         assert!(!debug.contains("BEGIN CERTIFICATE"));
     }
 

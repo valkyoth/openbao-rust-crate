@@ -25,7 +25,8 @@ configuration now fails before request serialization:
 - replace HTTP OIDC discovery, JWKS, Kubernetes, and RabbitMQ URLs with
   absolute HTTPS URLs; keep credentials in their dedicated typed fields;
 - configure LDAP and Kerberos LDAP with `ldaps://` or `starttls=true`, and do
-  not combine bind credentials or a client key with `insecure_tls=true`;
+  not combine bind credentials or a client key with `insecure_tls=true`.
+  Explicit StartTLS URLs must use credential-free `ldap://` syntax;
 - configure reviewed database plugins with encrypted TCP transport. Use
   PostgreSQL `sslmode=verify-full`, MySQL `tls=true` or `tls_ca`, Cassandra and
   InfluxDB TLS defaults/`tls=true`, and Valkey `tls=true`. The acknowledged

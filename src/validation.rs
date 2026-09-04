@@ -92,19 +92,26 @@ fn valid_endpoint_port(port: &str) -> bool {
         && port.parse::<u16>().is_ok_and(|port| port != 0)
 }
 
-pub(crate) fn validate_ldap_urls_use_encrypted_transport(
+pub(crate) fn validate_ldap_urls(
     urls: &Option<String>,
     starttls: Option<bool>,
     label: &'static str,
+    require_encrypted_transport: bool,
 ) -> Result<()> {
-    if starttls == Some(true) {
-        return Ok(());
-    }
+    let uses_starttls = starttls == Some(true);
     let Some(urls) = urls else {
+        if uses_starttls || !require_encrypted_transport {
+            return Ok(());
+        }
         return Err(Error::InvalidParameter(format!(
             "{label} URL must use ldaps:// or starttls=true"
         )));
     };
+    if urls.len() > MAX_EXTERNAL_ENDPOINT_BYTES {
+        return Err(Error::InvalidParameter(format!(
+            "{label} URL list exceeds the endpoint length limit"
+        )));
+    }
     let mut found = false;
     for value in urls.split(',') {
         let value = value.trim();
@@ -112,22 +119,25 @@ pub(crate) fn validate_ldap_urls_use_encrypted_transport(
             continue;
         }
         found = true;
-        if value.len() > MAX_EXTERNAL_ENDPOINT_BYTES {
-            return Err(Error::InvalidParameter(format!(
-                "{label} URL exceeds the endpoint length limit"
-            )));
-        }
         let endpoint = Url::parse(value).map_err(|_| {
             Error::InvalidParameter(format!("{label} URL must be an absolute LDAP URL"))
         })?;
-        if endpoint.scheme() != "ldaps"
+        let scheme_is_safe = if uses_starttls {
+            endpoint.scheme() == "ldap"
+        } else if require_encrypted_transport {
+            endpoint.scheme() == "ldaps"
+        } else {
+            matches!(endpoint.scheme(), "ldap" | "ldaps")
+        };
+        if !scheme_is_safe
             || endpoint.host_str().is_none()
+            || endpoint.port() == Some(0)
             || !endpoint.username().is_empty()
             || endpoint.password().is_some()
             || endpoint.fragment().is_some()
         {
             return Err(Error::InvalidParameter(format!(
-                "{label} URL must use ldaps:// without credentials or a fragment, or starttls=true"
+                "{label} URL is not safe for the selected LDAP TLS mode"
             )));
         }
     }
@@ -311,7 +321,7 @@ mod tests {
     use super::{
         MAX_EXTERNAL_ENDPOINT_BYTES, MAX_JSON_OBJECT_BYTES, validate_cidr,
         validate_duration_string, validate_https_endpoint, validate_json_object_string,
-        validate_ldap_urls_use_encrypted_transport, validate_secret_https_endpoint,
+        validate_ldap_urls, validate_secret_https_endpoint,
     };
 
     #[test]
@@ -356,41 +366,86 @@ mod tests {
             Some("ldaps://ldap.example.test".to_owned()),
             Some("ldaps://ldap-a.example.test, ldaps://ldap-b.example.test:636".to_owned()),
         ] {
-            assert!(
-                validate_ldap_urls_use_encrypted_transport(&urls, None, "LDAP endpoint").is_ok()
-            );
+            assert!(validate_ldap_urls(&urls, None, "LDAP endpoint", true).is_ok());
         }
         assert!(
-            validate_ldap_urls_use_encrypted_transport(
+            validate_ldap_urls(
                 &Some("ldap://ldap.example.test".to_owned()),
                 Some(true),
                 "LDAP endpoint",
+                true,
             )
             .is_ok()
         );
+        assert!(validate_ldap_urls(&None, None, "LDAP endpoint", false).is_ok());
+        assert!(
+            validate_ldap_urls(
+                &Some("http://ldap.example.test".to_owned()),
+                None,
+                "LDAP endpoint",
+                false,
+            )
+            .is_err()
+        );
+        assert!(validate_ldap_urls(&None, Some(true), "LDAP endpoint", true).is_ok());
+        assert!(
+            validate_ldap_urls(
+                &Some("ldap://ldap.example.test".to_owned()),
+                None,
+                "LDAP endpoint",
+                false,
+            )
+            .is_ok()
+        );
+        for urls in [
+            Some(String::new()),
+            Some("ldaps://ldap.example.test".to_owned()),
+            Some("http://ldap.example.test".to_owned()),
+            Some("ldap://ldap.example.test/#fragment".to_owned()),
+            Some("ldap://ldap.example.test:0".to_owned()),
+        ] {
+            assert!(validate_ldap_urls(&urls, Some(true), "LDAP endpoint", true,).is_err());
+        }
         for urls in [
             None,
             Some(String::new()),
             Some("ldap://ldap.example.test".to_owned()),
             Some("ldaps://ldap.example.test/#fragment".to_owned()),
         ] {
-            assert!(
-                validate_ldap_urls_use_encrypted_transport(&urls, None, "LDAP endpoint").is_err()
-            );
+            assert!(validate_ldap_urls(&urls, None, "LDAP endpoint", true).is_err());
         }
         let credential_url = format!(
             "ldaps://{}:{}@ldap.example.test",
             ["test", "-user"].concat(),
             ["test", "-password"].concat()
         );
+        for require_encrypted_transport in [false, true] {
+            assert!(
+                validate_ldap_urls(
+                    &Some(credential_url.clone()),
+                    None,
+                    "LDAP endpoint",
+                    require_encrypted_transport,
+                )
+                .is_err()
+            );
+        }
+        let starttls_credential_url = format!(
+            "ldap://{}:{}@ldap.example.test",
+            ["test", "-user"].concat(),
+            ["test", "-password"].concat()
+        );
         assert!(
-            validate_ldap_urls_use_encrypted_transport(
-                &Some(credential_url),
-                None,
-                "LDAP endpoint"
+            validate_ldap_urls(
+                &Some(starttls_credential_url),
+                Some(true),
+                "LDAP endpoint",
+                true,
             )
             .is_err()
         );
+        let oversized = format!("ldap://{}", "a".repeat(MAX_EXTERNAL_ENDPOINT_BYTES));
+        assert!(validate_ldap_urls(&Some(oversized), Some(true), "LDAP endpoint", true,).is_err());
     }
 
     #[test]

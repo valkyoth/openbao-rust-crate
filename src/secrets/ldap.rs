@@ -15,7 +15,7 @@ use crate::{
     Authenticated, Client, Error, Result,
     path::{validate_endpoint_path, validate_mount_path},
     response::{Empty, ListEntries, ResponseEnvelope, deserialize_bounded_string_vec},
-    validation::{validate_duration_string, validate_ldap_urls_use_encrypted_transport},
+    validation::{validate_duration_string, validate_ldap_urls},
 };
 
 /// Handle for a mounted LDAP secrets engine.
@@ -128,7 +128,7 @@ impl LdapConfig {
                 "ldap insecure_tls=true must not be combined with bindpass because credentials would cross an unverified TLS connection".into(),
             ));
         }
-        validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "LDAP")?;
+        validate_ldap_urls(&self.url, self.starttls, "LDAP", true)?;
         if let Some(value) = &self.connection_timeout {
             validate_duration_or_seconds(value, "LDAP connection_timeout", true)?;
         }
@@ -145,7 +145,7 @@ impl fmt::Debug for LdapConfig {
             .debug_struct("LdapConfig")
             .field("binddn", &self.binddn)
             .field("bindpass", &"<redacted>")
-            .field("url", &self.url)
+            .field("url", &self.url.as_ref().map(|_| "<redacted-url>"))
             .field("password_policy", &self.password_policy)
             .field("schema", &self.schema)
             .field("userdn", &self.userdn)
@@ -1178,13 +1178,16 @@ mod tests {
 
     #[test]
     fn ldap_debug_redacts_secret_fields() {
-        let config = LdapConfig::new(
+        let url_secret = ["ldap-uri", "-credential"].concat();
+        let mut config = LdapConfig::new(
             "cn=openbao,ou=Users,dc=example,dc=com",
             SecretString::from("bind-password"),
         );
+        config.url = Some(format!("ldap://test:{url_secret}@ldap.example.test"));
         let debug = format!("{config:?}");
         assert!(debug.contains("LdapConfig"));
         assert!(!debug.contains("bind-password"));
+        assert!(!debug.contains(&url_secret));
 
         let static_credentials = LdapStaticCredentials {
             username: "app".to_owned(),

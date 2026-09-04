@@ -19,8 +19,7 @@ use crate::{
         deserialize_bounded_string_map_or_default, deserialize_bounded_string_vec,
     },
     validation::{
-        validate_duration_string, validate_ldap_urls_use_encrypted_transport,
-        validate_optional_ldap_tls_version,
+        validate_duration_string, validate_ldap_urls, validate_optional_ldap_tls_version,
     },
 };
 
@@ -344,9 +343,14 @@ impl KerberosLdapConfig {
                 "Kerberos LDAP insecure_tls=true must not be combined with bindpass because credentials would cross an unverified TLS connection".into(),
             ));
         }
-        if cfg!(not(feature = "insecure-ldap-tls-acknowledged")) || self.bindpass.is_some() {
-            validate_ldap_urls_use_encrypted_transport(&self.url, self.starttls, "Kerberos LDAP")?;
-        }
+        let require_encrypted_transport =
+            cfg!(not(feature = "insecure-ldap-tls-acknowledged")) || self.bindpass.is_some();
+        validate_ldap_urls(
+            &self.url,
+            self.starttls,
+            "Kerberos LDAP",
+            require_encrypted_transport,
+        )?;
         crate::validation::validate_cidr_list(
             &self.token_bound_cidrs,
             "Kerberos LDAP token_bound_cidrs",
@@ -373,7 +377,7 @@ impl fmt::Debug for KerberosLdapConfig {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("KerberosLdapConfig")
-            .field("url", &self.url)
+            .field("url", &self.url.as_ref().map(|_| "<redacted-url>"))
             .field("case_sensitive_names", &self.case_sensitive_names)
             .field("starttls", &self.starttls)
             .field("tls_min_version", &self.tls_min_version)
@@ -1013,13 +1017,16 @@ mod tests {
 
     #[test]
     fn kerberos_ldap_config_debug_redacts_bind_password() {
-        let config = KerberosLdapConfig::new().with_bind(
+        let url_secret = ["ldap-uri", "-credential"].concat();
+        let mut config = KerberosLdapConfig::new().with_bind(
             "cn=openbao,dc=example,dc=com",
             test_secret(&["bind", "-pass"]),
         );
+        config.url = Some(format!("ldap://test:{url_secret}@ldap.example.test"));
         let debug = format!("{config:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("bind-pass"));
+        assert!(!debug.contains(&url_secret));
     }
 
     #[test]
@@ -1064,6 +1071,11 @@ mod tests {
             .with_bind("cn=openbao,dc=example,dc=test", bind_password());
         unverified.insecure_tls = Some(true);
         assert!(unverified.validate().is_err());
+
+        let url_secret = ["ldap-uri", "-credential"].concat();
+        let credential_url = KerberosLdapConfig::new()
+            .with_url(format!("ldap://test:{url_secret}@ldap.example.test"));
+        assert!(credential_url.validate().is_err());
     }
 
     #[test]

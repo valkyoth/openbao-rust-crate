@@ -49,6 +49,8 @@ without query suppressions or alert dismissals:
 - LDAP and Kerberos LDAP bind credentials require `ldaps://` or StartTLS and
   verified peer certificates. The LDAP acknowledgement feature cannot weaken
   transport while bind credentials or a client private key are configured.
+  StartTLS URLs remain subject to scheme, host, length, userinfo, port, and
+  fragment validation; LDAP URLs are redacted from configuration `Debug`.
 - Reviewed PostgreSQL, MySQL-family, Cassandra, InfluxDB, and Valkey options
   must prove encrypted TCP transport. `insecure-database-tls-acknowledged` may
   permit encrypted transport without full peer verification, but never

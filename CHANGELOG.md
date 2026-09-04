@@ -23,7 +23,9 @@ All notable changes to this project are documented here.
   Kubernetes auth and secrets API hosts, and RabbitMQ management endpoints.
 - Required encrypted LDAP transport for Kerberos and LDAP bind credentials,
   and prohibited unverified LDAP transport whenever bind credentials or a
-  client private key are present.
+  client private key are present. StartTLS URLs are structurally validated as
+  bounded, credential-free `ldap://` endpoints, and LDAP URLs are redacted
+  from configuration `Debug` output.
 - Required every reviewed built-in database configuration to prove encrypted
   TCP transport. The existing acknowledgement feature may permit skipped peer
   verification, but no longer permits plaintext database credential transport.
