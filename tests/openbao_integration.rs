@@ -20,6 +20,8 @@ use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa, sign::Signer};
 use reqwest::Certificate;
 #[cfg(all(feature = "operator-ops", feature = "unauthenticated-workflows"))]
 use reqwest::StatusCode;
+#[cfg(all(feature = "transit", feature = "transit-bytes"))]
+use secrecy::ExposeSecret;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -561,8 +563,17 @@ output {
                 &openbao::secrets::transit::TransitCreateKeyRequest::default(),
             )
             .await?;
+        transit.rotate_key("sensitive-buffer-regression").await?;
         let plaintext = b"openbao-transit-sensitive-buffer-regression";
         let associated_data = b"pawalyze-record-binding";
+        let current = transit
+            .encrypt(
+                "sensitive-buffer-regression",
+                &openbao::secrets::transit::TransitEncryptRequest::from_plaintext_bytes(plaintext)?
+                    .with_associated_data_bytes(associated_data)?,
+            )
+            .await?;
+        assert_eq!(current.key_version, Some(2));
         let mut encrypt_request =
             openbao::secrets::transit::TransitEncryptRequest::from_plaintext_bytes(plaintext)?
                 .with_associated_data_bytes(associated_data)?;
@@ -583,11 +594,22 @@ output {
         let decoded = decrypted.plaintext_bytes()?;
         decoded.with_secret(|bytes| assert_eq!(bytes, plaintext));
 
+        let ciphertext = encrypted.ciphertext.expose_secret();
+        let payload_start = ciphertext
+            .rfind(':')
+            .map(|index| index + 1)
+            .ok_or("Transit ciphertext did not contain a payload separator")?;
+        let mut tampered_ciphertext = ciphertext.as_bytes().to_vec();
+        let original = tampered_ciphertext
+            .get_mut(payload_start)
+            .ok_or("Transit ciphertext payload was empty")?;
+        *original = if *original == b'A' { b'B' } else { b'A' };
+        let tampered_ciphertext = String::from_utf8(tampered_ciphertext)?;
         let tampered = transit
             .decrypt(
                 "sensitive-buffer-regression",
                 &openbao::secrets::transit::TransitDecryptRequest::new(SecretString::from(
-                    "vault:v1:invalid-ciphertext",
+                    tampered_ciphertext,
                 ))
                 .with_associated_data_bytes(associated_data)?,
             )

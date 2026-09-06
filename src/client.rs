@@ -1100,6 +1100,8 @@ impl ClientBuilder {
             tls_backend,
             token: None,
             compatibility,
+            #[cfg(test)]
+            sanitizing_body_probe: None,
             _state: PhantomData,
         })
     }
@@ -1165,6 +1167,8 @@ pub struct Client<State = Unauthenticated> {
     pub(crate) tls_backend: TlsBackend,
     token: Option<ClientToken>,
     compatibility: Arc<ClientCompatibility>,
+    #[cfg(test)]
+    sanitizing_body_probe: Option<Arc<SanitizingBodyDropProbe>>,
     pub(crate) _state: PhantomData<State>,
 }
 
@@ -1205,6 +1209,8 @@ impl Client<Unauthenticated> {
             tls_backend: self.tls_backend,
             token: Some(token),
             compatibility: self.compatibility,
+            #[cfg(test)]
+            sanitizing_body_probe: self.sanitizing_body_probe,
             _state: PhantomData,
         }
     }
@@ -1279,6 +1285,8 @@ impl Client<Unauthenticated> {
             tls_backend: self.tls_backend,
             token: None,
             compatibility: Arc::clone(&self.compatibility),
+            #[cfg(test)]
+            sanitizing_body_probe: self.sanitizing_body_probe.clone(),
             _state: PhantomData,
         }
     }
@@ -1864,7 +1872,7 @@ impl<State> Client<State> {
         let route = self
             .resolve_registered_openbao_route(&method, binding, &[] as &[(&str, &str)])
             .await?;
-        let mut encoded = SanitizingBodyBuffer::new(self.config.max_request_bytes);
+        let mut encoded = self.sanitizing_body_buffer();
         for (index, (name, value)) in fields.iter().enumerate() {
             if index != 0 {
                 encoded.try_extend(b"&")?;
@@ -2931,7 +2939,7 @@ impl<State> Client<State> {
             request.headers_mut().insert(name, value);
         }
         if let Some(payload) = body {
-            let encoded = encode_bounded_json_body(payload, self.config.max_request_bytes)?;
+            let encoded = encode_bounded_json_body(payload, self.sanitizing_body_buffer())?;
             let has_content_type = headers.iter().any(|(name, _value)| *name == CONTENT_TYPE);
             if !has_content_type {
                 request
@@ -2988,7 +2996,8 @@ impl<State> Client<State> {
                 );
             }
             *request.body_mut() = Some(
-                SanitizingBodyBuffer::try_from_slice(body, self.config.max_request_bytes)?
+                self.sanitizing_body_buffer()
+                    .try_extend_and_return(body)?
                     .into_http_body(),
             );
         }
@@ -3101,6 +3110,21 @@ impl<State> Client<State> {
         }
 
         &self.sensitive_http
+    }
+
+    fn sanitizing_body_buffer(&self) -> SanitizingBodyBuffer {
+        let buffer = SanitizingBodyBuffer::new(self.config.max_request_bytes);
+        #[cfg(test)]
+        if let Some(probe) = &self.sanitizing_body_probe {
+            return buffer.with_drop_probe(Arc::clone(probe));
+        }
+        buffer
+    }
+
+    #[cfg(all(test, feature = "sensitive-http-test-only"))]
+    fn with_sanitizing_body_probe(mut self, probe: Arc<SanitizingBodyDropProbe>) -> Self {
+        self.sanitizing_body_probe = Some(probe);
+        self
     }
 
     fn require_encrypted_transport_for_sensitive_request(&self, url: &Url) -> Result<()> {
@@ -4018,10 +4042,25 @@ struct SanitizingBodyBuffer {
 }
 
 #[cfg(test)]
-#[derive(Default)]
 struct SanitizingBodyDropProbe {
     drops: std::sync::atomic::AtomicUsize,
-    observed_empty_after_wipe: std::sync::atomic::AtomicBool,
+    http_body_handoffs: std::sync::atomic::AtomicUsize,
+    wipe_events: std::sync::atomic::AtomicUsize,
+    wiped_initialized_bytes: std::sync::atomic::AtomicUsize,
+    observed_zeroed_before_clear: std::sync::atomic::AtomicBool,
+}
+
+#[cfg(test)]
+impl Default for SanitizingBodyDropProbe {
+    fn default() -> Self {
+        Self {
+            drops: std::sync::atomic::AtomicUsize::new(0),
+            http_body_handoffs: std::sync::atomic::AtomicUsize::new(0),
+            wipe_events: std::sync::atomic::AtomicUsize::new(0),
+            wiped_initialized_bytes: std::sync::atomic::AtomicUsize::new(0),
+            observed_zeroed_before_clear: std::sync::atomic::AtomicBool::new(true),
+        }
+    }
 }
 
 impl SanitizingBodyBuffer {
@@ -4041,10 +4080,38 @@ impl SanitizingBodyBuffer {
         self
     }
 
+    #[cfg(test)]
     fn try_from_slice(bytes: &[u8], limit: usize) -> Result<Self> {
         let mut body = Self::new(limit);
         body.try_extend(bytes)?;
         Ok(body)
+    }
+
+    fn try_extend_and_return(mut self, input: &[u8]) -> Result<Self> {
+        self.try_extend(input)?;
+        Ok(self)
+    }
+
+    fn wipe_allocation(&mut self) {
+        sanitization::wipe::bytes(self.bytes.as_mut_slice());
+        #[cfg(test)]
+        if !self.bytes.is_empty() {
+            let initialized_len = self.bytes.len();
+            if let Some(probe) = &self.drop_probe {
+                if self.bytes.iter().any(|byte| *byte != 0) {
+                    probe
+                        .observed_zeroed_before_clear
+                        .store(false, std::sync::atomic::Ordering::SeqCst);
+                }
+                probe
+                    .wipe_events
+                    .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                probe
+                    .wiped_initialized_bytes
+                    .fetch_add(initialized_len, std::sync::atomic::Ordering::SeqCst);
+            }
+        }
+        sanitization::wipe::vec(&mut self.bytes);
     }
 
     fn try_extend(&mut self, input: &[u8]) -> Result<()> {
@@ -4058,7 +4125,7 @@ impl SanitizingBodyBuffer {
             let mut replacement = Self::new(self.limit);
             replacement.bytes = Vec::with_capacity(capacity);
             replacement.bytes.extend_from_slice(&self.bytes);
-            sanitization::wipe::vec(&mut self.bytes);
+            self.wipe_allocation();
             core::mem::swap(&mut self.bytes, &mut replacement.bytes);
         }
         self.bytes.extend_from_slice(input);
@@ -4066,6 +4133,12 @@ impl SanitizingBodyBuffer {
     }
 
     fn into_http_body(self) -> reqwest::Body {
+        #[cfg(test)]
+        if let Some(probe) = &self.drop_probe {
+            probe
+                .http_body_handoffs
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
         reqwest::Body::from(Bytes::from_owner(self))
     }
 }
@@ -4091,12 +4164,9 @@ impl Write for SanitizingBodyBuffer {
 
 impl Drop for SanitizingBodyBuffer {
     fn drop(&mut self) {
-        sanitization::wipe::vec(&mut self.bytes);
+        self.wipe_allocation();
         #[cfg(test)]
         if let Some(probe) = &self.drop_probe {
-            probe
-                .observed_empty_after_wipe
-                .store(self.bytes.is_empty(), std::sync::atomic::Ordering::SeqCst);
             probe
                 .drops
                 .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -4155,11 +4225,13 @@ where
     Ok(writer.into_secret())
 }
 
-fn encode_bounded_json_body<T>(payload: &T, limit: usize) -> Result<reqwest::Body>
+fn encode_bounded_json_body<T>(
+    payload: &T,
+    mut writer: SanitizingBodyBuffer,
+) -> Result<reqwest::Body>
 where
     T: Serialize + ?Sized,
 {
-    let mut writer = SanitizingBodyBuffer::new(limit);
     if serde_json::to_writer(&mut writer, payload).is_err() {
         return if writer.exceeded {
             Err(request_body_too_large())
@@ -4411,7 +4483,42 @@ mod tests {
 
     fn assert_sanitizing_body_dropped(probe: &super::SanitizingBodyDropProbe) {
         assert_eq!(probe.drops.load(Ordering::SeqCst), 1);
-        assert!(probe.observed_empty_after_wipe.load(Ordering::SeqCst));
+        assert!(probe.wipe_events.load(Ordering::SeqCst) >= 1);
+        assert!(probe.wiped_initialized_bytes.load(Ordering::SeqCst) > 0);
+        assert!(probe.observed_zeroed_before_clear.load(Ordering::SeqCst));
+    }
+
+    fn assert_sanitizing_body_handed_off_and_dropped(probe: &super::SanitizingBodyDropProbe) {
+        assert_eq!(probe.http_body_handoffs.load(Ordering::SeqCst), 1);
+        assert_sanitizing_body_dropped(probe);
+    }
+
+    #[test]
+    fn sanitizing_body_verifies_growth_and_final_drop_before_release() {
+        let probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let mut owner = super::SanitizingBodyBuffer::new(1024).with_drop_probe(probe.clone());
+        owner
+            .try_extend(b"original")
+            .unwrap_or_else(|error| panic!("{error}"));
+        owner.bytes.copy_from_slice(b"mutated!");
+        owner
+            .try_extend(b"-forces-growth")
+            .unwrap_or_else(|error| panic!("{error}"));
+        owner.bytes[0] = b'X';
+        let final_len = owner.bytes.len();
+
+        assert_eq!(probe.wipe_events.load(Ordering::SeqCst), 1);
+        assert_eq!(probe.wiped_initialized_bytes.load(Ordering::SeqCst), 8);
+        assert!(probe.observed_zeroed_before_clear.load(Ordering::SeqCst));
+        drop(owner);
+
+        assert_eq!(probe.drops.load(Ordering::SeqCst), 1);
+        assert_eq!(probe.wipe_events.load(Ordering::SeqCst), 2);
+        assert_eq!(
+            probe.wiped_initialized_bytes.load(Ordering::SeqCst),
+            8 + final_len
+        );
+        assert!(probe.observed_zeroed_before_clear.load(Ordering::SeqCst));
     }
 
     #[test]
@@ -4440,7 +4547,7 @@ mod tests {
         drop(request);
         assert_eq!(probe.drops.load(Ordering::SeqCst), 0);
         drop(cloned);
-        assert_sanitizing_body_dropped(&probe);
+        assert_sanitizing_body_handed_off_and_dropped(&probe);
     }
 
     struct PartialSerializationFailure<'a> {
@@ -4493,31 +4600,146 @@ mod tests {
         assert_sanitizing_body_dropped(&limit_probe);
     }
 
-    #[test]
-    fn cancelled_request_future_drops_sanitizing_body_owner() {
-        let probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
-        let body = super::SanitizingBodyBuffer::try_from_slice(b"cancel-secret", 1024)
-            .unwrap_or_else(|error| panic!("{error}"))
-            .with_drop_probe(probe.clone())
-            .into_http_body();
-        let mut request = reqwest::Request::new(
-            reqwest::Method::POST,
-            reqwest::Url::parse("https://bao.example.test/v1/transit/encrypt/key")
-                .unwrap_or_else(|error| panic!("{error}")),
-        );
-        *request.body_mut() = Some(body);
-        let mut future = Box::pin(async move {
-            std::future::pending::<()>().await;
-            drop(request);
+    #[cfg(all(feature = "identity", feature = "sensitive-http-test-only"))]
+    #[tokio::test]
+    async fn production_json_form_and_byte_paths_retain_sanitizing_body_owners() {
+        use crate::secrets::identity::IdentityOidcProviderTokenRequest;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            for _ in 0..3 {
+                let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+                let mut request = [0_u8; 4096];
+                let read = stream
+                    .read(&mut request)
+                    .unwrap_or_else(|error| panic!("{error}"));
+                assert!(read > 0);
+                let body = br#"{"access_token":"access","id_token":"id","expires_in":60,"token_type":"Bearer"}"#;
+                write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n",
+                    body.len()
+                )
+                .and_then(|()| stream.write_all(body))
+                .unwrap_or_else(|error| panic!("{error}"));
+            }
         });
-        let waker = std::task::Waker::noop();
-        let mut context = std::task::Context::from_waker(waker);
-        assert!(matches!(
-            std::future::Future::poll(future.as_mut(), &mut context),
-            std::task::Poll::Pending
-        ));
-        drop(future);
-        assert_sanitizing_body_dropped(&probe);
+        let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 2))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(OpenBaoConfig::allow_sensitive_local_http_for_tests)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+
+        let json_probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let json_client = Client::from_config(config.clone())
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_sanitizing_body_probe(json_probe.clone());
+        let json_url = json_client
+            .url_for_path("transit/encrypt/test")
+            .unwrap_or_else(|error| panic!("{error}"));
+        let response = json_client
+            .send_sensitive_json_request(
+                Method::POST,
+                json_url,
+                &[],
+                Some(&serde_json::json!({"plaintext": "json-secret"})),
+            )
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        drop(response);
+        assert_sanitizing_body_handed_off_and_dropped(&json_probe);
+
+        let byte_probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let byte_client = Client::from_config(config.clone())
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_sanitizing_body_probe(byte_probe.clone());
+        let byte_url = byte_client
+            .url_for_path("sys/tools/random")
+            .unwrap_or_else(|error| panic!("{error}"));
+        let response = byte_client
+            .send_sensitive_bytes_request(Method::POST, byte_url, &[], Some(b"byte-secret"))
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        drop(response);
+        assert_sanitizing_body_handed_off_and_dropped(&byte_probe);
+
+        let form_probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let form_client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_sanitizing_body_probe(form_probe.clone());
+        let tokens = form_client
+            .identity_oidc_provider()
+            .unwrap_or_else(|error| panic!("{error}"))
+            .token(
+                "app",
+                &IdentityOidcProviderTokenRequest::client_credentials("openid")
+                    .with_post_credentials("client", Some(SecretString::from("form-secret"))),
+            )
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        drop(tokens);
+        assert_sanitizing_body_handed_off_and_dropped(&form_probe);
+
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
+    }
+
+    #[cfg(feature = "sensitive-http-test-only")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn cancelling_started_transport_drops_sanitizing_body_owner() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let (accepted_tx, accepted_rx) = mpsc::sync_channel(1);
+        let (release_tx, release_rx) = mpsc::sync_channel(1);
+        let server = thread::spawn(move || {
+            let (_stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            accepted_tx
+                .send(())
+                .unwrap_or_else(|error| panic!("{error}"));
+            release_rx
+                .recv_timeout(Duration::from_secs(5))
+                .unwrap_or_else(|error| panic!("{error}"));
+        });
+
+        let probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(OpenBaoConfig::allow_sensitive_local_http_for_tests)
+            .and_then(|config| config.max_request_bytes(super::MAX_REQUEST_BYTES))
+            .and_then(|config| config.timeout(Duration::from_secs(30)))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_sanitizing_body_probe(probe.clone());
+        let body = vec![0xA5_u8; super::MAX_REQUEST_BYTES];
+        let task = tokio::spawn(async move {
+            let url = client
+                .url_for_path("transit/encrypt/cancelled")
+                .unwrap_or_else(|error| panic!("{error}"));
+            client
+                .send_sensitive_bytes_request(Method::POST, url, &[], Some(&body))
+                .await
+        });
+
+        accepted_rx
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap_or_else(|error| panic!("transport did not start: {error}"));
+        // A loopback send may finish before this thread is scheduled again.
+        // Either the transport still owns the body here and cancellation drops
+        // it, or transmission already released and sanitized the final owner.
+        assert!(probe.drops.load(Ordering::SeqCst) <= 1);
+        task.abort();
+        let cancelled = task.await;
+        assert!(cancelled.is_err_and(|error| error.is_cancelled()));
+        assert_sanitizing_body_handed_off_and_dropped(&probe);
+        release_tx
+            .send(())
+            .unwrap_or_else(|error| panic!("{error}"));
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
     }
 
     #[tokio::test]
@@ -4542,7 +4764,7 @@ mod tests {
             .send()
             .await;
         assert!(result.is_err());
-        assert_sanitizing_body_dropped(&probe);
+        assert_sanitizing_body_handed_off_and_dropped(&probe);
     }
 
     #[tokio::test]
@@ -4580,7 +4802,7 @@ mod tests {
         success_server
             .join()
             .unwrap_or_else(|error| panic!("{error:?}"));
-        assert_sanitizing_body_dropped(&success_probe);
+        assert_sanitizing_body_handed_off_and_dropped(&success_probe);
 
         let timeout_listener =
             TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
@@ -4612,7 +4834,7 @@ mod tests {
         timeout_server
             .join()
             .unwrap_or_else(|error| panic!("{error:?}"));
-        assert_sanitizing_body_dropped(&timeout_probe);
+        assert_sanitizing_body_handed_off_and_dropped(&timeout_probe);
     }
 
     #[test]

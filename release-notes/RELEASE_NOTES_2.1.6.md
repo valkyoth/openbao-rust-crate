@@ -53,6 +53,12 @@ Both monitor frame-size rejection branches explicitly wipe the local uniquely
 owned chunk before returning. Their regressions cover newline-delimited and
 unterminated oversized frames.
 
+The request-body owner now wipes initialized bytes while they are still safely
+observable, before the existing full-capacity wipe clears and releases the
+allocation. Test-only probes verify actual zero bytes across growth, mutation,
+final-owner destruction, the production JSON/form/byte request paths, and
+cancellation after a loopback server has accepted the transport connection.
+
 ## Verification
 
 - Added pointer-identity and final-owner-drop regressions that fail if an
@@ -60,9 +66,9 @@ unterminated oversized frames.
 - Added lifecycle tests for success, partial serialization failure, size-limit
   rejection, cancellation, connection failure, and timeout.
 - Expanded the exact OpenBao `2.6.2` TLS/container integration flow with
-  Transit encryption and decryption, associated-data binding, explicit key
-  version `1`, malformed ciphertext rejection, and incorrect-associated-data
-  rejection.
+  Transit encryption and decryption, associated-data binding, explicit
+  selection of key version `1` after rotation to version `2`, valid-format
+  ciphertext tampering, and incorrect-associated-data rejection.
 - Replayed all 24 digest-pinned exact OpenBao profiles and re-anchored the
   core-flow evidence to the expanded test definition.
 - Existing error, `Debug`, and tracing redaction tests remain part of the full

@@ -20,6 +20,9 @@ grep -q 'sanitize_response_chunk_if_unique' src/sys.rs
 grep -q 'transit-sensitive-buffer-regression' tests/openbao_integration.rs
 grep -q 'pawalyze-record-binding' tests/openbao_integration.rs
 grep -q 'key_version = Some(1)' tests/openbao_integration.rs
+grep -q 'rotate_key("sensitive-buffer-regression")' tests/openbao_integration.rs
+grep -q 'assert_eq!(current.key_version, Some(2))' tests/openbao_integration.rs
+grep -q 'tampered_ciphertext' tests/openbao_integration.rs
 grep -q 'wrong-record-binding' tests/openbao_integration.rs
 
 if grep -Eq 'Vec::from\(&encoded\[\.\.\]\)\.into\(\)|Vec::from\(bytes\)\)\.into\(\)|body\.to_vec\(\)\.into\(\)' src/client.rs; then
@@ -34,6 +37,8 @@ if grep -Eq 'normal non-sanitizing (reqwest|HTTP) body|ordinary Vec owned by the
 fi
 
 cargo test --locked --lib --all-features sanitizing_body
+cargo test --locked --lib --all-features production_json_form_and_byte_paths
+cargo test --locked --lib --all-features cancelling_started_transport
 cargo test --locked --lib --all-features response_chunk_cleanup
 scripts/checks.sh
 python3 -B scripts/openbao_core_matrix.py --verify
