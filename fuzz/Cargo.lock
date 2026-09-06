@@ -602,9 +602,10 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "openbao"
-version = "2.1.5"
+version = "2.1.6"
 dependencies = [
  "base64-ng",
+ "bytes",
  "getrandom 0.4.3",
  "reqwest",
  "rustix",

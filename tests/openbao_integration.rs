@@ -549,12 +549,60 @@ output {
 
     #[cfg(all(feature = "transit", feature = "transit-bytes"))]
     if expected_version == "2.6.2" {
-        eprintln!("OpenBao integration stage: transit-non-default-hmac-regression");
+        eprintln!("OpenBao integration stage: transit-sensitive-buffer-regression");
         client
             .sys()
             .enable_mount(transit_mount, &kv_request("transit", BTreeMap::new()))
             .await?;
         let transit = client.transit(transit_mount)?;
+        transit
+            .create_key(
+                "sensitive-buffer-regression",
+                &openbao::secrets::transit::TransitCreateKeyRequest::default(),
+            )
+            .await?;
+        let plaintext = b"openbao-transit-sensitive-buffer-regression";
+        let associated_data = b"pawalyze-record-binding";
+        let mut encrypt_request =
+            openbao::secrets::transit::TransitEncryptRequest::from_plaintext_bytes(plaintext)?
+                .with_associated_data_bytes(associated_data)?;
+        encrypt_request.key_version = Some(1);
+        let encrypted = transit
+            .encrypt("sensitive-buffer-regression", &encrypt_request)
+            .await?;
+        assert_eq!(encrypted.key_version, Some(1));
+        let decrypted = transit
+            .decrypt(
+                "sensitive-buffer-regression",
+                &openbao::secrets::transit::TransitDecryptRequest::new(
+                    encrypted.ciphertext.clone(),
+                )
+                .with_associated_data_bytes(associated_data)?,
+            )
+            .await?;
+        let decoded = decrypted.plaintext_bytes()?;
+        decoded.with_secret(|bytes| assert_eq!(bytes, plaintext));
+
+        let tampered = transit
+            .decrypt(
+                "sensitive-buffer-regression",
+                &openbao::secrets::transit::TransitDecryptRequest::new(SecretString::from(
+                    "vault:v1:invalid-ciphertext",
+                ))
+                .with_associated_data_bytes(associated_data)?,
+            )
+            .await;
+        assert!(tampered.is_err());
+        let wrong_associated_data = transit
+            .decrypt(
+                "sensitive-buffer-regression",
+                &openbao::secrets::transit::TransitDecryptRequest::new(encrypted.ciphertext)
+                    .with_associated_data_bytes(b"wrong-record-binding")?,
+            )
+            .await;
+        assert!(wrong_associated_data.is_err());
+
+        eprintln!("OpenBao integration stage: transit-non-default-hmac-regression");
         transit
             .create_key(
                 "hmac-regression",

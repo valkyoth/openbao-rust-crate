@@ -22,6 +22,9 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use bytes::Bytes;
+#[cfg(feature = "raft-stream")]
+use futures_core::Stream;
 #[cfg(feature = "raft-stream")]
 use reqwest::header::CONTENT_LENGTH;
 #[cfg(feature = "rustls-tls")]
@@ -34,8 +37,6 @@ use reqwest::{
 use sanitization::{SecretVec, SecureSanitize};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-#[cfg(feature = "raft-stream")]
-use {bytes::Bytes, futures_core::Stream};
 
 use crate::{
     Error, Result,
@@ -502,8 +503,8 @@ impl OpenBaoConfig {
     ///
     /// The default is 8 MiB and the hard maximum is 32 MiB. JSON and form
     /// bodies stop serialization at this bound, and byte bodies are rejected
-    /// before the transport copy is allocated. Large Raft restores use the
-    /// `raft-stream` feature instead of raising this in-memory limit.
+    /// before the sanitizing HTTP-body owner is allocated. Large Raft restores
+    /// use the `raft-stream` feature instead of raising this in-memory limit.
     pub fn max_request_bytes(mut self, bytes: usize) -> Result<Self> {
         if bytes < MIN_REQUEST_BYTES {
             return Err(Error::InvalidParameter(
@@ -1863,7 +1864,7 @@ impl<State> Client<State> {
         let route = self
             .resolve_registered_openbao_route(&method, binding, &[] as &[(&str, &str)])
             .await?;
-        let mut encoded = BoundedSecretWriter::new(self.config.max_request_bytes);
+        let mut encoded = SanitizingBodyBuffer::new(self.config.max_request_bytes);
         for (index, (name, value)) in fields.iter().enumerate() {
             if index != 0 {
                 encoded.try_extend(b"&")?;
@@ -1872,8 +1873,6 @@ impl<State> Client<State> {
             encoded.try_extend(b"=")?;
             append_form_component(&mut encoded, value)?;
         }
-        let encoded = encoded.into_secret();
-
         let mut request_headers = Vec::with_capacity(headers.len() + 2);
         request_headers.extend(headers.iter().cloned());
         request_headers.push((ACCEPT, HeaderValue::from_static("application/json")));
@@ -1883,10 +1882,7 @@ impl<State> Client<State> {
         ));
         let url = self.url_for_path(route.wire_path())?;
         self.require_encrypted_transport_for_sensitive_request(&url)?;
-        // SECURITY: this is the single unavoidable non-sanitizing copy. It is
-        // moved directly into reqwest::Body before the await; no ordinary
-        // crate-owned buffer remains for cancellation to bypass cleaning.
-        let body = encoded.with_secret(|bytes| reqwest::Body::from(Vec::from(bytes)));
+        let body = encoded.into_http_body();
         let response = self
             .send_sensitive_prevalidated_body_request(route.method(), url, &request_headers, body)
             .await?;
@@ -2935,18 +2931,14 @@ impl<State> Client<State> {
             request.headers_mut().insert(name, value);
         }
         if let Some(payload) = body {
-            let encoded = encode_bounded_json(payload, self.config.max_request_bytes)?;
+            let encoded = encode_bounded_json_body(payload, self.config.max_request_bytes)?;
             let has_content_type = headers.iter().any(|(name, _value)| *name == CONTENT_TYPE);
             if !has_content_type {
                 request
                     .headers_mut()
                     .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
             }
-            // SECURITY: this copy is intentionally non-sanitizing because
-            // reqwest::Body does not accept a sanitize-on-drop body buffer.
-            // The SecretVec serialization buffer above is cleared; reqwest,
-            // TLS, kernel, and device buffers are documented residual risks.
-            *request.body_mut() = Some(encoded.with_secret(|bytes| Vec::from(bytes)).into());
+            *request.body_mut() = Some(encoded);
         }
 
         execute_openbao_http_request(http, request).await
@@ -2995,10 +2987,10 @@ impl<State> Client<State> {
                     HeaderValue::from_static("application/octet-stream"),
                 );
             }
-            // SECURITY: reqwest takes ownership of a normal body buffer. The
-            // caller-provided slice is not retained by this crate, but lower
-            // transport layers may hold transient copies during the request.
-            *request.body_mut() = Some(body.to_vec().into());
+            *request.body_mut() = Some(
+                SanitizingBodyBuffer::try_from_slice(body, self.config.max_request_bytes)?
+                    .into_http_body(),
+            );
         }
 
         execute_openbao_http_request(http, request).await
@@ -3908,14 +3900,24 @@ async fn read_response_bytes(
     let mut body = SecretVec::empty();
     while let Some(chunk) = response.chunk().await? {
         if body.len().saturating_add(chunk.len()) > max_response_bytes {
+            let _ = sanitize_response_chunk_if_unique(chunk);
             return Err(Error::Decode(
                 "OpenBao response exceeds client limit".into(),
             ));
         }
         body.extend_from_slice(&chunk);
+        let _ = sanitize_response_chunk_if_unique(chunk);
     }
 
     Ok(body)
+}
+
+pub(crate) fn sanitize_response_chunk_if_unique(chunk: Bytes) -> bool {
+    if let Ok(mut chunk) = chunk.try_into_mut() {
+        sanitization::wipe::bytes(&mut chunk);
+        return true;
+    }
+    false
 }
 
 #[cfg(feature = "tracing")]
@@ -4004,6 +4006,104 @@ struct BoundedSecretWriter {
     exceeded: bool,
 }
 
+// Owns the exact allocation exposed through Bytes::from_owner. Bytes clones
+// share this owner, so the full allocation is wiped after the final HTTP-body
+// reference drops. Growth wipes the replaced allocation before releasing it.
+struct SanitizingBodyBuffer {
+    bytes: Vec<u8>,
+    limit: usize,
+    exceeded: bool,
+    #[cfg(test)]
+    drop_probe: Option<Arc<SanitizingBodyDropProbe>>,
+}
+
+#[cfg(test)]
+#[derive(Default)]
+struct SanitizingBodyDropProbe {
+    drops: std::sync::atomic::AtomicUsize,
+    observed_empty_after_wipe: std::sync::atomic::AtomicBool,
+}
+
+impl SanitizingBodyBuffer {
+    fn new(limit: usize) -> Self {
+        Self {
+            bytes: Vec::new(),
+            limit,
+            exceeded: false,
+            #[cfg(test)]
+            drop_probe: None,
+        }
+    }
+
+    #[cfg(test)]
+    fn with_drop_probe(mut self, probe: Arc<SanitizingBodyDropProbe>) -> Self {
+        self.drop_probe = Some(probe);
+        self
+    }
+
+    fn try_from_slice(bytes: &[u8], limit: usize) -> Result<Self> {
+        let mut body = Self::new(limit);
+        body.try_extend(bytes)?;
+        Ok(body)
+    }
+
+    fn try_extend(&mut self, input: &[u8]) -> Result<()> {
+        if input.len() > self.limit.saturating_sub(self.bytes.len()) {
+            self.exceeded = true;
+            return Err(request_body_too_large());
+        }
+        let required = self.bytes.len().saturating_add(input.len());
+        if required > self.bytes.capacity() {
+            let capacity = self.bytes.capacity().saturating_mul(2).max(required).max(8);
+            let mut replacement = Self::new(self.limit);
+            replacement.bytes = Vec::with_capacity(capacity);
+            replacement.bytes.extend_from_slice(&self.bytes);
+            sanitization::wipe::vec(&mut self.bytes);
+            core::mem::swap(&mut self.bytes, &mut replacement.bytes);
+        }
+        self.bytes.extend_from_slice(input);
+        Ok(())
+    }
+
+    fn into_http_body(self) -> reqwest::Body {
+        reqwest::Body::from(Bytes::from_owner(self))
+    }
+}
+
+impl AsRef<[u8]> for SanitizingBodyBuffer {
+    fn as_ref(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+impl Write for SanitizingBodyBuffer {
+    fn write(&mut self, input: &[u8]) -> io::Result<usize> {
+        if self.try_extend(input).is_err() {
+            return Err(io::Error::other("OpenBao request exceeds client limit"));
+        }
+        Ok(input.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl Drop for SanitizingBodyBuffer {
+    fn drop(&mut self) {
+        sanitization::wipe::vec(&mut self.bytes);
+        #[cfg(test)]
+        if let Some(probe) = &self.drop_probe {
+            probe
+                .observed_empty_after_wipe
+                .store(self.bytes.is_empty(), std::sync::atomic::Ordering::SeqCst);
+            probe
+                .drops
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+}
+
 impl BoundedSecretWriter {
     fn new(limit: usize) -> Self {
         Self {
@@ -4055,11 +4155,26 @@ where
     Ok(writer.into_secret())
 }
 
+fn encode_bounded_json_body<T>(payload: &T, limit: usize) -> Result<reqwest::Body>
+where
+    T: Serialize + ?Sized,
+{
+    let mut writer = SanitizingBodyBuffer::new(limit);
+    if serde_json::to_writer(&mut writer, payload).is_err() {
+        return if writer.exceeded {
+            Err(request_body_too_large())
+        } else {
+            Err(Error::Decode("OpenBao request could not be encoded".into()))
+        };
+    }
+    Ok(writer.into_http_body())
+}
+
 fn request_body_too_large() -> Error {
     Error::InvalidParameter("OpenBao request exceeds configured client limit".into())
 }
 
-fn append_form_component(output: &mut BoundedSecretWriter, value: &str) -> Result<()> {
+fn append_form_component(output: &mut SanitizingBodyBuffer, value: &str) -> Result<()> {
     for character in url::form_urlencoded::byte_serialize(value.as_bytes()) {
         output.try_extend(character.as_bytes())?;
     }
@@ -4141,6 +4256,9 @@ mod tests {
     #![allow(clippy::panic)]
     #![allow(deprecated)]
 
+    #[cfg(feature = "sensitive-http-test-only")]
+    use std::sync::mpsc;
+    use std::time::Duration;
     use std::{
         collections::BTreeMap,
         fs,
@@ -4150,10 +4268,7 @@ mod tests {
         sync::atomic::{AtomicBool, AtomicU64, Ordering},
         thread,
     };
-    #[cfg(feature = "sensitive-http-test-only")]
-    use std::{sync::mpsc, time::Duration};
 
-    #[cfg(feature = "raft-stream")]
     use bytes::Bytes;
     #[cfg(feature = "raft-stream")]
     use futures_core::Stream;
@@ -4271,7 +4386,7 @@ mod tests {
             .unwrap_or_else(|| panic!("oversized JSON request was accepted"));
         assert!(error.to_string().contains("configured client limit"));
 
-        let mut form = super::BoundedSecretWriter::new(1024);
+        let mut form = super::SanitizingBodyBuffer::new(1024);
         let error = super::append_form_component(&mut form, &"/".repeat(400))
             .err()
             .unwrap_or_else(|| panic!("oversized form request was accepted"));
@@ -4292,6 +4407,222 @@ mod tests {
                 .and_then(|config| config.max_request_bytes(super::MAX_REQUEST_BYTES + 1))
                 .is_err()
         );
+    }
+
+    fn assert_sanitizing_body_dropped(probe: &super::SanitizingBodyDropProbe) {
+        assert_eq!(probe.drops.load(Ordering::SeqCst), 1);
+        assert!(probe.observed_empty_after_wipe.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn sanitizing_body_handoff_preserves_allocation_until_last_request_clone() {
+        let probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let mut owner = super::SanitizingBodyBuffer::new(1024).with_drop_probe(probe.clone());
+        owner
+            .try_extend(b"sensitive-request-body")
+            .unwrap_or_else(|error| panic!("{error}"));
+        let owner_pointer = owner.bytes.as_ptr();
+        let body = owner.into_http_body();
+        let body_bytes = body
+            .as_bytes()
+            .unwrap_or_else(|| panic!("sanitizing body was unexpectedly streaming"));
+        assert_eq!(body_bytes.as_ptr(), owner_pointer);
+
+        let mut request = reqwest::Request::new(
+            reqwest::Method::POST,
+            reqwest::Url::parse("https://bao.example.test/v1/transit/encrypt/key")
+                .unwrap_or_else(|error| panic!("{error}")),
+        );
+        *request.body_mut() = Some(body);
+        let cloned = request
+            .try_clone()
+            .unwrap_or_else(|| panic!("reusable sanitizing body did not clone"));
+        drop(request);
+        assert_eq!(probe.drops.load(Ordering::SeqCst), 0);
+        drop(cloned);
+        assert_sanitizing_body_dropped(&probe);
+    }
+
+    struct PartialSerializationFailure<'a> {
+        secret: &'a str,
+    }
+
+    impl Serialize for PartialSerializationFailure<'_> {
+        fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            use serde::ser::SerializeMap as _;
+
+            let mut map = serializer.serialize_map(Some(2))?;
+            map.serialize_entry("secret", self.secret)?;
+            Err(serde::ser::Error::custom(
+                "intentional serialization failure",
+            ))
+        }
+    }
+
+    #[test]
+    fn sanitizing_body_cleans_partial_serialization_and_limit_failures() {
+        let serialization_probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let mut writer =
+            super::SanitizingBodyBuffer::new(1024).with_drop_probe(serialization_probe.clone());
+        let secret = ["partial", "-serialization-secret"].concat();
+        let error = serde_json::to_writer(
+            &mut writer,
+            &PartialSerializationFailure { secret: &secret },
+        )
+        .err()
+        .unwrap_or_else(|| panic!("serialization failure was not propagated"));
+        assert!(!error.to_string().contains(&secret));
+        assert!(!writer.bytes.is_empty());
+        drop(writer);
+        assert_sanitizing_body_dropped(&serialization_probe);
+
+        let limit_probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let mut writer = super::SanitizingBodyBuffer::new(16).with_drop_probe(limit_probe.clone());
+        writer
+            .try_extend(b"first-secret")
+            .unwrap_or_else(|error| panic!("{error}"));
+        let error = writer
+            .try_extend(b"overflowing-secret")
+            .err()
+            .unwrap_or_else(|| panic!("oversized body was accepted"));
+        assert!(!error.to_string().contains("first-secret"));
+        drop(writer);
+        assert_sanitizing_body_dropped(&limit_probe);
+    }
+
+    #[test]
+    fn cancelled_request_future_drops_sanitizing_body_owner() {
+        let probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let body = super::SanitizingBodyBuffer::try_from_slice(b"cancel-secret", 1024)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_drop_probe(probe.clone())
+            .into_http_body();
+        let mut request = reqwest::Request::new(
+            reqwest::Method::POST,
+            reqwest::Url::parse("https://bao.example.test/v1/transit/encrypt/key")
+                .unwrap_or_else(|error| panic!("{error}")),
+        );
+        *request.body_mut() = Some(body);
+        let mut future = Box::pin(async move {
+            std::future::pending::<()>().await;
+            drop(request);
+        });
+        let waker = std::task::Waker::noop();
+        let mut context = std::task::Context::from_waker(waker);
+        assert!(matches!(
+            std::future::Future::poll(future.as_mut(), &mut context),
+            std::task::Poll::Pending
+        ));
+        drop(future);
+        assert_sanitizing_body_dropped(&probe);
+    }
+
+    #[tokio::test]
+    async fn transport_failure_drops_sanitizing_body_owner() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        drop(listener);
+
+        let probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let body = super::SanitizingBodyBuffer::try_from_slice(b"connection-secret", 1024)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_drop_probe(probe.clone())
+            .into_http_body();
+        let result = reqwest::Client::builder()
+            .retry(reqwest::retry::never())
+            .build()
+            .unwrap_or_else(|error| panic!("{error}"))
+            .post(format!("http://{address}/"))
+            .body(body)
+            .send()
+            .await;
+        assert!(result.is_err());
+        assert_sanitizing_body_dropped(&probe);
+    }
+
+    #[tokio::test]
+    async fn transport_success_and_timeout_drop_sanitizing_body_owners() {
+        let success_listener =
+            TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let success_address = success_listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let success_server = thread::spawn(move || {
+            let (mut stream, _) = success_listener
+                .accept()
+                .unwrap_or_else(|error| panic!("{error}"));
+            let mut request = [0_u8; 1024];
+            let _ = stream
+                .read(&mut request)
+                .unwrap_or_else(|error| panic!("{error}"));
+            stream
+                .write_all(b"HTTP/1.1 204 No Content\r\nconnection: close\r\n\r\n")
+                .unwrap_or_else(|error| panic!("{error}"));
+        });
+        let success_probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let response = reqwest::Client::new()
+            .post(format!("http://{success_address}/"))
+            .body(
+                super::SanitizingBodyBuffer::try_from_slice(b"success-secret", 1024)
+                    .unwrap_or_else(|error| panic!("{error}"))
+                    .with_drop_probe(success_probe.clone())
+                    .into_http_body(),
+            )
+            .send()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        drop(response);
+        success_server
+            .join()
+            .unwrap_or_else(|error| panic!("{error:?}"));
+        assert_sanitizing_body_dropped(&success_probe);
+
+        let timeout_listener =
+            TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let timeout_address = timeout_listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let timeout_server = thread::spawn(move || {
+            let (_stream, _) = timeout_listener
+                .accept()
+                .unwrap_or_else(|error| panic!("{error}"));
+            thread::sleep(Duration::from_millis(200));
+        });
+        let timeout_probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let result = reqwest::Client::builder()
+            .timeout(Duration::from_millis(25))
+            .retry(reqwest::retry::never())
+            .build()
+            .unwrap_or_else(|error| panic!("{error}"))
+            .post(format!("http://{timeout_address}/"))
+            .body(
+                super::SanitizingBodyBuffer::try_from_slice(b"timeout-secret", 1024)
+                    .unwrap_or_else(|error| panic!("{error}"))
+                    .with_drop_probe(timeout_probe.clone())
+                    .into_http_body(),
+            )
+            .send()
+            .await;
+        assert!(result.is_err());
+        timeout_server
+            .join()
+            .unwrap_or_else(|error| panic!("{error:?}"));
+        assert_sanitizing_body_dropped(&timeout_probe);
+    }
+
+    #[test]
+    fn response_chunk_cleanup_requires_unique_bytes_ownership() {
+        assert!(super::sanitize_response_chunk_if_unique(Bytes::from(
+            b"response-secret".to_vec()
+        )));
+
+        let shared = Bytes::from_static(b"shared-response-secret");
+        assert!(!super::sanitize_response_chunk_if_unique(shared));
     }
 
     #[test]

@@ -47,10 +47,13 @@ include real tokens, private keys, unseal material, or production secrets.
   are checked with `cargo deny` and RustSec, and every release requires a
   reviewed pentest report.
 
-Secret bytes necessarily enter dependency-owned HTTP, TLS, allocator, kernel,
-and device buffers that this crate cannot sanitize. Memory locking covers only
-the authenticated client's retained token when its acknowledged feature is
-enabled; it does not automatically lock every request or response secret.
+SDK-owned JSON, form, and byte request-body allocations are sanitized after
+the final HTTP-body owner drops. Uniquely owned receive chunks are sanitized
+after copying into secret storage. Dependency-owned HTTP, TLS, allocator,
+kernel, and device buffers can retain copies this crate cannot sanitize.
+Memory locking covers only the authenticated client's retained token when its
+acknowledged feature is enabled; it does not automatically lock every request
+or response secret.
 
 ## Detailed Model
 
@@ -58,9 +61,9 @@ The complete threat model, hardened deployment guidance, feature-specific
 controls, compatibility evidence rules, residual-memory analysis, and accepted
 limitations are maintained in the signed repository source:
 
-- [Security model and operational guidance](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/SECURITY_MODEL.md)
-- [OpenBao compatibility threat model](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md)
-- [Panic policy](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/PANIC_POLICY.md)
+- [Security model and operational guidance](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/SECURITY_MODEL.md)
+- [OpenBao compatibility threat model](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md)
+- [Panic policy](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/PANIC_POLICY.md)
 
 Review those documents before enabling any feature whose name ends in
 `-acknowledged` or deploying the SDK in a high-assurance environment.

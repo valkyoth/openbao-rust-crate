@@ -37,8 +37,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
 
       - name: Install security tools
-        # taiki-e/install-action v2.87.4
-        uses: taiki-e/install-action@e67fa11c4b9316fa714ddf0abed07a0c3143b95b
+        # taiki-e/install-action v2.87.6
+        uses: taiki-e/install-action@7b8d4719ee4aaa279bdf55df38dacb9ebfe12a6c
         with:
           tool: cargo-deny@0.20.2,cargo-audit@0.22.2,cargo-sbom@0.10.0
 

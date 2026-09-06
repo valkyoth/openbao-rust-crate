@@ -35,8 +35,9 @@ the authoritative vulnerability-reporting policy distributed with the crate.
   loopback servers. Hostnames such as `localhost` are rejected.
 - Response bodies must remain size-bounded; JSON responses and binary
   responses with an expected `Accept` header must be content-type checked.
-- JSON request serialization buffers controlled by this crate must be sanitized
-  after handoff to the HTTP stack.
+- JSON, form, and byte request-body allocations controlled by this crate must
+  remain sanitizing owners through HTTP handoff and be wiped after their final
+  body reference drops.
 - Third-party GitHub Actions must be pinned to immutable commit SHAs.
 - New dependencies require a release-plan justification and `cargo deny` review.
 - Historical OpenBao source and image evidence is accepted only through the
@@ -269,11 +270,23 @@ ordinary convergence.
 
 ## Residual Secret Memory
 
-After a JSON request body is handed to `reqwest`, the transport stack, TLS
-backend, kernel, or network device may keep independent plaintext or ciphertext
-buffers until their own cleanup. This crate sanitizes the serialization buffer it
-controls, but it cannot guarantee sanitization of buffers owned by dependencies
-or the operating system.
+JSON and form serialization write directly into a private wipe-on-drop owner.
+Byte requests copy the caller's borrowed slice into the same owner. The owner
+is passed to `bytes::Bytes::from_owner`, and every reusable `reqwest::Body`
+clone shares it; the complete allocation is wiped only after the final body
+reference drops. Reallocation wipes the replaced allocation before release.
+This covers successful requests, local serialization and size failures,
+transport errors, timeout, cancellation, and ordinary unwinding for the
+allocation the SDK owns.
+
+Responses are accumulated directly in `SecretVec`. After each HTTP chunk is
+copied, the SDK uses `Bytes::try_into_mut` and wipes the chunk when unique
+ownership is proven. Shared chunks cannot be mutated safely and are dropped
+back to the dependency owner without a cleanup guarantee. Serde, reqwest,
+Hyper, the TLS backend, allocator, kernel, or network device may create or keep
+independent plaintext or ciphertext buffers until their own cleanup. Forced
+process termination can also bypass Rust destructors. The SDK therefore does
+not claim complete process-wide sanitization.
 Token and namespace header values are also copied into HTTP-stack header
 structures that are marked sensitive for logging but are not sanitized on drop by
 the underlying `http`/`hyper`/`reqwest` types.
@@ -345,10 +358,12 @@ Lower `OpenBaoConfig::max_response_bytes` for clients that only call
 small-response endpoints.
 Request bodies default to an 8 MiB limit and cannot be configured above 32
 MiB. JSON and form serialization stop before crossing
-`OpenBaoConfig::max_request_bytes`; byte bodies are checked before the
-unavoidable `reqwest::Body` copy. Use the `raft-stream` feature for larger
-Integrated Storage restore payloads. Its exact-length stream rejects overflow
-and truncation and avoids a second complete snapshot allocation.
+`OpenBaoConfig::max_request_bytes`; byte bodies are checked before copying the
+caller's borrowed input into the sanitizing HTTP-body owner. Use the
+`raft-stream` feature for larger Integrated Storage restore payloads. Its
+exact-length stream rejects overflow and truncation and avoids a second
+complete snapshot allocation; caller-provided stream chunks retain their own
+custody and sanitization requirements.
 
 The `operator-ops` feature exposes production init, unseal, seal, rekey,
 rotation, and sealable-namespace lifecycle APIs. It is disabled by default and

@@ -8,9 +8,9 @@
   ·
   <a href="https://docs.rs/openbao">API Documentation</a>
   ·
-  <a href="https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/CURRENT_STATUS.md">Current Status</a>
+  <a href="https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/CURRENT_STATUS.md">Current Status</a>
   ·
-  <a href="https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/OPENBAO_API_COVERAGE.md">API Coverage</a>
+  <a href="https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/OPENBAO_API_COVERAGE.md">API Coverage</a>
   ·
   <a href="https://github.com/valkyoth/openbao-rust-crate/security">Security</a>
 </div>
@@ -18,7 +18,7 @@
 <br>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/valkyoth/openbao-rust-crate/v2.1.5/.github/images/openbao_rust_crate.webp" alt="OpenBao Rust crate overview">
+  <img src="https://raw.githubusercontent.com/valkyoth/openbao-rust-crate/v2.1.6/.github/images/openbao_rust_crate.webp" alt="OpenBao Rust crate overview">
 </p>
 
 # OpenBao Rust SDK
@@ -44,7 +44,7 @@ is the primary checked toolchain and Rust `1.90.0` is the MSRV.
 
 ```toml
 [dependencies]
-openbao = "2.1.5"
+openbao = "2.1.6"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
@@ -129,9 +129,9 @@ capability intersection.
 
 See the versioned source documentation for the complete policy:
 
-- [server version selection](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/OPENBAO_VERSION_SELECTION.md);
-- [tested server matrix](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/OPENBAO_VERSION_SUPPORT_MATRIX.md);
-- [response compatibility](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/OPENBAO_RESPONSE_COMPATIBILITY.md).
+- [server version selection](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/OPENBAO_VERSION_SELECTION.md);
+- [tested server matrix](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/OPENBAO_VERSION_SUPPORT_MATRIX.md);
+- [response compatibility](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/OPENBAO_RESPONSE_COMPATIBILITY.md).
 
 ## Coverage
 
@@ -155,9 +155,9 @@ builds while retaining typed support for reviewed operator tooling.
 
 Detailed inventories:
 
-- [current capability status](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/CURRENT_STATUS.md);
-- [API coverage](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/OPENBAO_API_COVERAGE.md);
-- [custom plugin pattern](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/CUSTOM_PLUGIN_PATTERN.md).
+- [current capability status](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/CURRENT_STATUS.md);
+- [API coverage](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/OPENBAO_API_COVERAGE.md);
+- [custom plugin pattern](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/CUSTOM_PLUGIN_PATTERN.md).
 
 ## Feature Selection
 
@@ -201,13 +201,15 @@ Key defaults and controls:
 - dependency, RustSec, package, Kani, compatibility, and pentest release gates.
 
 HTTP, TLS, allocator, kernel, and device layers can retain secret copies beyond
-the buffers controlled by this crate. Other request and response secrets are
-not automatically locked by the `memory-lock` feature. High-assurance users
-must review process isolation, core dumps, swap, memory-lock quotas, TLS
-termination, and feature selection.
+the buffers controlled by this crate. SDK-owned JSON, form, and byte request
+body allocations are wiped after their final HTTP-body owner drops, and
+uniquely owned receive chunks are wiped after copying into `SecretVec`.
+Other request and response secrets are not automatically locked by the
+`memory-lock` feature. High-assurance users must review process isolation,
+core dumps, swap, memory-lock quotas, TLS termination, and feature selection.
 
 Read [`SECURITY.md`](SECURITY.md) for reporting and baseline policy. The
-[detailed security model](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/SECURITY_MODEL.md)
+[detailed security model](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/SECURITY_MODEL.md)
 records feature-specific controls, residual risks, and hardened deployment
 guidance.
 
@@ -216,20 +218,20 @@ guidance.
 The repository contains compiled examples rather than duplicating dozens of
 unchecked Markdown programs:
 
-- [environment client](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/examples/from_env.rs);
-- [KV v2](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/examples/kv2.rs);
-- [AppRole login](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/examples/approle.rs);
-- [exact OpenBao 2.2 profile](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/examples/openbao_2_2.rs);
-- [admin bootstrap](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/examples/bootstrap.rs);
-- [system administration](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/examples/sys_admin.rs).
+- [environment client](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/examples/from_env.rs);
+- [KV v2](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/examples/kv2.rs);
+- [AppRole login](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/examples/approle.rs);
+- [exact OpenBao 2.2 profile](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/examples/openbao_2_2.rs);
+- [admin bootstrap](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/examples/bootstrap.rs);
+- [system administration](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/examples/sys_admin.rs).
 
 Additional repository documentation:
 
-- [migration guide](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/MIGRATION_GUIDE.md);
-- [API stability audit](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/API_STABILITY_AUDIT.md);
-- [panic policy](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/PANIC_POLICY.md);
-- [Kani proofs](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/kani/README.md);
-- [release plan](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.5/docs/RELEASE_PLAN.md).
+- [migration guide](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/MIGRATION_GUIDE.md);
+- [API stability audit](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/API_STABILITY_AUDIT.md);
+- [panic policy](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/PANIC_POLICY.md);
+- [Kani proofs](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/kani/README.md);
+- [release plan](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/RELEASE_PLAN.md).
 
 ## Development And Releases
 

@@ -901,3 +901,37 @@ Stop criteria:
 - `scripts/release_2_1_5_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.5`.
+
+### 2.1.6 - Secret-Bearing HTTP Buffer Hardening
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.6`;
+- sensitive JSON, form, and byte request bodies are backed by a sanitizing
+  owner shared through reqwest body clones, without an SDK-created ordinary
+  transport-buffer copy;
+- the complete SDK-controlled request owner is wiped after the final body
+  reference drops on success, local failure, transport failure, timeout, and
+  cancellation;
+- uniquely owned normal-response and monitor-stream chunks are wiped after
+  copying into sanitizing storage, while shared dependency-owned chunks remain
+  an explicit residual;
+- request and response bounds, TLS policy, redirect rejection, authentication
+  handling, retry policy, and secret-free errors, diagnostics, and tracing are
+  unchanged;
+- exact OpenBao `2.6.2` TLS integration covers Transit encrypt/decrypt,
+  associated data, explicit key versions, malformed ciphertext, and incorrect
+  associated data;
+- the changed integration definition is replayed successfully against all 24
+  digest-pinned exact OpenBao profiles and the resulting evidence is
+  re-anchored;
+- OpenBao routes, field rules, compatibility classifications, and historical
+  profiles remain unchanged from `2.1.5`;
+- direct crates, CI cargo tools, and immutable GitHub Action pins match the
+  versions reported by `scripts/checks.sh`;
+- README, migration, stability, security model, changelog, and release notes
+  describe the same enforceable cleanup guarantee and residual risks;
+- `scripts/release_2_1_6_gate.sh`, GitHub CI, CodeQL, the all-release
+  compatibility workflow, and exact-commit pentests pass before tagging
+  `v2.1.6`.

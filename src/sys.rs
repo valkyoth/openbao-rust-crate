@@ -28,6 +28,8 @@ use serde::{
 };
 use serde_json::value::RawValue;
 
+#[cfg(feature = "monitor-stream")]
+use crate::client::sanitize_response_chunk_if_unique;
 use crate::{
     Authenticated, Client, Error, JsonValue, Result, Unauthenticated,
     path::{validate_endpoint_path, validate_mount_path},
@@ -236,7 +238,9 @@ impl fmt::Debug for MonitorFrame {
 /// The HTTP body is polled only when the consumer polls this stream. No
 /// producer task or queue is created, so a slow consumer applies back-pressure
 /// directly to the transport. Dropping the stream drops the response body and
-/// cancels the request.
+/// cancels the request. Consumed or retained transport chunks are wiped when
+/// unique ownership can be proven; dependency-shared chunks remain a
+/// documented HTTP-stack residual.
 #[cfg(feature = "monitor-stream")]
 pub struct MonitorStream {
     body: Pin<Box<dyn Stream<Item = core::result::Result<Bytes, reqwest::Error>> + Send>>,
@@ -291,7 +295,9 @@ impl MonitorStream {
 
     fn frame_too_large(&mut self) -> Poll<Option<Result<MonitorFrame>>> {
         self.terminal = true;
-        self.chunk = None;
+        if let Some(chunk) = self.chunk.take() {
+            let _ = sanitize_response_chunk_if_unique(chunk);
+        }
         self.pending.clear_secret();
         Poll::Ready(Some(Err(Error::Decode(
             "OpenBao monitor frame exceeds configured limit".into(),
@@ -323,6 +329,7 @@ impl Stream for MonitorStream {
                         this.chunk = Some(chunk);
                     } else {
                         this.chunk_offset = 0;
+                        let _ = sanitize_response_chunk_if_unique(chunk);
                     }
                     return Poll::Ready(Some(Ok(frame)));
                 }
@@ -331,6 +338,7 @@ impl Stream for MonitorStream {
                 }
                 this.pending.extend_from_slice(remaining);
                 this.chunk_offset = 0;
+                let _ = sanitize_response_chunk_if_unique(chunk);
             }
 
             if chunks_polled >= MAX_MONITOR_CHUNKS_PER_POLL {
@@ -346,6 +354,7 @@ impl Stream for MonitorStream {
                     if chunk.len() > MAX_MONITOR_TRANSPORT_CHUNK_BYTES {
                         this.terminal = true;
                         this.pending.clear_secret();
+                        let _ = sanitize_response_chunk_if_unique(chunk);
                         return Poll::Ready(Some(Err(Error::Decode(
                             "OpenBao monitor transport chunk exceeds internal limit".into(),
                         ))));
@@ -354,6 +363,7 @@ impl Stream for MonitorStream {
                 }
                 Poll::Ready(Some(Err(error))) => {
                     this.terminal = true;
+                    this.pending.clear_secret();
                     return Poll::Ready(Some(Err(crate::error::http_transport_error(error))));
                 }
                 Poll::Ready(None) => {
@@ -365,6 +375,16 @@ impl Stream for MonitorStream {
                 }
             }
         }
+    }
+}
+
+#[cfg(feature = "monitor-stream")]
+impl Drop for MonitorStream {
+    fn drop(&mut self) {
+        if let Some(chunk) = self.chunk.take() {
+            let _ = sanitize_response_chunk_if_unique(chunk);
+        }
+        self.pending.clear_secret();
     }
 }
 

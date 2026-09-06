@@ -1,6 +1,6 @@
 [package]
 name = "openbao"
-version = "2.1.5"
+version = "2.1.6"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -92,8 +92,8 @@ workflow-trace = ["sys"]
 workflow-trace-acknowledged = []
 unauthenticated-workflows = ["sys"]
 unauthenticated-workflows-acknowledged = []
-monitor-stream = ["sys", "dep:bytes", "dep:futures-core", "reqwest/stream"]
-raft-stream = ["sys", "dep:bytes", "dep:futures-core", "reqwest/stream"]
+monitor-stream = ["sys", "dep:futures-core", "reqwest/stream"]
+raft-stream = ["sys", "dep:futures-core", "reqwest/stream"]
 http2 = ["reqwest/http2"]
 time = ["dep:time"]
 tokio-helpers = ["dep:tokio"]
@@ -148,7 +148,7 @@ sensitive-http-test-only-acknowledged = []
 [dependencies]
 aes-kw = { version = "0.3.1", default-features = false, optional = true }
 base64-ng = { version = "2.0.3", default-features = false, features = ["alloc"], optional = true }
-bytes = { version = "1.12.1", optional = true }
+bytes = "1.12.1"
 futures-core = { version = "0.3.34", optional = true }
 getrandom = "0.4.3"
 rand = { version = "0.10.2", default-features = false, features = ["std", "thread_rng"], optional = true }

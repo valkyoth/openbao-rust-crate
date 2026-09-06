@@ -7,6 +7,27 @@ profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
 
+## From `openbao` 2.1.5 To 2.1.6
+
+`2.1.6` is a source-compatible secret-buffer hardening release. Sensitive
+JSON, form, and byte request bodies now retain a sanitizing owner through the
+reqwest body instead of copying into an ordinary SDK-created `Vec<u8>`. The
+owner's full allocation is wiped after the final request/body clone drops.
+Uniquely owned response chunks are also wiped after their bytes have been
+copied into `SecretVec`.
+
+No application source migration is required. The `bytes` crate is now an
+unconditional internal dependency, but no new transitive package is added to
+the graph because reqwest already uses it. OpenBao compatibility profiles,
+routes, field rules, and security blocks are unchanged from `2.1.5`.
+
+This release narrows, but cannot eliminate, process-memory residuals. Shared
+reqwest/Hyper chunks, HTTP and TLS implementation buffers, allocator copies,
+kernel and device buffers, caller-owned input, and forced process termination
+remain outside the SDK's cleanup guarantee. Applications with an HSM-only or
+classified-memory requirement must continue to enforce that boundary outside
+this software client.
+
 ## From `openbao` 2.1.4 To 2.1.5
 
 `2.1.5` is a source-compatible dependency, toolchain, static-analysis, and

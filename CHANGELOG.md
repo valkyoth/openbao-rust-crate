@@ -4,6 +4,40 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.6 - 2026-09-06
+
+### Security
+
+- Replaced ordinary `Vec<u8>` HTTP request-body copies for sensitive JSON,
+  form, and byte requests with a private sanitizing body owner retained by
+  `bytes::Bytes`. The allocation is wiped after the final reqwest body clone
+  drops, including local failures, transport failures, timeouts, and
+  cancellation.
+- Added best-effort cleanup of uniquely owned response chunks after copying
+  them into `SecretVec`, including chunks retained by the monitor stream.
+  Shared reqwest, Hyper, TLS, allocator, kernel, and device buffers remain
+  dependency or operating-system residuals and are documented as such.
+- Added regressions that preserve the request allocation through HTTP handoff,
+  prove final-owner cleanup without reading freed memory, reject a return to
+  ordinary body copies, and exercise partial serialization, size rejection,
+  cancellation, connection failure, timeout, and success paths.
+- Expanded the exact OpenBao `2.6.2` TLS integration test with Transit
+  encrypt/decrypt, associated-data binding, explicit key-version selection,
+  malformed ciphertext, and incorrect-associated-data rejection.
+- Replayed and re-anchored the digest-pinned core-flow evidence across all 24
+  supported exact OpenBao releases after expanding the integration test.
+
+### Changed
+
+- Made the existing `bytes` dependency unconditional so sensitive reusable
+  reqwest bodies can retain a sanitizing allocation owner. No new transitive
+  package is introduced because reqwest already depends on `bytes`.
+- Updated the immutable `taiki-e/install-action` pin from `2.87.4` to
+  `2.87.6`; all other checked direct crates, CI cargo tools, and GitHub Actions
+  were current on the release date.
+- Updated security, migration, stability, README, and release documentation
+  to describe the enforceable SDK cleanup guarantee and its residual limits.
+
 ## 2.1.5 - 2026-09-04
 
 ### Changed

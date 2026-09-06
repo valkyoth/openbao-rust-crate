@@ -58,6 +58,11 @@ make the public API commitments and security boundaries explicit.
   changing the public SDK or any OpenBao compatibility profile. It also makes
   a fail-closed runtime correction for credential-bearing external backend
   transport and bounds environment CA-file ingestion.
+  `2.1.6` preserves the public SDK and compatibility profiles while replacing
+  ordinary SDK-owned sensitive HTTP body copies with final-owner sanitizing
+  storage and adding best-effort cleanup for uniquely owned response chunks.
+  Dependency-owned HTTP/TLS and operating-system buffers remain documented
+  residuals.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 689 operations documented for exact `2.6.2`, 594 are typed, 93
   are typed-gated, and two are security-blocked because the workflow prefix
@@ -133,7 +138,7 @@ must now have an explicit current decision.
 | --- | --- | --- |
 | `0.1.0` | KV v2 metadata, token lifecycle, and Transit were incomplete. | Resolved by later releases. |
 | `0.1.0` to `0.5.0` | Exact certificate/public-key pinning was not implemented. | Rejected for stable scope. Use `OpenBaoConfig::only_root_certificates` or `OPENBAO_CACERT` plus `OPENBAO_TLS_ROOTS_ONLY=true` with an internal CA or self-signed OpenBao certificate. Leaf and SPKI pinning are operationally brittle and `reqwest` has no portable pinning API across TLS backends. |
-| `0.2.0` and `0.3.0` | HTTP/TLS/kernel/device buffers are outside crate zeroization control after handoff to `reqwest`. | Permanent documented boundary. No crate can guarantee zeroization for external transport buffers. |
+| `0.2.0` and `0.3.0` | HTTP/TLS/kernel/device buffers are outside crate zeroization control after handoff to `reqwest`. | The avoidable SDK-owned request-body copy is resolved in `2.1.6`; external transport and operating-system buffers remain a permanent documented boundary. |
 | `0.3.0` | Transit batch/export/backup/restore were not typed. | Resolved in `0.8.0`. BYOK/import HTTP wrappers are resolved in `0.11.0`; default endpoint wrappers accept pre-wrapped `SecretString` ciphertext or public-key-only import material, and raw private or symmetric key bytes stay outside those wrappers. Optional software wrapping is available only behind the non-default `transit-import` feature. |
 | `0.3.0` | Plugin OCI initialization and reload-status endpoints were not typed. | Defer; plugin schemas and OCI deployment workflows are operator-specific. Keep `Client::request_json` and documented custom wrapper pattern. |
 | `0.3.0` | Production init/unseal/rekey/rotate were planned. | Resolved behind `operator-ops` and `operator-ops-acknowledged`. |

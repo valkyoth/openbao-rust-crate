@@ -1010,14 +1010,12 @@ impl ListEntries for TransitKeyList {
 ///
 /// # Security residual
 ///
-/// The SDK serializes secret-bearing request bodies through a sanitizing
-/// intermediate buffer, but `reqwest::Body` owns a normal non-sanitizing copy
-/// after handoff to the HTTP stack. Treat the calling process heap as
-/// containing the base64 plaintext for the duration of the request lifecycle,
-/// and possibly longer depending on allocator behavior. Disable core dumps,
-/// restrict `ptrace`/process memory inspection, avoid swap or use encrypted
-/// swap, and sanitize caller-owned plaintext buffers as soon as they are no
-/// longer needed.
+/// The SDK transfers the serialized request allocation to a sanitizing HTTP
+/// body owner and wipes it after the final body clone drops. HTTP, TLS,
+/// allocator, kernel, and device layers can still retain uncontrolled copies.
+/// Disable core dumps, restrict `ptrace`/process memory inspection, avoid swap
+/// or use encrypted swap, and sanitize caller-owned plaintext buffers as soon
+/// as they are no longer needed.
 #[derive(Clone, Debug)]
 pub struct TransitEncryptRequest {
     /// Base64-encoded plaintext.
@@ -1099,14 +1097,12 @@ impl fmt::Debug for TransitEncryptResponse {
 ///
 /// # Security residual
 ///
-/// The SDK serializes secret-bearing request bodies through a sanitizing
-/// intermediate buffer, but `reqwest::Body` owns a normal non-sanitizing copy
-/// after handoff to the HTTP stack. Treat the calling process heap as
-/// containing the ciphertext and any base64 associated data, derivation
-/// context, or nonce for the duration of the request lifecycle, and possibly
-/// longer depending on allocator behavior. Disable core dumps, restrict
-/// `ptrace`/process memory inspection, avoid swap or use encrypted swap, and
-/// sanitize caller-owned buffers promptly.
+/// The SDK transfers the serialized request allocation to a sanitizing HTTP
+/// body owner and wipes it after the final body clone drops. HTTP, TLS,
+/// allocator, kernel, and device layers can still retain ciphertext,
+/// associated-data, context, or nonce copies outside that owner. Disable core
+/// dumps, restrict `ptrace`/process memory inspection, avoid swap or use
+/// encrypted swap, and sanitize caller-owned buffers promptly.
 #[derive(Clone, Debug)]
 pub struct TransitDecryptRequest {
     /// OpenBao ciphertext.
@@ -2449,12 +2445,12 @@ impl Transit<'_> {
 
     /// Encrypts base64-encoded plaintext with a Transit key.
     ///
-    /// The plaintext is wrapped in `SecretString` and the crate sanitizes its
-    /// serialization buffer, but serde, reqwest, TLS, kernel, and device
-    /// buffers can retain transient body copies outside this crate's control
-    /// during request transmission. Callers that use raw plaintext buffers
-    /// should sanitize their own buffers immediately after constructing the
-    /// request.
+    /// The plaintext is wrapped in `SecretString`; the serialized HTTP-body
+    /// allocation is sanitizing and remains shared through body clones.
+    /// Serde, reqwest, Hyper, TLS, allocator, kernel, and device layers can
+    /// still retain transient copies outside this crate's control. Callers
+    /// should sanitize raw plaintext buffers immediately after constructing
+    /// the request.
     pub async fn encrypt(
         &self,
         name: &str,
@@ -2472,8 +2468,9 @@ impl Transit<'_> {
     /// Decrypts Transit ciphertext.
     ///
     /// Ciphertext and returned plaintext are secret-aware at the public API
-    /// boundary. Request and response buffers can still exist transiently in
-    /// the HTTP/TLS stack while the operation is in flight.
+    /// boundary. The controlled request owner and uniquely owned response
+    /// chunks are wiped, but dependency, TLS, allocator, kernel, and device
+    /// buffers can still exist transiently while the operation is in flight.
     pub async fn decrypt(
         &self,
         name: &str,
