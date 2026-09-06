@@ -58,6 +58,9 @@ observable, before the existing full-capacity wipe clears and releases the
 allocation. Test-only probes verify actual zero bytes across growth, mutation,
 final-owner destruction, the production JSON/form/byte request paths, and
 cancellation after a loopback server has accepted the transport connection.
+Uniquely owned response-chunk tests likewise inspect the bytes after wiping and
+before release. A shared heap-backed chunk is refused without changing its
+surviving clone.
 
 ## Verification
 
@@ -68,7 +71,9 @@ cancellation after a loopback server has accepted the transport connection.
 - Expanded the exact OpenBao `2.6.2` TLS/container integration flow with
   Transit encryption and decryption, associated-data binding, explicit
   selection of key version `1` after rotation to version `2`, valid-format
-  ciphertext tampering, and incorrect-associated-data rejection.
+  ciphertext tampering, and incorrect-associated-data rejection. Both negative
+  cases require OpenBao's HTTP 400 API error and are followed by another valid
+  decryption control.
 - Replayed all 24 digest-pinned exact OpenBao profiles and re-anchored the
   core-flow evidence to the expanded test definition.
 - Existing error, `Debug`, and tracing redaction tests remain part of the full

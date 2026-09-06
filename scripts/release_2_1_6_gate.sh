@@ -23,6 +23,8 @@ grep -q 'key_version = Some(1)' tests/openbao_integration.rs
 grep -q 'rotate_key("sensitive-buffer-regression")' tests/openbao_integration.rs
 grep -q 'assert_eq!(current.key_version, Some(2))' tests/openbao_integration.rs
 grep -q 'tampered_ciphertext' tests/openbao_integration.rs
+grep -q 'status == StatusCode::BAD_REQUEST' tests/openbao_integration.rs
+grep -q 'valid_after_rejections' tests/openbao_integration.rs
 grep -q 'wrong-record-binding' tests/openbao_integration.rs
 
 if grep -Eq 'Vec::from\(&encoded\[\.\.\]\)\.into\(\)|Vec::from\(bytes\)\)\.into\(\)|body\.to_vec\(\)\.into\(\)' src/client.rs; then

@@ -18,7 +18,10 @@ use openbao::{Client, OpenBaoCompatibilityPolicy, OpenBaoConfig, OpenBaoVersion}
 #[cfg(feature = "operator-ops")]
 use openssl::{hash::MessageDigest, pkey::PKey, rsa::Rsa, sign::Signer};
 use reqwest::Certificate;
-#[cfg(all(feature = "operator-ops", feature = "unauthenticated-workflows"))]
+#[cfg(any(
+    all(feature = "operator-ops", feature = "unauthenticated-workflows"),
+    all(feature = "transit", feature = "transit-bytes")
+))]
 use reqwest::StatusCode;
 #[cfg(all(feature = "transit", feature = "transit-bytes"))]
 use secrecy::ExposeSecret;
@@ -614,15 +617,33 @@ output {
                 .with_associated_data_bytes(associated_data)?,
             )
             .await;
-        assert!(tampered.is_err());
+        assert!(matches!(
+            tampered,
+            Err(openbao::Error::Api { status, .. }) if status == StatusCode::BAD_REQUEST
+        ));
         let wrong_associated_data = transit
             .decrypt(
                 "sensitive-buffer-regression",
-                &openbao::secrets::transit::TransitDecryptRequest::new(encrypted.ciphertext)
-                    .with_associated_data_bytes(b"wrong-record-binding")?,
+                &openbao::secrets::transit::TransitDecryptRequest::new(
+                    encrypted.ciphertext.clone(),
+                )
+                .with_associated_data_bytes(b"wrong-record-binding")?,
             )
             .await;
-        assert!(wrong_associated_data.is_err());
+        assert!(matches!(
+            wrong_associated_data,
+            Err(openbao::Error::Api { status, .. }) if status == StatusCode::BAD_REQUEST
+        ));
+        let valid_after_rejections = transit
+            .decrypt(
+                "sensitive-buffer-regression",
+                &openbao::secrets::transit::TransitDecryptRequest::new(encrypted.ciphertext)
+                    .with_associated_data_bytes(associated_data)?,
+            )
+            .await?;
+        valid_after_rejections
+            .plaintext_bytes()?
+            .with_secret(|bytes| assert_eq!(bytes, plaintext));
 
         eprintln!("OpenBao integration stage: transit-non-default-hmac-regression");
         transit

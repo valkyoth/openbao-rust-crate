@@ -3939,6 +3939,11 @@ async fn read_response_bytes(
 pub(crate) fn sanitize_response_chunk_if_unique(chunk: Bytes) -> bool {
     if let Ok(mut chunk) = chunk.try_into_mut() {
         sanitization::wipe::bytes(&mut chunk);
+        #[cfg(test)]
+        assert!(
+            chunk.iter().all(|byte| *byte == 0),
+            "response chunk was not sanitized"
+        );
         return true;
     }
     false
@@ -4735,11 +4740,18 @@ mod tests {
         task.abort();
         let cancelled = task.await;
         assert!(cancelled.is_err_and(|error| error.is_cancelled()));
-        assert_sanitizing_body_handed_off_and_dropped(&probe);
         release_tx
             .send(())
             .unwrap_or_else(|error| panic!("{error}"));
         server.join().unwrap_or_else(|error| panic!("{error:?}"));
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while probe.drops.load(Ordering::SeqCst) == 0 {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap_or_else(|error| panic!("transport body owner was not released: {error}"));
+        assert_sanitizing_body_handed_off_and_dropped(&probe);
     }
 
     #[tokio::test]
@@ -4843,8 +4855,14 @@ mod tests {
             b"response-secret".to_vec()
         )));
 
-        let shared = Bytes::from_static(b"shared-response-secret");
+        let surviving = Bytes::from(b"shared-response-secret".to_vec());
+        let shared = surviving.clone();
         assert!(!super::sanitize_response_chunk_if_unique(shared));
+        assert_eq!(surviving.as_ref(), b"shared-response-secret");
+
+        assert!(!super::sanitize_response_chunk_if_unique(
+            Bytes::from_static(b"static-response-secret")
+        ));
     }
 
     #[test]

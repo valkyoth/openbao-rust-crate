@@ -25,6 +25,10 @@ All notable changes to this project are documented here.
   transport acceptance. The OpenBao 2.6.2 Transit integration now rotates the
   key before selecting version 1 and modifies a valid-format ciphertext when
   checking authenticated-decryption failure.
+- Strengthened response-chunk cleanup regressions to inspect zeroed bytes before
+  release and to reject shared heap-backed chunks without modifying the
+  surviving owner. Transit authentication-rejection checks now require an
+  OpenBao HTTP 400 API response and are followed by a valid decryption control.
 - Added regressions that preserve the request allocation through HTTP handoff,
   prove final-owner cleanup without reading freed memory, reject a return to
   ordinary body copies, and exercise partial serialization, size rejection,
