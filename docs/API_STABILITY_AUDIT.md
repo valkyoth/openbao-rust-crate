@@ -62,7 +62,12 @@ make the public API commitments and security boundaries explicit.
   ordinary SDK-owned sensitive HTTP body copies with final-owner sanitizing
   storage and adding best-effort cleanup for uniquely owned response chunks.
   Dependency-owned HTTP/TLS and operating-system buffers remain documented
-  residuals.
+  residuals. `2.1.7` replaces upstream `secrecy 0.10.3` with the
+  `sanitization-secrecy 2.1.0` compatibility provider and updates
+  `sanitization` to `2.1.0`. The OpenBao re-export preserves the common source
+  path and API shape, but direct upstream `secrecy::SecretString` values have a
+  different nominal type and require the migration documented in
+  `docs/MIGRATION_GUIDE.md`.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 689 operations documented for exact `2.6.2`, 594 are typed, 93
   are typed-gated, and two are security-blocked because the workflow prefix

@@ -4,6 +4,34 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.7 - 2026-09-06
+
+### Security
+
+- Replaced the direct `secrecy 0.10.3` dependency with
+  `sanitization-secrecy 2.1.0`, using its `secrecy`-compatible API while
+  routing owned secret cleanup through `sanitization`.
+- Disabled `sanitization-secrecy`'s default `zeroize-interop` feature. The SDK
+  enables only bounded `SecretString` Serde support and does not rely on the
+  compatibility crate's `zeroize` bridge.
+- Added a packaged-public-API regression covering the provider re-export,
+  bounded Serde construction, secret exposure, and redacted `Debug` output.
+
+### Changed
+
+- Updated `sanitization` from `2.0.4` to `2.1.0` and exposed the compatibility
+  provider as `openbao::sanitization_secrecy` while retaining
+  `openbao::secrecy` as an alias.
+- Updated the immutable `taiki-e/install-action` pin from `2.87.6` to
+  `2.87.7`; all other checked direct crates, CI cargo tools, and GitHub Actions
+  were current on the release date.
+- `openbao::SecretString` now has `sanitization-secrecy` type identity.
+  Callers already using the OpenBao re-export require no import changes;
+  callers passing an upstream `secrecy::SecretString` must migrate to
+  `openbao::SecretString` or the documented package alias.
+- OpenBao routes, version profiles, wire formats, and feature acknowledgement
+  gates are unchanged from `2.1.6`.
+
 ## 2.1.6 - 2026-09-06
 
 ### Security

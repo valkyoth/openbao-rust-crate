@@ -69,6 +69,28 @@ check_manifest_crate_version() {
   fi
 }
 
+check_aliased_manifest_crate_version() {
+  alias=$1
+  crate=$2
+  expected=$(latest_crate_version "$crate")
+
+  if [ -z "$expected" ]; then
+    echo "failed to resolve latest ${crate} crate version" >&2
+    exit 1
+  fi
+
+  echo "${crate} latest ${expected} (manifest alias ${alias})"
+
+  actual=$(
+    sed -n "s/^${alias} = {.*version = \"\([^\"]*\)\".*/\1/p" Cargo.toml \
+      | head -1
+  )
+  if [ "$actual" != "$expected" ]; then
+    echo "Cargo.toml: ${alias} (${crate}) is pinned to ${actual:-missing}, expected latest ${expected}" >&2
+    exit 1
+  fi
+}
+
 check_workflow_tool_version() {
   tool=$1
   expected=$(latest_crate_version "$tool")
@@ -102,7 +124,7 @@ check_manifest_crate_version openssl
 check_manifest_crate_version rand
 check_manifest_crate_version reqwest
 check_manifest_crate_version rustix
-check_manifest_crate_version secrecy
+check_aliased_manifest_crate_version secrecy sanitization-secrecy
 check_manifest_crate_version serde
 check_manifest_crate_version serde_json
 check_manifest_crate_version subtle

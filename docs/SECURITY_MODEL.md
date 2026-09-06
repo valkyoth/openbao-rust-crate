@@ -12,7 +12,8 @@ the authoritative vulnerability-reporting policy distributed with the crate.
   Rust, FFI, assembly, or native C code and remain part of the trusted
   computing base. Release review includes the generated SBOM, dependency
   policy, and RustSec results for that complete graph.
-- All token-bearing APIs accept `secrecy::SecretString`.
+- All token-bearing APIs accept `openbao::SecretString`, provided by the
+  `sanitization-secrecy` compatibility crate and backed by `sanitization`.
 - Secret values must never be logged by this crate.
 - Any new auth method must include tests proving token redaction.
 - Any endpoint accepting user paths must use the shared path validator.

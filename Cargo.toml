@@ -1,6 +1,6 @@
 [package]
 name = "openbao"
-version = "2.1.6"
+version = "2.1.7"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -154,7 +154,7 @@ getrandom = "0.4.3"
 rand = { version = "0.10.2", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 openssl = { version = "0.10.81", optional = true }
-secrecy = { version = "0.10.3", features = ["serde"] }
+secrecy = { package = "sanitization-secrecy", version = "2.1.0", default-features = false, features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }
 subtle = "2.6.1"
@@ -162,7 +162,7 @@ time = { version = "0.3.55", default-features = false, features = ["parsing"], o
 tokio = { version = "1.53.1", default-features = false, features = ["time"], optional = true }
 tracing = { version = "0.1.44", default-features = false, features = ["std"], optional = true }
 url = { version = "2.5.8", default-features = false }
-sanitization = { version = "2.0.4", default-features = false, features = ["alloc"] }
+sanitization = { version = "2.1.0", default-features = false, features = ["alloc"] }
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.4", default-features = false, features = ["fs", "std"] }

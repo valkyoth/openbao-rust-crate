@@ -1,8 +1,8 @@
 //! Public-API smoke tests retained in the crates.io source package.
 
 use openbao::{
-    Client, OpenBaoCompatibilityPolicy, OpenBaoConfig, OpenBaoVersion, RetryPolicy,
-    validate_endpoint_path, validate_mount_path,
+    Client, ExposeSecret, OpenBaoCompatibilityPolicy, OpenBaoConfig, OpenBaoVersion, RetryPolicy,
+    SecretString, validate_endpoint_path, validate_mount_path,
 };
 use std::time::Duration;
 
@@ -38,5 +38,22 @@ fn packaged_retry_policy_preserves_bounded_configuration() -> openbao::Result<()
     assert_eq!(policy.initial_delay(), Duration::from_millis(25));
     assert_eq!(policy.max_delay(), Duration::from_millis(250));
     assert_eq!(policy.jitter_percent(), 0);
+    Ok(())
+}
+
+#[test]
+fn packaged_secret_string_uses_sanitization_secrecy() -> serde_json::Result<()> {
+    let secret: openbao::sanitization_secrecy::SecretString =
+        serde_json::from_str("\"package-secret\"")?;
+
+    assert_eq!(secret.expose_secret(), "package-secret");
+    assert!(!format!("{secret:?}").contains("package-secret"));
+
+    let reexported: SecretString = secret;
+    assert_eq!(reexported.expose_secret(), "package-secret");
+
+    let oversized = "x".repeat(openbao::sanitization::DEFAULT_SECRET_STRING_SERDE_MAX_LEN + 1);
+    let oversized_json = serde_json::to_string(&oversized)?;
+    assert!(serde_json::from_str::<SecretString>(&oversized_json).is_err());
     Ok(())
 }

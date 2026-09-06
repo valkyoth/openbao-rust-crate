@@ -935,3 +935,32 @@ Stop criteria:
 - `scripts/release_2_1_6_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.6`.
+
+### 2.1.7 - Sanitization Secrecy Provider Migration
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.7`;
+- `sanitization` is updated to `2.1.0` and the direct upstream `secrecy`
+  dependency is replaced by `sanitization-secrecy 2.1.0` through a reviewed
+  Cargo package alias;
+- the companion dependency disables default features and enables only `serde`,
+  so the SDK does not request its optional `zeroize` interoperability layer;
+- `openbao::SecretString`, `ExposeSecret`, and the compatibility
+  `openbao::secrecy` path retain their familiar source API, while
+  `openbao::sanitization_secrecy` exposes the actual provider explicitly;
+- migration documentation identifies the nominal type-identity change for
+  callers that directly use upstream `secrecy::SecretString`;
+- package tests verify provider identity, Serde loading, exposure, and
+  redacted debug behavior, and dependency checks reject reintroduction of the
+  upstream `secrecy` package;
+- OpenBao routes, field rules, compatibility profiles, wire formats, and
+  security gates remain unchanged from `2.1.6`;
+- all direct crates, CI cargo tools, and immutable GitHub Action pins match the
+  versions reported by `scripts/checks.sh`;
+- README, migration, stability, security model, changelog, and release notes
+  describe the same provider and compatibility boundary; and
+- `scripts/release_2_1_7_gate.sh`, GitHub CI, CodeQL, the all-release
+  compatibility workflow, and exact-commit pentests pass before tagging
+  `v2.1.7`.

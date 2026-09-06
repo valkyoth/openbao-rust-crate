@@ -61,9 +61,9 @@ The complete threat model, hardened deployment guidance, feature-specific
 controls, compatibility evidence rules, residual-memory analysis, and accepted
 limitations are maintained in the signed repository source:
 
-- [Security model and operational guidance](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/SECURITY_MODEL.md)
-- [OpenBao compatibility threat model](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md)
-- [Panic policy](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.6/docs/PANIC_POLICY.md)
+- [Security model and operational guidance](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.7/docs/SECURITY_MODEL.md)
+- [OpenBao compatibility threat model](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.7/docs/OPENBAO_COMPATIBILITY_THREAT_MODEL.md)
+- [Panic policy](https://github.com/valkyoth/openbao-rust-crate/blob/v2.1.7/docs/PANIC_POLICY.md)
 
 Review those documents before enabling any feature whose name ends in
 `-acknowledged` or deploying the SDK in a high-assurance environment.

@@ -3,7 +3,7 @@
 //! This crate is intentionally conservative:
 //!
 //! - this crate's Rust sources forbid unsafe code;
-//! - tokens are stored as [`secrecy::SecretString`];
+//! - tokens are stored as [`sanitization_secrecy::SecretString`];
 //! - HTTPS is required by default;
 //! - OpenBao API URLs are assembled with structured URL path segments;
 //! - authentication state is represented in the type system.
@@ -251,6 +251,8 @@ pub use response::{
     deserialize_bounded_string_vec,
 };
 pub use sanitization::{self, SecretVec, SecureSanitize, wipe::bytes as sanitize_bytes};
+/// Secrecy-compatible secret wrappers backed by `sanitization`.
+pub use secrecy as sanitization_secrecy;
 pub use secrecy::{self, ExposeSecret, SecretString};
 pub use serde_json::{self, Value as JsonValue};
 #[cfg(feature = "time")]

@@ -9250,8 +9250,8 @@ fn decode_operator_token(request: &DecodeTokenRequest) -> Result<DecodeTokenResp
             .map(str::to_owned)
             .map_err(|_| Error::Decode("decoded operator token is not valid UTF-8".into()))
     })?;
-    // `SecretString::from(String)` moves this allocation into secrecy's
-    // zeroizing box; it does not copy or abandon the plaintext allocation.
+    // `SecretString::from(String)` transfers this value into the
+    // sanitization-secrecy owner, which sanitizes the source allocation.
     Ok(DecodeTokenResponse {
         token: SecretString::from(decoded_token),
     })

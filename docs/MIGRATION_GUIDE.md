@@ -7,6 +7,46 @@ profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
 
+## From `openbao` 2.1.6 To 2.1.7
+
+`2.1.7` replaces the direct upstream `secrecy 0.10.3` dependency with
+`sanitization-secrecy 2.1.0` and updates the core `sanitization` dependency to
+`2.1.0`. The compatibility dependency is compiled without its default
+`zeroize-interop` feature; the SDK enables only `serde` support. Secret cleanup
+is therefore owned by `sanitization`, while TLS dependencies may still use
+`zeroize` independently.
+
+Applications that consistently import `SecretString` and `ExposeSecret` from
+`openbao` require no source changes:
+
+```rust
+use openbao::{ExposeSecret, SecretString};
+
+let token = SecretString::from("token");
+assert_eq!(token.expose_secret(), "token");
+```
+
+The provider change does change nominal type identity. A direct upstream
+`secrecy::SecretString` can no longer be passed where an OpenBao API expects
+`openbao::SecretString`. Prefer the OpenBao re-export. Code that must retain
+the local `secrecy::...` spelling can migrate its dependency with the companion
+crate's package alias:
+
+```toml
+[dependencies]
+secrecy = { package = "sanitization-secrecy", version = "2.1.0", default-features = false, features = ["serde"] }
+```
+
+`openbao::secrecy` remains available for compatibility and
+`openbao::sanitization_secrecy` names the actual provider explicitly. The
+familiar `SecretString::from`, `ExposeSecret`, redacted `Debug`, and Serde
+behavior used by this SDK remain available. Deserialization through the
+provider has a 1 MiB hard ceiling in addition to the SDK's endpoint-specific
+transport and response bounds.
+
+OpenBao compatibility profiles, routes, request and response field rules,
+wire formats, and feature acknowledgement gates are unchanged from `2.1.6`.
+
 ## From `openbao` 2.1.5 To 2.1.6
 
 `2.1.6` is a source-compatible secret-buffer hardening release. Sensitive
