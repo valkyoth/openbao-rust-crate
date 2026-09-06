@@ -250,6 +250,8 @@ pub struct MonitorStream {
     format: MonitorLogFormat,
     max_frame_bytes: usize,
     terminal: bool,
+    #[cfg(test)]
+    cleanup_probe: Option<std::sync::Arc<std::sync::atomic::AtomicUsize>>,
 }
 
 #[cfg(feature = "monitor-stream")]
@@ -278,6 +280,8 @@ impl MonitorStream {
             format: options.log_format,
             max_frame_bytes: options.max_frame_bytes,
             terminal: false,
+            #[cfg(test)]
+            cleanup_probe: None,
         }
     }
 
@@ -293,11 +297,17 @@ impl MonitorStream {
         }
     }
 
-    fn frame_too_large(&mut self) -> Poll<Option<Result<MonitorFrame>>> {
-        self.terminal = true;
-        if let Some(chunk) = self.chunk.take() {
-            let _ = sanitize_response_chunk_if_unique(chunk);
+    fn sanitize_chunk(&self, chunk: Bytes) {
+        let _sanitized = sanitize_response_chunk_if_unique(chunk);
+        #[cfg(test)]
+        if _sanitized && let Some(probe) = &self.cleanup_probe {
+            probe.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         }
+    }
+
+    fn frame_too_large(&mut self, chunk: Bytes) -> Poll<Option<Result<MonitorFrame>>> {
+        self.terminal = true;
+        self.sanitize_chunk(chunk);
         self.pending.clear_secret();
         Poll::Ready(Some(Err(Error::Decode(
             "OpenBao monitor frame exceeds configured limit".into(),
@@ -321,7 +331,7 @@ impl Stream for MonitorStream {
                 let remaining = &chunk[this.chunk_offset..];
                 if let Some(newline) = remaining.iter().position(|byte| *byte == b'\n') {
                     if this.pending.len().saturating_add(newline) > this.max_frame_bytes {
-                        return this.frame_too_large();
+                        return this.frame_too_large(chunk);
                     }
                     let frame = this.finish_frame(&remaining[..newline]);
                     this.chunk_offset += newline + 1;
@@ -329,16 +339,16 @@ impl Stream for MonitorStream {
                         this.chunk = Some(chunk);
                     } else {
                         this.chunk_offset = 0;
-                        let _ = sanitize_response_chunk_if_unique(chunk);
+                        this.sanitize_chunk(chunk);
                     }
                     return Poll::Ready(Some(Ok(frame)));
                 }
                 if this.pending.len().saturating_add(remaining.len()) > this.max_frame_bytes {
-                    return this.frame_too_large();
+                    return this.frame_too_large(chunk);
                 }
                 this.pending.extend_from_slice(remaining);
                 this.chunk_offset = 0;
-                let _ = sanitize_response_chunk_if_unique(chunk);
+                this.sanitize_chunk(chunk);
             }
 
             if chunks_polled >= MAX_MONITOR_CHUNKS_PER_POLL {
@@ -354,7 +364,7 @@ impl Stream for MonitorStream {
                     if chunk.len() > MAX_MONITOR_TRANSPORT_CHUNK_BYTES {
                         this.terminal = true;
                         this.pending.clear_secret();
-                        let _ = sanitize_response_chunk_if_unique(chunk);
+                        this.sanitize_chunk(chunk);
                         return Poll::Ready(Some(Err(Error::Decode(
                             "OpenBao monitor transport chunk exceeds internal limit".into(),
                         ))));
@@ -382,7 +392,7 @@ impl Stream for MonitorStream {
 impl Drop for MonitorStream {
     fn drop(&mut self) {
         if let Some(chunk) = self.chunk.take() {
-            let _ = sanitize_response_chunk_if_unique(chunk);
+            self.sanitize_chunk(chunk);
         }
         self.pending.clear_secret();
     }
@@ -12572,6 +12582,7 @@ mod tests {
             format: MonitorLogFormat::Json,
             max_frame_bytes,
             terminal: false,
+            cleanup_probe: None,
         }
     }
 
@@ -12631,6 +12642,22 @@ mod tests {
 
     #[cfg(feature = "monitor-stream")]
     #[test]
+    fn monitor_stream_sanitizes_both_oversized_frame_chunk_shapes() {
+        for chunk in [b"12345".as_slice(), b"12345\n".as_slice()] {
+            let cleanup_probe = Arc::new(AtomicUsize::new(0));
+            let mut stream = test_monitor_stream(&[chunk], 4);
+            stream.cleanup_probe = Some(Arc::clone(&cleanup_probe));
+
+            let error = poll_monitor(&mut stream)
+                .and_then(core::result::Result::err)
+                .unwrap_or_else(|| panic!("oversized monitor frame unexpectedly succeeded"));
+            assert!(error.to_string().contains("exceeds configured limit"));
+            assert_eq!(cleanup_probe.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[cfg(feature = "monitor-stream")]
+    #[test]
     fn monitor_stream_rejects_oversized_transport_chunks() {
         let oversized = vec![b'x'; super::MAX_MONITOR_TRANSPORT_CHUNK_BYTES + 1];
         let mut stream = test_monitor_stream(&[&oversized], super::MAX_MONITOR_FRAME_BYTES);
@@ -12657,6 +12684,7 @@ mod tests {
             format: MonitorLogFormat::Json,
             max_frame_bytes: 64,
             terminal: false,
+            cleanup_probe: None,
         };
         let mut context = Context::from_waker(Waker::noop());
 
@@ -12693,6 +12721,7 @@ mod tests {
             format: MonitorLogFormat::Standard,
             max_frame_bytes: 64,
             terminal: false,
+            cleanup_probe: None,
         };
         drop(stream);
         assert!(dropped.load(Ordering::SeqCst));

@@ -17,6 +17,8 @@ All notable changes to this project are documented here.
   them into `SecretVec`, including chunks retained by the monitor stream.
   Shared reqwest, Hyper, TLS, allocator, kernel, and device buffers remain
   dependency or operating-system residuals and are documented as such.
+- Corrected both oversized monitor-frame branches to wipe the local chunk
+  moved out of stream state before returning the bounded decode error.
 - Added regressions that preserve the request allocation through HTTP handoff,
   prove final-owner cleanup without reading freed memory, reject a return to
   ordinary body copies, and exercise partial serialization, size rejection,

@@ -49,6 +49,10 @@ caller-owned input, or memory after forced process termination. Those remain
 documented residual risks; this release does not claim universal process-memory
 erasure.
 
+Both monitor frame-size rejection branches explicitly wipe the local uniquely
+owned chunk before returning. Their regressions cover newline-delimited and
+unterminated oversized frames.
+
 ## Verification
 
 - Added pointer-identity and final-owner-drop regressions that fail if an
