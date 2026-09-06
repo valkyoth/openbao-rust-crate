@@ -955,6 +955,9 @@ Stop criteria:
 - package tests verify provider identity, Serde loading, exposure, and
   redacted debug behavior, and dependency checks reject reintroduction of the
   upstream `secrecy` package;
+- the intentional client-only feature set is warning-clean under
+  `cargo clippy --no-default-features --features rustls-tls -- -D warnings`,
+  without suppressing dead-code diagnostics in feature-bearing builds;
 - OpenBao routes, field rules, compatibility profiles, wire formats, and
   security gates remain unchanged from `2.1.6`;
 - all direct crates, CI cargo tools, and immutable GitHub Action pins match the

@@ -11,9 +11,12 @@ grep -q 'Version: 2.1.7' release-notes/RELEASE_NOTES_2.1.7.md
 grep -q '2.1.7 - 2026-09-06' CHANGELOG.md
 grep -q 'pub use secrecy as sanitization_secrecy;' src/lib.rs
 grep -q 'packaged_secret_string_uses_sanitization_secrecy' tests/package_smoke.rs
+grep -q 'checks: clippy client-only feature set' scripts/checks.sh
 grep -q 'taiki-e/install-action v2.87.7' .github/workflows/ci.yml
 grep -q 'uses: taiki-e/install-action@84f5ac3124727fb3d284d4d22ee9ab3654fd09a6' \
   .github/workflows/ci.yml
+grep -Fq 'rm -rf -- target/package' .github/workflows/ci.yml
+grep -Fq '{ name = "syn", version = "2" }' deny.toml
 
 if grep -q '^name = "secrecy"$' Cargo.lock fuzz/Cargo.lock \
   tests/fixtures/reqwest-native-unification/Cargo.lock; then
@@ -39,6 +42,7 @@ for lockfile in Cargo.lock fuzz/Cargo.lock tests/fixtures/reqwest-native-unifica
 done
 
 cargo test --locked --test package_smoke packaged_secret_string_uses_sanitization_secrecy
+cargo clippy --locked --no-default-features --features rustls-tls -- -D warnings
 scripts/checks.sh
 python3 -B scripts/openbao_core_matrix.py --verify
 python3 -B scripts/generate_openbao_version_contracts.py --verify

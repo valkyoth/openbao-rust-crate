@@ -74,6 +74,37 @@
 //! `openbao.request` spans, for example with `EnvFilter::new("openbao=info")`,
 //! or install a tracing layer that omits the `path` field.
 
+// A client-only build intentionally omits every endpoint module. Shared
+// dispatch, compatibility, validation, and response internals remain compiled
+// for the public client types but have no in-crate caller in that exact
+// configuration. Feature-bearing builds retain normal dead-code diagnostics.
+#![cfg_attr(
+    not(any(
+        feature = "approle",
+        feature = "cert-auth",
+        feature = "cubbyhole",
+        feature = "database",
+        feature = "identity",
+        feature = "jwt-auth",
+        feature = "kerberos-auth",
+        feature = "kubernetes-auth",
+        feature = "ldap-auth",
+        feature = "radius-auth",
+        feature = "userpass",
+        feature = "token",
+        feature = "kv1",
+        feature = "kv2",
+        feature = "kubernetes",
+        feature = "ldap",
+        feature = "pki",
+        feature = "rabbitmq",
+        feature = "ssh",
+        feature = "totp",
+        feature = "transit",
+        feature = "sys"
+    )),
+    allow(dead_code)
+)]
 #![forbid(unsafe_code)]
 
 #[cfg(not(any(feature = "rustls-tls", feature = "native-tls")))]

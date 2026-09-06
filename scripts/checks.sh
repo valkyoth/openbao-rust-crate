@@ -67,6 +67,9 @@ cargo clippy --all-targets \
 echo "checks: clippy all features"
 cargo clippy --all-targets --all-features -- -D warnings
 
+echo "checks: clippy client-only feature set"
+cargo clippy --no-default-features --features rustls-tls -- -D warnings
+
 echo "checks: reqwest TLS feature unification"
 cargo run --manifest-path tests/fixtures/reqwest-native-unification/Cargo.toml --locked
 

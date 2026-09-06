@@ -31,6 +31,12 @@ All notable changes to this project are documented here.
   `openbao::SecretString` or the documented package alias.
 - OpenBao routes, version profiles, wire formats, and feature acknowledgement
   gates are unchanged from `2.1.6`.
+- Made the intentional client-only feature set warning-clean and added a
+  `-D warnings` Clippy gate for that sparse configuration. Feature-bearing
+  builds retain normal dead-code diagnostics.
+- Recorded the temporary compile-time-only `syn 2`/`syn 3` split as a targeted
+  dependency-policy exception and removed disposable package verification
+  output before Rust cache cleanup so CI diagnostics remain actionable.
 
 ## 2.1.6 - 2026-09-06
 

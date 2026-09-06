@@ -47,3 +47,11 @@ jobs:
 
       - name: Generate SBOM
         run: scripts/generate-sbom.sh
+
+      # rust-cache 2.9.2 treats any nested directory named `tests` as a Cargo
+      # test profile during post-job cleanup. cargo package leaves an extracted
+      # package below target/package, so remove that disposable verification
+      # output before the cache is saved to avoid misleading ENOENT diagnostics.
+      - name: Remove package verification artifacts
+        if: always()
+        run: rm -rf -- target/package

@@ -38,6 +38,12 @@ ignore = true
 multiple-versions = "warn"
 wildcards = "deny"
 highlight = "all"
+skip = [
+    # Current procedural-macro dependencies are split between syn 2 and syn 3.
+    # syn is compile-time-only; limit the exception to the older major line so
+    # any additional duplicate remains visible.
+    { name = "syn", version = "2" },
+]
 
 # getrandom/rand duplicate versions are currently transitive through TLS and
 # cryptography dependencies. Keep them visible as warnings instead of skipping

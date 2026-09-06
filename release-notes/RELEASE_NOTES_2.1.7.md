@@ -48,6 +48,14 @@ OpenBao endpoint-specific body and collection bounds continue to apply first.
 - All default and all-feature source targets compile with the new provider.
 - A crates.io-retained package smoke test checks the explicit provider
   re-export, Serde construction, exposure, and debug redaction.
+- The client-only `default-features = false, features = ["rustls-tls"]`
+  configuration is warning-clean and enforced by Clippy with `-D warnings`;
+  normal dead-code diagnostics remain active whenever an endpoint feature is
+  selected.
+- The temporary compile-time-only `syn 2`/`syn 3` dependency split is an
+  explicit, major-line-limited policy exception. Generated package
+  verification artifacts are removed before Rust cache cleanup so upstream
+  cache-action diagnostics do not obscure CI results.
 - Release checks verify that `Cargo.lock` contains `sanitization-secrecy 2.1.0`
   and no upstream package named `secrecy`.
 - The root, fuzz, and standalone reqwest-unification lockfiles are refreshed.
