@@ -50,10 +50,11 @@
 //! a shared sanitizing owner. The owner wipes its complete allocation after
 //! the final HTTP-body clone drops, including cancellation and transport-error
 //! paths. Uniquely owned response chunks are wiped after copying into
-//! [`SecretVec`]. `reqwest`, Hyper, TLS, allocator, kernel, and device layers
-//! can still create or retain additional copies outside this crate's control.
-//! Treat Transit plaintext and other request or response secret material as
-//! process-resident during the request lifecycle.
+//! [`SecretVec`]. Escaped JSON strings can also pass through serde_json's
+//! private ordinary scratch buffer. `reqwest`, Hyper, TLS, Serde, allocator,
+//! kernel, and device layers can still create or retain additional copies
+//! outside this crate's control. Treat Transit plaintext and other request or
+//! response secret material as process-resident during the request lifecycle.
 //!
 //! OpenBao's `/v1` prefix is a routing namespace, not a server-version
 //! compatibility guarantee. New deployments should configure

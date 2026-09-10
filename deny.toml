@@ -39,6 +39,10 @@ multiple-versions = "warn"
 wildcards = "deny"
 highlight = "all"
 skip = [
+    # reqwest 0.13.5 uses base64 0.23 while hyper-util 0.1.20 still uses 0.22.
+    # Limit the temporary exception to the older line so any third version or
+    # future split remains visible.
+    { name = "base64", version = "0.22" },
     # Current procedural-macro dependencies are split between syn 2 and syn 3.
     # syn is compile-time-only; limit the exception to the older major line so
     # any additional duplicate remains visible.

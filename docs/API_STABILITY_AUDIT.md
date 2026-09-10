@@ -67,7 +67,10 @@ make the public API commitments and security boundaries explicit.
   `sanitization` to `2.1.0`. The OpenBao re-export preserves the common source
   path and API shape, but direct upstream `secrecy::SecretString` values have a
   different nominal type and require the migration documented in
-  `docs/MIGRATION_GUIDE.md`.
+  `docs/MIGRATION_GUIDE.md`. `2.1.8` preserves the entire public API and
+  compatibility profile set while redacting Transit batch item errors from
+  `Debug`, extending lifecycle regressions, and documenting serde_json escaped-
+  string scratch storage as a dependency-owned residual.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
   deferred. Of 689 operations documented for exact `2.6.2`, 594 are typed, 93
   are typed-gated, and two are security-blocked because the workflow prefix

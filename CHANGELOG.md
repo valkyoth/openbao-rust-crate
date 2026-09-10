@@ -4,6 +4,43 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.8 - 2026-09-10
+
+### Security
+
+- Redacted every Transit batch-result item error from `Debug` output. The
+  public error strings remain available for explicit handling, but potentially
+  reflected raw or Base64 secret material is no longer emitted by incidental
+  diagnostic formatting.
+- Added typed Transit lifecycle regressions for request-body final-owner
+  cleanup, response cancellation after a chunk is accumulated, escaped and
+  malformed JSON plaintext, invalid Base64, and chunked over-limit responses
+  without `Content-Length`.
+- Added an isolated end-to-end tracing subscriber test proving typed Transit
+  encrypt/decrypt spans exclude plaintext, Base64 plaintext, ciphertext,
+  authentication tokens, and key identifiers.
+
+### Changed
+
+- Updated `base64-ng` from `2.0.3` to `2.0.4` after its new security-focused
+  patch release, preserving the existing `alloc`-only optional configuration.
+- Updated `reqwest` from `0.13.4` to `0.13.5` with default features still
+  disabled and the existing explicit transport feature policy unchanged.
+- Recorded reqwest/hyper-util's temporary `base64 0.23`/`0.22` split as a
+  narrowly versioned dependency-policy exception; any additional line remains
+  visible to the release gate.
+- Updated the immutable `taiki-e/install-action` pin from `2.87.7` to
+  `2.87.9`; all other checked direct crates, CI cargo tools, and GitHub Actions
+  were current on the release date.
+- Documented the sensitive Transit allocation lifecycle in a stage-by-stage
+  ownership table, including the precise cleanup boundary for caller,
+  SDK-owned, dependency-owned, TLS, kernel, and device storage.
+- Documented that escaped JSON strings can use serde_json's private ordinary
+  scratch buffer. This dependency-owned storage cannot be sanitized by the
+  SDK, so complete process-memory erasure is not claimed.
+- OpenBao routes, compatibility profiles, public method signatures, and
+  feature gates are unchanged from `2.1.7`.
+
 ## 2.1.7 - 2026-09-06
 
 ### Security

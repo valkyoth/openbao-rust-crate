@@ -967,3 +967,32 @@ Stop criteria:
 - `scripts/release_2_1_7_gate.sh`, GitHub CI, CodeQL, the all-release
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.7`.
+
+### 2.1.8 - Transit Lifecycle Assurance
+
+Stop criteria:
+
+- package, fuzz-workspace, and standalone fixture metadata are updated to
+  `2.1.8`, `base64-ng` is updated to `2.0.4`, `reqwest` is updated to
+  `0.13.5`, the immutable CI action pins are current, and OpenBao compatibility
+  profiles remain unchanged;
+- Transit encrypt request-body ownership is exercised through the typed byte
+  constructor and production dispatch path, including final-owner cleanup;
+- response cancellation occurs only after the bounded response loop has
+  accumulated a real HTTP chunk into sanitizing storage;
+- Transit response regressions cover escaped Base64 padding, malformed escaped
+  strings, truncated JSON, invalid Base64, and chunked size-limit rejection
+  without `Content-Length`;
+- Transit batch encrypt, decrypt, rewrap, sign, and verify item errors remain
+  explicitly accessible but are redacted from `Debug` output;
+- an isolated tracing subscriber captures typed Transit encrypt/decrypt spans
+  and proves plaintext, encoded plaintext, ciphertext, token values, and key
+  identifiers are absent;
+- the security model maps every sensitive Transit lifecycle stage to its owner
+  and cleanup guarantee, and names serde_json escaped-string scratch storage as
+  an uncontrollable dependency residual;
+- no documentation claims complete process-memory erasure or cleanup of shared
+  HTTP, TLS, operating-system, or forced-termination state; and
+- `scripts/release_2_1_8_gate.sh`, GitHub CI, CodeQL, the all-release
+  compatibility workflow, exact OpenBao `2.6.2` TLS integration, and
+  exact-commit pentests pass before tagging `v2.1.8`.

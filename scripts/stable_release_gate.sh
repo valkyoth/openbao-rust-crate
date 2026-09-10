@@ -8,7 +8,7 @@ grep -q '1.1.0 - Sanitization Secret Buffer Migration' docs/RELEASE_PLAN.md
 grep -q '1.1.1 - Security Dependency Refresh' docs/RELEASE_PLAN.md
 grep -q '1.1.2 - Rust 1.96.1 Toolchain And Dependency Refresh' docs/RELEASE_PLAN.md
 grep -q 'Version: 1.1.2' release-notes/RELEASE_NOTES_1.1.2.md
-grep -q 'version = "2.1.7"' Cargo.toml
+grep -q 'version = "2.1.8"' Cargo.toml
 grep -q '2.0.0 - Multi-Version OpenBao Compatibility' docs/RELEASE_PLAN.md
 grep -q '2.0.1 - Compatibility Documentation Correction' docs/RELEASE_PLAN.md
 grep -q 'Version: 2.0.0' release-notes/RELEASE_NOTES_2.0.0.md
@@ -31,4 +31,6 @@ grep -q '2.1.6 - Secret-Bearing HTTP Buffer Hardening' docs/RELEASE_PLAN.md
 grep -q 'Version: 2.1.6' release-notes/RELEASE_NOTES_2.1.6.md
 grep -q '2.1.7 - Sanitization Secrecy Provider Migration' docs/RELEASE_PLAN.md
 grep -q 'Version: 2.1.7' release-notes/RELEASE_NOTES_2.1.7.md
+grep -q '2.1.8 - Transit Lifecycle Assurance' docs/RELEASE_PLAN.md
+grep -q 'Version: 2.1.8' release-notes/RELEASE_NOTES_2.1.8.md
 echo "stable release gate complete"

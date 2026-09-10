@@ -5577,6 +5577,129 @@ async fn transit_byte_helpers_base64_encode_and_decode_payloads() {
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }
 
+#[cfg(feature = "transit-bytes")]
+#[tokio::test]
+async fn transit_decrypt_parser_edges_remain_secret_free() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let responses = [
+        r#"{"data":{"plaintext":"c2VjcmV0IQ\u003d\u003d"}}"#,
+        r#"{"data":{"plaintext":"c2VjcmV0IQ\uD800"}}"#,
+        r#"{"data":{"plaintext":"truncated-secret-fragment""#,
+        r#"{"data":{"plaintext":"invalid-base64-secret%"}}"#,
+    ];
+    let server = thread::spawn(move || {
+        for body in responses {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("POST /v1/transit/decrypt/app-key HTTP/1.1"));
+            write_json_response(&mut stream, "200 OK", body);
+        }
+    });
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(SecretString::from("test-token")))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let transit = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"));
+    let request = || {
+        openbao::secrets::transit::TransitDecryptRequest::new(SecretString::from(
+            "vault:v1:test-ciphertext",
+        ))
+    };
+
+    let escaped = transit
+        .decrypt("app-key", &request())
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(!format!("{escaped:?}").contains("c2VjcmV0"));
+    escaped
+        .plaintext_bytes()
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_secret(|plaintext| assert_eq!(plaintext, b"secret!"));
+
+    for reflected in ["c2VjcmV0IQ", "truncated-secret-fragment"] {
+        let error = transit
+            .decrypt("app-key", &request())
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("malformed Transit response was accepted"));
+        let rendered = format!("{error:?} {error}");
+        assert!(rendered.contains("did not match expected schema"));
+        assert!(!rendered.contains(reflected));
+    }
+
+    let invalid = transit
+        .decrypt("app-key", &request())
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    let error = invalid
+        .plaintext_bytes()
+        .err()
+        .unwrap_or_else(|| panic!("invalid Base64 plaintext was accepted"));
+    let rendered = format!("{error:?} {error}");
+    assert!(rendered.contains("invalid base64"));
+    assert!(!rendered.contains("invalid-base64-secret"));
+
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
+#[tokio::test]
+async fn transit_chunked_response_limit_is_enforced_without_content_length() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("POST /v1/transit/decrypt/app-key HTTP/1.1"));
+        stream
+            .write_all(
+                b"HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ntransfer-encoding: chunked\r\nconnection: close\r\n\r\n",
+            )
+            .unwrap_or_else(|error| panic!("{error}"));
+        let encoded_marker = "Y2h1bmtlZC1yZXNwb25zZS1zZWNyZXQ=";
+        let oversized = format!("{{\"data\":{{\"plaintext\":\"{}", encoded_marker.repeat(40));
+        for chunk in oversized.as_bytes().chunks(700) {
+            write!(stream, "{:X}\r\n", chunk.len())
+                .and_then(|()| stream.write_all(chunk))
+                .and_then(|()| stream.write_all(b"\r\n"))
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+        let _ = stream.write_all(b"0\r\n\r\n");
+    });
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .and_then(|config| config.max_response_bytes(1024))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(SecretString::from("test-token")))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let error = client
+        .transit("transit")
+        .unwrap_or_else(|error| panic!("{error}"))
+        .decrypt(
+            "app-key",
+            &openbao::secrets::transit::TransitDecryptRequest::new(SecretString::from(
+                "vault:v1:test-ciphertext",
+            )),
+        )
+        .await
+        .err()
+        .unwrap_or_else(|| panic!("oversized chunked Transit response was accepted"));
+    let rendered = format!("{error:?} {error}");
+    assert!(rendered.contains("exceeds client limit"));
+    assert!(!rendered.contains("chunked-response-secret"));
+    assert!(!rendered.contains("Y2h1bmtlZC1yZXNwb25zZS1zZWNyZXQ="));
+    server.join().unwrap_or_else(|error| panic!("{error:?}"));
+}
+
 #[tokio::test]
 async fn transit_crypto_helpers_use_documented_paths() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));

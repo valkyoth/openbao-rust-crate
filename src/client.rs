@@ -3909,9 +3909,20 @@ async fn read_public_api_errors(
 }
 
 async fn read_response_bytes(
-    mut response: reqwest::Response,
+    response: reqwest::Response,
     max_response_bytes: usize,
 ) -> Result<SecretVec> {
+    read_response_bytes_with_observer(response, max_response_bytes, |_| {}).await
+}
+
+async fn read_response_bytes_with_observer<F>(
+    mut response: reqwest::Response,
+    max_response_bytes: usize,
+    mut observe_received_chunk: F,
+) -> Result<SecretVec>
+where
+    F: FnMut(usize),
+{
     if response
         .content_length()
         .is_some_and(|length| length > max_response_bytes as u64)
@@ -3930,6 +3941,7 @@ async fn read_response_bytes(
             ));
         }
         body.extend_from_slice(&chunk);
+        observe_received_chunk(chunk.len());
         let _ = sanitize_response_chunk_if_unique(chunk);
     }
 
@@ -4692,6 +4704,58 @@ mod tests {
         server.join().unwrap_or_else(|error| panic!("{error:?}"));
     }
 
+    #[cfg(all(
+        feature = "transit",
+        feature = "transit-bytes",
+        feature = "sensitive-http-test-only"
+    ))]
+    #[tokio::test]
+    async fn typed_transit_encrypt_retains_sanitizing_body_owner() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut request = [0_u8; 4096];
+            let read = stream
+                .read(&mut request)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let request = String::from_utf8_lossy(&request[..read]);
+            assert!(request.starts_with("POST /v1/transit/encrypt/app-key HTTP/1.1"));
+            assert!(request.contains(r#""plaintext":"dHlwZWQtdHJhbnNpdC1zZWNyZXQ=""#));
+            let body = r#"{"data":{"ciphertext":"vault:v1:ciphertext","key_version":1}}"#;
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{body}",
+                body.len()
+            )
+            .unwrap_or_else(|error| panic!("{error}"));
+        });
+
+        let probe = std::sync::Arc::new(super::SanitizingBodyDropProbe::default());
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(OpenBaoConfig::allow_sensitive_local_http_for_tests)
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .and_then(|client| client.try_with_token(SecretString::from("test-token")))
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_sanitizing_body_probe(probe.clone());
+        let request = crate::secrets::transit::TransitEncryptRequest::from_plaintext_bytes(
+            b"typed-transit-secret",
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        let response = client
+            .transit("transit")
+            .unwrap_or_else(|error| panic!("{error}"))
+            .encrypt("app-key", &request)
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        drop(response);
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
+        assert_sanitizing_body_handed_off_and_dropped(&probe);
+    }
+
     #[cfg(feature = "sensitive-http-test-only")]
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn cancelling_started_transport_drops_sanitizing_body_owner() {
@@ -4752,6 +4816,65 @@ mod tests {
         .await
         .unwrap_or_else(|error| panic!("transport body owner was not released: {error}"));
         assert_sanitizing_body_handed_off_and_dropped(&probe);
+    }
+
+    #[cfg(feature = "sensitive-http-test-only")]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn cancelling_response_after_received_chunk_drops_accumulator() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let (release_tx, release_rx) = mpsc::sync_channel(1);
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let mut request = [0_u8; 1024];
+            let _ = stream
+                .read(&mut request)
+                .unwrap_or_else(|error| panic!("{error}"));
+            let chunk = br#"{"data":{"plaintext":"c2Vuc2l0aXZlLXJlc3BvbnNl"#;
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ntransfer-encoding: chunked\r\nconnection: close\r\n\r\n{:X}\r\n",
+                chunk.len()
+            )
+            .and_then(|()| stream.write_all(chunk))
+            .and_then(|()| stream.write_all(b"\r\n"))
+            .and_then(|()| stream.flush())
+            .unwrap_or_else(|error| panic!("{error}"));
+            release_rx
+                .recv_timeout(Duration::from_secs(5))
+                .unwrap_or_else(|error| panic!("{error}"));
+        });
+
+        let response = reqwest::Client::new()
+            .get(format!("http://{address}/v1/transit/decrypt/app-key"))
+            .send()
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+        let (observed_tx, observed_rx) = mpsc::sync_channel(1);
+        let task = tokio::spawn(async move {
+            let mut notified = false;
+            super::read_response_bytes_with_observer(response, 1024, move |length| {
+                if !notified {
+                    observed_tx
+                        .send(length)
+                        .unwrap_or_else(|error| panic!("{error}"));
+                    notified = true;
+                }
+            })
+            .await
+        });
+        let observed = observed_rx
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap_or_else(|error| panic!("response chunk was not accumulated: {error}"));
+        assert!(observed > 0);
+        task.abort();
+        assert!(task.await.is_err_and(|error| error.is_cancelled()));
+        release_tx
+            .send(())
+            .unwrap_or_else(|error| panic!("{error}"));
+        server.join().unwrap_or_else(|error| panic!("{error:?}"));
     }
 
     #[tokio::test]

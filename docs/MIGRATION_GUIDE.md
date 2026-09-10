@@ -7,6 +7,28 @@ profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
 
+## From `openbao` 2.1.7 To 2.1.8
+
+`2.1.8` is a source-compatible Transit lifecycle assurance release. No public
+method, request, response, feature, compatibility-profile, or dependency-API
+changes require application migration. The internal optional `base64-ng`
+dependency is updated from `2.0.3` to `2.0.4`.
+The internal `reqwest` dependency is updated from `0.13.4` to `0.13.5` with
+default features still disabled and no transport-policy change.
+
+Transit batch item `Debug` output now redacts item-level OpenBao error strings
+because those strings can reflect raw or Base64 request material. Callers can
+still inspect each public `error: Option<String>` explicitly, but must treat it
+as untrusted, potentially sensitive server text.
+
+The documented memory guarantee is more precise. SDK-controlled request-body,
+response-accumulator, typed secret, and decoded-byte allocations sanitize on
+drop. Shared HTTP chunks and allocations owned by serde_json, reqwest, Hyper,
+TLS, the allocator, kernel, or device remain outside that guarantee. In
+particular, escaped JSON strings can use serde_json's private ordinary scratch
+buffer. Applications requiring stronger process-wide guarantees must enforce
+them below or outside this SDK.
+
 ## From `openbao` 2.1.6 To 2.1.7
 
 `2.1.7` replaces the direct upstream `secrecy 0.10.3` dependency with

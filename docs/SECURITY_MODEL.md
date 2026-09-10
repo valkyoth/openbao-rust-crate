@@ -271,6 +271,20 @@ ordinary convergence.
 
 ## Residual Secret Memory
 
+The sensitive Transit lifecycle has the following ownership boundaries:
+
+| Stage | Storage and cleanup guarantee |
+| --- | --- |
+| Caller plaintext | Caller-owned; callers must sanitize it after request construction |
+| Base64 encoding | `base64-ng` secret output is moved into `SecretString`; dependency internals remain outside the SDK guarantee |
+| Typed request fields | `SecretString`, sanitized when the final owner drops |
+| JSON/form/byte request body | SDK-owned wipe-on-drop allocation retained through every reusable HTTP-body clone |
+| reqwest, Hyper, TLS, allocator, kernel, device | Dependency or operating-system owned; no SDK cleanup guarantee |
+| Incoming `Bytes` chunk | Copied into sanitizing storage, then wiped only when unique ownership is proven |
+| Complete response body | `SecretVec`, sanitized when dropped, including decode errors and cancellation |
+| JSON parser temporary storage | Dependency-owned; escaped strings can use serde_json's private ordinary scratch buffer |
+| Typed plaintext and decoded bytes | `SecretString` and `SecretVec`, respectively, sanitized when their final owners drop |
+
 JSON and form serialization write directly into a private wipe-on-drop owner.
 Byte requests copy the caller's borrowed slice into the same owner. The owner
 is passed to `bytes::Bytes::from_owner`, and every reusable `reqwest::Body`
@@ -283,11 +297,14 @@ allocation the SDK owns.
 Responses are accumulated directly in `SecretVec`. After each HTTP chunk is
 copied, the SDK uses `Bytes::try_into_mut` and wipes the chunk when unique
 ownership is proven. Shared chunks cannot be mutated safely and are dropped
-back to the dependency owner without a cleanup guarantee. Serde, reqwest,
-Hyper, the TLS backend, allocator, kernel, or network device may create or keep
-independent plaintext or ciphertext buffers until their own cleanup. Forced
-process termination can also bypass Rust destructors. The SDK therefore does
-not claim complete process-wide sanitization.
+back to the dependency owner without a cleanup guarantee. serde_json keeps a
+private ordinary scratch buffer while decoding escaped JSON strings, including
+escaped Base64 padding in Transit plaintext responses. The SDK cannot sanitize
+that dependency-owned allocation. Serde, reqwest, Hyper, the TLS backend,
+allocator, kernel, or network device may create or keep independent plaintext
+or ciphertext buffers until their own cleanup. Forced process termination can
+also bypass Rust destructors. The SDK therefore does not claim complete
+process-wide sanitization.
 Token and namespace header values are also copied into HTTP-stack header
 structures that are marked sensitive for logging but are not sanitized on drop by
 the underlying `http`/`hyper`/`reqwest` types.

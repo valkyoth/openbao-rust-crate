@@ -1759,7 +1759,7 @@ impl fmt::Debug for TransitBatchEncryptItem {
                 &self.ciphertext.as_ref().map(|_| "<redacted>"),
             )
             .field("key_version", &self.key_version)
-            .field("error", &self.error)
+            .field("error", &self.error.as_ref().map(|_| "<redacted>"))
             .finish()
     }
 }
@@ -1780,7 +1780,7 @@ impl fmt::Debug for TransitBatchDecryptItem {
         formatter
             .debug_struct("TransitBatchDecryptItem")
             .field("plaintext", &self.plaintext.as_ref().map(|_| "<redacted>"))
-            .field("error", &self.error)
+            .field("error", &self.error.as_ref().map(|_| "<redacted>"))
             .finish()
     }
 }
@@ -1804,7 +1804,7 @@ impl fmt::Debug for TransitBatchRewrapItem {
                 "ciphertext",
                 &self.ciphertext.as_ref().map(|_| "<redacted>"),
             )
-            .field("error", &self.error)
+            .field("error", &self.error.as_ref().map(|_| "<redacted>"))
             .finish()
     }
 }
@@ -1825,13 +1825,13 @@ impl fmt::Debug for TransitBatchSignItem {
         formatter
             .debug_struct("TransitBatchSignItem")
             .field("signature", &self.signature.as_ref().map(|_| "<redacted>"))
-            .field("error", &self.error)
+            .field("error", &self.error.as_ref().map(|_| "<redacted>"))
             .finish()
     }
 }
 
 /// One item returned by a batch verification operation.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct TransitBatchVerifyItem {
     /// Whether this item verified successfully.
     #[serde(default)]
@@ -1839,6 +1839,16 @@ pub struct TransitBatchVerifyItem {
     /// OpenBao item error, when this item failed.
     #[serde(default)]
     pub error: Option<String>,
+}
+
+impl fmt::Debug for TransitBatchVerifyItem {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TransitBatchVerifyItem")
+            .field("valid", &self.valid)
+            .field("error", &self.error.as_ref().map(|_| "<redacted>"))
+            .finish()
+    }
 }
 
 /// Batch encryption response.
@@ -2471,6 +2481,8 @@ impl Transit<'_> {
     /// boundary. The controlled request owner and uniquely owned response
     /// chunks are wiped, but dependency, TLS, allocator, kernel, and device
     /// buffers can still exist transiently while the operation is in flight.
+    /// Escaped JSON strings can additionally use serde_json's private ordinary
+    /// scratch buffer, which this crate cannot sanitize.
     pub async fn decrypt(
         &self,
         name: &str,
@@ -3425,6 +3437,44 @@ mod tests {
         let debug = format!("{response:?}");
         assert!(debug.contains("<redacted>"));
         assert!(!debug.contains("secret-ciphertext"));
+    }
+
+    #[test]
+    fn transit_batch_result_debug_redacts_item_errors() {
+        let marker = "raw-secret c2VjcmV0";
+        let encrypt = super::TransitBatchEncryptItem {
+            ciphertext: None,
+            key_version: None,
+            error: Some(marker.to_owned()),
+        };
+        let decrypt = super::TransitBatchDecryptItem {
+            plaintext: None,
+            error: Some(marker.to_owned()),
+        };
+        let rewrap = super::TransitBatchRewrapItem {
+            ciphertext: None,
+            error: Some(marker.to_owned()),
+        };
+        let sign = super::TransitBatchSignItem {
+            signature: None,
+            error: Some(marker.to_owned()),
+        };
+        let verify = super::TransitBatchVerifyItem {
+            valid: false,
+            error: Some(marker.to_owned()),
+        };
+
+        for debug in [
+            format!("{encrypt:?}"),
+            format!("{decrypt:?}"),
+            format!("{rewrap:?}"),
+            format!("{sign:?}"),
+            format!("{verify:?}"),
+        ] {
+            assert!(debug.contains("<redacted>"));
+            assert!(!debug.contains("raw-secret"));
+            assert!(!debug.contains("c2VjcmV0"));
+        }
     }
 
     #[test]
