@@ -22,6 +22,8 @@ All notable changes to this project are documented here.
 - Added an isolated end-to-end tracing subscriber test proving typed Transit
   encrypt/decrypt spans exclude plaintext, Base64 plaintext, ciphertext,
   authentication tokens, and key identifiers.
+- Made the tracing regression's failure diagnostic constant so a failed
+  assertion cannot echo the matched secret sentinel into CI or CodeQL logs.
 
 ### Changed
 

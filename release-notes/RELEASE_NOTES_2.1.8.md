@@ -46,7 +46,8 @@ material.
 - An isolated tracing subscriber captures typed Transit encrypt and decrypt
   operations and verifies that raw plaintext, Base64 plaintext, ciphertext,
   authentication tokens, and key identifiers are absent from span and event
-  fields.
+  fields. Its failure diagnostic is constant and cannot echo a matched secret
+  sentinel into CI or code-scanning output.
 - Mock HTTP capture is timeout-bounded, size-bounded, and framing-aware. The
   typed lifecycle and tracing fixtures intentionally force multiple short TCP
   reads before asserting on the complete request.

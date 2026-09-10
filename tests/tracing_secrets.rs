@@ -166,6 +166,9 @@ async fn typed_transit_tracing_excludes_secret_material() {
         "trace-test-token",
         "trace-key-identifier",
     ] {
-        assert!(!captured.contains(secret), "tracing exposed {secret}");
+        assert!(
+            !captured.contains(secret),
+            "tracing output exposed prohibited secret material"
+        );
     }
 }
