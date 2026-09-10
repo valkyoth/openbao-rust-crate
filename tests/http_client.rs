@@ -4,6 +4,8 @@
 #![allow(clippy::panic)]
 #![allow(deprecated)]
 
+mod support;
+
 #[cfg(feature = "raft-stream")]
 use std::{
     collections::VecDeque,
@@ -33,6 +35,7 @@ use openbao::{
 };
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
+use support::read_http_request;
 
 #[cfg(feature = "raft-stream")]
 struct TestSnapshotStream {
@@ -766,27 +769,6 @@ impl TestTokenExt for Client<Unauthenticated> {
     }
 }
 
-fn read_http_request(stream: &mut impl Read) -> String {
-    let mut request = Vec::new();
-    let mut buffer = [0_u8; 4096];
-    loop {
-        let bytes = stream
-            .read(&mut buffer)
-            .unwrap_or_else(|error| panic!("{error}"));
-        if bytes == 0 {
-            break;
-        }
-        request.extend_from_slice(&buffer[..bytes]);
-        if http_request_is_complete(&request) {
-            break;
-        }
-    }
-    String::from_utf8(request).unwrap_or_else(|error| {
-        let bytes = error.into_bytes();
-        String::from_utf8_lossy(&bytes).into_owned()
-    })
-}
-
 fn write_json_response(stream: &mut impl Write, status: &str, body: &str) {
     let response = format!(
         "HTTP/1.1 {status}\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",
@@ -807,26 +789,6 @@ fn write_bytes_response(stream: &mut impl Write, content_type: &str, body: &[u8]
         .write_all(headers.as_bytes())
         .and_then(|()| stream.write_all(body))
         .unwrap_or_else(|error| panic!("{error}"));
-}
-
-fn http_request_is_complete(request: &[u8]) -> bool {
-    let Some(header_end) = request.windows(4).position(|window| window == b"\r\n\r\n") else {
-        return false;
-    };
-    let body_start = header_end + 4;
-    let headers = String::from_utf8_lossy(&request[..header_end]);
-    let content_length = headers
-        .lines()
-        .find_map(|line| {
-            let (name, value) = line.split_once(':')?;
-            if name.eq_ignore_ascii_case("content-length") {
-                value.trim().parse::<usize>().ok()
-            } else {
-                None
-            }
-        })
-        .unwrap_or(0);
-    request.len() >= body_start + content_length
 }
 
 fn test_operation_id() -> String {

@@ -3912,12 +3912,38 @@ async fn read_response_bytes(
     response: reqwest::Response,
     max_response_bytes: usize,
 ) -> Result<SecretVec> {
-    read_response_bytes_with_observer(response, max_response_bytes, |_| {}).await
+    read_response_bytes_into(
+        response,
+        max_response_bytes,
+        SanitizingResponseAccumulator::new(),
+        |_| {},
+    )
+    .await
 }
 
+#[cfg(all(test, feature = "sensitive-http-test-only"))]
 async fn read_response_bytes_with_observer<F>(
+    response: reqwest::Response,
+    max_response_bytes: usize,
+    observe_received_chunk: F,
+    cleanup_probe: Arc<SanitizingResponseDropProbe>,
+) -> Result<SecretVec>
+where
+    F: FnMut(usize),
+{
+    read_response_bytes_into(
+        response,
+        max_response_bytes,
+        SanitizingResponseAccumulator::new().with_drop_probe(cleanup_probe),
+        observe_received_chunk,
+    )
+    .await
+}
+
+async fn read_response_bytes_into<F>(
     mut response: reqwest::Response,
     max_response_bytes: usize,
+    mut body: SanitizingResponseAccumulator,
     mut observe_received_chunk: F,
 ) -> Result<SecretVec>
 where
@@ -3932,7 +3958,6 @@ where
         ));
     }
 
-    let mut body = SecretVec::empty();
     while let Some(chunk) = response.chunk().await? {
         if body.len().saturating_add(chunk.len()) > max_response_bytes {
             let _ = sanitize_response_chunk_if_unique(chunk);
@@ -3945,7 +3970,7 @@ where
         let _ = sanitize_response_chunk_if_unique(chunk);
     }
 
-    Ok(body)
+    Ok(body.into_secret())
 }
 
 pub(crate) fn sanitize_response_chunk_if_unique(chunk: Bytes) -> bool {
@@ -4045,6 +4070,87 @@ struct BoundedSecretWriter {
     bytes: SecretVec,
     limit: usize,
     exceeded: bool,
+}
+
+// Keeps the complete response in sanitizing storage across every await point.
+// Error and cancellation paths explicitly wipe initialized bytes before the
+// underlying SecretVec performs its full-capacity cleanup.
+struct SanitizingResponseAccumulator {
+    bytes: SecretVec,
+    #[cfg(all(test, feature = "sensitive-http-test-only"))]
+    drop_probe: Option<Arc<SanitizingResponseDropProbe>>,
+}
+
+#[cfg(all(test, feature = "sensitive-http-test-only"))]
+struct SanitizingResponseDropProbe {
+    drops: std::sync::atomic::AtomicUsize,
+    wiped_initialized_bytes: std::sync::atomic::AtomicUsize,
+    observed_zeroed_before_clear: std::sync::atomic::AtomicBool,
+}
+
+#[cfg(all(test, feature = "sensitive-http-test-only"))]
+impl Default for SanitizingResponseDropProbe {
+    fn default() -> Self {
+        Self {
+            drops: std::sync::atomic::AtomicUsize::new(0),
+            wiped_initialized_bytes: std::sync::atomic::AtomicUsize::new(0),
+            observed_zeroed_before_clear: std::sync::atomic::AtomicBool::new(true),
+        }
+    }
+}
+
+impl SanitizingResponseAccumulator {
+    fn new() -> Self {
+        Self {
+            bytes: SecretVec::empty(),
+            #[cfg(all(test, feature = "sensitive-http-test-only"))]
+            drop_probe: None,
+        }
+    }
+
+    #[cfg(all(test, feature = "sensitive-http-test-only"))]
+    fn with_drop_probe(mut self, probe: Arc<SanitizingResponseDropProbe>) -> Self {
+        self.drop_probe = Some(probe);
+        self
+    }
+
+    fn len(&self) -> usize {
+        self.bytes.len()
+    }
+
+    fn extend_from_slice(&mut self, bytes: &[u8]) {
+        self.bytes.extend_from_slice(bytes);
+    }
+
+    fn into_secret(mut self) -> SecretVec {
+        core::mem::take(&mut self.bytes)
+    }
+}
+
+impl Drop for SanitizingResponseAccumulator {
+    fn drop(&mut self) {
+        #[cfg(all(test, feature = "sensitive-http-test-only"))]
+        let initialized_len = self.bytes.len();
+        self.bytes.with_secret_mut(sanitization::wipe::bytes);
+        #[cfg(all(test, feature = "sensitive-http-test-only"))]
+        if let Some(probe) = &self.drop_probe {
+            if self
+                .bytes
+                .with_secret(|bytes| bytes.iter().any(|byte| *byte != 0))
+            {
+                probe
+                    .observed_zeroed_before_clear
+                    .store(false, std::sync::atomic::Ordering::SeqCst);
+            }
+            probe
+                .wiped_initialized_bytes
+                .fetch_add(initialized_len, std::sync::atomic::Ordering::SeqCst);
+            probe
+                .drops
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+        self.bytes.clear_secret();
+    }
 }
 
 // Owns the exact allocation exposed through Bytes::from_owner. Bytes clones
@@ -4345,6 +4451,12 @@ mod tests {
     #![allow(clippy::panic)]
     #![allow(deprecated)]
 
+    #[cfg(all(
+        feature = "transit",
+        feature = "transit-bytes",
+        feature = "sensitive-http-test-only"
+    ))]
+    use std::net::TcpStream;
     #[cfg(feature = "sensitive-http-test-only")]
     use std::sync::mpsc;
     use std::time::Duration;
@@ -4398,6 +4510,73 @@ mod tests {
             "openbao-ca-test-{}-{sequence}-{name}",
             std::process::id()
         ))
+    }
+
+    #[cfg(all(
+        feature = "transit",
+        feature = "transit-bytes",
+        feature = "sensitive-http-test-only"
+    ))]
+    fn read_complete_http_request(stream: &mut TcpStream, chunk_limit: usize) -> (String, usize) {
+        const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
+        const BUFFER_BYTES: usize = 4096;
+
+        assert!(chunk_limit > 0 && chunk_limit <= BUFFER_BYTES);
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap_or_else(|error| panic!("failed to set mock request timeout: {error}"));
+        let mut request = Vec::new();
+        let mut buffer = [0_u8; BUFFER_BYTES];
+        let mut reads = 0;
+        loop {
+            assert!(
+                request.len() < MAX_REQUEST_BYTES,
+                "incomplete or oversized mock HTTP request"
+            );
+            let remaining = MAX_REQUEST_BYTES - request.len();
+            let bytes = stream
+                .read(&mut buffer[..chunk_limit.min(remaining)])
+                .unwrap_or_else(|error| panic!("failed to read mock HTTP request: {error}"));
+            assert!(
+                bytes > 0,
+                "mock HTTP request ended before framing completed"
+            );
+            reads += 1;
+            request.extend_from_slice(&buffer[..bytes]);
+            if test_http_request_is_complete(&request) {
+                break;
+            }
+        }
+        let request = String::from_utf8(request).unwrap_or_else(|error| {
+            let bytes = error.into_bytes();
+            String::from_utf8_lossy(&bytes).into_owned()
+        });
+        (request, reads)
+    }
+
+    #[cfg(all(
+        feature = "transit",
+        feature = "transit-bytes",
+        feature = "sensitive-http-test-only"
+    ))]
+    fn test_http_request_is_complete(request: &[u8]) -> bool {
+        let Some(header_end) = request.windows(4).position(|window| window == b"\r\n\r\n") else {
+            return false;
+        };
+        let body_start = header_end + 4;
+        let headers = String::from_utf8_lossy(&request[..header_end]);
+        let content_length = headers
+            .lines()
+            .find_map(|line| {
+                let (name, value) = line.split_once(':')?;
+                name.eq_ignore_ascii_case("content-length")
+                    .then(|| value.trim().parse::<usize>().ok())
+                    .flatten()
+            })
+            .unwrap_or(0);
+        body_start
+            .checked_add(content_length)
+            .is_some_and(|complete_length| request.len() >= complete_length)
     }
 
     #[test]
@@ -4717,11 +4896,8 @@ mod tests {
             .unwrap_or_else(|error| panic!("{error}"));
         let server = thread::spawn(move || {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
-            let mut request = [0_u8; 4096];
-            let read = stream
-                .read(&mut request)
-                .unwrap_or_else(|error| panic!("{error}"));
-            let request = String::from_utf8_lossy(&request[..read]);
+            let (request, reads) = read_complete_http_request(&mut stream, 64);
+            assert!(reads > 1, "short-read regression did not split the request");
             assert!(request.starts_with("POST /v1/transit/encrypt/app-key HTTP/1.1"));
             assert!(request.contains(r#""plaintext":"dHlwZWQtdHJhbnNpdC1zZWNyZXQ=""#));
             let body = r#"{"data":{"ciphertext":"vault:v1:ciphertext","key_version":1}}"#;
@@ -4853,16 +5029,23 @@ mod tests {
             .await
             .unwrap_or_else(|error| panic!("{error}"));
         let (observed_tx, observed_rx) = mpsc::sync_channel(1);
+        let cleanup_probe = std::sync::Arc::new(super::SanitizingResponseDropProbe::default());
+        let task_cleanup_probe = cleanup_probe.clone();
         let task = tokio::spawn(async move {
             let mut notified = false;
-            super::read_response_bytes_with_observer(response, 1024, move |length| {
-                if !notified {
-                    observed_tx
-                        .send(length)
-                        .unwrap_or_else(|error| panic!("{error}"));
-                    notified = true;
-                }
-            })
+            super::read_response_bytes_with_observer(
+                response,
+                1024,
+                move |length| {
+                    if !notified {
+                        observed_tx
+                            .send(length)
+                            .unwrap_or_else(|error| panic!("{error}"));
+                        notified = true;
+                    }
+                },
+                task_cleanup_probe,
+            )
             .await
         });
         let observed = observed_rx
@@ -4871,6 +5054,13 @@ mod tests {
         assert!(observed > 0);
         task.abort();
         assert!(task.await.is_err_and(|error| error.is_cancelled()));
+        assert_eq!(cleanup_probe.drops.load(Ordering::SeqCst), 1);
+        assert!(cleanup_probe.wiped_initialized_bytes.load(Ordering::SeqCst) >= observed);
+        assert!(
+            cleanup_probe
+                .observed_zeroed_before_clear
+                .load(Ordering::SeqCst)
+        );
         release_tx
             .send(())
             .unwrap_or_else(|error| panic!("{error}"));

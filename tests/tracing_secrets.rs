@@ -8,8 +8,10 @@
 ))]
 #![allow(clippy::panic)]
 
+mod support;
+
 use std::{
-    io::{Read, Write},
+    io::Write,
     net::TcpListener,
     sync::{
         Arc, Mutex,
@@ -19,6 +21,7 @@ use std::{
 };
 
 use openbao::{Client, OpenBaoConfig, SecretString};
+use support::read_http_request_with_chunk_limit;
 
 #[derive(Clone)]
 struct CapturingSubscriber {
@@ -95,11 +98,8 @@ async fn typed_transit_tracing_excludes_secret_material() {
     let server = thread::spawn(move || {
         for index in 0..2 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
-            let mut request = [0_u8; 4096];
-            let read = stream
-                .read(&mut request)
-                .unwrap_or_else(|error| panic!("{error}"));
-            let request = String::from_utf8_lossy(&request[..read]);
+            let (request, reads) = read_http_request_with_chunk_limit(&mut stream, 64);
+            assert!(reads > 1, "short-read regression did not split the request");
             let body = if index == 0 {
                 assert!(request.contains(r#""plaintext":"dHJhY2Utc2VjcmV0LXJhdw==""#));
                 r#"{"data":{"ciphertext":"vault:v1:trace-ciphertext","key_version":1}}"#

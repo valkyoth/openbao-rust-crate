@@ -35,7 +35,9 @@ material.
   retain its sanitizing request-body allocation through production dispatch
   and final HTTP-body-owner destruction.
 - Response cancellation is synchronized after a real reqwest response chunk
-  has been copied into the sanitizing bounded accumulator.
+  has been copied into the sanitizing bounded accumulator. A cleanup probe
+  verifies that cancellation destroys the accumulator, wipes at least the
+  observed initialized bytes, and observes zeros before final clearing.
 - Parser regressions cover escaped Base64 padding, malformed escaped strings,
   truncated JSON, invalid Base64, and secret-free decode diagnostics.
 - A chunked Transit response without `Content-Length` is rejected as soon as
@@ -45,6 +47,9 @@ material.
   operations and verifies that raw plaintext, Base64 plaintext, ciphertext,
   authentication tokens, and key identifiers are absent from span and event
   fields.
+- Mock HTTP capture is timeout-bounded, size-bounded, and framing-aware. The
+  typed lifecycle and tracing fixtures intentionally force multiple short TCP
+  reads before asserting on the complete request.
 - Existing exact OpenBao `2.6.2` TLS integration continues to cover Transit
   encrypt/decrypt, associated-data binding, an older explicit key version after
   rotation, valid-format ciphertext tampering, and incorrect associated data.

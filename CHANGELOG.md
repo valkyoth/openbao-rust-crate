@@ -13,9 +13,12 @@ All notable changes to this project are documented here.
   reflected raw or Base64 secret material is no longer emitted by incidental
   diagnostic formatting.
 - Added typed Transit lifecycle regressions for request-body final-owner
-  cleanup, response cancellation after a chunk is accumulated, escaped and
-  malformed JSON plaintext, invalid Base64, and chunked over-limit responses
-  without `Content-Length`.
+  cleanup, response cancellation after a chunk is accumulated, explicit
+  accumulator zeroing before release, escaped and malformed JSON plaintext,
+  invalid Base64, and chunked over-limit responses without `Content-Length`.
+- Made mock HTTP request capture timeout-bounded, size-bounded, and aware of
+  complete HTTP framing. Transit lifecycle and tracing regressions force short
+  TCP reads so a split header/body delivery cannot make the tests flaky.
 - Added an isolated end-to-end tracing subscriber test proving typed Transit
   encrypt/decrypt spans exclude plaintext, Base64 plaintext, ciphertext,
   authentication tokens, and key identifiers.

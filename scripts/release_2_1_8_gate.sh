@@ -18,9 +18,12 @@ grep -q '2.1.8 - 2026-09-10' CHANGELOG.md
 grep -q 'transit_batch_result_debug_redacts_item_errors' src/secrets/transit.rs
 grep -q 'typed_transit_encrypt_retains_sanitizing_body_owner' src/client.rs
 grep -q 'cancelling_response_after_received_chunk_drops_accumulator' src/client.rs
+grep -q 'struct SanitizingResponseAccumulator' src/client.rs
+grep -q 'observed_zeroed_before_clear' src/client.rs
 grep -q 'transit_decrypt_parser_edges_remain_secret_free' tests/http_client.rs
 grep -q 'transit_chunked_response_limit_is_enforced_without_content_length' tests/http_client.rs
 grep -q 'typed_transit_tracing_excludes_secret_material' tests/tracing_secrets.rs
+grep -q 'read_http_request_with_chunk_limit' tests/support/mod.rs
 grep -q "serde_json's private ordinary scratch buffer" docs/SECURITY_MODEL.md
 
 if grep -q '^name = "secrecy"$' Cargo.lock fuzz/Cargo.lock \
