@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### Security
+
+- Updated transitive `rustls` from `0.23.43` to `0.23.45`, resolving
+  `RUSTSEC-2026-0285` for TLS 1.3 handshake messages accepted across encryption
+  level boundaries.
+
+### Changed
+
+- Updated `rand` from `0.10.2` to `0.10.3`, `rustix` from `1.1.4` to `1.1.5`,
+  and the immutable `taiki-e/install-action` pin from `2.87.9` to `2.87.20`;
+  confirmed Rust `1.98.1`, the remaining direct dependencies, CI cargo tools,
+  and pinned GitHub Actions remain current.
+- Refreshed all maintained lockfiles to their latest compatible transitive
+  releases and removed the obsolete `base64 0.22` duplicate-version policy
+  exception after the dependency graph converged on `base64 0.23`.
+
 ## 2.1.8 - 2026-09-10
 
 ### Security

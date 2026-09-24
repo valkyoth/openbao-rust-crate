@@ -151,7 +151,7 @@ base64-ng = { version = "2.0.4", default-features = false, features = ["alloc"],
 bytes = "1.12.1"
 futures-core = { version = "0.3.34", optional = true }
 getrandom = "0.4.3"
-rand = { version = "0.10.2", default-features = false, features = ["std", "thread_rng"], optional = true }
+rand = { version = "0.10.3", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.5", default-features = false, features = ["json"] }
 openssl = { version = "0.10.81", optional = true }
 secrecy = { package = "sanitization-secrecy", version = "2.1.0", default-features = false, features = ["serde"] }
@@ -165,7 +165,7 @@ url = { version = "2.5.8", default-features = false }
 sanitization = { version = "2.1.0", default-features = false, features = ["alloc"] }
 
 [target.'cfg(unix)'.dependencies]
-rustix = { version = "1.1.4", default-features = false, features = ["fs", "std"] }
+rustix = { version = "1.1.5", default-features = false, features = ["fs", "std"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61.2", default-features = false, features = ["Win32_Storage_FileSystem"] }
