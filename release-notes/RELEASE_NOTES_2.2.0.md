@@ -21,6 +21,10 @@ This release is being developed in pentestable commit checkpoints described in
   expansion budgets and duplicate/conflict handling with regression tests.
 - Isolated system-Python invocation prevents caller-provided import paths and
   startup customization from bypassing evidence verification.
+- Checkpoint 03a records the missing external-plugin release artifacts and
+  updates the local dev fixture without touching historical server profiles.
+  Checkpoint 03 remains incomplete; see the
+  [plugin/fixture review](../docs/OPENBAO_2_7_0_PLUGIN_REVIEW.md).
 
 ## Required Before Release
 

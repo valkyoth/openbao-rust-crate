@@ -4,6 +4,11 @@ Status: checkpoints 01 and 02 implemented; remaining checkpoints are required be
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
 
+Checkpoint 03a records the external-plugin availability blocker and refreshes
+the local development fixture. Checkpoint 03 is **not complete**: released
+plugin artifacts/contracts and staged 2.7 TLS fixture validation remain required.
+See [the checkpoint 03 review](OPENBAO_2_7_0_PLUGIN_REVIEW.md).
+
 ## Source Baseline
 
 - [Official release](https://github.com/openbao/openbao/releases/tag/v2.7.0),
@@ -37,7 +42,7 @@ All checkpoints target the same 2.2.0 release, not intermediate releases.
 | --- | --- | --- |
 | 01 | Development baseline and source inventory | Version manifests/locks agree on 2.2.0; locked source inventory and tamper tests pass; all 25 active profiles remain unchanged and 2.7.0 remains rejected. |
 | 02 | Signed artifacts and complete staged API evidence | Verify exact image signature identity, index/child/provenance relationships; capture bounded runtime OpenAPI; fix comma-separated method and nested operation parsing in a versioned extractor; diff all fields, methods, routes and responses against 2.6.3. Record source/runtime/doc discrepancies explicitly. No active routing promotion. |
-| 03 | External-plugin and server-fixture compatibility | Retain older built-in LDAP auth/secrets, Kerberos and RADIUS profiles. Separately pin and verify 2.7 external-plugin artifacts and contracts; distinguish plugin-not-installed from unsupported SDK behavior. Replace removed server `file` storage only in the new fixture with a tested supported backend. No silent mount skips or claims that server version alone proves an external-plugin version. |
+| 03 | External-plugin and server-fixture compatibility | Retain older built-in LDAP auth/secrets, Kerberos and RADIUS profiles. Separately pin and verify 2.7 external-plugin artifacts and contracts; distinguish plugin-not-installed from unsupported SDK behavior. Validate staged 2.7 fixtures with supported storage and TLS/container checks; the historical integration fixture already uses `inmem` and local development uses Raft. No silent mount skips or claims that server version alone proves an external-plugin version. |
 | 04 | External-key system administration | Typed config/key/grant CRUD, LIST and PATCH, built-in Transit provider and PKCS#11 schemas, and an explicitly bounded secret-aware path for custom provider options. Review grant privileges, verify=false, merge-patch deletion, endpoint validation, credentials, redaction, request limits and profile rejection. Live delegation tests must prove denied mounts cannot use keys. |
 | 05 | Transit ML-DSA and external keys | Create/read/import/export/sign/verify for the three ML-DSA parameter sets; external-key create/rotation and provider-dependent operations; external-mu/prehashed validation, batch variants, import restrictions and response additions. Use additive options/details APIs where existing exhaustive enums or struct literals prevent compatible extension. Live positive and negative crypto tests plus old-profile rejection. |
 | 06 | PKI ML-DSA, KMS and RSA-PSS changes | All affected root, rotate, intermediate, key, role, issue and sign paths, external_key_ref and kms mode, parameter-set checks, use_pss, and additive response types. Test PSS defaults, invalid trailing-dot names and unsupported ML-DSA OCSP behavior without weakening existing validation. Do not claim SDK TLS support for ML-DSA certificates merely because the server supports them. |
@@ -81,8 +86,11 @@ Transit, Identity MFA TOTP, SSH, namespaces, policies, password policies and
 workflows. Small documentation changes can be response-contract corrections,
 so they must be reviewed rather than discarded as editorial changes.
 
-The release also removes `file` server storage and built-in external engines;
-the current runtime evidence harness cannot simply be run unchanged on 2.7.
+The release also removes `file` server storage and built-in external engines.
+Inspection in checkpoint 03a confirmed that neither our historical `inmem`
+integration fixture nor our Raft local dev stack needs a `file`-storage migration.
+The exact-version inventory and external plugins still prevent simply running
+the historical harness unchanged on 2.7.
 The source has moved under `internal/`, and plugin distribution identity is
 now a separate compatibility input. These are fixture/evidence changes, not
 reasons to weaken production dispatch or erase historical engine APIs.

@@ -153,6 +153,9 @@ check_grep 'version = "=2.2.0"' fuzz/Cargo.toml
 check_grep 'version = "=2.2.0"' tests/fixtures/reqwest-native-unification/Cargo.toml
 check_file docs/OPENBAO_2_7_0_PLAN.md
 check_file docs/OPENBAO_2_7_0_REVIEW.md
+check_file docs/OPENBAO_2_7_0_PLUGIN_REVIEW.md
+check_file compat/onboarding/2.7.0/plugin-availability.json
+check_file deploy/podman/profile.json
 check_file compat/onboarding/2.7.0/api-evidence.lock.json
 check_file release-notes/RELEASE_NOTES_2.2.0.md
 check_grep 'Version: 2.2.0' release-notes/RELEASE_NOTES_2.2.0.md
@@ -160,6 +163,8 @@ check_grep 'openbao_2_7_source_inventory.py --verify' scripts/checks.sh
 check_grep 'openbao_2_7_source_inventory.py --self-test' scripts/checks.sh
 check_grep 'openbao_2_7_api.py --verify' scripts/checks.sh
 check_grep 'openbao_2_7_api.py --self-test' scripts/checks.sh
+check_grep 'scripts/openbao_2_7_plugins.py' scripts/checks.sh
+check_grep 'scripts/test_openbao_2_7_plugins.py' scripts/checks.sh
 check_grep 'Unique documented rows: `644`' docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
 check_grep 'oidc-get-callback-acknowledged = \[\]' Cargo.toml
 check_grep 'workflow-trace-acknowledged = \[\]' Cargo.toml

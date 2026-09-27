@@ -19,6 +19,9 @@ All notable changes to this project are documented here.
   Correct duplicate ACME records in staged documentation only.
 - Isolate evidence Python startup from environment and site-package overrides
   in checks, release gates, compatibility CI and documented commands.
+- Record checkpoint 03's unresolved external-plugin availability boundary;
+  refresh the optional local Podman stack to inventory-pinned OpenBao 2.6.3
+  with separate per-version state. This does not promote 2.7.0 support.
 
 ## 2.1.9 - 2026-09-27
 

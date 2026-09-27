@@ -51,6 +51,12 @@ The [2.7.0 plan](../docs/OPENBAO_2_7_0_PLAN.md) tracks the remaining work.
 Run `/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --verify` and `--self-test` for the
 API evidence checkpoint. Its [review](../docs/OPENBAO_2_7_0_REVIEW.md) records
 the removed-engine exclusions, extraction corrections and security boundaries.
+Checkpoint 03a adds a separate hash-anchored public plugin-availability
+observation. `/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_plugins.py`
+verifies that observation, not plugin support. Its `--require-verified` mode
+fails until artifacts and contracts are verified. The
+[checkpoint 03 review](../docs/OPENBAO_2_7_0_PLUGIN_REVIEW.md) records the
+upstream availability blocker and pending fixture tests.
 
 OpenBao's OCI indexes and `linux/amd64` manifests were verified with Cosign
 `3.1.1`, built from module tag `v3.1.1` at peeled source commit

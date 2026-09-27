@@ -32,6 +32,10 @@ echo "checks: staged OpenBao 2.7.0 API evidence"
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --self-test
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_evidence.py
 
+echo "checks: staged OpenBao 2.7 external-plugin availability and local fixture"
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_plugins.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_plugins.py
+
 echo "checks: historical OpenBao 2.6.0 onboarding evidence"
 /usr/bin/python3 -E -s -S -B scripts/openbao_onboarding_api.py --verify
 /usr/bin/python3 -E -s -S -B scripts/openbao_onboarding_api.py --self-test

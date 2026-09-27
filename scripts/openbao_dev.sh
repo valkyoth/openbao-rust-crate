@@ -3,11 +3,17 @@ set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 PODMAN_DIR="$ROOT_DIR/deploy/podman"
-STATE_DIR="$PODMAN_DIR/dev-state"
+profile=$(/usr/bin/python3 -E -s -S -B "$ROOT_DIR/scripts/openbao_dev_config.py" profile)
+IFS=' ' read -r OPENBAO_DEV_VERSION OPENBAO_DEV_PROJECT OPENBAO_IMAGE <<EOF
+$profile
+EOF
+readonly OPENBAO_DEV_VERSION OPENBAO_DEV_PROJECT OPENBAO_IMAGE
+export OPENBAO_DEV_VERSION OPENBAO_DEV_PROJECT OPENBAO_IMAGE
+STATE_DIR="$PODMAN_DIR/dev-state/$OPENBAO_DEV_VERSION"
 TLS_DIR="$STATE_DIR/tls"
 COMPOSE_FILE="$PODMAN_DIR/compose.dev.yml"
-OPENBAO_IMAGE="docker.io/openbao/openbao:2.5.5@sha256:e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9"
-DATA_VOLUME="openbao-rust-crate_openbao_data"
+DATA_VOLUME="${OPENBAO_DEV_PROJECT}_openbao_data"
+CONTAINER_NAME="${OPENBAO_DEV_PROJECT}_dev"
 
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -101,7 +107,7 @@ generate_tls() {
 compose() {
   require podman
   cd "$PODMAN_DIR"
-  podman compose -p openbao-rust-crate -f "$COMPOSE_FILE" "$@"
+  podman compose -p "$OPENBAO_DEV_PROJECT" -f "$COMPOSE_FILE" "$@"
 }
 
 case "${1:-help}" in
@@ -127,7 +133,7 @@ case "${1:-help}" in
     ;;
   status)
     require podman
-    podman exec openbao_rust_crate_dev bao status -address=https://127.0.0.1:8200 -ca-cert=/openbao/tls/dev-ca.crt
+    podman exec "$CONTAINER_NAME" bao status -address=https://127.0.0.1:8200 -ca-cert=/openbao/tls/dev-ca.crt
     ;;
   clean)
     compose down -v

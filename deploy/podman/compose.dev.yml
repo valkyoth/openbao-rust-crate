@@ -1,4 +1,4 @@
-name: openbao-rust-crate
+name: ${OPENBAO_DEV_PROJECT:?Run scripts/openbao_dev.sh}
 
 networks:
   openbao_internal:
@@ -9,8 +9,8 @@ volumes:
 
 services:
   openbao:
-    image: docker.io/openbao/openbao:2.5.5@sha256:e59b4c73cfce6875363d25548222819433c6ce0af9c6d3ec9ede220e905723f9
-    container_name: openbao_rust_crate_dev
+    image: ${OPENBAO_IMAGE:?Run scripts/openbao_dev.sh}
+    container_name: ${OPENBAO_DEV_PROJECT:?Run scripts/openbao_dev.sh}_dev
     command: ["server", "-config=/openbao/config/openbao.hcl"]
     user: "100:0"
     environment:
@@ -18,7 +18,7 @@ services:
     volumes:
       - openbao_data:/openbao/data
       - ./openbao.hcl:/openbao/config/openbao.hcl:ro,Z
-      - ./dev-state/tls:/openbao/tls:ro,z
+      - ./dev-state/${OPENBAO_DEV_VERSION:?Run scripts/openbao_dev.sh}/tls:/openbao/tls:ro,z
     ports:
       - "127.0.0.1:9940:8200"
       - "127.0.0.1:9941:8201"
