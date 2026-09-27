@@ -1,5 +1,8 @@
 //! System backend helpers.
 
+#[cfg(feature = "operator-ops")]
+pub mod external_keys;
+
 use core::{fmt, marker::PhantomData};
 #[cfg(feature = "monitor-stream")]
 use core::{

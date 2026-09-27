@@ -59,6 +59,15 @@ If a checkpoint needs multiple commits to keep review manageable, record the
 subcommits and audit range here. No release capability is considered complete
 merely because its planning row exists or its documentation was extracted.
 
+Checkpoint 04 is split for review. Subcommit 04a adds validated, operator-gated
+Transit and PKCS#11 provider schemas and their serialization, bounds and
+redaction tests. Its pentest base is `61d88cf`. See the
+[external-key review](OPENBAO_2_7_0_EXTERNAL_KEYS_REVIEW.md).
+Config/key/grant endpoint wrappers, custom-provider options, merge-patch
+deletion, verification acknowledgements, compatibility rejection and live
+grant-denial tests remain required parts of checkpoint 04, not deferrals to a
+later release. Checkpoint 04 is not complete and checkpoint 05 must wait.
+
 ## Security And Compatibility Rules
 
 - Preserve every released exact profile and immutable historical snapshot.

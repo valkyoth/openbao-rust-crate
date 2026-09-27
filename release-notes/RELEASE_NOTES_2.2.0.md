@@ -31,6 +31,11 @@ This release is being developed in pentestable commit checkpoints described in
   restrictions, TLS rejection tests, initialization/unsealing, built-in Transit
   creation and explicit absent-plugin checks. Retained evidence is bound to its
   fixture inputs. This is server evidence, not SDK 2.7 profile promotion.
+- Checkpoint 04a adds operator-gated Transit and PKCS#11 external-key provider
+  schemas with validated private fields, secret-aware credentials, bounded
+  inputs and serialization/redaction tests. Endpoint wrappers and live
+  delegation tests are still required before checkpoint 04 is complete. See the
+  [external-key review](../docs/OPENBAO_2_7_0_EXTERNAL_KEYS_REVIEW.md).
 
 ## Dependency Assurance
 

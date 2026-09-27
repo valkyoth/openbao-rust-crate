@@ -28,6 +28,9 @@ All notable changes to this project are documented here.
 - Complete checkpoint 03 with retained, input-bound live TLS fixture evidence,
   including negative TLS tests and absent-plugin checks. Guard excluded engine
   routes even when an acknowledged newer server selects an older profile.
+- Start checkpoint 04 with operator-gated, validated Transit and PKCS#11
+  external-key provider schemas and regression tests. No 2.7 profile promotion;
+  administration wrappers and live delegation verification remain pending.
 
 ## 2.1.9 - 2026-09-27
 
