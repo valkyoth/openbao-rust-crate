@@ -32,6 +32,12 @@ This release is being developed in pentestable commit checkpoints described in
   creation and explicit absent-plugin checks. Retained evidence is bound to its
   fixture inputs. This is server evidence, not SDK 2.7 profile promotion.
 
+## Dependency Assurance
+
+Pentest follow-up: the security policy now explicitly records the lack of an
+independent dependency audit chain as an accepted supply-chain assurance limit.
+No dependency, runtime behavior or mandatory release gate changed for this note.
+
 ## Required Before Release
 
 Built-in typed APIs and field rules,

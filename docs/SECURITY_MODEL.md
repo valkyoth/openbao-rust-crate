@@ -7,6 +7,32 @@ the authoritative vulnerability-reporting policy distributed with the crate.
 
 ## Security Baseline
 
+### Dependency Assurance Boundary
+
+Dependencies, build scripts, procedural macros and native libraries remain part
+of the trusted computing base. Lockfile checksums establish consistency with
+the selected registry source, not that its publisher or implementation is
+trustworthy. RustSec and `cargo deny` check known advisories and configured
+source/license/version policies; a previously unknown malicious release can
+pass those checks. Pinned CI actions and SBOMs likewise do not establish an
+independent source audit.
+
+The project does not currently provide independently reviewed `cargo-vet`
+records, committed vendored dependency sources, or a signed internal registry.
+This is an accepted supply-chain assurance limitation, not evidence that a
+current dependency is compromised. Neither green CI nor a clean pentest is
+certification for military, classified, or other high-assurance deployments.
+
+Organizations requiring stronger assurance should independently review the
+exact dependency graph and updates, retain reviewed audit records, and build
+from approved source snapshots or a controlled registry. Vendoring supports
+source retention and offline builds but does not replace that review; signing
+a mirror authenticates its publisher, not the correctness of its contents.
+Any future upstream audit gate must contain genuine reviews with a defined
+scope and maintenance owner, not blanket exemptions that merely make CI pass.
+
+### SDK Controls
+
 - `unsafe_code = "forbid"` applies to this crate's own Rust sources. It does
   not apply transitively: TLS and cryptographic dependencies can contain unsafe
   Rust, FFI, assembly, or native C code and remain part of the trusted

@@ -47,6 +47,12 @@ include real tokens, private keys, unseal material, or production secrets.
   are checked with `cargo deny` and RustSec, and every release requires a
   reviewed pentest report.
 
+Dependency checks establish source integrity and enforce the configured policy;
+they do not prove a dependency is trustworthy or detect every malicious release.
+This project does not provide an independently reviewed `cargo-vet` audit chain,
+committed vendor sources, or a signed internal registry. Deployments requiring
+those assurances must establish them separately before approving this SDK.
+
 SDK-owned JSON, form, and byte request-body allocations are sanitized after
 the final HTTP-body owner drops. Uniquely owned receive chunks are sanitized
 after copying into secret storage. Dependency-owned HTTP, TLS, allocator,
