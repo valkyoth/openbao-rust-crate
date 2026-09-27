@@ -279,7 +279,7 @@ mod tests {
     fn review_preserves_secret_json_and_redacts_diagnostics() {
         let payload = r#"{"escaped":"private\u002dvalue","nested":[null,true,1,-1,1.5]}"#;
         let entity =
-            r#"{"id":"requester-id","metadata":{"private":"identity-value"},"aliases":[]}"#;
+            r#"{"ID":"requester-id","metadata":{"private":"identity-value"},"aliases":[]}"#;
         let response = decode(fixture(payload, entity).as_bytes())
             .unwrap_or_else(|_| panic!("valid review rejected"));
         assert!(!response.approved);

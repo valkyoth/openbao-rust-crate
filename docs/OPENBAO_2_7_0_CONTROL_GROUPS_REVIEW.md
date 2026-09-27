@@ -2,9 +2,9 @@
 
 Status: checkpoints 07a/b/c/d implement explicit authorization, validated secret
 accessors, bounded request review, explicit deferred-execution handling and narrow
-typed policy construction. Checkpoint 07 is not complete:
-live lifecycle evidence remains open. No 2.7 routing
-is promoted.
+typed policy construction. Checkpoint 07e retains live lifecycle compatibility
+evidence with an explicit known upstream replay failure. Checkpoint 07 is ready
+for review under that accepted scope; no 2.7 routing is promoted.
 
 ## Reviewed Contract
 
@@ -87,11 +87,12 @@ and live server authorization semantics still require later evidence.
 
 ## Remaining Checkpoint 07
 
-1. Retain live TLS evidence for independent approvers, self-approval denial,
+1. Completed in 07e: retain live TLS evidence for independent approvers, self-approval denial,
    insufficient factors, expiration, namespace mismatch, replay and cancellation.
    Test original request/response shapes and metadata redaction. Python evidence
    alone cannot promote public SDK routing. Include policies emitted by the
-   typed builder and verify their actual approval requirements.
+   typed builder and verify their actual approval requirements. Server replay
+   rejection is a known failure, not a successful security check.
 2. At checkpoint 10, exercise successful registered SDK dispatch and mixed/older
    profile regression cases before promoting the staged profile.
 
@@ -188,3 +189,115 @@ document limits and policy-write rejection on every active/fallback profile.
 Source review and golden-output tests are not live enforcement evidence. The
 remaining TLS lifecycle fixture must exercise this policy with real identities
 before checkpoint 07 can be considered complete.
+
+## 07e Retained Live Compatibility Evidence
+
+`scripts/openbao_2_7_control_groups.py` has reached the replay check in a user-run
+rootful Podman fixture, where the server returned HTTP 200 instead of rejecting
+the second unwrap. A subsequent complete run is retained in
+`compat/onboarding/2.7.0/control-group-tls.json`, with that known failure explicit.
+`scripts/verify_openbao_2_7_control_groups.py` verifies the canonical report,
+digest, exact scope and current input hashes. Run a new live capture from the
+repository with:
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_control_groups.py
+```
+
+The fixture reuses signed-image verification, constrained container resources,
+isolated networking, TLS 1.3 validation and owned-resource cleanup. It creates
+four separate userpass identities, two internal groups, a KV v2 mount and the
+policy in `compat/onboarding/2.7.0/control-group-policy.hcl`. A Rust regression
+compares that file and its short-expiry variant with actual builder output.
+
+Checks require self-approval denial, nonmember approval having no effect, both
+factors reaching their thresholds, sensitive request-review metadata, deferred
+writes remaining unchanged before unwrap, original KV v2 response shapes,
+explicit replay classification, expiration of an approved token and peer-namespace review
+rejection. A one-shot TLS unwrap then closes before reading its response and
+observes state using only root reads; execution is never retried. Either observed
+state is outcome-unknown, not a rollback claim. Live cancellation does not replace
+the SDK's already-tested local one-attempt guard.
+
+Expected denial status/error pairs come from tagged handlers and HTTP error
+mapping. Except for the exact known replay behavior described below, unrelated errors, unexpected successes, malformed shapes, failed cleanup
+or changed inputs prevent a passing report. Diagnostics print only fixed phases
+and numeric statuses, not response bodies or credentials. Reports bind fixture,
+policy and SDK source hashes, contain no runtime identities/secrets, and retain
+`routable: false` and the server-fixture-only scope. Python runtime allocations
+are not covered by Rust sanitizing-storage guarantees; use a disposable test host.
+
+Offline tests cover report tampering, credential bounds, namespace and transport
+controls, one-send cancellation, cleanup failure and secret-free failure output.
+They are not evidence that the live server meets this contract. Any live replay
+or authorization failure needs investigation before checkpoint completion, not
+a relaxed assertion merely to obtain a passing report.
+
+### Live Replay Blocker
+
+The reported live run passed review metadata, self-approval denial, nonmember
+approval, factor thresholds, and the first deferred write before failing on
+the second unwrap's HTTP 200. A subsequent user-run fixture reported
+`replay diagnostic=write-version-advanced`: the read-only KV metadata check
+observed a version greater than 2 after replay. This confirms another write,
+not merely a repeated success response, in this disposable test scenario.
+The same approved token was reused without another approval round. This does
+not demonstrate bypass of the initial approval thresholds or establish impact
+for every engine. No passing evidence report was emitted.
+
+Unexpected success still fails; no extra unwrap attempt, automatic retry, or
+passing evidence is introduced. Further reruns of the same assertion are not
+needed to establish this blocker. Report the reproduction privately to upstream
+security maintainers before public disclosure of exploit details.
+
+Tagged `internal/vault/request_handling.go:929-964` returns directly into
+`handleCancelableRequest` for an approved deferred request. This bypasses the
+ordinary unwrap handler's token-use decrement and revocation in
+`internal/vault/logical_system.go:3380-3393`. This is consistent with the observed
+replay acceptance and needs upstream investigation, not an SDK assertion change.
+An SDK-local one-attempt handle cannot enforce server-wide single use against
+other copies of the token. Revoking after execution would also leave a race and
+cannot be presented as an atomic fix.
+
+### Accepted Compatibility Scope
+
+The maintainer explicitly chose to continue SDK support for the upstream API
+without claiming server-wide single-use enforcement. This is not a fix for the
+server defect. The SDK's local one-attempt guard and no-automatic-retry behavior
+remain unchanged. Generic unwrap can also execute deferred requests; the local
+guard is not a server-wide mitigation for other clients or token copies.
+
+The default fixture continues only for the pinned 2.7.0 image's exact observed
+replay result: HTTP 200, response version 3 and independently read KV version 3.
+Unrelated errors or different behavior still fail. Later assertions use that
+known state rather than assuming the rejected replay left version 2 unchanged.
+The v2 evidence schema records outcome
+`compatible-with-known-upstream-limitation` and the separate security result
+`server-replay-rejection: known-upstream-failure`. Replay rejection is not in
+the successful check list. Reports remain non-routable and fixture-only.
+
+To run the strict replay-security regression, which fails on the affected
+server without producing a report:
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_control_groups.py --require-replay-rejection
+```
+
+Do not carry this exception into a later server profile automatically. Once
+upstream fixes the behavior, require replay rejection and test the fixed exact
+version, including concurrent redemption, before changing the security result.
+
+The continued live run completed expiry, peer-namespace review and one-shot
+cancellation checks, plus cleanup, under this accepted scope. This establishes
+server API compatibility, not server replay protection or successful public
+SDK dispatch. No 2.7 routing is promoted by this scope decision.
+
+The continued live run reached peer-namespace setup after passing the original
+KV response and insufficient-approval checks. The fixture now accounts for
+tagged identity storage's `UUID.namespaceID` format, requiring the exact ID
+returned when creating the peer namespace rather than accepting arbitrary
+suffixes. Tagged `token_store.go` rejects cross-namespace accessor lookup with
+`cannot lookup token in different namespace`; this plain error maps to HTTP 500,
+not the HTTP 400 `invalid accessor` used for a missing same-namespace accessor.
+The fixture requires that exact denial and still rejects unrelated failures.
+The retained live result confirms these namespace checks.

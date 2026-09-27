@@ -34,6 +34,11 @@ pub enum ControlGroupExecutionState {
 /// token on uncertain outcomes for deliberate application recovery; that does
 /// not mean the token remains valid. Token copies made outside this handle are
 /// not constrained by this local guard. Dropping the handle does not revoke it.
+///
+/// OpenBao 2.7.0 has an observed server-side replay limitation for approved
+/// deferred requests. This handle provides one attempt locally, not server-wide
+/// single-use enforcement. Do not reuse or distribute copies of its token, and
+/// do not interpret API compatibility as proof of server replay protection.
 pub struct ControlGroupExecution<'a, T> {
     wrapped: WrappedResponse<'a, T>,
     state: ControlGroupExecutionState,

@@ -6,6 +6,13 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Separate the known OpenBao 2.7.0 server replay failure from control-group API
+  compatibility evidence; preserve strict replay-security testing and the SDK's
+  local one-attempt guard. The retained live result explicitly records the failure.
+- Complete checkpoint 07e constrained control-group TLS fixture and offline
+  regressions, using policy text checked against the Rust builder. The live
+  approval lifecycle compatibility evidence is retained and digest-pinned, with
+  the known server replay defect distinguished from successful checks.
 - Add checkpoint 07d bounded identity-approval policy requirements, explicit
   self-approval denial, exact-path collision checks and an opaque, version-gated
   control-group policy write request. Retain caller-managed advanced HCL.

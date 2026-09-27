@@ -8,6 +8,15 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Record the observed OpenBao 2.7.0 control-group replay limitation separately
+  from API compatibility. The SDK one-attempt guard is local, not server-wide
+  token consumption. The fixture retains a strict replay-security mode and
+  marks the known server failure explicitly in retained live evidence.
+- Complete the checkpoint 07e live control-group fixture with generated-policy,
+  identity, approval, expiry, replay and cancellation checks. Offline tests do
+  not establish live enforcement; the rootful TLS result is separately retained
+  and digest-pinned with the known replay limitation. OpenBao 2.7 support remains unpromoted.
+
 - Checkpoint 07d adds typed identity factors and TTL requirements to
   `AclPolicyBuilder`, with all rule operations controlled by every factor and
   self-approval disabled. `build_control_group_write_request` and

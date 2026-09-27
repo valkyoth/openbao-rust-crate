@@ -206,6 +206,33 @@ mod tests {
     }
 
     #[test]
+    fn live_fixture_uses_exact_builder_output() {
+        let expected = include_str!("../../compat/onboarding/2.7.0/control-group-policy.hcl");
+        for seconds in [300, 3] {
+            let factors = [
+                ControlGroupFactor::new("operators", ["operators"], 2),
+                ControlGroupFactor::new("security", ["security"], 1),
+            ]
+            .into_iter()
+            .map(|factor| factor.unwrap_or_else(|_| panic!("factor failed")));
+            let requirement = ControlGroupRequirement::new(Duration::from_secs(seconds), factors)
+                .unwrap_or_else(|_| panic!("requirement failed"));
+            let mut builder = AclPolicyBuilder::new();
+            builder
+                .allow_path_with_control_group(
+                    "fixture-kv/data/record",
+                    [AclCapability::Read, AclCapability::Update],
+                    requirement,
+                )
+                .unwrap_or_else(|_| panic!("rule failed"));
+            assert_eq!(
+                builder.build().unwrap_or_else(|_| panic!("render failed")),
+                expected.replace("ttl = \"300s\"", &format!("ttl = \"{seconds}s\""))
+            );
+        }
+    }
+
+    #[test]
     fn renders_exact_parser_keys_and_explicit_operations() {
         let mut builder = AclPolicyBuilder::new();
         builder

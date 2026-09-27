@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 06 passed pentest; checkpoint 06 evidence refresh pending after harness cleanup; checkpoint 07d implemented for review;
+Status: checkpoints 01 through 06 passed pentest; checkpoint 06 evidence refresh pending after harness cleanup; checkpoint 07e live compatibility evidence retained with an explicitly accepted upstream replay limitation, ready for pentest;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -111,6 +111,14 @@ cancellation/timeout/disconnection regression tests. Subcommit 07d (pentest base
 `9f20076`) implements the narrow ACL builder extension and gated policy writer.
 Live evidence, including generated-policy enforcement, remains required. See
 [the control-group review](OPENBAO_2_7_0_CONTROL_GROUPS_REVIEW.md).
+The 07e fixture and offline regression tests are prepared, with builder-matched
+HCL. A live run confirmed repeated execution on approved unwrap. The maintainer
+accepted API support with this known upstream limitation, separate from server
+replay-security results. The strict replay test remains available; the default
+fixture continues the other checks with an explicit limitation in its evidence.
+The complete live compatibility report is retained and digest-pinned; checkpoint
+07 is ready for pentest under this scope. Public SDK dispatch remains gated until
+checkpoint 10. The report does not claim server replay protection.
 
 The checkpoint 06 pipe-cleanup fix passed pentest and is committed as `7419d1b`.
 Its four replacement 2.7 live evidence captures are still required because the
