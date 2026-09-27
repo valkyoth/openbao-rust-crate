@@ -22,6 +22,23 @@ PLUGINS = {
     "secret/ldap": "secrets/ldap",
 }
 MAX_BYTES = 8 * 1024 * 1024
+TLS_RESULT = ROOT / "compat/onboarding/2.7.0/tls-fixture.json"
+TLS_SHA256 = "e22fb4f3d3e9173727d109f300cded9619afba7ecbd1f8b8ce4afac9746c5417"
+
+
+def verify_tls_result() -> dict:
+    import openbao_2_7_tls as fixture
+    data = base.read_regular_file(TLS_RESULT, 16 * 1024)
+    if base.sha256(data) != TLS_SHA256:
+        raise base.SnapshotError("staged TLS result checksum changed")
+    result = base.parse_json(data, 16 * 1024)
+    if data != base.canonical_json(result) or result.get("inputs") != fixture.input_hashes():
+        raise base.SnapshotError("staged TLS result is noncanonical or its fixture inputs changed")
+    if (result.get("outcome") != "passed" or result.get("routable") is not False
+        or result.get("plugin_contracts_verified") is not False
+        or result.get("scope") != "server-fixture-only-not-sdk-integration"):
+        raise base.SnapshotError("staged TLS result scope changed")
+    return result
 
 
 def classify(tags: list[str], paths: list[str]) -> list[dict]:
@@ -69,7 +86,7 @@ def validate(document: dict) -> None:
 def require_verified_plugins(document: dict) -> None:
     validate(document)
     if any(p["artifact_verified"] is not True or p["contract_verified"] is not True for p in document["plugins"]):
-        raise base.SnapshotError("external plugin artifacts and contracts are not verified; checkpoint 03 is incomplete")
+        raise base.SnapshotError("external plugin artifacts and contracts are not verified; these engines are excluded from 2.7 support")
 
 
 def verify() -> dict:
@@ -143,11 +160,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--observe", action="store_true", help="write a fresh observation to a new temporary file, never promote it")
     parser.add_argument("--require-verified", action="store_true", help="fail unless external-plugin verification is complete")
+    parser.add_argument("--verify-tls", action="store_true", help="verify the retained server-only TLS result and its inputs")
     args = parser.parse_args()
-    if args.observe and args.require_verified:
+    if sum((args.observe, args.require_verified, args.verify_tls)) > 1:
         parser.error("observation and promotion checks cannot be combined")
     try:
-        if args.observe:
+        if args.verify_tls:
+            verify_tls_result()
+            print("Staged TLS fixture result: verified (not SDK profile promotion)")
+        elif args.observe:
             document = observe()
             with tempfile.NamedTemporaryFile(prefix="openbao-plugin-observation-", suffix=".json", delete=False) as handle:
                 handle.write(base.canonical_json(document))

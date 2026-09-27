@@ -594,7 +594,7 @@ pub enum OpenBaoCapabilityAvailability {
     DocumentedRoute,
     /// The route is not documented for this exact locked release.
     NotDocumented,
-    /// The server documents the route, but crate security policy blocks its use.
+    /// Crate security policy blocks the route, including unverified external plugins.
     SecurityBlocked,
 }
 
@@ -712,6 +712,9 @@ impl OpenBaoOperation {
         if !is_generated_profile(version) {
             return None;
         }
+        if requires_unverified_external_plugin(self.path_template, version) {
+            return Some(OpenBaoCapabilityAvailability::SecurityBlocked);
+        }
         let range = select_capability_range(self.ranges, version)?;
         if range.evidence == OpenBaoCapabilityEvidence::None {
             return Some(OpenBaoCapabilityAvailability::NotDocumented);
@@ -731,6 +734,20 @@ impl OpenBaoOperation {
         }
         select_capability_range(self.ranges, version).map(OpenBaoCapabilityRange::evidence)
     }
+}
+
+// 2.7 removed these built-ins. Server version and retained API documentation
+// cannot establish a separately installed plugin's identity or contract.
+pub(crate) fn requires_unverified_external_plugin(path: &str, version: OpenBaoVersion) -> bool {
+    version >= OpenBaoVersion::new(2, 7, 0)
+        && ["/auth/ldap", "/auth/kerberos", "/auth/radius", "/ldap"]
+            .iter()
+            .any(|prefix| {
+                path == *prefix
+                    || path
+                        .strip_prefix(prefix)
+                        .is_some_and(|suffix| suffix.starts_with('/'))
+            })
 }
 
 pub(crate) fn select_capability_range(
@@ -1377,6 +1394,56 @@ mod tests {
                     Some(OpenBaoCapabilityAvailability::DocumentedRoute)
                 );
             }
+        }
+    }
+
+    #[test]
+    fn external_plugin_exclusions_preserve_historical_engine_profiles() {
+        for path in [
+            "/auth/ldap/login/:username",
+            "/auth/kerberos/config",
+            "/auth/radius/config",
+            "/ldap/config",
+        ] {
+            let operation = openbao_operations()
+                .iter()
+                .copied()
+                .find(|operation| operation.path_template() == path)
+                .unwrap_or_else(|| panic!("missing historical externalized engine route"));
+            for version in super::openbao_profile_versions() {
+                assert!(!super::requires_unverified_external_plugin(path, *version));
+                assert_eq!(
+                    operation.availability(*version),
+                    Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+                );
+            }
+            assert!(super::requires_unverified_external_plugin(
+                path,
+                OpenBaoVersion::new(2, 7, 0)
+            ));
+            assert!(super::requires_unverified_external_plugin(
+                path,
+                OpenBaoVersion::new(2, 8, 0)
+            ));
+            assert_eq!(operation.availability(OpenBaoVersion::new(2, 7, 0)), None);
+        }
+        for path in ["/auth/ldap", "/auth/kerberos", "/auth/radius", "/ldap"] {
+            assert!(super::requires_unverified_external_plugin(
+                path,
+                OpenBaoVersion::new(2, 7, 0)
+            ));
+        }
+        for path in [
+            "/auth/ldap-extra/config",
+            "/ldap-extra/config",
+            "/sys/plugins/catalog/auth/ldap",
+            "/transit/keys/:name",
+            "/auth/approle/login",
+        ] {
+            assert!(!super::requires_unverified_external_plugin(
+                path,
+                OpenBaoVersion::new(2, 7, 0)
+            ));
         }
     }
 

@@ -9,7 +9,7 @@ All notable changes to this project are documented here.
 - Start OpenBao 2.7.0 onboarding with a hash-locked tagged-source inventory
   and a ten-checkpoint implementation and security verification plan.
 - Keep all 25 active profiles through OpenBao 2.6.3 unchanged. OpenBao 2.7.0
-  remains non-routable until its API, plugin and live-test work is complete.
+  remains non-routable until its API, exclusion gates and live-test work is complete.
 - Lock staged 2.7.0 image/provenance and built-in-only runtime API evidence.
   Add documentation extractor v2 for comma-separated methods and nested
   operations, retaining historical snapshots and rebaselining only staging
@@ -22,6 +22,12 @@ All notable changes to this project are documented here.
 - Record checkpoint 03's unresolved external-plugin availability boundary;
   refresh the optional local Podman stack to inventory-pinned OpenBao 2.6.3
   with separate per-version state. This does not promote 2.7.0 support.
+- Explicitly exclude the externalized LDAP auth/secrets, Kerberos and RADIUS
+  engines on 2.7 until separately verified plugin support is available. Keep
+  all older built-in profiles and add a staged TLS server-fixture runner.
+- Complete checkpoint 03 with retained, input-bound live TLS fixture evidence,
+  including negative TLS tests and absent-plugin checks. Guard excluded engine
+  routes even when an acknowledged newer server selects an older profile.
 
 ## 2.1.9 - 2026-09-27
 

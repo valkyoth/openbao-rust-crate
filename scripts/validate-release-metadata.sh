@@ -165,6 +165,9 @@ check_grep 'openbao_2_7_api.py --verify' scripts/checks.sh
 check_grep 'openbao_2_7_api.py --self-test' scripts/checks.sh
 check_grep 'scripts/openbao_2_7_plugins.py' scripts/checks.sh
 check_grep 'scripts/test_openbao_2_7_plugins.py' scripts/checks.sh
+check_grep 'scripts/test_openbao_2_7_tls.py' scripts/checks.sh
+check_grep 'scripts/openbao_2_7_plugins.py --verify-tls' scripts/checks.sh
+check_file compat/onboarding/2.7.0/tls-fixture.json
 check_grep 'Unique documented rows: `644`' docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
 check_grep 'oidc-get-callback-acknowledged = \[\]' Cargo.toml
 check_grep 'workflow-trace-acknowledged = \[\]' Cargo.toml

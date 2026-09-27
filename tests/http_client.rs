@@ -1385,6 +1385,75 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
 }
 
 #[tokio::test]
+async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() {
+    for engine in ["ldap-secret", "ldap-auth", "kerberos", "radius"] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let addr = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("GET /v1/sys/health "));
+            write_json_response(
+                &mut stream,
+                "200 OK",
+                r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+            );
+            listener
+        });
+        let config = OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .map(|config| {
+                config.compatibility_policy(
+                    OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                        UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+                    ),
+                )
+            })
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
+        let operation = async {
+            match engine {
+                "ldap-secret" => client
+                    .with_token(test_secret(&["test-", "token"]))
+                    .ldap()
+                    .unwrap_or_else(|error| panic!("{error}"))
+                    .read_config()
+                    .await
+                    .err(),
+                "ldap-auth" => client
+                    .login_ldap("alice", test_secret(&["test-", "password"]))
+                    .await
+                    .err(),
+                "kerberos" => client
+                    .login_kerberos(test_secret(&["test-", "spnego"]))
+                    .await
+                    .err(),
+                "radius" => client
+                    .login_radius("alice", test_secret(&["test-", "password"]))
+                    .await
+                    .err(),
+                _ => panic!("unknown test engine"),
+            }
+        };
+        let error = tokio::time::timeout(Duration::from_secs(2), operation)
+            .await
+            .unwrap_or_else(|_| panic!("excluded operation reached transport"));
+        assert!(
+            matches!(error, Some(Error::UnsupportedOpenBaoCapability { version, .. }) if version == OpenBaoVersion::new(2, 7, 0))
+        );
+        let listener = server.join().unwrap_or_else(|error| panic!("{error:?}"));
+        listener
+            .set_nonblocking(true)
+            .unwrap_or_else(|error| panic!("{error}"));
+        assert!(
+            matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+        );
+    }
+}
+
+#[tokio::test]
 async fn kv2_read_sends_documented_headers_and_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

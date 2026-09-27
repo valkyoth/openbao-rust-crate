@@ -17,10 +17,24 @@ from validate_openbao_release_lock import validate_lock_files
 
 
 class PluginTests(unittest.TestCase):
+    def test_retained_tls_result_is_bound_to_fixture_and_not_promotion(self):
+        result = plugins.verify_tls_result()
+        self.assertFalse(result["routable"])
+        self.assertFalse(result["plugin_contracts_verified"])
+        import openbao_2_7_tls as fixture
+        with patch.object(fixture, "input_hashes", return_value={}):
+            with self.assertRaises(base.SnapshotError):
+                plugins.verify_tls_result()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tls.json"
+            path.write_bytes(base.canonical_json(result) + b" ")
+            with patch.object(plugins, "TLS_RESULT", path), self.assertRaises(base.SnapshotError):
+                plugins.verify_tls_result()
+
     def test_observation_is_not_artifact_or_contract_verification(self):
         document = plugins.verify()
         self.assertEqual(len(document["plugins"]), 4)
-        with self.assertRaisesRegex(base.SnapshotError, "checkpoint 03 is incomplete"):
+        with self.assertRaisesRegex(base.SnapshotError, "excluded from 2.7 support"):
             plugins.require_verified_plugins(document)
         for item in document["plugins"]:
             self.assertFalse(item["artifact_verified"])
@@ -82,7 +96,7 @@ class PluginTests(unittest.TestCase):
         result = subprocess.run(["/usr/bin/python3", "-E", "-s", "-S", "-B", str(plugins.ROOT / "scripts/openbao_2_7_plugins.py"), "--require-verified"],
                                 capture_output=True, timeout=30, check=False)
         self.assertEqual(result.returncode, 1)
-        self.assertIn(b"checkpoint 03 is incomplete", result.stdout)
+        self.assertIn(b"excluded from 2.7 support", result.stdout)
 
     def test_dev_profile_rejects_unknown_and_staged_versions(self):
         inventory = validate_lock_files()

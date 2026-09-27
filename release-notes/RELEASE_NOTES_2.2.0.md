@@ -23,12 +23,18 @@ This release is being developed in pentestable commit checkpoints described in
   startup customization from bypassing evidence verification.
 - Checkpoint 03a records the missing external-plugin release artifacts and
   updates the local dev fixture without touching historical server profiles.
-  Checkpoint 03 remains incomplete; see the
+  The approved 2.2.0 scope explicitly excludes LDAP auth/secrets, Kerberos and
+  RADIUS on 2.7 pending separately verified plugins (target 2.2.1 when available).
+  Historical built-in support is unchanged. See the
   [plugin/fixture review](../docs/OPENBAO_2_7_0_PLUGIN_REVIEW.md).
+- Checkpoint 03 completes the staged TLS fixture with verified network/resource
+  restrictions, TLS rejection tests, initialization/unsealing, built-in Transit
+  creation and explicit absent-plugin checks. Retained evidence is bound to its
+  fixture inputs. This is server evidence, not SDK 2.7 profile promotion.
 
 ## Required Before Release
 
-External-plugin evidence and compatibility, new typed APIs and field rules,
+Built-in typed APIs and field rules,
 security review, live regression coverage, profile
 promotion, complete documentation and the final release gate remain pending.
 Do not publish or tag this development checkpoint. The stable release is

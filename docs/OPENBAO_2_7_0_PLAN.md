@@ -1,12 +1,16 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 and 02 implemented; remaining checkpoints are required before
+Status: checkpoints 01 through 03 implemented; remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
 
-Checkpoint 03a records the external-plugin availability blocker and refreshes
-the local development fixture. Checkpoint 03 is **not complete**: released
-plugin artifacts/contracts and staged 2.7 TLS fixture validation remain required.
+Checkpoint 03a records external-plugin availability and refreshes the local
+development fixture. The approved checkpoint 03 scope now excludes LDAP
+auth/secrets, Kerberos and RADIUS on 2.7 until separately verified artifacts
+become available (target 2.2.1 or later). Older built-in profiles remain supported.
+Staged 2.7 TLS fixture validation passed, including network/resource isolation,
+negative TLS cases, initialization, built-in Transit and absent-plugin checks.
+Checkpoint 03 is complete under the approved external-plugin exclusions.
 See [the checkpoint 03 review](OPENBAO_2_7_0_PLUGIN_REVIEW.md).
 
 ## Source Baseline
@@ -42,14 +46,14 @@ All checkpoints target the same 2.2.0 release, not intermediate releases.
 | --- | --- | --- |
 | 01 | Development baseline and source inventory | Version manifests/locks agree on 2.2.0; locked source inventory and tamper tests pass; all 25 active profiles remain unchanged and 2.7.0 remains rejected. |
 | 02 | Signed artifacts and complete staged API evidence | Verify exact image signature identity, index/child/provenance relationships; capture bounded runtime OpenAPI; fix comma-separated method and nested operation parsing in a versioned extractor; diff all fields, methods, routes and responses against 2.6.3. Record source/runtime/doc discrepancies explicitly. No active routing promotion. |
-| 03 | External-plugin and server-fixture compatibility | Retain older built-in LDAP auth/secrets, Kerberos and RADIUS profiles. Separately pin and verify 2.7 external-plugin artifacts and contracts; distinguish plugin-not-installed from unsupported SDK behavior. Validate staged 2.7 fixtures with supported storage and TLS/container checks; the historical integration fixture already uses `inmem` and local development uses Raft. No silent mount skips or claims that server version alone proves an external-plugin version. |
+| 03 | External-plugin exclusions and server-fixture compatibility | Retain older built-in LDAP auth/secrets, Kerberos and RADIUS profiles. Explicitly exclude those engines on 2.7 until separately verified plugin artifacts/contracts are available; distinguish server plugin-not-installed from SDK exclusion. Validate staged 2.7 fixtures with supported storage and TLS/container checks. The historical integration fixture already uses `inmem` and local development uses Raft. No silent mount skips or server-version-only plugin support claims. |
 | 04 | External-key system administration | Typed config/key/grant CRUD, LIST and PATCH, built-in Transit provider and PKCS#11 schemas, and an explicitly bounded secret-aware path for custom provider options. Review grant privileges, verify=false, merge-patch deletion, endpoint validation, credentials, redaction, request limits and profile rejection. Live delegation tests must prove denied mounts cannot use keys. |
 | 05 | Transit ML-DSA and external keys | Create/read/import/export/sign/verify for the three ML-DSA parameter sets; external-key create/rotation and provider-dependent operations; external-mu/prehashed validation, batch variants, import restrictions and response additions. Use additive options/details APIs where existing exhaustive enums or struct literals prevent compatible extension. Live positive and negative crypto tests plus old-profile rejection. |
 | 06 | PKI ML-DSA, KMS and RSA-PSS changes | All affected root, rotate, intermediate, key, role, issue and sign paths, external_key_ref and kms mode, parameter-set checks, use_pss, and additive response types. Test PSS defaults, invalid trailing-dot names and unsupported ML-DSA OCSP behavior without weakening existing validation. Do not claim SDK TLS support for ML-DSA certificates merely because the server supports them. |
 | 07 | Control groups and approval-aware wrapping | Typed authorize/status APIs with secret accessors and secret-aware bounded request_data; original request responses, authorization tokens and unwrap lifecycle; audit metadata redaction, namespace binding, denial, expiration, replay and cancellation. Review whether a narrowly typed ACL builder extension is safe; opaque PolicyWriteRequest remains available. Do not auto-approve or auto-replay requests. |
 | 08 | Explicit consistency controls | Bounded typed X-Vault-Index response capture and X-Vault-Inconsistent request options, profile gating, namespace/cluster scoping, header validation, await-state timeout, forwarding and 429 handling. Preserve non-idempotent retry restrictions. Prove behavior with multi-node live tests, not single-node success alone. |
 | 09 | Remaining behavior/field gaps and old security blocks | Catalog OCI digest/default command/latest version support, plugin prune, sanitized config additions, cert Envoy decoder, wrapping-token revoke-self, raw backup reads, MFA TOTP responses, and every other source/runtime delta. Re-review workflow CAS and prefix listing independently; retain blocks on older profiles and require exact 2.7 adversarial tests before lifting either. |
-| 10 | Profile promotion and release assurance | Every inventory item has implemented/tested or explicitly justified unsupported/security-blocked disposition. Promote 2.7.0 only after routes, field rules, fixtures, plugin contracts and gates are wired. Regenerate registry/contracts/fixtures; test all historical versions against their own API and mixed-version intersections; update docs/migration/examples, audit dependencies, run full release gate and pentests, then await exact-commit GitHub checks before tagging. |
+| 10 | Profile promotion and release assurance | Every inventory item has implemented/tested or explicitly justified unsupported/security-blocked disposition. Promote 2.7.0 only after routes, field rules, fixtures, explicit plugin exclusions and gates are wired. Regenerate registry/contracts/fixtures; test all historical versions against their own API and mixed-version intersections; update docs/migration/examples, audit dependencies, run full release gate and pentests, then await exact-commit GitHub checks before tagging. |
 
 If a checkpoint needs multiple commits to keep review manageable, record the
 subcommits and audit range here. No release capability is considered complete
@@ -103,6 +107,7 @@ corrected; active historical evidence and runtime captures were not rewritten.
 The immutable checkpoint 01 source inventory intentionally asserts no endpoint
 coverage count. Checkpoint 02 separately locks signed-image evidence, v2
 documentation, built-in-only runtime OpenAPI and an adjacent diff. External
-plugin capture is pending checkpoint 03; request-field rules, typed APIs,
+plugin capture is excluded from 2.2.0 by the approved checkpoint 03 decision;
+request-field rules, typed APIs,
 behavior tests and profile promotion remain pending later checkpoints. Neither
 source inventory nor staged API evidence claims usable SDK 2.7.0 support.

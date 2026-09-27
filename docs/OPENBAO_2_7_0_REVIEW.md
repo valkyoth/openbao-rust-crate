@@ -69,7 +69,10 @@ The capture mounts nine secret engines and five auth engines. It contains
 724 runtime operations, 503 paths and 545 schemas. The missing LDAP secret
 engine and LDAP/Kerberos/RADIUS auth engines are explicitly listed as excluded
 because their built-in distributions were removed. Their external-plugin
-contracts and fixtures belong to checkpoint 03, not a successful skipped test.
+contracts and fixtures were assigned to checkpoint 03, not a successful skipped
+test. The subsequent [checkpoint 03 scope decision](OPENBAO_2_7_0_PLUGIN_REVIEW.md)
+explicitly excludes these engines from 2.2.0 support on 2.7 until verified plugin
+artifacts become available for a later release.
 
 `--capture-runtime` on the staged evidence script first verifies the frozen
 evidence and image signature, then writes a fresh capture into a new temporary

@@ -56,7 +56,10 @@ observation. `/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_plugins.py`
 verifies that observation, not plugin support. Its `--require-verified` mode
 fails until artifacts and contracts are verified. The
 [checkpoint 03 review](../docs/OPENBAO_2_7_0_PLUGIN_REVIEW.md) records the
-upstream availability blocker and pending fixture tests.
+approved built-in-only 2.2.0 scope, explicit external-engine exclusions on 2.7,
+and staged TLS fixture tests. Older built-in profiles are unchanged. External
+plugins require a later independently verified release, targeted for 2.2.1
+when artifacts become available.
 
 OpenBao's OCI indexes and `linux/amd64` manifests were verified with Cosign
 `3.1.1`, built from module tag `v3.1.1` at peeled source commit

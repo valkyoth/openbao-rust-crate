@@ -1701,6 +1701,18 @@ impl<State> Client<State> {
                 "typed OpenBao request matches multiple registry operations",
             ));
         }
+        // An acknowledged newer server must not regain removed built-ins by
+        // selecting an older fallback profile. No probe means no server claim.
+        let server_version = report.detected_version().unwrap_or(version);
+        if crate::compatibility::requires_unverified_external_plugin(
+            operation.path_template(),
+            server_version,
+        ) {
+            return Err(Error::UnsupportedOpenBaoCapability {
+                endpoint: operation.id(),
+                version: server_version,
+            });
+        }
         if !matches!(
             operation.availability(version),
             Some(OpenBaoCapabilityAvailability::DocumentedRoute)
