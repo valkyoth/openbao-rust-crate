@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 06a adds `PkiMldsaParameterSet`, `with_mldsa` request builders and
+  old/fallback-profile rejection on all existing PKI generation/role paths.
+  [The PKI review](../docs/OPENBAO_2_7_0_PKI_REVIEW.md) records remaining KMS/PSS
+  options and live evidence requirements. This is not completed 2.7 PKI support.
+
 - Follow-up checkpoint 05 hardening removes message-sized constant-time Base64
   decoding from constructors, adds a separate 16 KiB BYOK budget and enforces a
   five-second combined budget for two maximum-size constructors in release tests.

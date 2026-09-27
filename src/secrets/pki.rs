@@ -1,5 +1,8 @@
 //! PKI secrets engine support.
 
+mod extensions;
+pub use extensions::PkiMldsaParameterSet;
+
 use core::fmt;
 use std::collections::BTreeMap;
 
@@ -1977,6 +1980,8 @@ impl Pki<'_> {
     }
 
     async fn validate_role_request_fields(&self, role: &PkiRole) -> Result<()> {
+        self.validate_pki_key_algorithm(role.key_type.as_deref(), role.key_bits)
+            .await?;
         self.client
             .validate_versioned_request_fields(&[
                 (
@@ -2018,6 +2023,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
+            .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
             .await?;
         self.enveloped(
@@ -2034,6 +2041,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
+            .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
             .await?;
         self.enveloped(
@@ -2055,6 +2064,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
+            .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
             .await?;
         self.enveloped(
@@ -2081,6 +2092,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateKeyRequest,
     ) -> Result<PkiGeneratedKey> {
+        self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
+            .await?;
         self.enveloped(
             Method::POST,
             &self.path(&["keys", "generate", generation_type.as_path_segment()])?,
@@ -2121,6 +2134,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateIntermediateRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
+            .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
             .await?;
         self.enveloped(
@@ -2141,6 +2156,8 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateIntermediateRequest,
     ) -> Result<PkiAuthorityBundle> {
+        self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
+            .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
             .await?;
         self.enveloped(

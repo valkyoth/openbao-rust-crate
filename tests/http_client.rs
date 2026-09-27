@@ -1768,6 +1768,172 @@ async fn transit_detailed_read_preserves_existing_profile_and_has_no_get_body() 
         .unwrap_or_else(|_| panic!("read fixture failed"));
 }
 
+#[cfg(feature = "pki")]
+async fn assert_pki_mldsa_rejected(client: &Client<Authenticated>, expected: OpenBaoVersion) {
+    use openbao::secrets::pki::*;
+    fn rejected<T>(result: openbao::Result<T>, expected: OpenBaoVersion) {
+        assert!(matches!(result, Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "pki.key", field: "key_type=mldsa", version
+        }) if version == expected));
+    }
+    let pki = client
+        .pki("nested/pki")
+        .unwrap_or_else(|_| panic!("mount rejected"));
+    for parameters in [
+        PkiMldsaParameterSet::MlDsa44,
+        PkiMldsaParameterSet::MlDsa65,
+        PkiMldsaParameterSet::MlDsa87,
+    ] {
+        let root = PkiGenerateRootRequest::default().with_mldsa(parameters);
+        let csr = PkiGenerateIntermediateRequest::default().with_mldsa(parameters);
+        let key = PkiGenerateKeyRequest::default().with_mldsa(parameters);
+        for mode in [
+            PkiKeyGenerationType::Internal,
+            PkiKeyGenerationType::Exported,
+            PkiKeyGenerationType::Existing,
+        ] {
+            rejected(pki.generate_root(mode, &root).await, expected);
+            rejected(pki.generate_issuer_root(mode, &root).await, expected);
+            rejected(pki.rotate_root(mode, &root).await, expected);
+            rejected(pki.generate_intermediate(mode, &csr).await, expected);
+            rejected(pki.generate_issuer_intermediate(mode, &csr).await, expected);
+            rejected(pki.generate_key(mode, &key).await, expected);
+        }
+        let role = PkiRole::default().with_mldsa(parameters);
+        rejected(pki.write_role("role", &role).await, expected);
+        rejected(pki.patch_role("role", &role).await, expected);
+        #[cfg(feature = "identity-template-overrides-acknowledged")]
+        {
+            rejected(
+                pki.write_role_with_identity_template_globs(
+                    "role",
+                    &role,
+                    PkiIdentityTemplateGlobOverride::acknowledge(),
+                )
+                .await,
+                expected,
+            );
+            rejected(
+                pki.patch_role_with_identity_template_globs(
+                    "role",
+                    &role,
+                    PkiIdentityTemplateGlobOverride::acknowledge(),
+                )
+                .await,
+                expected,
+            );
+        }
+    }
+    // Legacy public fields are revalidated rather than trusting builder provenance.
+    for spelling in ["mldsa", "MLDSA"] {
+        for bits in [None, Some(0)] {
+            let raw = PkiGenerateKeyRequest {
+                key_type: Some(spelling.into()),
+                key_bits: bits,
+                ..Default::default()
+            };
+            rejected(
+                pki.generate_key(PkiKeyGenerationType::Internal, &raw).await,
+                expected,
+            );
+        }
+    }
+    let mut invalid = PkiGenerateKeyRequest::default().with_mldsa(PkiMldsaParameterSet::MlDsa44);
+    invalid.key_bits = Some(u64::MAX);
+    assert!(matches!(
+        pki.generate_key(PkiKeyGenerationType::Internal, &invalid)
+            .await,
+        Err(Error::InvalidParameter(_))
+    ));
+}
+
+#[tokio::test]
+#[cfg(feature = "pki")]
+async fn pki_mldsa_rejects_every_active_and_unselected_profile_before_transport() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|error| panic!("{error}"));
+    for selected in openbao::openbao_profile_versions()
+        .iter()
+        .copied()
+        .map(Some)
+        .chain([None])
+    {
+        let mut config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}"));
+        if let Some(version) = selected {
+            config = config.compatibility_policy(
+                OpenBaoCompatibilityPolicy::assume(version)
+                    .unwrap_or_else(|error| panic!("{error}")),
+            );
+        }
+        let client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_token(test_secret(&["fixture-", "client-token"]));
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            assert_pki_mldsa_rejected(&client, selected.unwrap_or(OpenBaoVersion::new(2, 6, 3))),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("PKI ML-DSA reached transport"));
+    }
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+#[cfg(feature = "pki")]
+async fn pki_mldsa_cannot_use_a_newer_server_fallback() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health "));
+        assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+        );
+        listener
+    });
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| {
+            config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            ))
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["fixture-", "client-token"]));
+    tokio::time::timeout(
+        Duration::from_secs(2),
+        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 6, 3)),
+    )
+    .await
+    .unwrap_or_else(|_| panic!("PKI ML-DSA reached transport"));
+    let listener = server
+        .join()
+        .unwrap_or_else(|_| panic!("health fixture failed"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
 #[tokio::test]
 #[cfg(feature = "operator-ops")]
 async fn external_key_administration_cannot_use_a_newer_server_fallback() {

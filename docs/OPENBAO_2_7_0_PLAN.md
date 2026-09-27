@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 05 implemented for review;
+Status: checkpoints 01 through 05 passed pentest; checkpoint 06a implemented for review;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -79,9 +79,15 @@ formats, mu/batch validation and old/fallback-profile rejection tests. Its pente
 base is `4394b8a`. Subcommit 05b (pentest base `16a1cde`) retains passing,
 input-bound TLS cryptographic evidence for all three parameter sets and external
 Transit-provider operations, plus offline failure and tamper regressions.
-Checkpoint 05 is ready for pentest before starting checkpoint 06. Public SDK
+Checkpoint 05 and its follow-up fixes through `2361a98` passed pentest. Public SDK
 positive dispatch remains a checkpoint 10 requirement, not a claim of this fixture.
 See [the Transit review](OPENBAO_2_7_0_TRANSIT_REVIEW.md) for the explicit test scope.
+
+Checkpoint 06 is split for review. Subcommit 06a (pentest base `2361a98`) adds
+typed PKI ML-DSA selection and guards every existing generation/role path against
+old or fallback profiles, including direct assignment to legacy public fields.
+Additive KMS/PSS/issuance options and live cryptographic evidence remain required
+before checkpoint 06 is complete. See [the PKI review](OPENBAO_2_7_0_PKI_REVIEW.md).
 
 ## Security And Compatibility Rules
 

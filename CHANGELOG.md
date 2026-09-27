@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Start checkpoint 06a with typed PKI ML-DSA parameter selection and validated
+  profile guards on existing generation and role-write/PATCH APIs, including
+  direct public-field assignments and identity-template override methods.
+  Preserve classical behavior; KMS/PSS additions and live PKI evidence remain
+  required before checkpoint 06 completion and eventual 2.7 profile promotion.
+
 - Resolve checkpoint 05 CPU-amplification finding: use strict allocation-free
   Base64 sizing for ML-DSA messages/imports, cap BYOK ciphertext at 16 KiB encoded,
   retain fixed-size mu decoding, and enforce a maximum-input release benchmark

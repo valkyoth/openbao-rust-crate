@@ -101,6 +101,9 @@ cargo test --all-targets --all-features
 echo "checks: minimal Transit contracts"
 cargo test --no-default-features --features transit,rustls-tls --lib extensions
 
+echo "checks: minimal PKI contracts"
+cargo test --no-default-features --features pki,rustls-tls --lib pki::extensions
+
 echo "checks: ML-DSA maximum-input validation budget"
 cargo test --locked --release --no-default-features --features transit,rustls-tls \
   --lib mldsa_maximum_message_validation_budget --no-run
