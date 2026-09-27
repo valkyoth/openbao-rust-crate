@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 06 passed pentest; checkpoint 06 evidence refresh pending after harness cleanup; checkpoint 07b implemented for review;
+Status: checkpoints 01 through 06 passed pentest; checkpoint 06 evidence refresh pending after harness cleanup; checkpoint 07c implemented for review;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -105,7 +105,9 @@ adds the explicit control-group authorization call, validated secret accessors
 and strict approval decoding, with incompatible-profile rejection tests.
 Subcommit 07b (pentest base `8a85027`) adds bounded secret-aware request review,
 including full requester metadata, duplicate rejection and decode-limit tests.
-Wrapping lifecycle, live evidence and the ACL builder decision remain
+Subcommit 07c (pentest base `83133d5`) adds explicit deferred-execution ownership,
+one-attempt state tracking, response-shape preservation and real-transport
+cancellation/timeout/disconnection regression tests. Live evidence and the ACL builder decision remain
 required. See [the control-group review](OPENBAO_2_7_0_CONTROL_GROUPS_REVIEW.md).
 
 The checkpoint 06 pipe-cleanup fix passed pentest and is committed as `7419d1b`.

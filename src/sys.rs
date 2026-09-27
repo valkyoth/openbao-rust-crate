@@ -3250,8 +3250,11 @@ impl<'a> WrappingContext<'a> {
     /// Sends a wrapped JSON request and returns wrapping token metadata.
     ///
     /// The returned [`WrappedResponse<T>`] does not contain the inner response
-    /// body. The inner response remains in OpenBao's cubbyhole storage until a
-    /// holder of the single-use wrapping token unwraps it.
+    /// body. Ordinary response wrapping stores the response in OpenBao's
+    /// cubbyhole. A control-group policy can instead defer the original request
+    /// until approved unwrap; metadata alone cannot distinguish these cases.
+    /// For explicit deferred execution use
+    /// [`WrappedResponse::into_control_group_execution`].
     pub async fn request_json<T, B>(
         &self,
         method: Method,
@@ -3374,6 +3377,11 @@ impl<'a, T> WrappedResponse<'a, T> {
     }
 
     /// Attempts to redeem the token without transferring wrapper ownership.
+    ///
+    /// If this is a control-group token, redemption can execute the original
+    /// request, including writes. Use [`Self::into_control_group_execution`]
+    /// for an explicit one-attempt deferred-execution handle. Wrapping metadata
+    /// alone does not establish whether the original request already executed.
     ///
     /// The token remains in this value when the future is cancelled or when
     /// transport or decoding fails. Such failures are outcome-unknown: the

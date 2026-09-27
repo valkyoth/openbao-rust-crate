@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Add checkpoint 07c explicit control-group execution handles with one local
+  attempt, outcome-unknown cancellation handling, sanitizing response bytes,
+  original-shape typed decoding and credential clearing after accepted responses.
+  Correct ordinary wrapping docs to account for deferred server execution.
 - Add checkpoint 07b typed control-group request review with sanitizing payload
   and identity storage, bounded whole-envelope decoding, duplicate-key rejection
   and secret-free diagnostics. No 2.7 profile promotion or automatic execution.

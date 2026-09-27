@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 
 mod review;
 pub use review::{ControlGroupAuthorization, ControlGroupRequest, ControlGroupRequestData};
+mod execution;
+pub use execution::{ControlGroupExecution, ControlGroupExecutionState};
 
 use crate::{
     Authenticated, Error, Result,

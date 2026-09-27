@@ -1,7 +1,7 @@
 # OpenBao 2.7.0 Control Groups Review
 
-Status: checkpoints 07a/b implement explicit authorization, validated secret
-accessors and bounded request review. Checkpoint 07 is not complete. Approval-aware wrapping,
+Status: checkpoints 07a/b/c implement explicit authorization, validated secret
+accessors, bounded request review and explicit deferred-execution handling. Checkpoint 07 is not complete:
 live lifecycle evidence and the ACL builder decision remain open. No 2.7 routing
 is promoted.
 
@@ -85,16 +85,54 @@ and live server authorization semantics still require later evidence.
 
 ## Remaining Checkpoint 07
 
-1. Add explicit approval-aware response handling and token ownership through
-   deferred execution, cancellation, failed decoding and replay attempts. Preserve
-   namespace binding. Do not treat a denied or expired approval as a normal
-   wrapped response, or silently retry side-effecting requests.
-2. Review narrowly typed control-group policy construction against the actual
+1. Review narrowly typed control-group policy construction against the actual
    parser. Keep opaque `PolicyWriteRequest` available; do not weaken existing
    policy escaping or capability validation.
-3. Retain live TLS evidence for independent approvers, self-approval denial,
+2. Retain live TLS evidence for independent approvers, self-approval denial,
    insufficient factors, expiration, namespace mismatch, replay and cancellation.
    Test original request/response shapes and metadata redaction. Python evidence
    alone cannot promote public SDK routing.
-4. At checkpoint 10, exercise successful registered SDK dispatch and mixed/older
+3. At checkpoint 10, exercise successful registered SDK dispatch and mixed/older
    profile regression cases before promoting the staged profile.
+
+## 07c Execution Ownership
+
+The pinned `request_handling.go` defers the original request and executes it on
+approved unwrap. It returns ordinary wrapping metadata without a reliable
+control-group discriminator. The SDK therefore does not infer deferred state
+from an accessor, TTL or creation path. Callers explicitly transfer an existing
+`WrappedResponse<T>` using `into_control_group_execution`. This conversion sends
+no request, asserts no approval and cannot track earlier attempts made through
+other handles. The original wrapper API remains compatible, with corrected docs
+warning that unwrap may execute a deferred write.
+
+`ControlGroupExecution` retains its original client and configured namespace.
+`try_execute_bytes` requires the promoted 2.7 profile, then sends an authenticated
+registered POST to `sys/wrapping/unwrap`. OpenBao enforces approval, expiry and
+token namespace; the SDK never treats cached `approved` metadata as permission.
+Only HTTP 200/204 are accepted. The bounded response uses sanitizing byte storage
+and preserves the entire original wire shape, including nested KV v2 data and
+PKI responses. No-content responses return empty bytes. `try_execute` decodes
+the entire response as `T`, not an assumed inner `data` field. Use secret-aware
+types for `T`; arbitrary caller deserializers and dependency parser scratch can
+create ordinary allocations outside this guarantee.
+
+Local state starts `Ready`. Incompatible profiles leave it unchanged and send
+no execution request. Tokens must be 1..=65536 visible ASCII bytes; empty or
+malformed tokens fail locally, never selecting OpenBao's authenticated-token
+fallback for an empty unwrap payload. Before transport starts it becomes `OutcomeUnknown`:
+denial, expiry, timeout, disconnect or cancellation cannot reset it. The handle
+retains credentials for deliberate application recovery but refuses any further
+attempt. A complete accepted response sets `ResponseReceived` and clears the
+local token/accessor before typed decoding, even if decoding then fails. This
+does not assert server-side success beyond the received status. Other token
+copies remain outside the local guard; dropping the handle does not revoke the
+token, and a failed call never proves that a deferred write was rolled back.
+
+Tests use the production transport helper after its separate compatibility gate
+to check namespace/token placement, exact response bytes, typed shape decoding,
+no-content behavior, denial/error redaction, malformed success responses, timeout,
+disconnection and cancellation after the mock server received the request. They
+check local replay rejection and rejection before transport for every active
+profile. These tests do not promote 2.7 or replace live server lifecycle evidence;
+successful public SDK dispatch is still required at checkpoint 10.

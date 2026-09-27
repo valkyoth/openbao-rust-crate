@@ -8,6 +8,13 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 07c adds `WrappedResponse::into_control_group_execution` and
+  `ControlGroupExecution`. A handle preserves its original client/namespace and
+  allows one execution attempt, with no automatic approval or retry. Cancellation
+  and transport failures retain credentials with an unknown outcome; accepted
+  responses clear credentials even if later typed decoding fails. Public dispatch
+  still requires the unpromoted 2.7 profile.
+
 - Checkpoint 07b adds `Sys::read_control_group_request` with bounded,
   duplicate-rejecting response decoding. Saved payload and full requester
   metadata use sanitizing JSON storage; operation, path and approver identities
@@ -16,7 +23,7 @@ This release is being developed in pentestable commit checkpoints described in
 - Checkpoint 07a adds `ControlGroupAccessor`, `ControlGroupApproval` and
   `Sys::authorize_control_group`, using an explicit authenticated POST with no
   automatic approval, replay or unwrap. The 2.7 profile remains unpromoted;
-  approval-aware wrapping and live lifecycle verification remain under development.
+  live lifecycle verification remains under development.
 
 - Fix inherited subprocess stdout-pipe cleanup in the verification harness,
   with real-process tests for normal exit, failures, timeout, overflow,
