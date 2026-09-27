@@ -6,14 +6,26 @@
 //! establish a hardware key boundary. PKCS#11 requires a separately installed
 //! server plugin (v0.2.0 or newer) and an operator-configured library alias.
 //!
-//! This is checkpoint 04a of the staged 2.7 onboarding. Administration methods,
-//! custom-provider options, PATCH semantics and live delegation verification
-//! are still pending. These schemas do not enable a 2.7 compatibility profile.
+//! These APIs remain blocked until the staged 2.7 compatibility profile is
+//! promoted. They do not enable routes on older or assumed fallback profiles.
 //!
 //! Serialization deliberately exposes credentials to the serializer. Use the
 //! SDK's sanitizing request transport, not ordinary JSON strings or logging.
 
 use core::fmt;
+
+mod administration;
+mod options;
+mod requests;
+
+pub use administration::ExternalKeyList;
+pub use options::{
+    ExternalKeyCustomOptionsAcknowledgement, ExternalKeyOptions, ExternalKeyParameters,
+};
+pub use requests::{
+    ExternalKeyConfigPatch, ExternalKeyConfigRequest, ExternalKeyKeyPatch, ExternalKeyKeyRequest,
+    ExternalKeyVerificationBypass,
+};
 
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Serialize, Serializer};

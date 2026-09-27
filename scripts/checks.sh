@@ -37,6 +37,8 @@ echo "checks: staged OpenBao 2.7 external-plugin availability and local fixture"
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_plugins.py --verify-tls
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_plugins.py
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_tls.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_external_keys.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_external_keys.py
 
 echo "checks: historical OpenBao 2.6.0 onboarding evidence"
 /usr/bin/python3 -E -s -S -B scripts/openbao_onboarding_api.py --verify

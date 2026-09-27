@@ -418,6 +418,20 @@ deletion is irreversible and does not clean up external lease resources. Do
 not enable this feature in normal application clients; reserve it for audited
 operator tooling.
 
+Staged OpenBao 2.7 external-key administration uses the same operator gates.
+Provider tokens, PINs and TLS private keys are secret values. Custom provider
+options and partial patches require explicit review acknowledgement; they can
+bypass the typed Transit provider's verified-HTTPS defaults. Bypassing server
+provider verification requires a separate acknowledgement. These markers are
+not authorization or sandbox boundaries. Grants authorize same-namespace mount
+paths, not mount identities, and survive unmounting. Reusing a granted path can
+authorize a new mount. Deleting a mapping or config does not destroy remote KMS
+key material. The staged live Transit delegation fixture does not establish
+hardware custody or verify an installed PKCS#11 provider. Provider JSON is kept
+in bounded sanitizing storage, but dependency parser scratch buffers remain a
+memory-cleanup residual. See the
+[external-key review](OPENBAO_2_7_0_EXTERNAL_KEYS_REVIEW.md).
+
 The `transit-import` feature is a software BYOK wrapping helper. It depends on
 the host OpenSSL runtime through the `openssl` crate and requires an audited
 OpenSSL 1.1.1 or newer deployment baseline. It is not an HSM, FIPS,

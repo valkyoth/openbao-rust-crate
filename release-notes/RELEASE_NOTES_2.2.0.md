@@ -33,9 +33,15 @@ This release is being developed in pentestable commit checkpoints described in
   fixture inputs. This is server evidence, not SDK 2.7 profile promotion.
 - Checkpoint 04a adds operator-gated Transit and PKCS#11 external-key provider
   schemas with validated private fields, secret-aware credentials, bounded
-  inputs and serialization/redaction tests. Endpoint wrappers and live
-  delegation tests are still required before checkpoint 04 is complete. See the
+  inputs and serialization/redaction tests. See the
   [external-key review](../docs/OPENBAO_2_7_0_EXTERNAL_KEYS_REVIEW.md).
+- Checkpoint 04b adds config/key/grant administration, bounded secret-aware custom
+  options and provider reads, explicit custom/verification acknowledgements and
+  JSON Merge Patch handling. Old and fallback profiles reject the new methods.
+  Retained live TLS evidence proves administration, allowed encryption/decryption,
+  denied mounts, denial after grant removal and preservation of remote key
+  material after mapping deletion. CI verifies the input-bound evidence and its
+  scope. No PKCS#11 hardware claim or 2.7 routing promotion is made.
 
 ## Dependency Assurance
 

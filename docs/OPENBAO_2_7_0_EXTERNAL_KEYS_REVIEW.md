@@ -1,6 +1,6 @@
 # OpenBao 2.7 External-Key Administration
 
-Status: checkpoint 04a provider schemas implemented; checkpoint 04 incomplete.
+Status: checkpoint 04 complete for pentest review, including retained live evidence.
 No new route is enabled and OpenBao 2.7.0 remains unpromoted.
 
 ## Contracts Reviewed
@@ -71,16 +71,76 @@ Debug redaction, invalid token/header/URL/path/SNI input, text-limit boundaries,
 version boundaries, lossless large slot IDs, combined selectors, hexadecimal ID
 validation and all documented mechanism/hash encodings.
 
-Required before checkpoint 04 completion:
+Implemented in 04b:
 
-1. Bounded, secret-aware custom provider options and response decoding, including
-   duplicate-key rejection and no credential echo in diagnostics.
-2. Config/key/grant CRUD and LIST, PATCH omission versus null deletion, and an
-   explicit acknowledgement when bypassing server provider verification.
-3. Exact-profile rejection before credentials are serialized or transmitted;
-   no route exposure through assumed/fallback profiles.
-4. HTTP contract tests, aggregate request limits, credential-safe errors/tracing
-   and live TLS tests demonstrating both permitted delegation and denied mounts.
+- Thirteen operator-gated config/key/grant methods: config and key read, write,
+  patch, delete and paginated LIST; grant LIST, creation and deletion. Writes use
+  POST (the documented PUT alias is not a separate SDK method), require 204 and
+  use the existing sanitizing transport. PATCH sets the Merge Patch media type.
+- `ExternalKeyOptions` retains JSON in `SecretVec`, capped at 256 KiB, eight
+  container levels, 2048 value nodes, 64 object members and 64 KiB per decoded
+  string. Every object rejects duplicate keys, including escaped equivalents.
+  Top-level names are ASCII identifiers capped at 256 bytes. Reserved request
+  fields cannot override path parameters, `plugin` or `verify`.
+  Read parameter objects permit one additional root member for the server's
+  `plugin` metadata, retaining all other limits.
+- Custom options and all partial patches require
+  `ExternalKeyCustomOptionsAcknowledgement::acknowledge_unvalidated_provider()`.
+  This is a review marker, not a security sandbox. Custom options can disable
+  provider TLS checks or otherwise bypass the typed Transit schema. Provider
+  semantics are deliberately not inferred from arbitrary custom fields.
+- Full requests verify by default. `verify=false` requires a separate
+  `ExternalKeyVerificationBypass::acknowledge_deferred_validation()` value.
+  Config patch plugin changes are separate from option null deletion.
+- Provider reads keep unknown parameters in bounded sanitizing storage. The SDK
+  does not trust plugins to redact correctly. Read responses cannot be passed
+  directly into request builders; `(redacted)` credentials must not be replayed.
+- Errors and Debug do not echo values. Parser scratch storage remains a
+  dependency-owned memory residual; validation is not a claim of whole-process
+  erasure. Top-level request option identifiers are non-secret metadata.
+- All 13 methods reject all 25 older active profiles before endpoint transport.
+  A detected 2.7 server with an acknowledged older fallback is also rejected.
+  Dispatch still requires the generated registry; candidate operation promotion
+  and successful public-SDK 2.7 transport remain checkpoint 10 work.
+
+Retained live TLS result: permitted delegation, denied mounts, grant removal,
+administration and cleanup passed. Reproduce with:
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_external_keys.py
+```
+
+This fixture creates a constrained disposable server, delegates from one Transit
+mount to another with a narrowly scoped provider token, checks CRUD/LIST/PATCH,
+proves encryption/decryption succeeds only with the grant, and checks mapping
+deletion leaves the original key intact. It verifies TLS 1.3 and TLS rejection,
+resource limits and isolated networking using the unchanged checkpoint 03
+helpers. No arbitrary existing deployment is targeted. A result is produced
+only after cleanup and stable-input checks pass. Python/dependency-owned memory
+is not promised erased. This is server-contract evidence, not a promoted SDK
+profile or PKCS#11 hardware test.
+
+Evidence: `compat/onboarding/2.7.0/external-key-tls.json`, SHA-256
+`dee89246afdd1a3b30be28f7c68be3fc39043659f8ce96b5fc20d838c3931aa6`.
+`scripts/verify_openbao_2_7_external_keys.py` checks its pinned hash, canonical
+encoding, exact scope/checks and current fixture inputs. Tests reject altered
+scope, missing checks, stale inputs and changed evidence bytes. This is retained
+operator-executed evidence, not independent remote attestation.
+
+The first live run passed config/key writes and patches, redaction, ungranted
+mount denial, granted encryption/decryption and denial after grant removal. It
+then exposed a missing-resource HTTP discrepancy: the tagged handlers construct
+a coded 404, but `sdk/logical/response_util.go` replaces an error response with a
+plain error in `RespondErrorCommon`, losing that code before HTTP adjustment.
+The observed missing-key response was 400. The fixture now requires HTTP 400
+**and the exact missing-key/config error**, rather than accepting arbitrary
+failure as proof of deletion. SDK reads preserve this as an API error without
+retaining the response body. A failed run is not retained as successful evidence.
+
+Checkpoint 10 must register the documented operations without changing older
+profile cells. In particular the grant `:mount-path` tail is multi-segment;
+config and key names are single-segment. The SDK wrappers must continue through
+registered dispatch after the minimum-profile precheck.
 
 Audit base for 04a: `61d88cf`. The staged TLS fixture retained for checkpoint 03
 is unchanged; it does not count as a delegation test for checkpoint 04.
@@ -98,4 +158,16 @@ Checks run for 04a:
   verification and the active 691-operation capability registry check passed.
 
 This is focused checkpoint verification, not the final release gate. No live
-delegation fixture or full release gate was run for this schema-only subcommit.
+delegation fixture or full release gate was run for the schema-only 04a subcommit.
+
+Audit base for 04b: `b4edeff`. The complete checkpoint audit begins at `61d88cf`.
+
+04b verification includes 21 external-key unit tests, 13-method rejection across
+all 25 active profiles, acknowledged-newer fallback rejection, nine offline
+fixture/evidence tests and the successful rootful TLS run. The all-feature suite
+passed with 379 library tests and 165 HTTP tests; all other enabled targets also
+passed. MSRV 1.90.0 compilation, strict Clippy, strict rustdoc and unchanged
+active-registry/retained checkpoint 03 evidence checks passed.
+The complete `scripts/checks.sh` run finished with `checks: ok`, including
+packaged-crate checks, dependency checks and Kani. This remains checkpoint
+verification, not permission to publish the unfinished 2.2.0 release.

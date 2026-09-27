@@ -1454,6 +1454,167 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
 }
 
 #[tokio::test]
+#[cfg(feature = "operator-ops")]
+async fn external_key_administration_rejects_every_active_profile_before_transport() {
+    use openbao::{ListPageOptions, sys::external_keys::*};
+    use sanitization::SecretVec;
+    fn rejected<T>(result: openbao::Result<T>, expected: OpenBaoVersion) {
+        assert!(
+            matches!(result, Err(Error::UnsupportedOpenBaoCapability { endpoint: "sys.external-keys", version }) if version == expected)
+        );
+    }
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config_request = ExternalKeyConfigRequest::transit(
+        TransitExternalKeyConfig::new(
+            "https://remote.example",
+            test_secret(&["fixture-", "provider-token"]),
+        )
+        .unwrap_or_else(|error| panic!("{error}")),
+    );
+    let key_request = ExternalKeyKeyRequest::transit(
+        TransitExternalKey::new("remote", 1).unwrap_or_else(|error| panic!("{error}")),
+    );
+    let options = || {
+        ExternalKeyOptions::from_json(SecretVec::from_slice(br#"{"token":null}"#))
+            .unwrap_or_else(|error| panic!("{error}"))
+    };
+    let ack = ExternalKeyCustomOptionsAcknowledgement::acknowledge_unvalidated_provider;
+    let config_patch = ExternalKeyConfigPatch::new(options(), ack());
+    let key_patch = ExternalKeyKeyPatch::new(options(), ack());
+    for version in openbao::openbao_profile_versions().iter().copied() {
+        let policy =
+            OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_token(test_secret(&["fixture-", "client-token"]));
+        let sys = client.sys();
+        let page = ListPageOptions::new();
+        rejected(sys.list_external_key_configs(&page).await, version);
+        rejected(sys.read_external_key_config("provider").await, version);
+        rejected(
+            sys.write_external_key_config("provider", &config_request)
+                .await,
+            version,
+        );
+        rejected(
+            sys.patch_external_key_config("provider", &config_patch)
+                .await,
+            version,
+        );
+        rejected(sys.delete_external_key_config("provider").await, version);
+        rejected(sys.list_external_keys("provider", &page).await, version);
+        rejected(sys.read_external_key("provider", "key").await, version);
+        rejected(
+            sys.write_external_key("provider", "key", &key_request)
+                .await,
+            version,
+        );
+        rejected(
+            sys.patch_external_key("provider", "key", &key_patch).await,
+            version,
+        );
+        rejected(sys.delete_external_key("provider", "key").await, version);
+        rejected(
+            sys.list_external_key_grants("provider", "key").await,
+            version,
+        );
+        rejected(
+            sys.grant_external_key("provider", "key", "pki").await,
+            version,
+        );
+        rejected(
+            sys.delete_external_key_grant("provider", "key", "pki")
+                .await,
+            version,
+        );
+    }
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["fixture-", "client-token"]));
+    // Unselected compatibility must not bypass the last promoted profile.
+    rejected(
+        client
+            .sys()
+            .write_external_key_config("provider", &config_request)
+            .await,
+        OpenBaoVersion::new(2, 6, 3),
+    );
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+#[cfg(feature = "operator-ops")]
+async fn external_key_administration_cannot_use_a_newer_server_fallback() {
+    use openbao::sys::external_keys::*;
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health "));
+        assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+        );
+        listener
+    });
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| {
+            config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            ))
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["fixture-", "client-token"]));
+    let request = ExternalKeyConfigRequest::transit(
+        TransitExternalKeyConfig::new(
+            "https://remote.example",
+            test_secret(&["fixture-", "provider-token"]),
+        )
+        .unwrap_or_else(|error| panic!("{error}")),
+    );
+    let result = tokio::time::timeout(
+        Duration::from_secs(2),
+        client.sys().write_external_key_config("provider", &request),
+    )
+    .await
+    .unwrap_or_else(|_| panic!("operation reached transport"));
+    assert!(matches!(
+        result,
+        Err(Error::UnsupportedOpenBaoCapability { .. })
+    ));
+    let listener = server.join().unwrap_or_else(|error| panic!("{error:?}"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
 async fn kv2_read_sends_documented_headers_and_path() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

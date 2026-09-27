@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 03 implemented; remaining checkpoints are required before
+Status: checkpoints 01 through 04 implemented; remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
 
@@ -63,10 +63,14 @@ Checkpoint 04 is split for review. Subcommit 04a adds validated, operator-gated
 Transit and PKCS#11 provider schemas and their serialization, bounds and
 redaction tests. Its pentest base is `61d88cf`. See the
 [external-key review](OPENBAO_2_7_0_EXTERNAL_KEYS_REVIEW.md).
-Config/key/grant endpoint wrappers, custom-provider options, merge-patch
-deletion, verification acknowledgements, compatibility rejection and live
-grant-denial tests remain required parts of checkpoint 04, not deferrals to a
-later release. Checkpoint 04 is not complete and checkpoint 05 must wait.
+Subcommit 04b adds config/key/grant endpoint wrappers, bounded secret-aware
+custom-provider options and responses, merge-patch deletion, verification
+acknowledgements and old/fallback-profile rejection tests. Its pentest base is
+`b4edeff`. Live TLS administration, grant denial/removal and encryption/decryption
+passed; the retained result is hash-bound to its fixture inputs and checked in CI.
+Checkpoint 04 is complete for pentest review; checkpoint 05 follows that review.
+Successful public SDK dispatch also requires the checkpoint 10 generated-registry/
+profile promotion; no staged wrapper bypasses that registry.
 
 ## Security And Compatibility Rules
 

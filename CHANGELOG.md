@@ -30,7 +30,11 @@ All notable changes to this project are documented here.
   routes even when an acknowledged newer server selects an older profile.
 - Start checkpoint 04 with operator-gated, validated Transit and PKCS#11
   external-key provider schemas and regression tests. No 2.7 profile promotion;
-  administration wrappers and live delegation verification remain pending.
+  administration wrappers and live delegation verification follow in 04b.
+- Add checkpoint 04b external-key administration wrappers, bounded custom JSON,
+  secret-aware provider responses, explicit acknowledgement controls and
+  old-profile rejection tests. Retain verified live TLS grant/delegation evidence
+  and CI tamper checks without enabling OpenBao 2.7 routing.
 
 ## 2.1.9 - 2026-09-27
 

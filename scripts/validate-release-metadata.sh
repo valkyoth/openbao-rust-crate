@@ -166,6 +166,9 @@ check_grep 'openbao_2_7_api.py --self-test' scripts/checks.sh
 check_grep 'scripts/openbao_2_7_plugins.py' scripts/checks.sh
 check_grep 'scripts/test_openbao_2_7_plugins.py' scripts/checks.sh
 check_grep 'scripts/test_openbao_2_7_tls.py' scripts/checks.sh
+check_grep 'scripts/test_openbao_2_7_external_keys.py' scripts/checks.sh
+check_grep 'scripts/verify_openbao_2_7_external_keys.py' scripts/checks.sh
+check_file compat/onboarding/2.7.0/external-key-tls.json
 check_grep 'scripts/openbao_2_7_plugins.py --verify-tls' scripts/checks.sh
 check_file compat/onboarding/2.7.0/tls-fixture.json
 check_grep 'Unique documented rows: `644`' docs/OPENBAO_2_5_ENDPOINT_MATRIX.md
