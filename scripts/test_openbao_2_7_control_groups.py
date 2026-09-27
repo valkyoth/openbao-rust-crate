@@ -12,6 +12,47 @@ import verify_openbao_2_7_control_groups as evidence
 
 
 class ControlGroupFixtureTests(unittest.TestCase):
+    def test_lifecycle_continues_with_secure_and_known_failure_versions(self):
+        for secure in (True, False):
+            version = 2 if secure else 3
+            def stored(value, number):
+                return {"data": {"value": value}, "metadata": {"version": number}}
+            def call(method, path, *args, **kwargs):
+                if path == "sys/namespaces/fixture-peer":
+                    return {"data": {"id": "peer123"}}
+                if path == "sys/wrapping/unwrap":
+                    return next(responses)
+                return {}
+            responses = iter([{"data": {"version": 2}}, {"data": stored("changed", version)}])
+            denied = {"errors": ["wrapping token is not valid or does not exist"]}
+            with patch.object(subject, "Probe") as create, \
+                 patch.object(subject.secrets, "token_urlsafe", side_effect=["initial", "changed", "final"]), \
+                 patch.object(subject.time, "sleep"), patch.object(subject, "cancelled_unwrap") as cancel, \
+                 contextlib.redirect_stdout(io.StringIO()):
+                p = create.return_value
+                p.user.side_effect = [("requester", "id1"), ("first", "id2"), ("second", "id3"), ("outsider", "id4"), ("peer", "id5")]
+                p.call.side_effect = call
+                p.deferred.return_value = ("wrapped", "accessor")
+                p.review.side_effect = [
+                    {"approved": False, "authorizations": [], "request_operation": "update",
+                     "request_path": "fixture-kv/data/record", "request_data": {"data": {"value": "changed"}},
+                     "request_entity": {"ID": "id1"}},
+                    {"authorizations": []}, {"authorizations": []}, {"approved": True}]
+                p.request.side_effect = [
+                    (403, {"errors": ["permission denied"]}),
+                    (500, {"errors": ["token owner cannot be approver"]}),
+                    (400, denied) if secure else (200, {"data": {"version": 3}}),
+                    (400, denied), (500, {"errors": ["cannot lookup token in different namespace"]}),
+                    (400, denied)]
+                p.value.side_effect = [stored("initial", 1), stored("initial", 1), stored("changed", 2),
+                                       stored("changed", version), stored("changed", version), stored("final", version + 1)]
+                self.assertIs(subject.probe("address", Path("ca"), "root", secure), secure)
+                cancel.assert_called_once()
+                self.assertEqual(p.request.call_count, 6)
+                report = subject.report_for({}, secure)
+                subject.validate_report(report, {})
+                self.assertEqual(report["security_checks"]["server-replay-rejection"], "passed" if secure else "known-upstream-failure")
+
     def test_retained_evidence_rejects_digest_and_input_changes(self):
         report = evidence.verify()
         self.assertEqual(report["security_checks"]["server-replay-rejection"], "known-upstream-failure")
@@ -37,7 +78,9 @@ class ControlGroupFixtureTests(unittest.TestCase):
 
     def test_known_replay_exception_is_exact_and_strict_mode_still_fails(self):
         with contextlib.redirect_stdout(io.StringIO()):
-            subject.classify_known_replay(200, {"data": {"version": 3}}, 3, False)
+            self.assertIs(subject.classify_known_replay(200, {"data": {"version": 3}}, 3, False), False)
+            for strict in (True, False):
+                self.assertIs(subject.classify_known_replay(400, {"errors": ["wrapping token is not valid or does not exist"]}, 2, strict), True)
             with self.assertRaises(subject.harness.HarnessError):
                 subject.classify_known_replay(200, {"data": {"version": 3}}, 3, True)
             for status, body, version in ((400, {}, 2), (500, {}, 3),
@@ -211,7 +254,7 @@ class ControlGroupFixtureTests(unittest.TestCase):
                 stack.enter_context(patch.object(subject.harness, "cleanup_private_files", return_value=True))
                 if failed_cleanup:
                     remove.side_effect = subject.harness.HarnessError("cleanup failed")
-                stack.enter_context(patch.object(subject, "probe", side_effect=subject.harness.HarnessError("probe failed") if failed_probe else None))
+                stack.enter_context(patch.object(subject, "probe", return_value=False, side_effect=subject.harness.HarnessError("probe failed") if failed_probe else None))
                 stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
                 if failed_probe or failed_cleanup:
                     with self.assertRaises(subject.harness.HarnessError):

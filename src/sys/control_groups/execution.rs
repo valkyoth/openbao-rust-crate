@@ -53,13 +53,14 @@ impl<'a, T> WrappedResponse<'a, T> {
     /// Unwrapping can execute the original request, including writes. Review and
     /// authorize separately; no network request occurs during this conversion.
     /// Execution requires a promoted OpenBao 2.7+ compatibility profile.
-    /// This new handle cannot track earlier attempts made through the ordinary
-    /// wrapper or other token copies. Do not use conversion to retry an
-    /// outcome-unknown request without an application-specific recovery decision.
+    /// Earlier attempts through this wrapper are preserved; conversion cannot
+    /// reset an outcome-unknown attempt. Other token copies remain outside this guard.
     #[must_use]
     pub fn into_control_group_execution(self) -> ControlGroupExecution<'a, T> {
         let state = if self.consumed {
             ControlGroupExecutionState::ResponseReceived
+        } else if self.attempted {
+            ControlGroupExecutionState::OutcomeUnknown
         } else {
             ControlGroupExecutionState::Ready
         };
@@ -249,6 +250,7 @@ mod tests {
                 creation_path: Some("private/path".into()),
             },
             consumed: false,
+            attempted: false,
             _response: PhantomData,
         }
         .into_control_group_execution()
@@ -303,6 +305,60 @@ mod tests {
         assert!(
             matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
         );
+    }
+
+    #[tokio::test]
+    async fn generic_unwrap_attempts_cannot_be_reset_by_conversion() {
+        for (status, body, success) in [
+            ("200 OK", r#"{"data":{"value":"synthetic"}}"#, true),
+            ("200 OK", "invalid-json", false),
+            ("403 Forbidden", r#"{"errors":["denied"]}"#, false),
+        ] {
+            let listener = listener();
+            let client = client(
+                listener
+                    .local_addr()
+                    .unwrap_or_else(|_| panic!("address failed")),
+            );
+            let server = thread::spawn(move || {
+                let (mut stream, _) = listener
+                    .accept()
+                    .unwrap_or_else(|_| panic!("accept failed"));
+                receive(&mut stream);
+                let reply = format!(
+                    "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                stream
+                    .write_all(reply.as_bytes())
+                    .unwrap_or_else(|_| panic!("write failed"));
+                listener
+            });
+            let mut wrapped = handle(&client).wrapped;
+            assert!(!wrapped.is_attempted());
+            assert_eq!(wrapped.try_unwrap().await.is_ok(), success);
+            assert!(wrapped.is_attempted());
+            assert_eq!(wrapped.is_consumed(), success);
+            assert_eq!(wrapped.token().expose_secret().is_empty(), success);
+            assert!(matches!(
+                wrapped.try_unwrap().await,
+                Err(Error::InvalidParameter(_))
+            ));
+            let mut execution = wrapped.into_control_group_execution();
+            assert_eq!(
+                execution.state(),
+                if success {
+                    ControlGroupExecutionState::ResponseReceived
+                } else {
+                    ControlGroupExecutionState::OutcomeUnknown
+                }
+            );
+            assert!(matches!(
+                execution.try_execute().await,
+                Err(Error::InvalidParameter(_))
+            ));
+            no_replay(server.join().unwrap_or_else(|_| panic!("server failed")));
+        }
     }
 
     #[tokio::test]

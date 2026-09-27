@@ -3319,6 +3319,7 @@ impl<'a> WrappingContext<'a> {
             client: self.client,
             wrap_info,
             consumed: false,
+            attempted: false,
             _response: PhantomData,
         })
     }
@@ -3342,6 +3343,7 @@ pub struct WrappedResponse<'a, T> {
     client: &'a Client<Authenticated>,
     wrap_info: WrapInfo,
     consumed: bool,
+    attempted: bool,
     _response: PhantomData<T>,
 }
 
@@ -3376,6 +3378,12 @@ impl<'a, T> WrappedResponse<'a, T> {
         self.consumed
     }
 
+    /// Returns whether a local unwrap attempt began, regardless of its outcome.
+    #[must_use]
+    pub const fn is_attempted(&self) -> bool {
+        self.attempted
+    }
+
     /// Attempts to redeem the token without transferring wrapper ownership.
     ///
     /// If this is a control-group token, redemption can execute the original
@@ -3386,17 +3394,20 @@ impl<'a, T> WrappedResponse<'a, T> {
     /// The token remains in this value when the future is cancelled or when
     /// transport or decoding fails. Such failures are outcome-unknown: the
     /// server may have consumed the single-use token even though the client did
-    /// not receive a response. Do not retry automatically. Use wrapping lookup
-    /// or an application-specific recovery decision.
+    /// not receive a response. This handle refuses another attempt, including
+    /// after conversion to a control-group execution handle. Retained credentials
+    /// remain available for wrapping lookup or deliberate application recovery;
+    /// they are not a guarantee that execution is safe to repeat.
     pub async fn try_unwrap(&mut self) -> Result<T>
     where
         T: DeserializeOwned,
     {
-        if self.consumed {
+        if self.attempted || self.consumed {
             return Err(Error::InvalidParameter(
-                "wrapping token was already consumed".into(),
+                "wrapping token execution was already attempted".into(),
             ));
         }
+        self.attempted = true;
         let payload = WrappingTokenPayload {
             token: self.wrap_info.token.expose_secret(),
         };
@@ -3436,6 +3447,7 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
             .debug_struct("WrappedResponse")
             .field("wrap_info", &self.wrap_info)
             .field("consumed", &self.consumed)
+            .field("attempted", &self.attempted)
             .finish_non_exhaustive()
     }
 }

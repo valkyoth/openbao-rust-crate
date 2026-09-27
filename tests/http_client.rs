@@ -2912,7 +2912,7 @@ async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
     let (cancel_request_seen, cancel_request_waiter) = mpsc::channel();
 
     let server = thread::spawn(move || {
-        for step in 0..3 {
+        for step in 0..2 {
             let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
             let request = read_http_request(&mut stream);
             let body = match step {
@@ -2932,12 +2932,6 @@ async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
                         .unwrap_or_else(|error| panic!("{error}"));
                     thread::sleep(Duration::from_millis(100));
                     continue;
-                }
-                2 => {
-                    assert!(request.starts_with("POST /v1/sys/wrapping/unwrap HTTP/1.1"));
-                    assert!(request.contains("x-vault-token: test-token"));
-                    assert!(request.contains(r#""token":"wrap-token""#));
-                    r#"{"data":{"value":"ok"},"lease_duration":0,"renewable":false}"#.to_owned()
                 }
                 _ => unreachable!(),
             };
@@ -2994,13 +2988,16 @@ async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
     assert_eq!(wrapped.token().expose_secret(), "wrap-token");
     assert!(!wrapped.is_consumed());
 
-    let envelope = wrapped
-        .try_unwrap()
-        .await
-        .unwrap_or_else(|error| panic!("{error}"));
-    assert_eq!(envelope.data.value, "ok");
-    assert!(wrapped.is_consumed());
-    assert!(wrapped.token().expose_secret().is_empty());
+    assert!(wrapped.is_attempted());
+    assert!(matches!(
+        wrapped.try_unwrap().await,
+        Err(Error::InvalidParameter(_))
+    ));
+    let mut execution = wrapped.into_control_group_execution();
+    assert!(matches!(
+        execution.try_execute().await,
+        Err(Error::InvalidParameter(_))
+    ));
 
     server.join().unwrap_or_else(|error| panic!("{error:?}"));
 }

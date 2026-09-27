@@ -27,7 +27,11 @@ include real tokens, private keys, unseal material, or production secrets.
 
 - `unsafe_code = "forbid"` applies to this crate's own Rust sources. TLS and
   cryptographic dependencies can contain unsafe Rust, FFI, assembly, or native
-  code and remain part of the trusted computing base.
+  code and remain part of the trusted computing base. This includes the
+  sanitization and sanitization-secrecy storage implementations and their
+  platform-specific unsafe code. Advisory-clean dependencies are not proof of
+  independent unsafe-code review; deployments requiring such assurance must
+  audit the exact resolved dependency graph and retain their lockfile.
 - HTTPS, TLS verification, TLS 1.3, and disabled redirects are the defaults.
 - Credential-bearing external service configuration fails closed on plaintext
   transport. Typed OIDC/JWKS, Kubernetes, RabbitMQ, LDAP/Kerberos LDAP, and

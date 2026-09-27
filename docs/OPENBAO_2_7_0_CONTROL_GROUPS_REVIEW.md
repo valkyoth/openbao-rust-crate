@@ -103,8 +103,8 @@ approved unwrap. It returns ordinary wrapping metadata without a reliable
 control-group discriminator. The SDK therefore does not infer deferred state
 from an accessor, TTL or creation path. Callers explicitly transfer an existing
 `WrappedResponse<T>` using `into_control_group_execution`. This conversion sends
-no request, asserts no approval and cannot track earlier attempts made through
-other handles. The original wrapper API remains compatible, with corrected docs
+no request and asserts no approval. It preserves attempts made through the same
+ordinary wrapper; other token copies remain outside the guard. The original wrapper API retains its signatures, with corrected docs
 warning that unwrap may execute a deferred write.
 
 `ControlGroupExecution` retains its original client and configured namespace.
@@ -271,9 +271,13 @@ The default fixture continues only for the pinned 2.7.0 image's exact observed
 replay result: HTTP 200, response version 3 and independently read KV version 3.
 Unrelated errors or different behavior still fail. Later assertions use that
 known state rather than assuming the rejected replay left version 2 unchanged.
-The v2 evidence schema records outcome
+The v3 evidence schema records outcome
 `compatible-with-known-upstream-limitation` and the separate security result
-`server-replay-rejection: known-upstream-failure`. Replay rejection is not in
+`server-replay-rejection: known-upstream-failure` for the affected server. A
+verified rejection instead records `passed` for both fields, and subsequent
+KV version assertions use version 2 rather than the replayed version 3.
+The strict mode returns immediately from successful rejection classification,
+without requiring the defective behavior afterward. Replay rejection is not in
 the successful check list. Reports remain non-routable and fixture-only.
 
 To run the strict replay-security regression, which fails on the affected
@@ -301,3 +305,19 @@ suffixes. Tagged `token_store.go` rejects cross-namespace accessor lookup with
 not the HTTP 400 `invalid accessor` used for a missing same-namespace accessor.
 The fixture requires that exact denial and still rejects unrelated failures.
 The retained live result confirms these namespace checks.
+
+## Pentest Follow-Up
+
+Generic `WrappedResponse::try_unwrap` now records an attempt before its first
+network await and refuses reuse after cancellation, transport failure, HTTP
+error or decoding failure. `is_attempted()` exposes that local state;
+`is_consumed()` retains its successful-decoding meaning. Failed attempts retain
+credentials for explicit recovery, but conversion into `ControlGroupExecution`
+preserves outcome-unknown state instead of resetting the guard. This is an
+intentional behavioral hardening: explicit retry on the same wrapper now errors.
+
+Tests cover ordinary success, decoding failure, HTTP denial, cancellation after
+transmission, blocked reuse and conversion. Offline fixture tests exercise the
+remaining lifecycle with both secure and defective replay outcomes. The v3
+capture was rerun on the pinned image; it still records the upstream defect.
+No server-security guarantee or dependency audit attestation is inferred.

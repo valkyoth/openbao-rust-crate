@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Make generic wrapped responses one-attempt locally, including after errors
+  or cancellation; conversion to control-group execution preserves prior attempts.
+  Add `is_attempted()` without changing successful-consumption reporting.
+- Fix strict replay fixture classification and subsequent KV version assertions
+  to accept secure behavior; retain fresh evidence of the pinned upstream defect.
+
 - Separate the known OpenBao 2.7.0 server replay failure from control-group API
   compatibility evidence; preserve strict replay-security testing and the SDK's
   local one-attempt guard. The retained live result explicitly records the failure.

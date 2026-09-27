@@ -45,17 +45,20 @@ def input_hashes():
             for path in INPUTS}
 
 
-def report_for(inputs):
-    return {"schema": "openbao-control-group-tls/v2", "version": fixture.VERSION,
+def report_for(inputs, replay_rejected=False):
+    require(type(replay_rejected) is bool)
+    return {"schema": "openbao-control-group-tls/v3", "version": fixture.VERSION,
             "image_linux_amd64_digest": staged.AMD64, "inputs": inputs,
-            "outcome": "compatible-with-known-upstream-limitation",
-            "security_checks": {"server-replay-rejection": "known-upstream-failure"},
+            "outcome": "passed" if replay_rejected else "compatible-with-known-upstream-limitation",
+            "security_checks": {"server-replay-rejection": "passed" if replay_rejected else "known-upstream-failure"},
             "scope": "server-fixture-only-not-sdk-integration", "tls": "TLSv1.3",
             "checks": CHECKS, "routable": False}
 
 
 def validate_report(report, inputs):
-    require(isinstance(report, dict) and report == report_for(inputs)
+    require(isinstance(report, dict))
+    rejected = report.get("security_checks") == {"server-replay-rejection": "passed"}
+    require(report == report_for(inputs, rejected)
             and report.get("routable") is False)
 
 
@@ -116,8 +119,9 @@ def reject_replay(status, body, persisted_version):
 
 
 def classify_known_replay(status, body, persisted_version, strict):
-    if strict:
+    if strict or status == 400:
         reject_replay(status, body, persisted_version)
+        return True
     # This exception is only for the exact pinned 2.7.0 fixture. Unexpected
     # errors or behavior changes require review, not a broader exception.
     require(fixture.VERSION == "2.7.0")
@@ -127,6 +131,7 @@ def classify_known_replay(status, body, persisted_version, strict):
             and data["version"] == 3)
     require(type(persisted_version) is int and persisted_version == 3)
     print("Control-group fixture: server replay rejection FAILED (known upstream limitation)", flush=True)
+    return False
 
 
 def initial_review(review, requester_id, changed):
@@ -288,7 +293,8 @@ def probe(address, ca, root, strict_replay=False):
     require(p.value()["data"] == {"value": changed})
     replay_status, replay_body = p.request("POST", "sys/wrapping/unwrap", {"token": wrapped}, requester)
     persisted_version = p.value()["metadata"].get("version")
-    classify_known_replay(replay_status, replay_body, persisted_version, strict_replay)
+    replay_rejected = classify_known_replay(replay_status, replay_body, persisted_version, strict_replay)
+    current_version = 2 if replay_rejected else 3
     require(p.value()["data"] == {"value": changed})
     print("Control-group fixture: original KV2 response and insufficient approval", flush=True)
     wrapped, accessor = p.deferred("GET", requester)
@@ -300,7 +306,7 @@ def probe(address, ca, root, strict_replay=False):
     p.authorize(accessor, second, True)
     response = p.call("POST", "sys/wrapping/unwrap", {"token": wrapped}, 200, requester)
     require(response.get("data", {}).get("data") == {"value": changed}
-            and response["data"].get("metadata", {}).get("version") == 3)
+            and response["data"].get("metadata", {}).get("version") == current_version)
     print("Control-group fixture: peer namespace review denial", flush=True)
     print("Control-group fixture: creating peer namespace", flush=True)
     peer_namespace = p.call("POST", "sys/namespaces/fixture-peer", {}, 200).get("data")
@@ -334,8 +340,9 @@ def probe(address, ca, root, strict_replay=False):
     cancelled_unwrap(p, requester, wrapped)
     observed = p.value()
     version = observed["metadata"].get("version")
-    require(type(version) is int and version in (3, 4)
-            and observed["data"] == {"value": final if version == 4 else changed})
+    require(type(version) is int and version in (current_version, current_version + 1)
+            and observed["data"] == {"value": final if version == current_version + 1 else changed})
+    return replay_rejected
 
 
 def run(strict_replay=False):
@@ -378,7 +385,7 @@ def run(strict_replay=False):
         print("Control-group fixture: initializing disposable server", flush=True)
         token = harness.initialize_and_unseal(address, ca)
         print("Control-group fixture: preparing policies and identities", flush=True)
-        probe(address, ca, token, strict_replay)
+        replay_rejected = probe(address, ca, token, strict_replay)
     finally:
         token = ""
         failed = False
@@ -397,13 +404,13 @@ def run(strict_replay=False):
         if failed:
             raise harness.HarnessError("control-group fixture cleanup incomplete")
     require(inputs == input_hashes())
-    return report_for(inputs)
+    return report_for(inputs, replay_rejected)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--require-replay-rejection", action="store_true",
-                        help="Fail on the known 2.7.0 server replay defect; emit no report")
+                        help="Require replay rejection; failure emits no report")
     arguments = parser.parse_args()
     for number in (signal.SIGINT, signal.SIGTERM):
         signal.signal(number, harness.interrupted)
@@ -413,7 +420,8 @@ def main():
             output.write(snapshots.canonical_json(result))
             output.flush()
             os.fchmod(output.fileno(), 0o644)
-            print(f"Control-group compatibility checks completed with known server replay failure; result: {output.name}")
+            label = "replay rejection passed" if result["outcome"] == "passed" else "known server replay failure"
+            print(f"Control-group compatibility checks completed ({label}); result: {output.name}")
         return 0
     except (harness.HarnessError, snapshots.SnapshotError, OSError, ValueError, TypeError, KeyError, http.client.HTTPException):
         print("Control-group fixture failed; no compatibility promotion")

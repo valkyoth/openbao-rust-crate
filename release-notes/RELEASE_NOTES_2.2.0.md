@@ -8,6 +8,14 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Harden `WrappedResponse::try_unwrap`: once an attempt starts, that wrapper
+  cannot send another unwrap, even after cancellation or an error. This changes
+  explicit retry behavior without changing method signatures. `is_attempted()`
+  exposes the local guard; conversion to control-group execution cannot reset it.
+- Correct strict replay-security testing to accept rejection and derive later
+  KV assertions from the observed outcome. Fresh live evidence still records
+  the known OpenBao 2.7.0 server defect, not a successful replay-security check.
+
 - Record the observed OpenBao 2.7.0 control-group replay limitation separately
   from API compatibility. The SDK one-attempt guard is local, not server-wide
   token consumption. The fixture retains a strict replay-security mode and
