@@ -1,5 +1,7 @@
 //! System backend helpers.
 
+pub mod control_groups;
+
 #[cfg(feature = "operator-ops")]
 pub mod external_keys;
 

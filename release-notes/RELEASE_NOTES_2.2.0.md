@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 07a adds `ControlGroupAccessor`, `ControlGroupApproval` and
+  `Sys::authorize_control_group`, using an explicit authenticated POST with no
+  automatic approval, replay or unwrap. The 2.7 profile remains unpromoted;
+  request review and approval-aware wrapping are still under development.
+
 - Fix inherited subprocess stdout-pipe cleanup in the verification harness,
   with real-process tests for normal exit, failures, timeout, overflow,
   interruption and selector setup errors.

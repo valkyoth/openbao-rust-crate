@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 05 passed pentest; checkpoint 06 implemented with retained live evidence, ready for pentest;
+Status: checkpoints 01 through 06 passed pentest; checkpoint 06 evidence refresh pending after harness cleanup; checkpoint 07a implemented for review;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -96,9 +96,19 @@ rejects key-exporting PEM bundles that duplicate private keys into public fields
 Subcommit 06e (pentest base `a08dbbd`) adds independent OpenSSL verification,
 the constrained live PKI fixture and passing input-bound evidence. All three
 ML-DSA parameter sets, RSA-PSS settings, OCSP behavior and Transit KMS grants
-are checked. Checkpoint 06 implementation is ready for pentest; production SDK
+are checked. Checkpoint 06 implementation passed pentest; production SDK
 positive dispatch remains required at checkpoint 10, with no profile promotion
 from Python fixture results. See [the PKI review](OPENBAO_2_7_0_PKI_REVIEW.md).
+
+Checkpoint 07 is split for review. Subcommit 07a (pentest base `7419d1b`)
+adds the explicit control-group authorization call, validated secret accessors
+and strict approval decoding, with incompatible-profile rejection tests. Request
+review, wrapping lifecycle, live evidence and the ACL builder decision remain
+required. See [the control-group review](OPENBAO_2_7_0_CONTROL_GROUPS_REVIEW.md).
+
+The checkpoint 06 pipe-cleanup fix passed pentest and is committed as `7419d1b`.
+Its four replacement 2.7 live evidence captures are still required because the
+shared harness input hash changed; historical results are not relabeled.
 
 ## Security And Compatibility Rules
 

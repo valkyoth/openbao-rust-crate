@@ -6,6 +6,9 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Start checkpoint 07a with explicit control-group authorization, validated
+  secret accessors and strict approval responses. Older and fallback profiles
+  remain blocked; request review and wrapping lifecycle work remains open.
 - Fix inherited verification-harness stdout pipe cleanup on success and failure,
   including selector setup errors; add real-process cleanup regression tests.
 - Retain checkpoint 06e signed-image PKI TLS evidence with independent OpenSSL

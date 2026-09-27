@@ -3,7 +3,7 @@
 Status: checkpoints 06a through 06d add typed ML-DSA selection, KMS generation,
 role/authority signature options, issuance options and profile guards.
 Checkpoint 06e retains passing signed-image TLS certificate evidence. Checkpoint
-06 implementation is ready for pentest; successful SDK dispatch remains a
+06 implementation passed pentest; successful SDK dispatch remains a
 checkpoint 10 promotion requirement.
 OpenBao 2.7 routing is not promoted.
 
@@ -237,8 +237,8 @@ changes, missing/extra fields and wrong scalar types. The evidence covers local
 ML-DSA-44/65/87 authority, import, rotation and issuance flows; the live KMS
 provider case uses ML-DSA-44 over Transit, not PKCS#11 or an HSM.
 
-This is **server-fixture-only**, not SDK integration evidence. Checkpoint 06 is
-ready for pentest, but this does not promote the 2.7 profile. Successful SDK
+This is **server-fixture-only**, not SDK integration evidence. Checkpoint 06
+passed pentest, but this does not promote the 2.7 profile. Successful SDK
 dispatch, aliases and historical/mixed-profile regressions remain mandatory at
 checkpoint 10. Fixture scratch files are private
 and wiped before removal; Python, OpenSSL, filesystem and OS copies are not a

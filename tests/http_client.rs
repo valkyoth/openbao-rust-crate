@@ -1454,6 +1454,97 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
 }
 
 #[tokio::test]
+async fn control_group_authorization_rejects_active_and_unselected_profiles() {
+    use openbao::sys::control_groups::ControlGroupAccessor;
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|_| panic!("nonblocking failed"));
+    let accessor = ControlGroupAccessor::new(test_secret(&["fixture-", "approval-accessor"]))
+        .unwrap_or_else(|_| panic!("accessor rejected"));
+    for version in openbao::openbao_profile_versions()
+        .iter()
+        .copied()
+        .map(Some)
+        .chain([None])
+    {
+        let mut config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|_| panic!("config rejected"));
+        if let Some(version) = version {
+            config = config.compatibility_policy(
+                OpenBaoCompatibilityPolicy::assume(version)
+                    .unwrap_or_else(|_| panic!("profile rejected")),
+            );
+        }
+        let client = Client::from_config(config)
+            .unwrap_or_else(|_| panic!("client rejected"))
+            .with_token(test_secret(&["fixture-", "client-token"]));
+        let expected = version.unwrap_or(OpenBaoVersion::new(2, 6, 3));
+        let result = client.sys().authorize_control_group(&accessor).await;
+        assert!(matches!(result,
+            Err(Error::UnsupportedOpenBaoCapability { endpoint: "sys.control-group", version }) if version == expected));
+    }
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+async fn control_group_authorization_cannot_use_newer_server_fallback() {
+    use openbao::sys::control_groups::ControlGroupAccessor;
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener
+            .accept()
+            .unwrap_or_else(|_| panic!("accept failed"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health "));
+        assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+        );
+        listener
+    });
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| {
+            config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            ))
+        })
+        .unwrap_or_else(|_| panic!("config rejected"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|_| panic!("client rejected"))
+        .with_token(test_secret(&["fixture-", "client-token"]));
+    let accessor = ControlGroupAccessor::new(test_secret(&["fixture-", "approval-accessor"]))
+        .unwrap_or_else(|_| panic!("accessor rejected"));
+    let result = tokio::time::timeout(
+        Duration::from_secs(2),
+        client.sys().authorize_control_group(&accessor),
+    )
+    .await
+    .unwrap_or_else(|_| panic!("operation reached transport"));
+    assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 6, 3)));
+    let listener = server.join().unwrap_or_else(|_| panic!("server failed"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|_| panic!("nonblocking failed"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
 #[cfg(feature = "operator-ops")]
 async fn external_key_administration_rejects_every_active_profile_before_transport() {
     use openbao::{ListPageOptions, sys::external_keys::*};
