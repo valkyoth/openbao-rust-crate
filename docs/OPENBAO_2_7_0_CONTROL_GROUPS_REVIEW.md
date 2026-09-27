@@ -329,3 +329,8 @@ spending a local attempt. `wrapping_unwrap(None)` remains intentional fallback.
 Tests cover invalid-token rejection without transport, exact size boundaries
 and fallback wire behavior. The control-group live capture was refreshed again
 against these inputs, preserving the upstream replay failure classification.
+
+The evidence input list also binds `src/sys.rs`, which owns the shared explicit
+wrapping-token validator. A regression test mutates only that source input and
+requires rejection of the old report; omission of the input is rejected too.
+Updating this binding requires a fresh live capture, not relabeling prior output.

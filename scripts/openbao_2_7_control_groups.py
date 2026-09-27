@@ -25,7 +25,7 @@ import openbao_test_harness as harness
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = "compat/onboarding/2.7.0/control-group-policy.hcl"
 INPUTS = (*fixture.INPUTS, "scripts/openbao_2_7_control_groups.py", POLICY,
-          "src/policy.rs", "src/policy/control_groups.rs",
+          "src/policy.rs", "src/policy/control_groups.rs", "src/sys.rs",
           "src/sys/control_groups.rs", "src/sys/control_groups/execution.rs",
           "src/sys/control_groups/review.rs")
 CHECKS = ["exact-version-tls13", "tls-rejections", "resource-limits", "network-isolation",

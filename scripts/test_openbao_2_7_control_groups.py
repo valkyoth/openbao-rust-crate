@@ -12,6 +12,29 @@ import verify_openbao_2_7_control_groups as evidence
 
 
 class ControlGroupFixtureTests(unittest.TestCase):
+    def test_shared_wrapping_validator_source_is_bound_to_evidence(self):
+        path = "src/sys.rs"
+        self.assertIn(path, subject.INPUTS)
+        inputs = subject.input_hashes()
+        report = subject.report_for(inputs)
+        subject.validate_report(report, inputs)
+        read = subject.snapshots.read_regular_file
+
+        def modified_read(candidate, maximum):
+            data = read(candidate, maximum)
+            return data + b"\n// synthetic validator change\n" if candidate == subject.ROOT / path else data
+
+        with patch.object(subject.snapshots, "read_regular_file", side_effect=modified_read):
+            changed = subject.input_hashes()
+        self.assertNotEqual(inputs[path], changed[path])
+        self.assertEqual({key for key in inputs if inputs[key] != changed[key]}, {path})
+        with self.assertRaises(subject.harness.HarnessError):
+            subject.validate_report(report, changed)
+        missing = dict(inputs)
+        del missing[path]
+        with self.assertRaises(subject.harness.HarnessError):
+            subject.validate_report(subject.report_for(missing), inputs)
+
     def test_lifecycle_continues_with_secure_and_known_failure_versions(self):
         for secure in (True, False):
             version = 2 if secure else 3
