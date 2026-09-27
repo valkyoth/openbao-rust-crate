@@ -1354,7 +1354,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"initialized":true,"sealed":false,"version":"2.6.3"}"#,
+                r#"{"initialized":true,"sealed":false,"version":"2.6.4"}"#,
             );
         });
         let policy = if acknowledged {
@@ -1376,7 +1376,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
                 report.status(),
                 OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
             );
-            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 6, 2)));
+            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 6, 3)));
         } else {
             assert!(matches!(result, Err(Error::UnknownOpenBaoVersion(_))));
         }
@@ -13094,6 +13094,99 @@ async fn admin_bootstrap_rechecks_mount_and_transit_key_after_redacted_bad_reque
 
 #[cfg(feature = "operator-ops")]
 #[tokio::test]
+async fn raw_uncompressed_write_rejects_every_older_profile_before_transport() {
+    for &version in openbao::compatibility::openbao_profile_versions() {
+        if version >= OpenBaoVersion::new(2, 6, 3) {
+            continue;
+        }
+        let policy =
+            OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new("https://127.0.0.1:1")
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .and_then(|client| client.try_with_token(test_secret(&["raw-", "token"])))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let value = test_secret(&["raw-", "uncompressed-value"]);
+        let result = client
+            .sys()
+            .raw_write_uncompressed("sdk-test/value", &value, openbao::sys::RawEncoding::None)
+            .await;
+        assert!(matches!(result, Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "sys.raw.write", field: "compression_type=none", version: rejected,
+        }) if rejected == version));
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
+async fn raw_uncompressed_write_uses_explicit_none_and_preserves_legacy_mode() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        for (expected, encoding) in [("none", None), ("none", Some("base64")), ("", None)] {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("POST /v1/sys/raw/sdk-test/value HTTP/1.1"));
+            let (_, body) = request
+                .split_once("\r\n\r\n")
+                .unwrap_or_else(|| panic!("missing request body"));
+            let body: serde_json::Value =
+                serde_json::from_str(body).unwrap_or_else(|_| panic!("invalid JSON request body"));
+            assert!(
+                body["compression_type"] == expected,
+                "wrong compression mode"
+            );
+            assert!(body["value"] == "dGVzdA==", "wrong raw payload");
+            assert!(body.get("encoding").and_then(serde_json::Value::as_str) == encoding);
+            stream
+                .write_all(
+                    b"HTTP/1.1 204 No Content\r\nconnection: close\r\ncontent-length: 0\r\n\r\n",
+                )
+                .unwrap_or_else(|error| panic!("{error}"));
+        }
+    });
+    let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 3))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(test_secret(&["raw-", "token"])))
+        .unwrap_or_else(|error| panic!("{error}"));
+    let value = test_secret(&["dGVz", "dA=="]);
+    assert!(
+        client
+            .sys()
+            .raw_write_uncompressed("../invalid", &value, openbao::sys::RawEncoding::None,)
+            .await
+            .is_err()
+    );
+    for encoding in [
+        openbao::sys::RawEncoding::None,
+        openbao::sys::RawEncoding::Base64,
+    ] {
+        client
+            .sys()
+            .raw_write_uncompressed("sdk-test/value", &value, encoding)
+            .await
+            .unwrap_or_else(|error| panic!("{error}"));
+    }
+    let request = openbao::sys::RawWriteRequest::new(value)
+        .with_compression(openbao::sys::RawCompression::None);
+    client
+        .sys()
+        .raw_write("sdk-test/value", &request)
+        .await
+        .unwrap_or_else(|error| panic!("{error}"));
+    server.join().unwrap_or_else(|_| panic!("raw mock failed"));
+}
+
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
 async fn raw_storage_helpers_use_documented_paths_and_redact_values() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener
@@ -13109,7 +13202,7 @@ async fn raw_storage_helpers_use_documented_paths_and_redact_values() {
                     assert!(request.starts_with(
                         "GET /v1/sys/raw/logical/foo?compressed=false&encoding=base64 HTTP/1.1"
                     ));
-                    format!(r#"{{"value":"{}{}"}}"#, "raw-", "read-value")
+                    format!(r#"{{"data":{{"value":"{}{}"}}}}"#, "raw-", "read-value")
                 }
                 1 => {
                     assert!(request.starts_with("POST /v1/sys/raw/logical/foo HTTP/1.1"));

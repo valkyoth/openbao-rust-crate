@@ -73,6 +73,8 @@ const V2_5_2: OpenBaoVersion = OpenBaoVersion::new(2, 5, 2);
 #[cfg(any(feature = "operator-ops", test))]
 const V2_5_5: OpenBaoVersion = OpenBaoVersion::new(2, 5, 5);
 const V2_6_0: OpenBaoVersion = OpenBaoVersion::new(2, 6, 0);
+#[cfg(any(feature = "operator-ops", test))]
+const V2_6_3: OpenBaoVersion = OpenBaoVersion::new(2, 6, 3);
 
 pub(crate) mod fields {
     use super::*;
@@ -150,6 +152,9 @@ pub(crate) mod fields {
         VersionedRequestField::since("sys.rotate.config", "interval", V2_4_0);
     pub(crate) const PLUGIN_OCI: VersionedRequestField =
         VersionedRequestField::since("sys.plugins.catalog.register", "oci", V2_5_0);
+    #[cfg(any(feature = "operator-ops", test))]
+    pub(crate) const RAW_UNCOMPRESSED_WRITE: VersionedRequestField =
+        VersionedRequestField::since("sys.raw.write", "compression_type=none", V2_6_3);
 
     pub(crate) const TRANSIT_DATA_KEY_ASSOCIATED_DATA: VersionedRequestField =
         VersionedRequestField::since("transit.datakey", "associated_data", V2_5_0);
@@ -210,6 +215,7 @@ pub(crate) mod fields {
         RAFT_JOIN_NON_VOTER,
         ROTATION_INTERVAL,
         PLUGIN_OCI,
+        RAW_UNCOMPRESSED_WRITE,
         TRANSIT_DATA_KEY_ASSOCIATED_DATA,
         PKI_AUTHORITY_NOT_BEFORE,
         PKI_SIGN_VERBATIM_NOT_BEFORE,
@@ -338,6 +344,6 @@ mod tests {
                 ));
             }
         }
-        assert_eq!(identities.len(), 40);
+        assert_eq!(identities.len(), 41);
     }
 }

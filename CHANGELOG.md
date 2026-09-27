@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.1.9 - 2026-09-27
+
+### Added
+
+- Exact OpenBao `2.6.3` compatibility with immutable source, signed image,
+  provenance, tagged documentation, runtime OpenAPI, and live TLS evidence.
+  All 25 selected releases retain separate compatibility profiles. OpenBao
+  `2.7.0` remains reserved for `2.2.0`.
+- Operator-gated `Sys::raw_write_uncompressed` sends the 2.6.3 `none`
+  compression value and rejects every older profile before serialization.
+  Normal-mode 2.6.3 creation with this value returns 400; existing-entry updates
+  work. This upstream caveat is documented and tested without automatic retries.
+- Live regressions for canonical userpass ACL denial and raw-storage round
+  trips, plus leader-status parsing and compression wire-compatibility tests.
+
+### Fixed
+
+- `Sys::raw_read` now decodes the server's `data.value` envelope instead of
+  expecting a flat response. Its public return type is unchanged.
+
 ### Security
 
 - Updated transitive `rustls` from `0.23.43` to `0.23.45`, resolving
@@ -13,7 +33,7 @@ All notable changes to this project are documented here.
 ### Changed
 
 - Updated `rand` from `0.10.2` to `0.10.3`, `rustix` from `1.1.4` to `1.1.5`,
-  and the immutable `taiki-e/install-action` pin from `2.87.9` to `2.87.20`;
+  and the immutable `taiki-e/install-action` pin from `2.87.9` to `2.87.21`;
   confirmed Rust `1.98.1`, the remaining direct dependencies, CI cargo tools,
   and pinned GitHub Actions remain current.
 - Refreshed all maintained lockfiles to their latest compatible transitive

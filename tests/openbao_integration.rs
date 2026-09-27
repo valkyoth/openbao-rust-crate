@@ -23,7 +23,10 @@ use reqwest::Certificate;
     all(feature = "transit", feature = "transit-bytes")
 ))]
 use reqwest::StatusCode;
-#[cfg(all(feature = "transit", feature = "transit-bytes"))]
+#[cfg(any(
+    feature = "operator-ops",
+    all(feature = "transit", feature = "transit-bytes")
+))]
 use secrecy::ExposeSecret;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -209,7 +212,7 @@ const OPENBAO_2_6_OPERATION_IDS: [&str; 6] = [
 ];
 
 fn is_openbao_2_6(version: &str) -> bool {
-    matches!(version, "2.6.0" | "2.6.1" | "2.6.2")
+    matches!(version, "2.6.0" | "2.6.1" | "2.6.2" | "2.6.3")
 }
 
 #[derive(Serialize)]
@@ -340,7 +343,7 @@ async fn run_2_6_flow(
         .await?;
 
     #[cfg(feature = "unauthenticated-workflows")]
-    if expected_version == "2.6.2" {
+    if matches!(expected_version, "2.6.2" | "2.6.3") {
         eprintln!("OpenBao integration stage: workflow-unauthenticated-regression");
         let unauthenticated_name = format!("{workflow}-unauthed");
         let request = openbao::sys::WorkflowWriteRequest::new(SecretString::from(
@@ -460,7 +463,7 @@ output {
     role.not_before_leeway = Some(openbao::auth::jwt::JwtLeeway::seconds(29));
     eprintln!("OpenBao integration stage: jwt-cel-write");
     assert_eq!(jwt.write_cel_role("service", &role).await?.name, "service");
-    if matches!(expected_version, "2.6.1" | "2.6.2") {
+    if matches!(expected_version, "2.6.1" | "2.6.2" | "2.6.3") {
         eprintln!("OpenBao integration stage: jwt-cel-patch-preservation");
         let patched = jwt
             .patch_cel_role_acknowledged(
@@ -534,7 +537,47 @@ output {
         .update_password_hash(hashed_user, &second_hash)
         .await?;
 
-    if matches!(expected_version, "2.6.1" | "2.6.2") {
+    if expected_version == "2.6.3" {
+        eprintln!("OpenBao integration stage: canonical-userpass-acl");
+        let policy = format!("{policy_name}-canonical");
+        client.sys().write_policy(&policy, &openbao::sys::PolicyWriteRequest {
+            policy: format!(
+                "path \"auth/{userpass_mount}/users/*\" {{ capabilities = [\"read\"] }}\npath \"auth/{userpass_mount}/users/{hashed_user}\" {{ capabilities = [\"deny\"] }}"
+            ),
+            ..Default::default()
+        }).await?;
+        let token = client
+            .token()
+            .create(&openbao::auth::token::TokenCreateRequest {
+                policies: vec![policy.clone()],
+                no_default_policy: Some(true),
+                ttl: Some("60s".to_owned()),
+                renewable: Some(false),
+                ..Default::default()
+            })
+            .await?;
+        let ca = Certificate::from_pem(&fs::read(env::var("BAO_CACERT")?)?)?;
+        let config = OpenBaoConfig::new(client.base_url().as_str())?
+            .only_root_certificates(vec![ca])?
+            .compatibility_policy(OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(
+                2, 6, 3,
+            ))?);
+        let restricted = Client::from_config(config)?.try_with_token(token.client_token.clone())?;
+        for name in [hashed_user.to_owned(), hashed_user.to_ascii_uppercase()] {
+            let read = restricted
+                .userpass_admin_at(userpass_mount)?
+                .read_user(&name)
+                .await;
+            assert!(
+                read.is_err_and(|error| error.is_permission_denied()),
+                "canonical resource deny was bypassed"
+            );
+        }
+        client.token().revoke(&token.client_token).await?;
+        client.sys().delete_policy(&policy).await?;
+    }
+
+    if matches!(expected_version, "2.6.1" | "2.6.2" | "2.6.3") {
         eprintln!("OpenBao integration stage: acl-policy-patch-preservation");
         let before = client.sys().read_policy(policy_name).await?;
         client
@@ -553,7 +596,7 @@ output {
     }
 
     #[cfg(all(feature = "transit", feature = "transit-bytes"))]
-    if expected_version == "2.6.2" {
+    if matches!(expected_version, "2.6.2" | "2.6.3") {
         eprintln!("OpenBao integration stage: transit-sensitive-buffer-regression");
         client
             .sys()
@@ -677,7 +720,7 @@ output {
     }
 
     #[cfg(feature = "pki")]
-    if expected_version == "2.6.2" {
+    if matches!(expected_version, "2.6.2" | "2.6.3") {
         eprintln!("OpenBao integration stage: pki-csr-ip-san-cidr-regression");
         client
             .sys()
@@ -720,6 +763,52 @@ output {
     }
 
     eprintln!("OpenBao integration stage: changed-response-fields");
+    if expected_version == "2.6.3" {
+        let path = "sdk-integration/uncompressed";
+        let first = SecretString::from(["raw-", "first"].concat());
+        let second = SecretString::from(["raw-", "second"].concat());
+        let create = client
+            .sys()
+            .raw_write_uncompressed(path, &first, openbao::sys::RawEncoding::None)
+            .await;
+        assert!(
+            create.is_err_and(|error| error.is_bad_request()),
+            "2.6.3 raw create behavior changed; review the upstream create/update discrepancy"
+        );
+        client
+            .sys()
+            .raw_write(
+                path,
+                &openbao::sys::RawWriteRequest::new(first.clone())
+                    .with_compression(openbao::sys::RawCompression::None),
+            )
+            .await?;
+        for value in [&first, &second] {
+            eprintln!("OpenBao integration stage: raw-uncompressed-write");
+            client
+                .sys()
+                .raw_write_uncompressed(path, value, openbao::sys::RawEncoding::None)
+                .await?;
+            eprintln!("OpenBao integration stage: raw-uncompressed-read");
+            let read = client
+                .sys()
+                .raw_read(
+                    path,
+                    &openbao::sys::RawReadOptions::new().with_compressed(false),
+                )
+                .await?;
+            assert!(
+                read.value.expose_secret() == value.expose_secret(),
+                "raw value did not round trip"
+            );
+        }
+        client.sys().raw_delete(path).await?;
+        let missing = client
+            .sys()
+            .raw_read(path, &openbao::sys::RawReadOptions::new())
+            .await;
+        assert!(missing.is_err_and(|error| error.is_not_found()));
+    }
     let seal = client.sys().seal_status_details().await?;
     assert_eq!(seal.status.version, expected_version);
     assert!(seal.commit_date.is_some());

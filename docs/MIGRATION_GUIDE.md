@@ -7,6 +7,29 @@ profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
 
+## From `openbao` 2.1.8 To 2.1.9
+
+`2.1.9` adds exact OpenBao `2.6.3` compatibility and an additive operator method,
+`Sys::raw_write_uncompressed`. Existing public struct fields and enum variants
+are unchanged. Earlier exact profiles retain their routes and field rules.
+
+`raw_read` now decodes OpenBao's actual `data.value` response envelope. Test
+doubles must use that envelope instead of the old flat mock response.
+
+The new raw-write method sends `compression_type="none"` and rejects older
+profiles before serialization. On a normal-mode 2.6.3 server this works for
+existing entries but returns 400 when creating a missing entry. Use existing
+`raw_write` with `RawCompression::None` for normal-mode creation; it still sends
+`""`. The client does not retry failed writes or substitute another value.
+
+OpenBao 2.6.3 canonicalizes resource paths before ACL checks and restricts
+plugin catalog entry reads, writes, and deletes to the root namespace. Review
+server policies and namespace selection when upgrading the server. The SDK
+does not bypass those restrictions. Updating the crate does not install
+server-side security fixes on an older OpenBao deployment.
+
+OpenBao 2.7.0 remains outside the verified profile inventory for this release.
+
 ## From `openbao` 2.1.7 To 2.1.8
 
 `2.1.8` is a source-compatible Transit lifecycle assurance release. No public

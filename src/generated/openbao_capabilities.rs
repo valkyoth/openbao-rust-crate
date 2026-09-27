@@ -25,6 +25,7 @@ pub(super) const GENERATED_PROFILE_VERSIONS: &[OpenBaoVersion] = &[
     OpenBaoVersion::new(2, 6, 0),
     OpenBaoVersion::new(2, 6, 1),
     OpenBaoVersion::new(2, 6, 2),
+    OpenBaoVersion::new(2, 6, 3),
 ];
 
 // Only fully promoted profiles may drive compatibility policy or dispatch.
@@ -53,6 +54,7 @@ pub(super) const GENERATED_ROUTABLE_PROFILE_VERSIONS: &[OpenBaoVersion] = &[
     OpenBaoVersion::new(2, 6, 0),
     OpenBaoVersion::new(2, 6, 1),
     OpenBaoVersion::new(2, 6, 2),
+    OpenBaoVersion::new(2, 6, 3),
 ];
 
 pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
@@ -64,7 +66,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -78,7 +80,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -92,7 +94,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -106,7 +108,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -120,7 +122,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -134,7 +136,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -148,7 +150,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -162,7 +164,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -176,7 +178,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -190,7 +192,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -204,7 +206,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -218,7 +220,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -232,7 +234,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -246,7 +248,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -260,7 +262,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -274,7 +276,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -294,7 +296,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -308,7 +310,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -322,7 +324,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -336,7 +338,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -350,7 +352,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -364,7 +366,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -378,7 +380,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -392,7 +394,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -406,7 +408,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -420,7 +422,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -434,7 +436,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -448,7 +450,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -462,7 +464,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -476,7 +478,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -490,7 +492,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -504,7 +506,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -518,7 +520,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -532,7 +534,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -546,7 +548,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -560,7 +562,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -574,7 +576,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -588,7 +590,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -602,7 +604,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -616,7 +618,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -630,7 +632,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -644,7 +646,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -658,7 +660,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -672,7 +674,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -686,7 +688,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -700,7 +702,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -714,7 +716,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -728,7 +730,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -742,7 +744,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -756,7 +758,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -770,7 +772,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -784,7 +786,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -804,7 +806,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -818,7 +820,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -832,7 +834,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -846,7 +848,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -860,7 +862,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -874,7 +876,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -888,7 +890,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -902,7 +904,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -916,7 +918,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -930,7 +932,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -944,7 +946,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -958,7 +960,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -978,7 +980,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 3, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -992,7 +994,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1006,7 +1008,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1020,7 +1022,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1034,7 +1036,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1048,7 +1050,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1062,7 +1064,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1076,7 +1078,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1090,7 +1092,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1104,7 +1106,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1124,7 +1126,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1138,7 +1140,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1152,7 +1154,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1166,7 +1168,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1186,7 +1188,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1200,7 +1202,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1214,7 +1216,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1228,7 +1230,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1242,7 +1244,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1256,7 +1258,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1270,7 +1272,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1284,7 +1286,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1298,7 +1300,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1312,7 +1314,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1326,7 +1328,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1340,7 +1342,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1354,7 +1356,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1368,7 +1370,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1388,7 +1390,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1408,7 +1410,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1428,7 +1430,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1448,7 +1450,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1462,7 +1464,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1476,7 +1478,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1490,7 +1492,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1504,7 +1506,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1518,7 +1520,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1532,7 +1534,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1546,7 +1548,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1560,7 +1562,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1574,7 +1576,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1588,7 +1590,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1602,7 +1604,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1616,7 +1618,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1630,7 +1632,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1644,7 +1646,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1658,7 +1660,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1672,7 +1674,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1692,7 +1694,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1706,7 +1708,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1720,7 +1722,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1740,7 +1742,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 1, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1754,7 +1756,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1768,7 +1770,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1782,7 +1784,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1796,7 +1798,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1810,7 +1812,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1824,7 +1826,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1838,7 +1840,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1852,7 +1854,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1866,7 +1868,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1880,7 +1882,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1894,7 +1896,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1908,7 +1910,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1922,7 +1924,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1936,7 +1938,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1950,7 +1952,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1964,7 +1966,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1978,7 +1980,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -1992,7 +1994,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2006,7 +2008,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2020,7 +2022,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2034,7 +2036,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2048,7 +2050,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2062,7 +2064,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2076,7 +2078,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2090,7 +2092,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2104,7 +2106,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2118,7 +2120,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2132,7 +2134,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2146,7 +2148,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2160,7 +2162,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2174,7 +2176,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2188,7 +2190,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2202,7 +2204,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2216,7 +2218,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2230,7 +2232,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2244,7 +2246,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2258,7 +2260,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2272,7 +2274,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2286,7 +2288,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2300,7 +2302,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2314,7 +2316,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2328,7 +2330,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2342,7 +2344,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2356,7 +2358,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2370,7 +2372,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2384,7 +2386,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2398,7 +2400,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2412,7 +2414,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2426,7 +2428,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::LockedOpenApi,
                 false,
             ),
@@ -2440,7 +2442,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2454,7 +2456,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2468,7 +2470,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2482,7 +2484,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2496,7 +2498,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2510,7 +2512,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2524,7 +2526,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2538,7 +2540,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2552,7 +2554,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2566,7 +2568,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2580,7 +2582,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2594,7 +2596,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2608,7 +2610,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2622,7 +2624,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2636,7 +2638,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2656,7 +2658,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2670,7 +2672,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2684,7 +2686,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2698,7 +2700,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2712,7 +2714,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2726,7 +2728,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2740,7 +2742,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2754,7 +2756,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2768,7 +2770,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2782,7 +2784,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2796,7 +2798,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2810,7 +2812,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2824,7 +2826,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2838,7 +2840,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2852,7 +2854,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2866,7 +2868,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2880,7 +2882,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2894,7 +2896,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2908,7 +2910,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2922,7 +2924,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2936,7 +2938,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2950,7 +2952,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2964,7 +2966,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2978,7 +2980,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -2992,7 +2994,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3006,7 +3008,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3020,7 +3022,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3034,7 +3036,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3048,7 +3050,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3062,7 +3064,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3076,7 +3078,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3090,7 +3092,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3104,7 +3106,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3118,7 +3120,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3132,7 +3134,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3146,7 +3148,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3160,7 +3162,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3174,7 +3176,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3188,7 +3190,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3202,7 +3204,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3216,7 +3218,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3230,7 +3232,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3244,7 +3246,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3264,7 +3266,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 3, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3278,7 +3280,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3298,7 +3300,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 3, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3318,7 +3320,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 3, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3332,7 +3334,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3346,7 +3348,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3360,7 +3362,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3374,7 +3376,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3388,7 +3390,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3402,7 +3404,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3416,7 +3418,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3430,7 +3432,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3444,7 +3446,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3458,7 +3460,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3472,7 +3474,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3486,7 +3488,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3500,7 +3502,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3520,7 +3522,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3534,7 +3536,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3548,7 +3550,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3562,7 +3564,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3576,7 +3578,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3590,7 +3592,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3604,7 +3606,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3618,7 +3620,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3644,7 +3646,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::None,
                 false,
             ),
@@ -3658,7 +3660,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3672,7 +3674,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3686,7 +3688,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3700,7 +3702,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3714,7 +3716,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3734,7 +3736,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 5, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::None,
                 false,
             ),
@@ -3748,7 +3750,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3762,7 +3764,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3776,7 +3778,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3790,7 +3792,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3804,7 +3806,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3818,7 +3820,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3832,7 +3834,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3846,7 +3848,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3860,7 +3862,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3874,7 +3876,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3888,7 +3890,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3902,7 +3904,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3916,7 +3918,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3930,7 +3932,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3944,7 +3946,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3958,7 +3960,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3972,7 +3974,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -3992,7 +3994,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4006,7 +4008,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4020,7 +4022,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4034,7 +4036,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4048,7 +4050,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4062,7 +4064,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4076,7 +4078,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4090,7 +4092,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4104,7 +4106,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4118,7 +4120,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4132,7 +4134,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4146,7 +4148,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4160,7 +4162,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4174,7 +4176,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4188,7 +4190,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4202,7 +4204,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4216,7 +4218,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4230,7 +4232,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4244,7 +4246,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4258,7 +4260,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4272,7 +4274,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4286,7 +4288,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4300,7 +4302,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4314,7 +4316,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4328,7 +4330,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4342,7 +4344,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4356,7 +4358,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4370,7 +4372,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4384,7 +4386,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4398,7 +4400,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4412,7 +4414,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4426,7 +4428,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4446,7 +4448,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4472,7 +4474,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::LockedOpenApi,
                 false,
             ),
@@ -4492,7 +4494,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4512,7 +4514,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4526,7 +4528,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4540,7 +4542,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4554,7 +4556,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4568,7 +4570,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4582,7 +4584,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4602,7 +4604,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4616,7 +4618,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4630,7 +4632,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4644,7 +4646,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4658,7 +4660,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4672,7 +4674,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4686,7 +4688,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4700,7 +4702,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4714,7 +4716,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4728,7 +4730,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4742,7 +4744,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4756,7 +4758,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4770,7 +4772,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4784,7 +4786,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4798,7 +4800,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4818,7 +4820,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4832,7 +4834,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4846,7 +4848,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4860,7 +4862,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4874,7 +4876,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4888,7 +4890,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4902,7 +4904,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4916,7 +4918,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4930,7 +4932,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4944,7 +4946,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4958,7 +4960,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4972,7 +4974,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -4986,7 +4988,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5000,7 +5002,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5014,7 +5016,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5028,7 +5030,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5042,7 +5044,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5056,7 +5058,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5070,7 +5072,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5084,7 +5086,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5098,7 +5100,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5112,7 +5114,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5126,7 +5128,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5140,7 +5142,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5154,7 +5156,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5168,7 +5170,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5182,7 +5184,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5196,7 +5198,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5210,7 +5212,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5224,7 +5226,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5238,7 +5240,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5252,7 +5254,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5266,7 +5268,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5286,7 +5288,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5300,7 +5302,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5320,7 +5322,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5334,7 +5336,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5348,7 +5350,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5362,7 +5364,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5376,7 +5378,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5390,7 +5392,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5404,7 +5406,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5418,7 +5420,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5438,7 +5440,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5452,7 +5454,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5466,7 +5468,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5486,7 +5488,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 3, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5500,7 +5502,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5514,7 +5516,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5528,7 +5530,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5542,7 +5544,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5556,7 +5558,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5570,7 +5572,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5584,7 +5586,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5598,7 +5600,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5618,7 +5620,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5638,7 +5640,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 5, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5658,7 +5660,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 5, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5672,7 +5674,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5692,7 +5694,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5706,7 +5708,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5720,7 +5722,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5734,7 +5736,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5754,7 +5756,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5774,7 +5776,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5788,7 +5790,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5802,7 +5804,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5828,7 +5830,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5848,7 +5850,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5862,7 +5864,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5876,7 +5878,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5890,7 +5892,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5904,7 +5906,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5918,7 +5920,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5938,7 +5940,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5952,7 +5954,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5966,7 +5968,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5980,7 +5982,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -5994,7 +5996,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6008,7 +6010,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6022,7 +6024,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6036,7 +6038,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6050,7 +6052,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6064,7 +6066,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6078,7 +6080,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6092,7 +6094,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6106,7 +6108,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6120,7 +6122,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6134,7 +6136,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6148,7 +6150,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6162,7 +6164,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6176,7 +6178,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6190,7 +6192,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6204,7 +6206,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6218,7 +6220,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6232,7 +6234,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6246,7 +6248,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6260,7 +6262,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6280,7 +6282,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6300,7 +6302,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6314,7 +6316,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6328,7 +6330,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6342,7 +6344,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6356,7 +6358,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6370,7 +6372,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6384,7 +6386,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6398,7 +6400,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6412,7 +6414,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6426,7 +6428,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6440,7 +6442,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6454,7 +6456,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6468,7 +6470,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6482,7 +6484,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6496,7 +6498,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6510,7 +6512,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6524,7 +6526,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6538,7 +6540,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6552,7 +6554,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6566,7 +6568,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6580,7 +6582,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6594,7 +6596,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6608,7 +6610,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6622,7 +6624,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6636,7 +6638,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6650,7 +6652,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6664,7 +6666,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6678,7 +6680,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6692,7 +6694,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6706,7 +6708,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6720,7 +6722,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6734,7 +6736,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6748,7 +6750,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6762,7 +6764,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6776,7 +6778,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6790,7 +6792,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6804,7 +6806,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6818,7 +6820,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6832,7 +6834,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6846,7 +6848,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6860,7 +6862,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6874,7 +6876,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6888,7 +6890,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6902,7 +6904,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6916,7 +6918,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6930,7 +6932,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6944,7 +6946,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6958,7 +6960,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6972,7 +6974,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -6986,7 +6988,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7000,7 +7002,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7014,7 +7016,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7028,7 +7030,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7042,7 +7044,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7056,7 +7058,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7070,7 +7072,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7084,7 +7086,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7098,7 +7100,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7112,7 +7114,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7126,7 +7128,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7140,7 +7142,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7154,7 +7156,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7168,7 +7170,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7182,7 +7184,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7196,7 +7198,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7210,7 +7212,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7224,7 +7226,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7238,7 +7240,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7252,7 +7254,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7266,7 +7268,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7280,7 +7282,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7294,7 +7296,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7308,7 +7310,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7322,7 +7324,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7336,7 +7338,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7350,7 +7352,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7364,7 +7366,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7378,7 +7380,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7392,7 +7394,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7406,7 +7408,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7420,7 +7422,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7434,7 +7436,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7448,7 +7450,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7462,7 +7464,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7476,7 +7478,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7490,7 +7492,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7504,7 +7506,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7518,7 +7520,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7532,7 +7534,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7546,7 +7548,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7560,7 +7562,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7574,7 +7576,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7594,7 +7596,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7614,7 +7616,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7634,7 +7636,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7648,7 +7650,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7662,7 +7664,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7676,7 +7678,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7690,7 +7692,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7704,7 +7706,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7718,7 +7720,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7732,7 +7734,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7746,7 +7748,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7760,7 +7762,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7774,7 +7776,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7788,7 +7790,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7802,7 +7804,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7816,7 +7818,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7830,7 +7832,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7844,7 +7846,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7858,7 +7860,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7872,7 +7874,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7886,7 +7888,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7900,7 +7902,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7914,7 +7916,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7928,7 +7930,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7942,7 +7944,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7956,7 +7958,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7970,7 +7972,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7984,7 +7986,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -7998,7 +8000,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8012,7 +8014,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8026,7 +8028,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8040,7 +8042,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8054,7 +8056,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8068,7 +8070,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8082,7 +8084,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8096,7 +8098,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8110,7 +8112,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8124,7 +8126,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8138,7 +8140,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8152,7 +8154,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8166,7 +8168,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8180,7 +8182,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8194,7 +8196,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8208,7 +8210,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8222,7 +8224,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8236,7 +8238,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8250,7 +8252,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8264,7 +8266,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8278,7 +8280,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8292,7 +8294,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8306,7 +8308,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8320,7 +8322,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8334,7 +8336,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8348,7 +8350,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8362,7 +8364,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8376,7 +8378,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8390,7 +8392,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8410,7 +8412,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 3, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8424,7 +8426,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8438,7 +8440,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8452,7 +8454,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8472,7 +8474,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 3, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::LockedOpenApi,
                 false,
             ),
@@ -8492,7 +8494,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 3, 1),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8506,7 +8508,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8520,7 +8522,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8534,7 +8536,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8548,7 +8550,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8562,7 +8564,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8576,7 +8578,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8590,7 +8592,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8604,7 +8606,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8618,7 +8620,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8632,7 +8634,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8646,7 +8648,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8660,7 +8662,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8674,7 +8676,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8688,7 +8690,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8702,7 +8704,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8716,7 +8718,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8730,7 +8732,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8750,7 +8752,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8770,7 +8772,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8784,7 +8786,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8798,7 +8800,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8812,7 +8814,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8826,7 +8828,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8840,7 +8842,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8854,7 +8856,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8868,7 +8870,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8882,7 +8884,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8896,7 +8898,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8910,7 +8912,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8924,7 +8926,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8938,7 +8940,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8952,7 +8954,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8966,7 +8968,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -8980,7 +8982,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9000,7 +9002,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9020,7 +9022,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9034,7 +9036,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9048,7 +9050,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9062,7 +9064,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9076,7 +9078,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9090,7 +9092,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9104,7 +9106,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9118,7 +9120,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9132,7 +9134,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9146,7 +9148,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9160,7 +9162,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9174,7 +9176,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9188,7 +9190,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9202,7 +9204,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9216,7 +9218,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9230,7 +9232,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9244,7 +9246,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9258,7 +9260,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9278,7 +9280,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9298,7 +9300,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9324,7 +9326,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::LockedOpenApi,
                 false,
             ),
@@ -9344,7 +9346,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9370,7 +9372,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::LockedOpenApi,
                 false,
             ),
@@ -9390,7 +9392,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 4, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9404,7 +9406,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9418,7 +9420,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9432,7 +9434,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9446,7 +9448,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9466,7 +9468,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9480,7 +9482,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9500,7 +9502,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9514,7 +9516,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9528,7 +9530,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9542,7 +9544,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9556,7 +9558,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9570,7 +9572,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9584,7 +9586,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9604,7 +9606,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9624,7 +9626,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9644,7 +9646,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9664,7 +9666,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9678,7 +9680,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9692,7 +9694,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9706,7 +9708,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9720,7 +9722,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9734,7 +9736,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9748,7 +9750,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9762,7 +9764,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9776,7 +9778,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9790,7 +9792,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9804,7 +9806,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9818,7 +9820,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9832,7 +9834,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9846,7 +9848,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9860,7 +9862,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9874,7 +9876,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9894,7 +9896,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 1, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9908,7 +9910,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9922,7 +9924,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9936,7 +9938,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9956,7 +9958,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 1, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9970,7 +9972,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9984,7 +9986,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -9998,7 +10000,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10012,7 +10014,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10026,7 +10028,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10040,7 +10042,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10054,7 +10056,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10068,7 +10070,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
         &[
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 0, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10088,7 +10090,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10108,7 +10110,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10128,7 +10130,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 2, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10148,7 +10150,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10168,7 +10170,7 @@ pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &[
             ),
             OpenBaoCapabilityRange::generated(
                 OpenBaoVersion::new(2, 6, 0),
-                OpenBaoVersion::new(2, 6, 2),
+                OpenBaoVersion::new(2, 6, 3),
                 OpenBaoCapabilityEvidence::TaggedDocumentation,
                 false,
             ),
@@ -10188,7 +10190,7 @@ pub(crate) const GENERATED_SYS_GENERATE_ROOT_CANCEL: OpenBaoEndpointSpec = OpenB
         OpenBaoEndpointVariant::new(
             "openbao.delete.sys.generate.root.token.attempt.76b869404ef9c2aa",
             OpenBaoVersion::new(2, 6, 0),
-            OpenBaoVersion::new(2, 6, 2),
+            OpenBaoVersion::new(2, 6, 3),
         ),
     ],
 );
@@ -10205,7 +10207,7 @@ pub(crate) const GENERATED_SYS_GENERATE_ROOT_START: OpenBaoEndpointSpec = OpenBa
         OpenBaoEndpointVariant::new(
             "openbao.post.sys.generate.root.token.attempt.532d9c8f9c22306d",
             OpenBaoVersion::new(2, 6, 0),
-            OpenBaoVersion::new(2, 6, 2),
+            OpenBaoVersion::new(2, 6, 3),
         ),
     ],
 );
@@ -10222,7 +10224,7 @@ pub(crate) const GENERATED_SYS_GENERATE_ROOT_STATUS: OpenBaoEndpointSpec = OpenB
         OpenBaoEndpointVariant::new(
             "openbao.get.sys.generate.root.token.attempt.4c6a9904e9da8d8a",
             OpenBaoVersion::new(2, 6, 0),
-            OpenBaoVersion::new(2, 6, 2),
+            OpenBaoVersion::new(2, 6, 3),
         ),
     ],
 );
@@ -10239,7 +10241,7 @@ pub(crate) const GENERATED_SYS_GENERATE_ROOT_UPDATE: OpenBaoEndpointSpec = OpenB
         OpenBaoEndpointVariant::new(
             "openbao.post.sys.generate.root.token.update.741304409be7b3ee",
             OpenBaoVersion::new(2, 6, 0),
-            OpenBaoVersion::new(2, 6, 2),
+            OpenBaoVersion::new(2, 6, 3),
         ),
     ],
 );

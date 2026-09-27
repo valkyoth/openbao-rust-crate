@@ -21,8 +21,8 @@ make the public API commitments and security boundaries explicit.
   intentionally breaking raw-transport, JWT/OIDC secret-metadata, and base-URL
   hardening. See the migration guide before updating from 1.x.
 - Final coverage: the compatibility union has 691 logical operation identities
-  and 16,584 operation/profile cells. All operations available in supported
-  profiles are typed, typed-gated, or security-blocked. The current `2.6.2`
+  and 17,275 operation/profile cells. All operations available in supported
+  profiles are typed, typed-gated, or security-blocked. The current `2.6.3`
   profile has 689 documented operations: 594 typed, 93 typed-gated, and 2
   security-blocked.
 - Evidence boundary: contract and serde evidence is complete; live integration
@@ -72,7 +72,7 @@ make the public API commitments and security boundaries explicit.
   `Debug`, extending lifecycle regressions, and documenting serde_json escaped-
   string scratch storage as a dependency-owned residual.
 - OpenBao 2.6 closure: no operation is planned, pending, raw, external, or
-  deferred. Of 689 operations documented for exact `2.6.2`, 594 are typed, 93
+  deferred. Of 689 operations documented for exact `2.6.3`, 594 are typed, 93
   are typed-gated, and two are security-blocked because the workflow prefix
   handlers remain unsafe. JWT CEL PATCH is separately blocked only on exact
   `2.6.0`, where the server drops claim constraints.
@@ -166,7 +166,7 @@ must now have an explicit current decision.
 ## Deferred Work Template
 
 This template records historical scope decisions and future OpenBao onboarding
-rules. It does not represent unfinished `2.1.x` or OpenBao `2.6.2` work; the
+rules. It does not represent unfinished `2.1.x` or OpenBao `2.6.3` work; the
 active exact profile has no deferred operation disposition.
 
 When moving a feature out of the stable scope, record:

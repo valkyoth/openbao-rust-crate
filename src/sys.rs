@@ -531,12 +531,14 @@ impl RawEncoding {
 /// Raw storage write compression mode for `/sys/raw`.
 ///
 /// `None` serializes to an empty string, which asks OpenBao to write without
-/// compression. Leave the request field unset to let OpenBao keep the existing
-/// key's compression behavior where the server supports that.
+/// compression. It is not the `"none"` value added in OpenBao 2.6.3 for the
+/// update-operation path (including raw writes during recovery).
+/// Leave the request field unset to let OpenBao keep the existing key's
+/// compression behavior where the server supports that.
 #[cfg(feature = "operator-ops")]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 pub enum RawCompression {
-    /// Explicitly write without compression.
+    /// Write without compression (`""` on the wire).
     #[serde(rename = "")]
     None,
     /// Ask OpenBao to gzip-compress the stored value.
@@ -545,6 +547,17 @@ pub enum RawCompression {
     /// Ask OpenBao to snappy-compress the stored value.
     #[serde(rename = "snappy")]
     Snappy,
+}
+
+#[cfg(feature = "operator-ops")]
+impl RawCompression {
+    fn as_wire_value(self) -> &'static str {
+        match self {
+            Self::None => "",
+            Self::Gzip => "gzip",
+            Self::Snappy => "snappy",
+        }
+    }
 }
 
 /// Read options for `/sys/raw/:path`.
@@ -5315,7 +5328,7 @@ struct SysHashPayload<'a> {
 struct RawWritePayload<'a> {
     value: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    compression_type: Option<RawCompression>,
+    compression_type: Option<&'static str>,
     #[serde(skip_serializing_if = "RawEncoding::is_none")]
     encoding: RawEncoding,
 }
@@ -6921,7 +6934,8 @@ impl Sys<'_, Authenticated> {
         if let Some(encoding) = options.encoding.as_query_value() {
             query.push(("encoding", encoding));
         }
-        self.client
+        let envelope: ResponseEnvelope<RawReadResponse> = self
+            .client
             .request_sys_json_query_accepting(
                 Method::GET,
                 &raw_storage_path(path)?,
@@ -6929,7 +6943,8 @@ impl Sys<'_, Authenticated> {
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Writes one raw storage backend key through `/sys/raw/:path`.
@@ -6941,13 +6956,58 @@ impl Sys<'_, Authenticated> {
     pub async fn raw_write(&self, path: &str, request: &RawWriteRequest) -> Result<Empty> {
         let payload = RawWritePayload {
             value: request.value.expose_secret(),
-            compression_type: request.compression_type,
+            compression_type: request.compression_type.map(RawCompression::as_wire_value),
             encoding: request.encoding,
         };
         self.client
             .request_sys_json_accepting(
                 Method::POST,
                 &raw_storage_path(path)?,
+                Some(&payload),
+                &[StatusCode::OK, StatusCode::NO_CONTENT],
+            )
+            .await
+    }
+
+    /// Requests explicit uncompressed raw storage writes on OpenBao 2.6.3+.
+    ///
+    /// Sends `compression_type="none"`. `encoding` describes the supplied value,
+    /// not the compression mode. Older exact profiles fail before serialization.
+    ///
+    /// OpenBao 2.6.3 normalizes `"none"` only for update operations. On a normal
+    /// server, creating a missing entry with this value returns HTTP 400; use
+    /// [`Sys::raw_write`] with [`RawCompression::None`] for normal-mode creation.
+    /// Existing entries accept this explicit mode. The documented recovery-mode
+    /// creation path is not covered by the normal-mode integration tests.
+    /// No retry or alternate write is performed on a server error.
+    ///
+    /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    /// This can overwrite internal storage and must only be used during an
+    /// explicit operator recovery or migration procedure. It does not provide
+    /// create-only or compare-and-swap semantics.
+    #[cfg(feature = "operator-ops")]
+    pub async fn raw_write_uncompressed(
+        &self,
+        path: &str,
+        value: &SecretString,
+        encoding: RawEncoding,
+    ) -> Result<Empty> {
+        let path = raw_storage_path(path)?;
+        self.client
+            .validate_versioned_request_fields(&[(
+                &crate::request_compatibility::fields::RAW_UNCOMPRESSED_WRITE,
+                true,
+            )])
+            .await?;
+        let payload = RawWritePayload {
+            value: value.expose_secret(),
+            compression_type: Some("none"),
+            encoding,
+        };
+        self.client
+            .request_sys_json_accepting(
+                Method::POST,
+                &path,
                 Some(&payload),
                 &[StatusCode::OK, StatusCode::NO_CONTENT],
             )
@@ -8112,6 +8172,9 @@ impl Sys<'_, Authenticated> {
     }
 
     /// Reads one plugin catalog entry.
+    ///
+    /// OpenBao 2.6.3 restricts catalog entry reads, writes, and deletes to the
+    /// root namespace. This client never retries in a different namespace.
     pub async fn read_plugin(
         &self,
         plugin_type: PluginType,
@@ -10727,6 +10790,35 @@ impl<'de> Visitor<'de> for OptionalStringOrU64Visitor {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::panic)]
+
+    #[test]
+    fn leader_status_accepts_explicit_false_and_historical_omission() {
+        for (body, expected) in [
+            (r#"{"ha_enabled":true,"is_self":false}"#, false),
+            (r#"{"ha_enabled":true,"is_self":true}"#, true),
+            (r#"{"ha_enabled":true}"#, false),
+        ] {
+            let status: super::LeaderStatus =
+                serde_json::from_str(body).unwrap_or_else(|error| panic!("{error}"));
+            assert!(status.ha_enabled);
+            assert_eq!(status.is_self, expected);
+        }
+        assert!(serde_json::from_str::<super::LeaderStatus>(r#"{"is_self":"false"}"#).is_err());
+    }
+
+    #[cfg(feature = "operator-ops")]
+    #[test]
+    fn historical_raw_compression_wire_values_are_preserved() {
+        for (compression, expected) in [
+            (super::RawCompression::None, r#""""#),
+            (super::RawCompression::Gzip, r#""gzip""#),
+            (super::RawCompression::Snappy, r#""snappy""#),
+        ] {
+            let encoded =
+                serde_json::to_string(&compression).unwrap_or_else(|error| panic!("{error}"));
+            assert_eq!(encoded, expected);
+        }
+    }
 
     use secrecy::{ExposeSecret, SecretString};
     #[cfg(feature = "monitor-stream")]

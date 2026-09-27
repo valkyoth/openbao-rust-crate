@@ -12,8 +12,8 @@ ranges, mixed clusters, assumed mode, and future-release onboarding, is in
 
 ## Release Lock
 
-`releases.lock.json` records the 24 published OpenBao releases from `2.0.0`
-through `2.6.2` selected for the active compatibility range. Each record contains:
+`releases.lock.json` records the 25 published OpenBao releases from `2.0.0`
+through `2.6.3` selected for the active compatibility range. Each record contains:
 
 - the exact official Git tag ref object and peeled source commit;
 - the published, non-draft, non-prerelease GitHub Release timestamp;
@@ -37,8 +37,9 @@ New releases are first recorded outside the active inventory under
 `onboarding/<version>/`. The 2.6.0 onboarding files remain as immutable
 pre-promotion evidence for its source release, image, signature topology,
 tagged documentation, runtime OpenAPI, adjacent diff, rendered observation,
-and reviewed discrepancies. The same evidence is now promoted into the active
-22-profile locks, capability registry, contracts, and live matrix.
+and reviewed discrepancies. That evidence was promoted into the then-current
+22-profile locks, capability registry, contracts, and live matrix. The active
+inventory now contains 25 profiles.
 
 OpenBao's OCI indexes and `linux/amd64` manifests were verified with Cosign
 `3.1.1`, built from module tag `v3.1.1` at peeled source commit
@@ -64,6 +65,11 @@ inside the verified signed index; it is never reported as independently
 signed. The same index includes a BuildKit SLSA provenance manifest whose
 subject and source revision were checked and locked. This is a different
 verification topology, not a claim that the child was independently signed.
+
+The 2.6.3 append was verified using Cosign 3.1.2 with its exact
+`release-images.yml@refs/tags/v2.6.3` identity and the same issuer. It preserves
+this index-signed topology. See the
+[2.6.3 source and artifact review](../docs/OPENBAO_2_6_3_REVIEW.md).
 
 No Cosign `.att` OCI tags were present for the 2.0.0 through 2.5.5 images, and
 the GitHub attestations API returned no SLSA provenance attestation for those
@@ -177,7 +183,7 @@ the file in memory and rejects any stale or manually detached fixture.
 
 `version-contract-matrix.json` joins the capability registry, exact tagged
 contracts, request-field rules, response fixtures, and representative live
-core-flow results into all 16,584 operation/profile cells. Its generated
+core-flow results into all 17,275 operation/profile cells. Its generated
 summary and the user-facing `docs/OPENBAO_VERSION_SUPPORT_MATRIX.md` derive
 coverage percentages mechanically. Live and fixture evidence remains labeled
 as representative so a profile pass cannot be misreported as an endpoint-level
@@ -258,7 +264,7 @@ listener twice.
 ## Historical Core-Flow Results
 
 `core-flow-results.json` records a successful live run against every one of the
-24 exact releases in `releases.lock.json`, from `2.0.0` through `2.6.2`. Each
+25 exact releases in `releases.lock.json`, from `2.0.0` through `2.6.3`. Each
 run verifies the reported server version and executes the same core subset:
 
 - health and seal status;
@@ -269,7 +275,7 @@ run verifies the reported server version and executes the same core subset:
 - caller, token, and accessor capability checks;
 - response wrapping, lookup, and unwrap.
 
-Exact `2.6.0`, `2.6.1`, and `2.6.2` additionally exercise root-token route selection,
+Exact `2.6.0` through `2.6.3` additionally exercise root-token route selection,
 sealable namespaces, workflow CRUD/execution, JWT CEL role CRUD, userpass
 bcrypt-hash administration, and changed response fields. Earlier profiles
 record those six operations as explicit `server-operation-unavailable` skips.
@@ -296,7 +302,7 @@ tokens or raw server errors cannot enter committed evidence.
 `scripts/generate_openbao_capability_registry.py`. The registry assigns 691
 stable operation identifiers across the union of exact tagged documentation
 and reviewed contract corrections. Every operation has a contiguous,
-non-overlapping range partition covering all 24 locked releases.
+non-overlapping range partition covering all 25 locked releases.
 
 Availability means only that an exact tagged route is documented. It is not a
 live-behavior result or a typed-SDK support claim. The pre-2.0 matrix's typed
@@ -323,7 +329,7 @@ python3 -B scripts/generate_openbao_capability_registry.py --self-test
 `.github/workflows/openbao-compatibility.yml` obtains every matrix value from
 the validated release inventory through `scripts/openbao_ci_matrix.py`. Pull
 requests run `2.0.0` plus the latest patch in each OpenBao minor line. Scheduled
-nightly runs, manual pre-release gates, and version-tag runs cover all 24 exact
+nightly runs, manual pre-release gates, and version-tag runs cover all 25 exact
 releases.
 
 Compatibility jobs do not use a shared Cargo cache or repository secrets. They

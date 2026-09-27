@@ -1,7 +1,7 @@
 # OpenBao Request-Field Compatibility
 
 The typed client validates caller-selected fields whose availability changes
-across the 24 immutable OpenBao profiles from `2.0.0` through `2.6.2`.
+across the 25 immutable OpenBao profiles from `2.0.0` through `2.6.3`.
 Validation uses the selected compatibility profile and runs before a
 secret-bearing payload is constructed or serialized. An unavailable selected
 field returns `Error::UnsupportedOpenBaoRequestField` containing only a stable
@@ -49,6 +49,7 @@ field to make a request appear compatible.
 | `sys.storage.raft.join` | `non_voter` | `2.2.0` | `-` |
 | `sys.rotate.config` | `interval` | `2.4.0` | `-` |
 | `sys.plugins.catalog.register` | `oci` | `2.5.0` | `-` |
+| `sys.raw.write` | `compression_type=none` | `2.6.3` | `-` |
 | `transit.datakey` | `associated_data` | `2.5.0` | `-` |
 | `pki.authority.generate` | `not_before` | `2.1.0` | `-` |
 | `pki.sign_verbatim` | `not_before` | `2.1.0` | `-` |

@@ -37,8 +37,8 @@ SNAPSHOT_LOCK_PATH = COMPAT_ROOT / "api-snapshots.lock.json"
 SNAPSHOT_CHECKSUM_PATH = COMPAT_ROOT / "api-snapshots.lock.sha256"
 
 GENERATOR_VERSION = 1
-OBSERVED_ON = "2026-08-19"
-EXPECTED_SNAPSHOT_LOCK_SHA256 = "a1ea8bd342c0b45d8cd60fa5f0d2240ee84493d447ed36206340b2c3e591665e"
+OBSERVED_ON = "2026-09-27"
+EXPECTED_SNAPSHOT_LOCK_SHA256 = "8537e732b60018dd1f4eb1027f9ae4160b0869531696f2356d4907cc5fa38df6"
 EXPECTED_SNAPSHOT_RECORDS = (
     ("2.0.0", "edc1e8daae71bba48e1656555a82a3ad5f80b497ce87918a0a1a7cc564627081", "6251b7f9e971bd5d791ccab4e43775228c27461883a1ed6587af22aa9a56dd95", None),
     ("2.0.1", "1ae9535ec91318fe990ae71aa93dfa9ea1ea81506c85a092965eca92bb9b07e6", "4b32092b3a8a9bcdcc25ff1e9182d9cd7fdaba91a7b781e575420e32b1a91e95", "5b9424973f9fcaa0e5a64f481a956425b23f32dfeb59504ca4e6522f10a64272"),
@@ -64,6 +64,7 @@ EXPECTED_SNAPSHOT_RECORDS = (
     ("2.6.0", "d6ab7dfebcad55bed1c2fb383af00d1141018a4373571c850705f8e684eb934d", "3479568c017fa999258a9e1022299d8be6283b1b02c8994bdcd88c27afd10442", "be2a87012e39b8c66ef07ec51b0014b1ffafc5849a9a7b1215ab3b24f2fa7865"),
     ("2.6.1", "1b701c5b5003e5636cb14fb820c5f0b50ed5b526a647d1d4bbee05e19c1e4a2b", "5c3c40f104961544d64680bbb0f4e0477d13f7e921334cf6974f7f154237e344", "3f0dc7a8e262f8d56b84b48f9ed6ea791dbcaa136302df651f9531f73188926f"),
     ("2.6.2", "e7f36deffe6d7cb80bab79318bc6ecfc313ba81597e99d8c11b991b458e4a4fb", "508afb1b50295df67cf13b59d2a873f03fc52333a515b18a74d6b5058626ec48", "9d5010e45aedf7d17d1325a3d03781c7894386b1676aab55eb9a43a08cd51b0d"),
+    ("2.6.3", "535c8a2fefa024f2b2d08d105988603c30015226809e37437808261e01bd8c08", "2e03c8864113c0f72c61735a72517c2a9b21e0e8b5b9a42a1dd0d0fc8262f67a", "2dcabe5d59ab9eb8b50f777b988dbfd49bbb9a9fabe5ac1048591ca23f03a7b5"),
 )
 MAX_LOCK_BYTES = 256 * 1024
 MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024
@@ -1015,6 +1016,8 @@ def rendered_line(version: str) -> tuple[str, tuple[str, ...]] | None:
         return ("2.6.1-current", ("/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"))
     if version == "2.6.2":
         return ("2.6.2-current", ("/docs/api/auth/", "/docs/api/secret/", "/docs/api/system/"))
+    if version == "2.6.3":
+        return ("2.6.3-minor-line", ("/docs/2.6.x/api/auth/", "/docs/2.6.x/api/secret/", "/docs/2.6.x/api/system/"))
     return None
 
 
@@ -1025,6 +1028,8 @@ def rendered_observed_on(line: str) -> str:
         return "2026-07-17"
     if line == "2.6.1-current":
         return "2026-07-25"
+    if line == "2.6.2-current":
+        return "2026-08-19"
     return OBSERVED_ON
 
 
@@ -1618,6 +1623,8 @@ def validate_rendered_snapshot(
         ]
     elif line == "2.6.2-current":
         expected_roots = ["/docs/api/auth/", "/docs/api/secret/", "/docs/api/system/"]
+    elif line == "2.6.3-minor-line":
+        expected_roots = ["/docs/2.6.x/api/auth/", "/docs/2.6.x/api/secret/", "/docs/2.6.x/api/system/"]
     else:
         expected_roots = ["/api-docs/auth/", "/api-docs/secret/", "/api-docs/system/"]
     if (

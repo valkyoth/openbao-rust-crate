@@ -403,8 +403,10 @@ def write_server_config(root: Path, version: str) -> Path:
         b'api_addr = "https://127.0.0.1:8200"\n'
         b'cluster_addr = "https://127.0.0.1:8201"\n'
     )
-    if version == "2.6.2":
+    if version in {"2.6.2", "2.6.3"}:
         configuration += b'allow_unauthenticated_workflows = true\n'
+    if version == "2.6.3":
+        configuration += b'raw_storage_endpoint = true\n'
     write_private(
         config,
         configuration,
@@ -688,7 +690,7 @@ def read_descriptor(descriptor: int, maximum: int) -> bytes:
 
 
 def validate_attestation(value: dict[str, Any], version: str) -> None:
-    latest = version in {"2.6.0", "2.6.1", "2.6.2"}
+    latest = version in {"2.6.0", "2.6.1", "2.6.2", "2.6.3"}
     expected_executed = list(CORE_OPERATION_IDS if latest else CORE_OPERATION_IDS[:8])
     expected_skipped = [] if latest else list(OPENBAO_2_6_OPERATION_IDS)
     if set(value) != {"schema", "version", "executed", "skipped"}:
@@ -1032,19 +1034,19 @@ def run_integration(version: str) -> dict[str, Any]:
                     "id": operation,
                     "status": (
                         "passed"
-                        if version in {"2.6.0", "2.6.1", "2.6.2"}
+                        if version in {"2.6.0", "2.6.1", "2.6.2", "2.6.3"}
                         or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "skipped"
                     ),
                     "reason_code": (
                         None
-                        if version in {"2.6.0", "2.6.1", "2.6.2"}
+                        if version in {"2.6.0", "2.6.1", "2.6.2", "2.6.3"}
                         or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "server-operation-unavailable"
                     ),
                     "classification": (
                         None
-                        if version in {"2.6.0", "2.6.1", "2.6.2"}
+                        if version in {"2.6.0", "2.6.1", "2.6.2", "2.6.3"}
                         or operation not in OPENBAO_2_6_OPERATION_IDS
                         else "expected-server-difference"
                     ),

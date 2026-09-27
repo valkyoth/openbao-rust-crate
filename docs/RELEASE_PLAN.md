@@ -968,6 +968,28 @@ Stop criteria:
   compatibility workflow, and exact-commit pentests pass before tagging
   `v2.1.7`.
 
+### 2.1.9 - OpenBao 2.6.3 Compatibility
+
+Status: implemented; final release validation, pentesting, and GitHub approval
+are required before tagging. The tagged-source review and verification scope are in
+[`OPENBAO_2_6_3_REVIEW.md`](OPENBAO_2_6_3_REVIEW.md).
+
+Stop criteria:
+
+- package, fuzz workspace, and fixture metadata agree on `2.1.9`;
+- direct dependencies, maintained lockfiles, Rust, and GitHub tooling are
+  checked against current stable releases, preserving Rust 1.90 MSRV;
+- exact 2.6.3 source, signed image, provenance, documentation, and runtime
+  OpenAPI evidence are appended without rewriting historical profiles;
+- review the new raw-storage compression value and changed ACL, plugin,
+  leader-status, and recovery-token behavior with appropriate regressions;
+- generate and verify profiles, response fixtures, contracts, and the live
+  matrix, then enable 2.6.3 routing only after those checks pass;
+- complete the full release gate, exact-version TLS integration, pentesting,
+  GitHub CI, and CodeQL before tagging `v2.1.9`.
+
+OpenBao `2.7.0` onboarding belongs to `2.2.0`, after `2.1.9` is released.
+
 ### 2.1.8 - Transit Lifecycle Assurance
 
 Stop criteria:
