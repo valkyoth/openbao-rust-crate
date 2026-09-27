@@ -1,7 +1,7 @@
 # OpenBao 2.7.0 Control Groups Review
 
-Status: checkpoint 07a implements explicit authorization and validated secret
-accessors. Checkpoint 07 is not complete. Request review, approval-aware wrapping,
+Status: checkpoints 07a/b implement explicit authorization, validated secret
+accessors and bounded request review. Checkpoint 07 is not complete. Approval-aware wrapping,
 live lifecycle evidence and the ACL builder decision remain open. No 2.7 routing
 is promoted.
 
@@ -52,21 +52,49 @@ and acknowledged newer-server fallback remain rejected. Tests cover constructor
 boundaries and controls, secret-free diagnostics, request serialization, strict
 approval decoding and no operation transport on incompatible profiles.
 
+## 07b Implementation
+
+`Sys::read_control_group_request` uses the registered secret-response transport,
+with the same compatibility gate, configured namespace and body-only accessor.
+It does not approve, unwrap or replay. HTTP error bodies are not exposed.
+
+`ControlGroupRequest` retains payload and the complete requester entity as
+`ControlGroupRequestData`, backed by `SecretVec`. Explicit `with_json_bytes`
+inspection avoids materializing an ordinary secret-bearing JSON value tree.
+Operation/path and authorizer identity strings use `SecretString`. All Debug
+implementations redact contents. Malformed responses yield a fixed decode error.
+
+The decoder caps the whole envelope at 512 KiB, 16 nested containers, 4096 value
+nodes, 256 members per container and 64 KiB per decoded string/key. These bounds
+also cover unknown fields. A first validation pass rejects duplicate keys at
+every depth, including escaped-equivalent keys, before typed decoding. Payload
+must be an object or null; requester metadata must be an object. Required fields
+are not silently defaulted. The 512 KiB cap applies before parsing, not during
+network collection: the client response-byte limit bounds transport storage.
+
+SDK-owned payload and duplicate-detection key storage sanitize on drop. Serde's
+escaped-string scratch storage and HTTP/TLS buffers remain dependency residuals;
+this is not a guarantee of total process-memory cleanup. Callers can introduce
+their own copies through explicit inspection and must handle them accordingly.
+
+Tests cover valid nested/escaped JSON, full entity metadata retention, null
+payloads, redaction, malformed/type-invalid/missing fields, duplicate keys,
+exact and exceeded decoder limits, and rejection before operation transport on
+all active profiles and newer-server fallback. Positive registered SDK dispatch
+and live server authorization semantics still require later evidence.
+
 ## Remaining Checkpoint 07
 
-1. Add typed request review with bounded secret-aware `request_data`, requester
-   and authorization metadata. Reject duplicate keys and excessive nesting,
-   counts and bytes without materializing arbitrary secrets as ordinary JSON.
-2. Add explicit approval-aware response handling and token ownership through
+1. Add explicit approval-aware response handling and token ownership through
    deferred execution, cancellation, failed decoding and replay attempts. Preserve
    namespace binding. Do not treat a denied or expired approval as a normal
    wrapped response, or silently retry side-effecting requests.
-3. Review narrowly typed control-group policy construction against the actual
+2. Review narrowly typed control-group policy construction against the actual
    parser. Keep opaque `PolicyWriteRequest` available; do not weaken existing
    policy escaping or capability validation.
-4. Retain live TLS evidence for independent approvers, self-approval denial,
+3. Retain live TLS evidence for independent approvers, self-approval denial,
    insufficient factors, expiration, namespace mismatch, replay and cancellation.
    Test original request/response shapes and metadata redaction. Python evidence
    alone cannot promote public SDK routing.
-5. At checkpoint 10, exercise successful registered SDK dispatch and mixed/older
+4. At checkpoint 10, exercise successful registered SDK dispatch and mixed/older
    profile regression cases before promoting the staged profile.

@@ -1454,7 +1454,7 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
 }
 
 #[tokio::test]
-async fn control_group_authorization_rejects_active_and_unselected_profiles() {
+async fn control_group_operations_reject_active_and_unselected_profiles() {
     use openbao::sys::control_groups::ControlGroupAccessor;
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
     let address = listener
@@ -1487,6 +1487,9 @@ async fn control_group_authorization_rejects_active_and_unselected_profiles() {
         let result = client.sys().authorize_control_group(&accessor).await;
         assert!(matches!(result,
             Err(Error::UnsupportedOpenBaoCapability { endpoint: "sys.control-group", version }) if version == expected));
+        let result = client.sys().read_control_group_request(&accessor).await;
+        assert!(matches!(result,
+            Err(Error::UnsupportedOpenBaoCapability { endpoint: "sys.control-group", version }) if version == expected));
     }
     assert!(
         matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
@@ -1494,7 +1497,7 @@ async fn control_group_authorization_rejects_active_and_unselected_profiles() {
 }
 
 #[tokio::test]
-async fn control_group_authorization_cannot_use_newer_server_fallback() {
+async fn control_group_operations_cannot_use_newer_server_fallback() {
     use openbao::sys::control_groups::ControlGroupAccessor;
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
     let address = listener
@@ -1533,6 +1536,14 @@ async fn control_group_authorization_cannot_use_newer_server_fallback() {
     )
     .await
     .unwrap_or_else(|_| panic!("operation reached transport"));
+    assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 6, 3)));
+    let result = tokio::time::timeout(
+        Duration::from_secs(2),
+        client.sys().read_control_group_request(&accessor),
+    )
+    .await
+    .unwrap_or_else(|_| panic!("review reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
         endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 6, 3)));
     let listener = server.join().unwrap_or_else(|_| panic!("server failed"));

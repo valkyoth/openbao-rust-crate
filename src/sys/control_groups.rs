@@ -10,6 +10,9 @@ use reqwest::{Method, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
+mod review;
+pub use review::{ControlGroupAuthorization, ControlGroupRequest, ControlGroupRequestData};
+
 use crate::{
     Authenticated, Error, Result,
     compatibility::{OpenBaoVersion, latest_routable_profile},
@@ -76,6 +79,52 @@ pub struct ControlGroupApproval {
 }
 
 impl Sys<'_, Authenticated> {
+    async fn require_control_groups(&self) -> Result<()> {
+        let report = self.client.compatibility_report().await?;
+        let version = report
+            .profile_version()
+            .or_else(latest_routable_profile)
+            .ok_or(Error::Internal("no control-group compatibility profile"))?;
+        if version < OpenBaoVersion::new(2, 7, 0) {
+            return Err(Error::UnsupportedOpenBaoCapability {
+                endpoint: "sys.control-group",
+                version,
+            });
+        }
+        Ok(())
+    }
+
+    /// Reviews a deferred request using its secret accessor (OpenBao 2.7+).
+    ///
+    /// Sends an authenticated POST in this client's namespace. This neither
+    /// authorizes nor unwraps the request. Treat payload, paths, requester
+    /// metadata and authorizer identities as sensitive. Approval is only a
+    /// point-in-time observation; expiry and subsequent changes can invalidate it.
+    /// Bound violations and malformed responses fail with secret-free errors.
+    /// The staged profile must be promoted before dispatch is possible.
+    pub async fn read_control_group_request(
+        &self,
+        accessor: &ControlGroupAccessor,
+    ) -> Result<ControlGroupRequest> {
+        self.require_control_groups().await?;
+        let payload = AccessorPayload {
+            accessor: accessor.0.expose_secret(),
+        };
+        let body = self
+            .client
+            .request_registered_secret_json_accepting(
+                "/sys/",
+                Method::POST,
+                "sys/control-group/request",
+                "sys/control-group/request",
+                &[] as &[(&str, &str)],
+                Some(&payload),
+                &[StatusCode::OK],
+            )
+            .await?;
+        ControlGroupRequest::from_envelope(body)
+    }
+
     /// Explicitly records this principal's approval of a saved request (2.7+).
     ///
     /// Review the original request with the intended requester first. The server
@@ -92,17 +141,7 @@ impl Sys<'_, Authenticated> {
         &self,
         accessor: &ControlGroupAccessor,
     ) -> Result<ControlGroupApproval> {
-        let report = self.client.compatibility_report().await?;
-        let version = report
-            .profile_version()
-            .or_else(latest_routable_profile)
-            .ok_or(Error::Internal("no control-group compatibility profile"))?;
-        if version < OpenBaoVersion::new(2, 7, 0) {
-            return Err(Error::UnsupportedOpenBaoCapability {
-                endpoint: "sys.control-group",
-                version,
-            });
-        }
+        self.require_control_groups().await?;
         let payload = AccessorPayload {
             accessor: accessor.0.expose_secret(),
         };
