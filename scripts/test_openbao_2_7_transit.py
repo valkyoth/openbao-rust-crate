@@ -56,7 +56,8 @@ class TransitFixtureTests(unittest.TestCase):
                 subject.raw(value)
         with self.assertRaises(subject.harness.HarnessError):
             subject.raw("Zg==", 2)
-        for pem in ("", "-----BEGIN PRIVATE KEY-----\nZg==\n-----END PRIVATE KEY-----",
+        # A certificate label exercises wrong-type rejection without a private-key marker.
+        for pem in ("", "-----BEGIN CERTIFICATE-----\nZg==\n-----END CERTIFICATE-----",
                     "-----BEGIN PUBLIC KEY-----\n!\n-----END PUBLIC KEY-----"):
             with self.assertRaises(subject.harness.HarnessError):
                 subject.pem_der(pem, "PUBLIC KEY")
