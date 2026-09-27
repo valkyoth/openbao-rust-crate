@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 05 pentest hardening adds canonical Base64, BYOK size-layout and
+  bounded public-key PEM envelope validation, including mutable version imports.
+  Tests cover empty messages, malformed encodings, exact size limits, raw seeds,
+  wrong PEM labels, duplicate envelopes and secret-free diagnostics.
+
 - Checkpoint 05a adds additive Transit ML-DSA/external-reference APIs, detailed
   key metadata, export formats and bounded signing/verification controls with
   old-profile rejection. [The Transit review](../docs/OPENBAO_2_7_0_TRANSIT_REVIEW.md)

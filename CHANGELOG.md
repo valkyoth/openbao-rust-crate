@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Harden checkpoint 05 after pentest: validate bounded canonical Base64 for
+  ML-DSA messages and wrapped imports, reject truncated BYOK layouts and raw
+  seeds, and validate bounded public-key PEM envelopes. Revalidate ML-DSA
+  version-import material and retain server-side cryptographic validation.
+
 - Add checkpoint 05a Transit ML-DSA and external-key request APIs, detailed
   version metadata, explicit export formats, secret-aware mu validation and
   request-wide batch controls. Preserve existing enums/struct literals and

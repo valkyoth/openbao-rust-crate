@@ -12,8 +12,14 @@ fn wire(value: &impl Serialize) -> Value {
 }
 
 fn secret() -> SecretString {
-    SecretString::from(["synthetic-", "sensitive-marker"].concat())
+    encoded(b"synthetic-sensitive-marker")
 }
+
+fn ciphertext() -> SecretString {
+    encoded(&[42; RSA_WRAPPED_AES_BYTES + 16])
+}
+
+const PUBLIC_PEM: &str = "-----BEGIN PUBLIC KEY-----\nZg==\n-----END PUBLIC KEY-----";
 
 fn mu() -> SecretString {
     encoded(&[42; 64])
@@ -90,7 +96,7 @@ fn external_references_and_hmac_bounds_are_explicit() {
 fn mldsa_import_is_secret_aware_and_has_no_derivation_or_external_type() {
     let request = ok(TransitMldsaImportRequest::new(
         MldsaParameterSet::MlDsa87,
-        secret(),
+        ciphertext(),
     ))
     .with_hash_function(TransitImportHashFunction::Sha256)
     .allow_rotation()
@@ -101,21 +107,157 @@ fn mldsa_import_is_secret_aware_and_has_no_derivation_or_external_type() {
     assert_eq!(value["type"], "mldsa-87");
     assert_eq!(value["hash_function"], "SHA256");
     assert_eq!(value["allow_rotation"], true);
-    assert!(value["ciphertext"].as_str() == Some(secret().expose_secret()));
+    assert!(value["ciphertext"].as_str() == Some(ciphertext().expose_secret()));
     assert!(value.get("derived").is_none());
     assert!(value.get("public_key").is_none());
-    assert!(!format!("{request:?}").contains(secret().expose_secret()));
+    assert!(!format!("{request:?}").contains(ciphertext().expose_secret()));
     assert!(crate::client::encode_bounded_json(&request, 1).is_err());
     let public = ok(TransitMldsaImportRequest::from_public_key(
         MldsaParameterSet::MlDsa44,
-        "synthetic-public-key",
+        PUBLIC_PEM,
     ));
     assert!(wire(&public).get("ciphertext").is_none());
-    assert_eq!(wire(&public)["public_key"], "synthetic-public-key");
+    assert_eq!(wire(&public)["public_key"], PUBLIC_PEM);
     assert!(
         TransitMldsaImportRequest::new(MldsaParameterSet::MlDsa44, SecretString::from("")).is_err()
     );
     assert!(TransitMldsaImportRequest::from_public_key(MldsaParameterSet::MlDsa44, "").is_err());
+}
+
+#[test]
+fn message_base64_rejects_bad_encodings_without_exposing_input() {
+    for input in [
+        "%private-marker",
+        "Zg",
+        "Zh==",
+        "Zg==\n",
+        "Zg===",
+        "Zg==Zg==",
+        "_w==",
+    ] {
+        for result in [
+            TransitMldsaSignRequest::new(SecretString::from(input), TransitMldsaSignMode::Message)
+                .map(|_| ()),
+            TransitMldsaVerifyRequest::new(SecretString::from(input), secret()).map(|_| ()),
+        ] {
+            let error = result
+                .err()
+                .unwrap_or_else(|| panic!("bad encoding accepted"));
+            assert!(!format!("{error:?} {error}").contains(input));
+        }
+    }
+    for input in ["", "Zg==", "Zm8=", "Zm9v"] {
+        assert!(
+            TransitMldsaSignRequest::new(SecretString::from(input), TransitMldsaSignMode::Message)
+                .is_ok()
+        );
+        assert!(TransitMldsaVerifyRequest::new(SecretString::from(input), secret()).is_ok());
+    }
+    for (size, accepted) in [
+        (MAX_MLDSA_BASE64_BYTES, true),
+        (MAX_MLDSA_BASE64_BYTES + 4, false),
+    ] {
+        assert_eq!(
+            TransitMldsaSignRequest::new(
+                SecretString::from("A".repeat(size)),
+                TransitMldsaSignMode::Message
+            )
+            .is_ok(),
+            accepted
+        );
+        assert_eq!(
+            TransitMldsaVerifyRequest::new(SecretString::from("A".repeat(size)), secret()).is_ok(),
+            accepted
+        );
+    }
+}
+
+#[test]
+fn imports_reject_raw_seeds_truncated_wrapping_and_mutated_version_material() {
+    for size in [0, 32, 64, 512, 513, 527, 529] {
+        assert!(
+            TransitMldsaImportRequest::new(MldsaParameterSet::MlDsa44, encoded(&vec![42; size]))
+                .is_err()
+        );
+    }
+    for size in [528, 536, 1024] {
+        assert!(
+            TransitMldsaImportRequest::new(MldsaParameterSet::MlDsa44, encoded(&vec![42; size]))
+                .is_ok()
+        );
+    }
+    for value in [
+        SecretString::from("invalid-marker%"),
+        SecretString::from("A".repeat(MAX_MLDSA_BASE64_BYTES + 4)),
+    ] {
+        assert!(TransitMldsaImportRequest::new(MldsaParameterSet::MlDsa44, value).is_err());
+    }
+    let mut version = ok(TransitImportVersionRequest::new(ciphertext()));
+    assert!(validate_mldsa_version_material(&version).is_ok());
+    version.ciphertext = Some(encoded(&[42; 32]));
+    assert!(validate_mldsa_version_material(&version).is_err());
+    version.public_key = Some(PUBLIC_PEM.into());
+    assert!(validate_mldsa_version_material(&version).is_err());
+    version.ciphertext = None;
+    assert!(validate_mldsa_version_material(&version).is_ok());
+    version.public_key = Some("not-pem".into());
+    assert!(validate_mldsa_version_material(&version).is_err());
+    version.public_key = None;
+    assert!(validate_mldsa_version_material(&version).is_err());
+}
+
+#[test]
+fn public_import_checks_bounded_single_pem_envelope() {
+    for size in [1312, 1952, 2592] {
+        let body = encoded(&vec![42; size]);
+        let lines = body
+            .expose_secret()
+            .as_bytes()
+            .chunks(64)
+            .map(|line| {
+                std::str::from_utf8(line).unwrap_or_else(|_| panic!("fixture is not ASCII"))
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let pem = format!("-----BEGIN PUBLIC KEY-----\n{lines}\n-----END PUBLIC KEY-----\n");
+        assert!(
+            TransitMldsaImportRequest::from_public_key(MldsaParameterSet::MlDsa44, pem).is_ok()
+        );
+    }
+    for input in [
+        PUBLIC_PEM.to_owned(),
+        format!("\n{PUBLIC_PEM}\n"),
+        PUBLIC_PEM.replace('\n', "\r\n"),
+    ] {
+        assert!(
+            TransitMldsaImportRequest::from_public_key(MldsaParameterSet::MlDsa44, input).is_ok()
+        );
+    }
+    for input in [
+        "not-pem".into(),
+        PUBLIC_PEM.replace("PUBLIC KEY", "CERTIFICATE"),
+        PUBLIC_PEM.replace("Zg==", "Zh=="),
+        PUBLIC_PEM.replace("Zg==", ""),
+        PUBLIC_PEM.replace("Zg==", " Zg=="),
+        PUBLIC_PEM.replace("Zg==", &"A".repeat(68)),
+        format!("{PUBLIC_PEM}\n{PUBLIC_PEM}"),
+        format!("junk\n{PUBLIC_PEM}"),
+        format!("{PUBLIC_PEM}\njunk"),
+    ] {
+        assert!(
+            TransitMldsaImportRequest::from_public_key(MldsaParameterSet::MlDsa44, input).is_err()
+        );
+    }
+    for (size, accepted) in [
+        (MAX_MLDSA_PUBLIC_PEM_BYTES, true),
+        (MAX_MLDSA_PUBLIC_PEM_BYTES + 1, false),
+    ] {
+        let input = format!("{PUBLIC_PEM}{}", "\n".repeat(size - PUBLIC_PEM.len()));
+        assert_eq!(
+            TransitMldsaImportRequest::from_public_key(MldsaParameterSet::MlDsa44, input).is_ok(),
+            accepted
+        );
+    }
 }
 
 #[test]

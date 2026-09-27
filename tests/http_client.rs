@@ -1582,7 +1582,7 @@ async fn assert_transit_27_rejected(client: &Client<Authenticated>, expected: Op
             expected,
         );
         let import =
-            TransitMldsaImportRequest::new(parameters, test_secret(&["fixture-", "ciphertext"]))
+            TransitMldsaImportRequest::new(parameters, SecretString::from("A".repeat(704)))
                 .unwrap_or_else(|_| panic!("import fixture rejected"));
         rejected(transit.import_mldsa_key("key", &import).await, expected);
     }

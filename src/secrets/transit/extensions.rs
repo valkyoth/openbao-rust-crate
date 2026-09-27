@@ -44,6 +44,67 @@ fn invalid(message: &'static str) -> Error {
     Error::InvalidParameter(message.into())
 }
 
+const MAX_MLDSA_BASE64_BYTES: usize = 32 * 1024 * 1024;
+const MAX_MLDSA_PUBLIC_PEM_BYTES: usize = 16 * 1024;
+const RSA_WRAPPED_AES_BYTES: usize = 512;
+
+fn validate_base64(value: &str, error: &'static str) -> Result<usize> {
+    if value.len() > MAX_MLDSA_BASE64_BYTES {
+        return Err(invalid(error));
+    }
+    let decoded = base64_ng::ct::STANDARD
+        .decode_secret(value.as_bytes())
+        .map_err(|_| invalid(error))?;
+    Ok(decoded.len())
+}
+
+fn validate_mldsa_ciphertext(value: &SecretString) -> Result<()> {
+    const ERROR: &str = "ML-DSA import requires bounded canonical Base64 BYOK ciphertext";
+    let length = validate_base64(value.expose_secret(), ERROR)?;
+    // RSA-4096 ciphertext followed by AES-KWP: at least two 8-byte blocks.
+    if length < RSA_WRAPPED_AES_BYTES + 16 || !(length - RSA_WRAPPED_AES_BYTES).is_multiple_of(8) {
+        return Err(invalid(ERROR));
+    }
+    Ok(())
+}
+
+fn validate_mldsa_public_key(value: &str) -> Result<()> {
+    const ERROR: &str = "ML-DSA public import requires one bounded PUBLIC KEY PEM envelope";
+    if value.len() > MAX_MLDSA_PUBLIC_PEM_BYTES {
+        return Err(invalid(ERROR));
+    }
+    let mut lines = value
+        .trim_matches(|c: char| c.is_ascii_whitespace())
+        .lines();
+    if lines.next() != Some("-----BEGIN PUBLIC KEY-----")
+        || lines.next_back() != Some("-----END PUBLIC KEY-----")
+    {
+        return Err(invalid(ERROR));
+    }
+    // Only public envelope text is concatenated; decoded bytes use sanitizing storage.
+    let mut body = String::new();
+    for line in lines {
+        if line.is_empty() || line.len() > 64 || line.bytes().any(|b| b.is_ascii_whitespace()) {
+            return Err(invalid(ERROR));
+        }
+        body.push_str(line);
+    }
+    if validate_base64(&body, ERROR)? == 0 {
+        return Err(invalid(ERROR));
+    }
+    Ok(())
+}
+
+fn validate_mldsa_version_material(request: &TransitImportVersionRequest) -> Result<()> {
+    match (&request.ciphertext, &request.public_key) {
+        (Some(value), None) => validate_mldsa_ciphertext(value),
+        (None, Some(value)) => validate_mldsa_public_key(value),
+        _ => Err(invalid(
+            "ML-DSA import requires exactly one key material source",
+        )),
+    }
+}
+
 fn validate_name(name: &str) -> Result<()> {
     let word = |byte: u8| byte.is_ascii_alphanumeric() || byte == b'_';
     let bytes = name.as_bytes();
@@ -166,23 +227,26 @@ impl TransitMldsaImportRequest {
         }
     }
 
-    /// Accepts only nonempty base64 BYOK ciphertext, produced by an external wrapper.
+    /// Accepts canonical Base64 BYOK ciphertext (at most 32 MiB encoded).
+    /// Checks the RSA-4096/AES-KWP size layout, not authenticity or decrypted contents.
     /// The server requires PKCS#8 private material inside that wrapping, not a raw seed.
     pub fn new(parameters: MldsaParameterSet, ciphertext: SecretString) -> Result<Self> {
-        validate_non_empty_secret(&ciphertext, "Transit import ciphertext")?;
+        validate_mldsa_ciphertext(&ciphertext)?;
         Ok(Self {
             ciphertext: Some(ciphertext),
             ..Self::empty(parameters)
         })
     }
 
-    /// Imports a public-only PEM SubjectPublicKeyInfo key. The server checks the parameter set.
+    /// Imports one PUBLIC KEY PEM envelope (at most 16 KiB, Base64 lines up to 64 bytes).
+    /// Validates the envelope and canonical Base64 locally. OpenBao validates the
+    /// decoded SubjectPublicKeyInfo structure, algorithm and parameter set.
     pub fn from_public_key(
         parameters: MldsaParameterSet,
         public_key: impl Into<String>,
     ) -> Result<Self> {
         let public_key = public_key.into();
-        validate_non_empty_public_key(&public_key, "Transit import public_key")?;
+        validate_mldsa_public_key(&public_key)?;
         Ok(Self {
             public_key: Some(public_key),
             ..Self::empty(parameters)
@@ -268,7 +332,8 @@ pub struct TransitMldsaSignRequest {
 }
 
 impl TransitMldsaSignRequest {
-    /// Accepts base64 message input, or exactly 64 decoded bytes for external mu.
+    /// Accepts canonical Base64 message input (at most 32 MiB encoded, including empty),
+    /// or exactly 64 decoded bytes for external mu. Decoding uses sanitizing storage.
     pub fn new(input: SecretString, mode: TransitMldsaSignMode) -> Result<Self> {
         if mode == TransitMldsaSignMode::ExternalMu {
             if input.expose_secret().len() != 88 {
@@ -280,6 +345,11 @@ impl TransitMldsaSignRequest {
             if decoded.len() != 64 {
                 return Err(invalid("ML-DSA external mu must encode exactly 64 bytes"));
             }
+        } else {
+            validate_base64(
+                input.expose_secret(),
+                "invalid or oversized ML-DSA message Base64",
+            )?;
         }
         Ok(Self {
             input,
@@ -313,9 +383,14 @@ pub struct TransitMldsaVerifyRequest {
 }
 
 impl TransitMldsaVerifyRequest {
-    /// Verifies a server-format signature against the original message.
+    /// Verifies a server-format signature against the original canonical Base64 message.
+    /// Empty messages are valid; encoded messages are limited to 32 MiB.
     pub fn new(input: SecretString, signature: SecretString) -> Result<Self> {
         validate_non_empty_secret(&signature, "Transit signature")?;
+        validate_base64(
+            input.expose_secret(),
+            "invalid or oversized ML-DSA message Base64",
+        )?;
         Ok(Self { input, signature })
     }
 }
@@ -642,6 +717,7 @@ impl Transit<'_> {
         if let Some(version) = request.version {
             validate_version(version)?;
         }
+        validate_mldsa_version_material(request)?;
         self.import_key_version(name, request).await
     }
 

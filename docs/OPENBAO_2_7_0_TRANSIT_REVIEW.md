@@ -34,6 +34,13 @@ The staging inventory and runtime OpenAPI remain unchanged.
   The caller owns wrapping; SDK endpoint wrappers never accept raw private bytes.
   The server checks parameter-set matches and rejects further imported versions
   after server-side rotation. Import APIs cannot select `external-key`.
+  After checkpoint 05 pentest, ML-DSA imports validate canonical Base64 and the
+  RSA-4096/AES-KWP size layout locally, rejecting raw seeds and truncated blobs.
+  This does not authenticate ciphertext or inspect encrypted PKCS#8 contents.
+  Public imports require one PUBLIC KEY PEM envelope with canonical Base64,
+  lines up to 64 bytes and a 16 KiB total limit. Decoded SPKI structure and
+  algorithm validation remain server-owned. ML-DSA version imports revalidate
+  the mutable legacy request's material without changing older import APIs.
 - Exports add `format`: default, raw, DER or PEM. The SDK retains the existing
   secret-aware export response and does not decode private exports into ordinary
   strings. Explicit versions are bounded positive integers; omission exports
@@ -43,6 +50,9 @@ The staging inventory and runtime OpenAPI remain unchanged.
   decoder, after checking the bounded encoded length. The caller must compute
   mu with the correct public-key/message binding. Verification of mu is explicitly
   rejected by the server: verify against the original message instead.
+  Message-mode signing and verification also require canonical Base64, with a
+  32 MiB encoded ceiling checked before sanitizing decoding; empty messages remain
+  valid. Configured HTTP request limits still apply independently.
 - Signing batch mode and key version are top-level request fields. They are
   not per-item controls. New batch APIs reject mixed modes or versions rather
   than silently ignoring them. Both batch APIs retain existing count limits
