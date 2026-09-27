@@ -2,6 +2,10 @@
 
 mod extensions;
 pub use extensions::{PkiExternalKeyReference, PkiGeneratedKeyDetails, PkiMldsaParameterSet};
+mod signing;
+pub use signing::{
+    PkiIssuanceKey, PkiRoleSigningDetails, PkiRoleSigningOptions, PkiSignatureOptions,
+};
 
 use core::fmt;
 use std::collections::BTreeMap;

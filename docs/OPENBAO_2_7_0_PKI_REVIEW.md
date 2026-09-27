@@ -1,8 +1,9 @@
 # OpenBao 2.7.0 PKI Review
 
-Status: checkpoints 06a/06b add typed ML-DSA selection, KMS generation and
-profile guards. Checkpoint 06 is not complete: PSS/issuance options, further
-response review and live certificate evidence remain required.
+Status: checkpoints 06a/06b/06c add typed ML-DSA selection, KMS generation,
+role signature/issuance options and profile guards. Checkpoint 06 is not complete:
+authority signature options, further response review and live certificate
+evidence remain required.
 OpenBao 2.7 routing is not promoted.
 
 ## Source Contract
@@ -93,9 +94,13 @@ These tests are not a substitute for live provider/certificate evidence.
 
 ## Remaining Checkpoint 06
 
-1. Add PSS/signature and issuance algorithm options across affected role,
-   issue/sign and authority methods, with additive response details where needed.
-   Preserve merge-patch semantics and operator/template acknowledgement gates.
+1. Complete authority signature options across root/rotation/intermediate
+   generation (including KMS), intermediate signing and cross-sign CSR generation.
+   Review response shapes and preserve operator acknowledgement gates. The legacy
+   cross-sign helper uses a signing request/response shape while the tagged
+   handler generates a CSR with an existing key; an additive correct-shape API
+   and live verification are required. Sign-verbatim already exposes `use_pss`
+   and `signature_bits`; do not duplicate those fields or remove its operator gate.
 2. Retain signed-image TLS evidence for ML-DSA certificate/CSR generation,
    issuance/signing, import/read response shapes, KMS grant denial and provider
    operations, RSA-PSS defaults/overrides, invalid trailing-dot names and
@@ -104,3 +109,42 @@ These tests are not a substitute for live provider/certificate evidence.
 3. Complete SDK positive dispatch and historical/mixed-profile checks during
    checkpoint 10 promotion. No source-only or Python fixture result substitutes
    for those production API checks.
+
+## 06c Implementation
+
+Tagged `path_roles.go`, `path_issue_sign.go`, `fields.go` and
+`sdk/helper/certutil/helpers.go` distinguish subject-key selection from signer
+preferences. Ordinary issue/sign operations inherit signature settings from the
+role. They do not accept a per-request PSS override. CEL evaluates raw request
+inputs and controls the final key/signature output, so its request settings are
+inputs to policy, not guaranteed overrides. Self-issued signing does not expose
+`use_pss`/`signature_bits`; no invented parameters were added to that endpoint.
+
+`PkiSignatureOptions` preserves omission versus explicit false and zero. Digest
+sizes are limited to 0/256/384/512. `PkiRoleSigningOptions` adds these fields to
+role write/PATCH without changing existing public structs. Its optional template
+glob override is private, has no deserialization path, and requires the existing
+feature and typed acknowledgement. The implementation retains the versioned role
+field guards and Merge Patch content type. `PkiRoleSigningDetails` adds optional
+readback fields while retaining existing role and template metadata. Reads use
+existing registered routes on older profiles, with missing values left absent.
+
+`PkiIssuanceKey` validates RSA (0/2048/3072/4096/8192), EC
+(0/224/256/384/521), Ed25519 and all three ML-DSA parameter sets. The tagged helper
+allows RSA-8192 even though some endpoint descriptions list only up to 4096.
+Ordinary and named-issuer issue helpers send key selection but not signature
+overrides. A role with a specific key type ignores the selection; callers must
+use an appropriate `any` role and inspect the resulting certificate as needed.
+CEL issue/sign helpers send signature inputs, with optional issuance key selection.
+CSR signing does not generate a new subject key.
+
+All new write helpers conservatively require a selected 2.7+ profile, even for
+classical algorithms or empty options. This is the reviewed additive contract,
+not a claim that the individual fields never existed on older servers. Existing
+public methods and their historical behavior remain unchanged. Tests cover all
+25 active profiles, unselected and unknown-newer fallback, invalid paths before
+health probing, omission/false/zero serialization, size/parameter sets, readback
+and duplicate rejection. Compile-fail examples prevent generic deserialization
+or direct construction of the template override. Historical mock reads and the
+existing PKI HTTP regressions pass. Actual 2.7 write/PATCH dispatch and header
+checks remain required at promotion; no live certificate result is claimed here.

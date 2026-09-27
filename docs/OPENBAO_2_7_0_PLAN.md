@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 05 passed pentest; checkpoints 06a/06b implemented for review;
+Status: checkpoints 01 through 05 passed pentest; checkpoints 06a/06b/06c implemented for review;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -88,7 +88,9 @@ typed PKI ML-DSA selection and guards every existing generation/role path agains
 old or fallback profiles, including direct assignment to legacy public fields.
 Subcommit 06b (pentest base `1942e7b`) adds six KMS generation paths, bounded
 external-key references, conflicting-input rejection and additive key metadata.
-PSS/issuance options and live cryptographic evidence remain required
+Subcommit 06c (pentest base `21ad367`) adds role signature options/readback,
+issuance key selection and CEL issue/sign inputs, preserving template gates.
+Authority signature options and live cryptographic evidence remain required
 before checkpoint 06 is complete. See [the PKI review](OPENBAO_2_7_0_PKI_REVIEW.md).
 
 ## Security And Compatibility Rules

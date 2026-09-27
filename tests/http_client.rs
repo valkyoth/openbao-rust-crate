@@ -1933,6 +1933,213 @@ async fn assert_pki_kms_rejected(client: &Client<Authenticated>, expected: OpenB
     }
 }
 
+#[cfg(feature = "pki")]
+async fn assert_pki_signing_options_rejected(
+    client: &Client<Authenticated>,
+    expected: OpenBaoVersion,
+) {
+    use openbao::secrets::pki::*;
+    fn rejected<T>(result: openbao::Result<T>, expected: OpenBaoVersion) {
+        assert!(matches!(result, Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "pki.signing", field: "signing_options", version,
+        }) if version == expected));
+    }
+    let pki = client
+        .pki("nested/pki")
+        .unwrap_or_else(|_| panic!("mount failed"));
+    let role = PkiRole::default();
+    let issue = PkiIssueRequest::new("example.test");
+    let sign = PkiSignRequest {
+        csr: "public-csr-fixture".into(),
+        ..Default::default()
+    };
+    let signatures = [
+        PkiSignatureOptions::default(),
+        PkiSignatureOptions::default().with_pss(false),
+        PkiSignatureOptions::default()
+            .with_pss(true)
+            .with_signature_bits(384)
+            .unwrap_or_else(|_| panic!("digest failed")),
+    ];
+    for signature in signatures {
+        let options = PkiRoleSigningOptions::new(signature);
+        rejected(
+            pki.write_role_with_signing_options("role", &role, &options)
+                .await,
+            expected,
+        );
+        rejected(
+            pki.patch_role_with_signing_options("role", &role, &options)
+                .await,
+            expected,
+        );
+        #[cfg(feature = "identity-template-overrides-acknowledged")]
+        {
+            let options = options
+                .with_identity_template_globs(PkiIdentityTemplateGlobOverride::acknowledge());
+            rejected(
+                pki.write_role_with_signing_options("role", &role, &options)
+                    .await,
+                expected,
+            );
+            rejected(
+                pki.patch_role_with_signing_options("role", &role, &options)
+                    .await,
+                expected,
+            );
+        }
+        rejected(
+            pki.cel_sign_with_signature_options("role", &sign, &signature)
+                .await,
+            expected,
+        );
+        rejected(
+            pki.cel_issue_with_options("role", &issue, None, &signature)
+                .await,
+            expected,
+        );
+        for key in [
+            PkiIssuanceKey::rsa(2048).unwrap_or_else(|_| panic!("RSA failed")),
+            PkiIssuanceKey::ec(256).unwrap_or_else(|_| panic!("EC failed")),
+            PkiIssuanceKey::ed25519(),
+            PkiIssuanceKey::mldsa(PkiMldsaParameterSet::MlDsa44),
+            PkiIssuanceKey::mldsa(PkiMldsaParameterSet::MlDsa65),
+            PkiIssuanceKey::mldsa(PkiMldsaParameterSet::MlDsa87),
+        ] {
+            rejected(pki.issue_with_key("role", &issue, &key).await, expected);
+            rejected(
+                pki.issue_with_issuer_and_key("issuer", "role", &issue, &key)
+                    .await,
+                expected,
+            );
+            rejected(
+                pki.cel_issue_with_options("role", &issue, Some(&key), &signature)
+                    .await,
+                expected,
+            );
+        }
+    }
+}
+
+#[tokio::test]
+#[cfg(feature = "pki")]
+async fn pki_signing_options_reject_invalid_paths_without_health_probe() {
+    use openbao::secrets::pki::*;
+    fn invalid<T>(result: openbao::Result<T>) {
+        assert!(matches!(result, Err(Error::InvalidPath(_))));
+    }
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|_| panic!("nonblocking failed"));
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| {
+            config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            ))
+        })
+        .unwrap_or_else(|_| panic!("config failed"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|_| panic!("client failed"))
+        .with_token(test_secret(&["fixture-", "client-token"]));
+    let pki = client.pki("pki").unwrap_or_else(|_| panic!("mount failed"));
+    let role = PkiRole::default();
+    let options = PkiRoleSigningOptions::default();
+    let issue = PkiIssueRequest::new("example.test");
+    let sign = PkiSignRequest::default();
+    let key = PkiIssuanceKey::ed25519();
+    let signature = PkiSignatureOptions::default();
+    tokio::time::timeout(Duration::from_secs(2), async {
+        for name in ["../escape", "a?b", "a%2fb", "a."] {
+            invalid(
+                pki.write_role_with_signing_options(name, &role, &options)
+                    .await,
+            );
+            invalid(
+                pki.patch_role_with_signing_options(name, &role, &options)
+                    .await,
+            );
+            invalid(pki.read_role_signing_details(name).await);
+            invalid(pki.issue_with_key(name, &issue, &key).await);
+            invalid(
+                pki.issue_with_issuer_and_key(name, "role", &issue, &key)
+                    .await,
+            );
+            invalid(
+                pki.issue_with_issuer_and_key("issuer", name, &issue, &key)
+                    .await,
+            );
+            invalid(
+                pki.cel_issue_with_options(name, &issue, Some(&key), &signature)
+                    .await,
+            );
+            invalid(
+                pki.cel_sign_with_signature_options(name, &sign, &signature)
+                    .await,
+            );
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("invalid path reached transport"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+#[cfg(feature = "pki")]
+async fn pki_role_signing_readback_works_on_historical_profiles_without_a_get_body() {
+    for version in [OpenBaoVersion::new(2, 0, 0), OpenBaoVersion::new(2, 6, 3)] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|_| panic!("address failed"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener
+                .accept()
+                .unwrap_or_else(|_| panic!("accept failed"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("GET /v1/nested/pki/roles/role "));
+            assert!(request.ends_with("\r\n\r\n"));
+            write_json_response(
+                &mut stream,
+                "200 OK",
+                r#"{"data":{"key_type":"rsa","signature_bits":256,"use_pss":true}}"#,
+            );
+        });
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .map(|config| {
+                config.compatibility_policy(
+                    OpenBaoCompatibilityPolicy::assume(version)
+                        .unwrap_or_else(|_| panic!("profile failed")),
+                )
+            })
+            .unwrap_or_else(|_| panic!("config failed"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|_| panic!("client failed"))
+            .with_token(test_secret(&["fixture-", "client-token"]));
+        let pki = client
+            .pki("nested/pki")
+            .unwrap_or_else(|_| panic!("mount failed"));
+        let details = tokio::time::timeout(
+            Duration::from_secs(2),
+            pki.read_role_signing_details("role"),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("read timed out"))
+        .unwrap_or_else(|_| panic!("read failed"));
+        assert_eq!(details.use_pss, Some(true));
+        assert_eq!(details.signature_bits, Some(256));
+        assert_eq!(details.details.role.key_type.as_deref(), Some("rsa"));
+        server.join().unwrap_or_else(|_| panic!("fixture failed"));
+    }
+}
+
 #[tokio::test]
 #[cfg(feature = "pki")]
 async fn pki_27_generation_rejects_every_active_and_unselected_profile_before_transport() {
@@ -1965,6 +2172,7 @@ async fn pki_27_generation_rejects_every_active_and_unselected_profile_before_tr
             let expected = selected.unwrap_or(OpenBaoVersion::new(2, 6, 3));
             assert_pki_mldsa_rejected(&client, expected).await;
             assert_pki_kms_rejected(&client, expected).await;
+            assert_pki_signing_options_rejected(&client, expected).await;
         })
         .await
         .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));
@@ -2007,6 +2215,7 @@ async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
     tokio::time::timeout(Duration::from_secs(2), async {
         assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
         assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
+        assert_pki_signing_options_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
     })
     .await
     .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));

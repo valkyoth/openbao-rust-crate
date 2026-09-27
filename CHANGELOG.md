@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Add checkpoint 06c PKI role signature options and readback, validated issuance
+  key selection, and CEL signing inputs. Preserve PATCH omission/false semantics,
+  template-override acknowledgement gates and historical APIs. New write paths
+  remain blocked until 2.7 promotion; authority signing and live evidence remain.
+
 - Add checkpoint 06b PKI KMS generation across root, rotation, intermediate
   and standalone key paths, with bounded registry references, conflict rejection,
   additive key response metadata and old/fallback-profile rejection tests.

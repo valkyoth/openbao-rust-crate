@@ -8,6 +8,13 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 06c adds `PkiSignatureOptions`, `PkiRoleSigningOptions`,
+  `PkiRoleSigningDetails` and `PkiIssuanceKey`, with role write/PATCH/readback,
+  ordinary/named-issuer issuance and CEL issue/sign helpers. Signature preferences
+  preserve omitted/false/zero distinctions; identity-template overrides still
+  require the acknowledgement feature and token. New writes require the reviewed
+  2.7 contract, which remains unpromoted. Historical role reads remain available.
+
 - Checkpoint 06b adds six PKI KMS generation methods, validated
   `PkiExternalKeyReference` and `PkiGeneratedKeyDetails`. Conflicting local key
   settings fail before compatibility probing; all active and fallback profiles
