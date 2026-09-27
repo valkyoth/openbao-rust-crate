@@ -11,7 +11,10 @@ This release is being developed in pentestable commit checkpoints described in
 - Checkpoint 05a adds additive Transit ML-DSA/external-reference APIs, detailed
   key metadata, export formats and bounded signing/verification controls with
   old-profile rejection. [The Transit review](../docs/OPENBAO_2_7_0_TRANSIT_REVIEW.md)
-  records 05b's required live tests; OpenBao 2.7 remains unpromoted.
+  records 05b's passing, hash-bound live TLS tests for all parameter sets,
+  import/export, mu/batches and external-provider restrictions. Offline tests
+  reject tampered evidence and failed fixture cleanup. OpenBao 2.7 remains
+  unpromoted; successful SDK dispatch is still required at checkpoint 10.
 
 - Checkpoint 04 pentest hardening: PKCS#11 OAEP SHA-1 requires the existing
   acknowledgement feature; external-key names match the server grammar;

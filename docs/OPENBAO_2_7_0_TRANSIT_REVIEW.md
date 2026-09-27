@@ -1,7 +1,7 @@
 # OpenBao 2.7.0 Transit Review
 
 Status: checkpoint 05a implements additive request/response APIs and offline/mock
-regressions. Checkpoint 05b live cryptographic evidence is still required. This
+regressions. Checkpoint 05b retains passing live TLS cryptographic evidence. This
 document is not a claim of routable or verified OpenBao 2.7 SDK support.
 
 ## Reviewed Contract
@@ -26,6 +26,9 @@ The staging inventory and runtime OpenAPI remain unchanged.
   automatic rotation. The optional `key_size` controls an auxiliary local HMAC
   key (32 through 512 bytes), not remote KMS key size. Generic read capability
   flags do not prove that a provider supports each cryptographic operation.
+  The server accepts `exportable=true` at creation but cannot export the external
+  material. The fixture checks that failure separately from the default
+  non-exportable policy; the SDK external-create request does not expose that flag.
 - ML-DSA imports accept PEM SubjectPublicKeyInfo or wrapped PKCS#8 private
   material. Raw private exports are ML-DSA seeds, not ready-to-import PKCS#8.
   The caller owns wrapping; SDK endpoint wrappers never accept raw private bytes.
@@ -83,7 +86,7 @@ or crypto implementation is introduced. Sensitive request fields are borrowed
 only during serialization into the existing sanitizing transport. Response
 parser and HTTP/TLS residuals in SECURITY.md still apply.
 
-## Verification And Remaining 05b Work
+## Verification
 
 05a tests cover every parameter-set spelling; create defaults; external-name
 injection and size boundaries; auxiliary HMAC bounds; secret serialization and
@@ -94,7 +97,7 @@ new operations; and real mock dispatch of the additive read on an older profile.
 Minimal Transit-only builds must also pass, without relying on Identity or
 operator features to enable Base64 support.
 
-05b must retain signed-image, input-bound TLS server evidence for:
+05b retains signed-image, input-bound TLS server evidence for:
 
 - All three parameter sets: create/read, sign/verify, rotation and explicit
   older-version signing, valid-format tampering, wrong-message rejection and
@@ -111,7 +114,45 @@ operator features to enable Base64 support.
   export/import/derivation/auto-rotation. Transit-provider evidence is not an HSM
   or PKCS#11 guarantee.
 
-Any source/runtime discrepancy must be resolved before marking checkpoint 05
-complete. Public SDK positive dispatch and the complete historical/mixed-profile
+The observed exportable-flag distinction is documented above. Public SDK positive
+dispatch and the complete historical/mixed-profile
 matrix remain required at checkpoint 10; no fixture may bypass production
 compatibility checks to claim SDK support early.
+
+## Retained 05b Evidence
+
+`compat/onboarding/2.7.0/transit-tls.json` records the passing live result with
+SHA-256 `26ba9bae26db683cc3d6fdf31b1690e91e5b88b9cae95930e56888153d71858e`.
+`scripts/verify_openbao_2_7_transit.py` verifies its digest, canonical encoding,
+exact coverage, scope and current fixture-input hashes in CI. Reproduce from the
+repository with rootful Podman:
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_transit.py
+```
+
+The fixture reuses the immutable checkpoint 03/04 image, TLS, request bounds,
+network/resource isolation and cleanup helpers without modifying them. Its
+output explicitly remains server-contract-only, not SDK integration or PKCS#11
+verification. A changed input, failed assertion or incomplete cleanup prevents a
+successful result. It never emits provider errors or sensitive response content.
+
+External mu is computed only for synthetic test messages through Python's
+standard-library SHAKE256, following [RFC 9881 Appendix D](https://www.rfc-editor.org/rfc/rfc9881.html#appendix-D).
+The live oracle must verify the resulting signature against the original
+message. There is no new SDK-side prehash or signature implementation.
+
+For wrapped private import the source mount imports its own wrapping public key
+as a public-only RSA destination, then BYOK-exports the ML-DSA key to it. OpenBao
+performs PKCS#8 serialization and wrapping; the fixture does not add local
+wrapping code or pass ephemeral AES keys in process arguments. Successful
+signing with the imported private key must verify under the original public key.
+
+All data and keys are disposable test material. This Python fixture does not
+guarantee heap sanitization, even though the Rust SDK uses sanitizing storage.
+It must not be pointed at a production server or used as an application example.
+The eleven offline tests in `scripts/test_openbao_2_7_transit.py` cover parsing
+bounds, canonical Base64/PEM checks, prehash binding, valid-format tampering,
+specific negative controls, transport/envelope checks, input binding, cleanup
+failures, secret-free failure output, and rejected evidence mutations or stale
+inputs. They do not replace the live run.
