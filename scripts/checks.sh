@@ -40,6 +40,14 @@ echo "checks: staged OpenBao 2.7 external-plugin availability and local fixture"
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_external_keys.py
 /usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_external_keys.py
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_transit.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_pki.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_pki.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_pki_crypto.py \
+  CryptoTests.test_bounds_permissions_and_cleanup \
+  CryptoTests.test_cleanup_attempts_every_file_and_propagates_failure \
+  CryptoTests.test_commands_are_bounded_no_shell_or_ambient_trust \
+  CryptoTests.test_command_failure_diagnostics_do_not_expose_arguments_or_error \
+  CryptoTests.test_real_rsa_pss_and_pkcs1_are_distinguished
 /usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_transit.py
 
 echo "checks: historical OpenBao 2.6.0 onboarding evidence"

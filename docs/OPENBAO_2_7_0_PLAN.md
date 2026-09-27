@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 05 passed pentest; checkpoints 06a through 06d implemented for review;
+Status: checkpoints 01 through 05 passed pentest; checkpoint 06 implemented with retained live evidence, ready for pentest;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -93,8 +93,12 @@ issuance key selection and CEL issue/sign inputs, preserving template gates.
 Subcommit 06d (pentest base `a0d6bbf`) adds authority signature options, explicit
 key-source selection and a corrected operator-gated cross-sign CSR API. It also
 rejects key-exporting PEM bundles that duplicate private keys into public fields.
-Live cryptographic evidence and any fixes it reveals remain required
-before checkpoint 06 is complete. See [the PKI review](OPENBAO_2_7_0_PKI_REVIEW.md).
+Subcommit 06e (pentest base `a08dbbd`) adds independent OpenSSL verification,
+the constrained live PKI fixture and passing input-bound evidence. All three
+ML-DSA parameter sets, RSA-PSS settings, OCSP behavior and Transit KMS grants
+are checked. Checkpoint 06 implementation is ready for pentest; production SDK
+positive dispatch remains required at checkpoint 10, with no profile promotion
+from Python fixture results. See [the PKI review](OPENBAO_2_7_0_PKI_REVIEW.md).
 
 ## Security And Compatibility Rules
 

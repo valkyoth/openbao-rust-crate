@@ -2,8 +2,9 @@
 
 Status: checkpoints 06a through 06d add typed ML-DSA selection, KMS generation,
 role/authority signature options, issuance options and profile guards.
-Checkpoint 06 is not complete: live certificate evidence and any fixes it reveals
-remain required.
+Checkpoint 06e retains passing signed-image TLS certificate evidence. Checkpoint
+06 implementation is ready for pentest; successful SDK dispatch remains a
+checkpoint 10 promotion requirement.
 OpenBao 2.7 routing is not promoted.
 
 ## Source Contract
@@ -92,13 +93,13 @@ and rejection after an unauthenticated newer-server health probe. Positive SDK
 dispatch remains blocked, and must be tested during checkpoint 10 promotion.
 These tests are not a substitute for live provider/certificate evidence.
 
-## Remaining Checkpoint 06
+## Evidence And Promotion
 
-1. Retain signed-image TLS evidence for ML-DSA certificate/CSR generation,
+1. Checkpoint 06e retains signed-image TLS evidence for ML-DSA certificate/CSR generation,
    issuance/signing, import/read response shapes, KMS grant denial and provider
    operations, RSA-PSS defaults/overrides, invalid trailing-dot names and
-   unsupported ML-DSA OCSP behavior. Verify certificates cryptographically;
-   HTTP success or a returned PEM string is not sufficient.
+   unsupported ML-DSA OCSP behavior. OpenSSL verifies certificate/CSR signatures
+   and exported-key matching, rather than accepting HTTP success alone.
 2. Complete SDK positive dispatch and historical/mixed-profile checks during
    checkpoint 10 promotion. No source-only or Python fixture result substitutes
    for those production API checks.
@@ -179,4 +180,58 @@ CSR response shape and private-key Debug redaction, all authority write gates
 across historical/unselected/fallback profiles, preflight conflict rejection, and
 the exported-bundle restriction in both old and new methods. A minimal-feature
 compile-fail doctest checks the cross-sign operator gate. Live cryptographic
-verification and successful 2.7 SDK dispatch are still outstanding.
+verification was outstanding at 06d and is retained in 06e below. Successful
+2.7 SDK dispatch remains outstanding until checkpoint 10.
+
+## 06e Retained Evidence
+
+`scripts/openbao_2_7_pki.py` adds a staged signed-image TLS fixture. It checks
+ML-DSA-44/65/87 roots, CSRs, named-issuer issue/sign, key import/read and
+existing-key cross-sign CSRs; RSA-PSS defaults and explicit settings; trailing-dot
+rejection; and Transit-provider KMS signing with denied, removed and restored
+mount grants. OCSP checks require the exact unsupported ML-DSA response and a
+cryptographically verified successful RSA response, not just an arbitrary failure.
+
+The trailing-dot assertion requires HTTP 400 and the exact IDNA invalid-label
+error for the fixture name. Tagged `cert_util.go` performs CN-to-IDNA conversion
+before role checks; its pinned `golang.org/x/net v0.58.0` rejects the final dot
+with `VerifyDNSLength` under Unicode 16+. A generic role-policy denial is not
+accepted as evidence of this dependency behavior.
+
+The fixture provider policy grants read access to the exact
+`pki-source/export/public-key/signer/latest` path used by the pinned Transit KMS
+provider's `ExportPublic` implementation, in addition to key metadata and
+sign/verify operations. Key metadata access alone is insufficient for PKI KMS
+registration. Private signing-key export and mount administration remain denied;
+the live fixture checks both denials with the restricted provider token.
+
+The separate OpenSSL verifier checks actual signatures and exported-key/public-key
+matching, with ambient trust disabled for certificate verification. Its local
+tests accept valid signatures and reject tampering, wrong issuer keys and wrong
+private keys. Run the complete local crypto suite with OpenSSL 3.5+:
+
+```sh
+python3 -B scripts/test_openbao_2_7_pki_crypto.py
+```
+
+Ordinary checks run the offline lifecycle tests and classical crypto checks;
+the live fixture requires ML-DSA-capable OpenSSL and never silently skips it.
+Run the disposable server fixture on the constrained rootful Podman host:
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_pki.py
+```
+
+The passing result is retained at `compat/onboarding/2.7.0/pki-tls.json` and
+checked by `scripts/verify_openbao_2_7_pki.py`. It is canonical, digest-pinned and
+bound to all imported fixture inputs. Tests reject input drift, scope/coverage
+changes, missing/extra fields and wrong scalar types. The evidence covers local
+ML-DSA-44/65/87 authority, import, rotation and issuance flows; the live KMS
+provider case uses ML-DSA-44 over Transit, not PKCS#11 or an HSM.
+
+This is **server-fixture-only**, not SDK integration evidence. Checkpoint 06 is
+ready for pentest, but this does not promote the 2.7 profile. Successful SDK
+dispatch, aliases and historical/mixed-profile regressions remain mandatory at
+checkpoint 10. Fixture scratch files are private
+and wiped before removal; Python, OpenSSL, filesystem and OS copies are not a
+guaranteed memory-erasure boundary. Only disposable fixture secrets are used.

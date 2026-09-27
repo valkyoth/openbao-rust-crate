@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Retain checkpoint 06e signed-image PKI TLS evidence with independent OpenSSL
+  verification for ML-DSA, RSA-PSS and KMS grants, plus signature-tamper,
+  wrong-key, cleanup and evidence-integrity regressions. The 2.7 profile stays
+  unpromoted; successful SDK dispatch remains a checkpoint 10 requirement.
 - Add checkpoint 06d authority signature options and corrected, operator-gated
   cross-sign CSR generation. Preserve existing public enum/struct shapes and
   fail closed on conflicting key-source settings and unpromoted profiles.

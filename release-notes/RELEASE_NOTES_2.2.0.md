@@ -8,9 +8,14 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Retain checkpoint 06e signed-image PKI TLS evidence with independent OpenSSL
+  certificate, CSR and key-matching verification, local tamper/wrong-key controls
+  and input-bound evidence validation. This is server-contract evidence, not SDK
+  2.7 compatibility promotion; checkpoint 10 still requires positive SDK dispatch.
+
 - Checkpoint 06d adds `PkiAuthorityKeySource`, authority signature-option
   helpers and operator-gated `cross_sign_intermediate_csr`, preserving existing
-  APIs and requiring the unpromoted 2.7 contract. Live PKI evidence remains open.
+  APIs and requiring the unpromoted 2.7 contract. Live PKI evidence is retained in 06e.
 - Security hardening: exported authority generation and ordinary issuance now
   reject `pem_bundle`, which puts private keys into public certificate/CSR
   fields. This also applies to existing helpers. Switch those requests to `pem`
@@ -26,7 +31,7 @@ This release is being developed in pentestable commit checkpoints described in
 - Checkpoint 06b adds six PKI KMS generation methods, validated
   `PkiExternalKeyReference` and `PkiGeneratedKeyDetails`. Conflicting local key
   settings fail before compatibility probing; all active and fallback profiles
-  reject KMS operations. Live PKI/provider verification remains outstanding.
+  reject KMS operations. Live Transit-provider PKI verification is retained in 06e.
 
 - Checkpoint 06a adds `PkiMldsaParameterSet`, `with_mldsa` request builders and
   old/fallback-profile rejection on all existing PKI generation/role paths.
