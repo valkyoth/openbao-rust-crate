@@ -63,6 +63,14 @@ or response secret.
 
 ## Detailed Model
 
+ML-DSA message and import Base64 syntax validation is bounded but variable-time:
+the strict validator avoids a message-sized decoded allocation and the expensive
+64-symbol-per-byte constant-time scan. It does not protect against co-resident
+cache observers; dependency-owned stack scratch/state is not guaranteed wiped.
+Only fixed-size external mu uses constant-time sanitizing decoding. Applications
+must enforce ingress, concurrency and aggregate batch budgets independently of
+the SDK's per-value and HTTP-body limits.
+
 The complete threat model, hardened deployment guidance, feature-specific
 controls, compatibility evidence rules, residual-memory analysis, and accepted
 limitations are maintained in the signed repository source:

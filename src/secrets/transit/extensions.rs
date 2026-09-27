@@ -45,22 +45,26 @@ fn invalid(message: &'static str) -> Error {
 }
 
 const MAX_MLDSA_BASE64_BYTES: usize = 32 * 1024 * 1024;
+// Covers ML-DSA-87 expanded key + seed + public key, DER overhead and BYOK wrapping.
+// This is an SDK resource budget, not support for arbitrary PKCS#8 attributes.
+const MAX_MLDSA_BYOK_BASE64_BYTES: usize = 16 * 1024;
 const MAX_MLDSA_PUBLIC_PEM_BYTES: usize = 16 * 1024;
 const RSA_WRAPPED_AES_BYTES: usize = 512;
 
-fn validate_base64(value: &str, error: &'static str) -> Result<usize> {
-    if value.len() > MAX_MLDSA_BASE64_BYTES {
+fn validate_base64(value: &str, max_bytes: usize, error: &'static str) -> Result<usize> {
+    if value.len() > max_bytes {
         return Err(invalid(error));
     }
-    let decoded = base64_ng::ct::STANDARD
-        .decode_secret(value.as_bytes())
-        .map_err(|_| invalid(error))?;
-    Ok(decoded.len())
+    // Strict syntax validation without a message-sized decoded allocation. This is
+    // variable-time; do not describe it as protection from co-resident cache observers.
+    base64_ng::STRICT_STANDARD_PADDED
+        .decoded_len(value.as_bytes())
+        .map_err(|_| invalid(error))
 }
 
 fn validate_mldsa_ciphertext(value: &SecretString) -> Result<()> {
     const ERROR: &str = "ML-DSA import requires bounded canonical Base64 BYOK ciphertext";
-    let length = validate_base64(value.expose_secret(), ERROR)?;
+    let length = validate_base64(value.expose_secret(), MAX_MLDSA_BYOK_BASE64_BYTES, ERROR)?;
     // RSA-4096 ciphertext followed by AES-KWP: at least two 8-byte blocks.
     if length < RSA_WRAPPED_AES_BYTES + 16 || !(length - RSA_WRAPPED_AES_BYTES).is_multiple_of(8) {
         return Err(invalid(ERROR));
@@ -81,7 +85,7 @@ fn validate_mldsa_public_key(value: &str) -> Result<()> {
     {
         return Err(invalid(ERROR));
     }
-    // Only public envelope text is concatenated; decoded bytes use sanitizing storage.
+    // Only public envelope text is concatenated; validation needs no decoded allocation.
     let mut body = String::new();
     for line in lines {
         if line.is_empty() || line.len() > 64 || line.bytes().any(|b| b.is_ascii_whitespace()) {
@@ -89,7 +93,7 @@ fn validate_mldsa_public_key(value: &str) -> Result<()> {
         }
         body.push_str(line);
     }
-    if validate_base64(&body, ERROR)? == 0 {
+    if validate_base64(&body, MAX_MLDSA_PUBLIC_PEM_BYTES, ERROR)? == 0 {
         return Err(invalid(ERROR));
     }
     Ok(())
@@ -227,7 +231,7 @@ impl TransitMldsaImportRequest {
         }
     }
 
-    /// Accepts canonical Base64 BYOK ciphertext (at most 32 MiB encoded).
+    /// Accepts canonical Base64 BYOK ciphertext (at most 16 KiB encoded).
     /// Checks the RSA-4096/AES-KWP size layout, not authenticity or decrypted contents.
     /// The server requires PKCS#8 private material inside that wrapping, not a raw seed.
     pub fn new(parameters: MldsaParameterSet, ciphertext: SecretString) -> Result<Self> {
@@ -333,7 +337,8 @@ pub struct TransitMldsaSignRequest {
 
 impl TransitMldsaSignRequest {
     /// Accepts canonical Base64 message input (at most 32 MiB encoded, including empty),
-    /// or exactly 64 decoded bytes for external mu. Decoding uses sanitizing storage.
+    /// or exactly 64 decoded bytes for external mu. Message validation is variable-time
+    /// and allocation-free; only the fixed-size mu uses sanitizing constant-time decoding.
     pub fn new(input: SecretString, mode: TransitMldsaSignMode) -> Result<Self> {
         if mode == TransitMldsaSignMode::ExternalMu {
             if input.expose_secret().len() != 88 {
@@ -348,6 +353,7 @@ impl TransitMldsaSignRequest {
         } else {
             validate_base64(
                 input.expose_secret(),
+                MAX_MLDSA_BASE64_BYTES,
                 "invalid or oversized ML-DSA message Base64",
             )?;
         }
@@ -389,6 +395,7 @@ impl TransitMldsaVerifyRequest {
         validate_non_empty_secret(&signature, "Transit signature")?;
         validate_base64(
             input.expose_secret(),
+            MAX_MLDSA_BASE64_BYTES,
             "invalid or oversized ML-DSA message Base64",
         )?;
         Ok(Self { input, signature })

@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Resolve checkpoint 05 CPU-amplification finding: use strict allocation-free
+  Base64 sizing for ML-DSA messages/imports, cap BYOK ciphertext at 16 KiB encoded,
+  retain fixed-size mu decoding, and enforce a maximum-input release benchmark
+  in CI. Document variable-time validation and dependency scratch-memory limits.
+
 - Harden checkpoint 05 after pentest: validate bounded canonical Base64 for
   ML-DSA messages and wrapped imports, reject truncated BYOK layouts and raw
   seeds, and validate bounded public-key PEM envelopes. Revalidate ML-DSA

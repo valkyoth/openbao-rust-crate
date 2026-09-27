@@ -101,6 +101,13 @@ cargo test --all-targets --all-features
 echo "checks: minimal Transit contracts"
 cargo test --no-default-features --features transit,rustls-tls --lib extensions
 
+echo "checks: ML-DSA maximum-input validation budget"
+cargo test --locked --release --no-default-features --features transit,rustls-tls \
+  --lib mldsa_maximum_message_validation_budget --no-run
+timeout --signal=TERM --kill-after=5s 30s \
+  cargo test --locked --release --no-default-features --features transit,rustls-tls \
+  --lib mldsa_maximum_message_validation_budget -- --ignored --nocapture
+
 echo "checks: doctests"
 cargo test --doc --features operator-ops,operator-ops-acknowledged Pkcs11OaepHash
 cargo test --doc --all-features

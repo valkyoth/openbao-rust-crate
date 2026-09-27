@@ -126,6 +126,18 @@ fn mldsa_import_is_secret_aware_and_has_no_derivation_or_external_type() {
 
 #[test]
 fn message_base64_rejects_bad_encodings_without_exposing_input() {
+    for index in [0, 2048, 4095] {
+        let mut input = "A".repeat(4096);
+        input.replace_range(index..index + 1, "%");
+        assert!(
+            TransitMldsaSignRequest::new(
+                SecretString::from(input.clone()),
+                TransitMldsaSignMode::Message
+            )
+            .is_err()
+        );
+        assert!(TransitMldsaVerifyRequest::new(SecretString::from(input), secret()).is_err());
+    }
     for input in [
         "%private-marker",
         "Zg",
@@ -174,6 +186,25 @@ fn message_base64_rejects_bad_encodings_without_exposing_input() {
 
 #[test]
 fn imports_reject_raw_seeds_truncated_wrapping_and_mutated_version_material() {
+    // RFC 9881 largest parameter set plus a conservative DER/attribute allowance.
+    let pkcs8_budget: usize = 4896 + 32 + 2592 + 1024;
+    let wrapped_budget = RSA_WRAPPED_AES_BYTES + pkcs8_budget.div_ceil(8) * 8 + 8;
+    let largest = encoded(&vec![42; wrapped_budget]);
+    assert!(largest.expose_secret().len() < MAX_MLDSA_BYOK_BASE64_BYTES);
+    assert!(TransitMldsaImportRequest::new(MldsaParameterSet::MlDsa87, largest).is_ok());
+    for (size, accepted) in [
+        (MAX_MLDSA_BYOK_BASE64_BYTES, true),
+        (MAX_MLDSA_BYOK_BASE64_BYTES + 4, false),
+    ] {
+        assert_eq!(
+            TransitMldsaImportRequest::new(
+                MldsaParameterSet::MlDsa87,
+                SecretString::from("A".repeat(size))
+            )
+            .is_ok(),
+            accepted
+        );
+    }
     for size in [0, 32, 64, 512, 513, 527, 529] {
         assert!(
             TransitMldsaImportRequest::new(MldsaParameterSet::MlDsa44, encoded(&vec![42; size]))
@@ -204,6 +235,28 @@ fn imports_reject_raw_seeds_truncated_wrapping_and_mutated_version_material() {
     assert!(validate_mldsa_version_material(&version).is_err());
     version.public_key = None;
     assert!(validate_mldsa_version_material(&version).is_err());
+}
+
+#[test]
+#[ignore = "release-mode wall-time benchmark, explicitly enforced by scripts/checks.sh"]
+#[allow(clippy::print_stderr)] // Benchmark duration only; never input or key material.
+fn mldsa_maximum_message_validation_budget() {
+    let sign_input = SecretString::from("A".repeat(MAX_MLDSA_BASE64_BYTES));
+    let verify_input = SecretString::from("A".repeat(MAX_MLDSA_BASE64_BYTES));
+    let signature = secret();
+    let start = std::time::Instant::now();
+    let sign = ok(TransitMldsaSignRequest::new(
+        sign_input,
+        TransitMldsaSignMode::Message,
+    ));
+    let verify = ok(TransitMldsaVerifyRequest::new(verify_input, signature));
+    std::hint::black_box((&sign, &verify));
+    let elapsed = start.elapsed();
+    eprintln!("two 32 MiB ML-DSA constructor validations: {elapsed:?}");
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "ML-DSA validation exceeded wall-time budget"
+    );
 }
 
 #[test]

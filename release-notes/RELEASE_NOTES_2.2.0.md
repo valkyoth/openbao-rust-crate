@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Follow-up checkpoint 05 hardening removes message-sized constant-time Base64
+  decoding from constructors, adds a separate 16 KiB BYOK budget and enforces a
+  five-second combined budget for two maximum-size constructors in release tests.
+  Fixed-size external-mu validation remains constant-time and sanitizing.
+
 - Checkpoint 05 pentest hardening adds canonical Base64, BYOK size-layout and
   bounded public-key PEM envelope validation, including mutable version imports.
   Tests cover empty messages, malformed encodings, exact size limits, raw seeds,

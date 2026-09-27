@@ -51,8 +51,11 @@ The staging inventory and runtime OpenAPI remain unchanged.
   mu with the correct public-key/message binding. Verification of mu is explicitly
   rejected by the server: verify against the original message instead.
   Message-mode signing and verification also require canonical Base64, with a
-  32 MiB encoded ceiling checked before sanitizing decoding; empty messages remain
-  valid. Configured HTTP request limits still apply independently.
+  32 MiB encoded ceiling checked before strict, allocation-free length validation;
+  empty messages remain valid. This variable-time syntax check is not a
+  co-resident cache-observer defense. Only fixed-size external mu uses the
+  constant-time sanitizing decoder. Configured HTTP request limits still apply
+  independently; applications must also bound ingress and batch aggregation.
 - Signing batch mode and key version are top-level request fields. They are
   not per-item controls. New batch APIs reject mixed modes or versions rather
   than silently ignoring them. Both batch APIs retain existing count limits
@@ -97,6 +100,34 @@ only during serialization into the existing sanitizing transport. Response
 parser and HTTP/TLS residuals in SECURITY.md still apply.
 
 ## Verification
+
+The follow-up CPU-exhaustion finding replaces large constant-time decodes with
+`base64_ng::STRICT_STANDARD_PADDED.decoded_len`, which validates canonical syntax
+without allocating a decoded message. The dependency can still use small stack
+scratch/state; this is not a guarantee of complete process-memory erasure.
+
+BYOK imports have a separate 16 KiB encoded resource budget. For the largest
+ML-DSA-87 representation, 4896 expanded bytes + 32 seed bytes + 2592 public bytes,
+plus a conservative 1024-byte DER/attribute allowance, fit below that budget after
+AES-KWP rounding/8-byte overhead, the 512-byte RSA component and Base64 encoding.
+Sizes follow [RFC 9881 Section 6 and Appendix B](https://www.rfc-editor.org/rfc/rfc9881.html#section-6).
+This is an SDK envelope budget, not support for arbitrarily large optional PKCS#8
+attributes or a promise that OpenBao accepts every representation. Tests cover
+the largest parameter set's size budget and exact/over-limit ciphertexts.
+
+`scripts/checks.sh` explicitly runs the ignored release-mode benchmark
+`mldsa_maximum_message_validation_budget`: two actual 32 MiB message constructors
+must finish within five seconds combined. Compilation is outside the measurement;
+the test command also has a 30-second process timeout (five-second kill grace).
+Local mutation verification restored the old decoder temporarily: the benchmark
+failed at about 24.7 seconds, versus about 0.51 seconds with the strict validator.
+These measurements are local regression evidence, not performance guarantees.
+Run it independently with:
+
+```sh
+cargo test --locked --release --no-default-features --features transit,rustls-tls \
+  --lib mldsa_maximum_message_validation_budget -- --ignored --nocapture
+```
 
 05a tests cover every parameter-set spelling; create defaults; external-name
 injection and size boundaries; auxiliary HMAC bounds; secret serialization and
