@@ -9,7 +9,7 @@ import openbao_api_snapshots as snapshots
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULT = ROOT / "compat/onboarding/2.7.0/pki-tls.json"
-EXPECTED_SHA256 = "605326e4772d0a1cbc13ce33b7f20361bde7ee480742bef489781b4e6948e58e"
+EXPECTED_SHA256 = "f9805a3da7a5e6d0655a0eb35232f916885e03769c391920c25b18e17595742e"
 
 
 def validate_report(report, inputs):

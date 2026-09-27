@@ -9,7 +9,7 @@ import openbao_api_snapshots as snapshots
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULT = ROOT / "compat/onboarding/2.7.0/external-key-tls.json"
-EXPECTED_SHA256 = "dee89246afdd1a3b30be28f7c68be3fc39043659f8ce96b5fc20d838c3931aa6"
+EXPECTED_SHA256 = "2a24a872b40c795e11587c35fa65c7d99230d9f3693ff5f5bb1f4b908a511231"
 
 
 def validate_report(report, inputs):

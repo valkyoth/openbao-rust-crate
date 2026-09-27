@@ -9,7 +9,7 @@ import openbao_api_snapshots as snapshots
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULT = ROOT / "compat/onboarding/2.7.0/transit-tls.json"
-EXPECTED_SHA256 = "26ba9bae26db683cc3d6fdf31b1690e91e5b88b9cae95930e56888153d71858e"
+EXPECTED_SHA256 = "6157f73c7d0f46aedc503f795b4f4aa62894c8d7fac1be0207aa687839694153"
 
 
 def validate_report(report, inputs):

@@ -23,7 +23,7 @@ PLUGINS = {
 }
 MAX_BYTES = 8 * 1024 * 1024
 TLS_RESULT = ROOT / "compat/onboarding/2.7.0/tls-fixture.json"
-TLS_SHA256 = "e22fb4f3d3e9173727d109f300cded9619afba7ecbd1f8b8ce4afac9746c5417"
+TLS_SHA256 = "a498fada4a0c5ff7490b077e144be081d51a4c586d2a253ea4fa7546350fa8ca"
 
 
 def verify_tls_result() -> dict:

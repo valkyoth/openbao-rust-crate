@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 06 passed pentest; checkpoint 06 evidence refresh pending after harness cleanup; checkpoint 07e live compatibility evidence retained with an explicitly accepted upstream replay limitation, ready for pentest;
+Status: checkpoints 01 through 06 passed pentest; checkpoint 06 evidence refreshed after harness cleanup; checkpoint 07e live compatibility evidence retained with an explicitly accepted upstream replay limitation, ready for pentest;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -121,8 +121,11 @@ The complete live compatibility report is retained and digest-pinned; checkpoint
 checkpoint 10. The report does not claim server replay protection.
 
 The checkpoint 06 pipe-cleanup fix passed pentest and is committed as `7419d1b`.
-Its four replacement 2.7 live evidence captures are still required because the
-shared harness input hash changed; historical results are not relabeled.
+Its four replacement 2.7 live evidence captures (TLS/plugin exclusions, external
+keys, Transit and PKI) were rerun successfully and retained with updated digest
+pins. Only the shared harness input hash differs from the earlier reports;
+checks and scope are unchanged. Historical results were not relabeled as new
+runs, and no active profile was changed.
 
 ## Security And Compatibility Rules
 
