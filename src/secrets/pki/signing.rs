@@ -177,7 +177,7 @@ struct CelPayload<'a, T> {
 impl Pki<'_> {
     // Only the reviewed 2.7 contract is enabled for these additive options.
     // Existing methods retain their historical behavior and profile coverage.
-    async fn require_signing_options_profile(&self) -> Result<()> {
+    pub(super) async fn require_signing_options_profile(&self) -> Result<()> {
         const OPTIONS: crate::request_compatibility::VersionedRequestField =
             crate::request_compatibility::VersionedRequestField::since(
                 "pki.signing",
@@ -264,6 +264,7 @@ impl Pki<'_> {
         request: &PkiIssueRequest,
         key: &PkiIssuanceKey,
     ) -> Result<PkiCertificateBundle> {
+        validate_private_key_output_format(request.format.as_deref(), true)?;
         let path = self.path(&["issue", role])?;
         self.require_signing_options_profile().await?;
         self.enveloped(Method::POST, &path, Some(&IssuePayload { request, key }))
@@ -279,6 +280,7 @@ impl Pki<'_> {
         request: &PkiIssueRequest,
         key: &PkiIssuanceKey,
     ) -> Result<PkiCertificateBundle> {
+        validate_private_key_output_format(request.format.as_deref(), true)?;
         let path = self.path(&["issuer", issuer_ref, "issue", role])?;
         self.require_signing_options_profile().await?;
         self.enveloped(Method::POST, &path, Some(&IssuePayload { request, key }))

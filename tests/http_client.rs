@@ -2021,6 +2021,354 @@ async fn assert_pki_signing_options_rejected(
     }
 }
 
+#[cfg(feature = "pki")]
+async fn assert_pki_authority_options_rejected(
+    client: &Client<Authenticated>,
+    expected: OpenBaoVersion,
+) {
+    use openbao::secrets::pki::*;
+    fn rejected<T>(result: openbao::Result<T>, expected: OpenBaoVersion) {
+        assert!(matches!(result, Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "pki.signing", field: "signing_options", version,
+        }) if version == expected));
+    }
+    let pki = client
+        .pki("nested/pki")
+        .unwrap_or_else(|_| panic!("mount failed"));
+    let reference = PkiExternalKeyReference::new("provider", "key")
+        .unwrap_or_else(|_| panic!("reference failed"));
+    for source in [
+        PkiAuthorityKeySource::Internal,
+        PkiAuthorityKeySource::Exported,
+        PkiAuthorityKeySource::Existing,
+        PkiAuthorityKeySource::Kms(reference),
+    ] {
+        let key_ref = matches!(source, PkiAuthorityKeySource::Existing).then(|| "default".into());
+        let root = PkiGenerateRootRequest {
+            common_name: "CA".into(),
+            key_ref: key_ref.clone(),
+            ..Default::default()
+        };
+        let csr = PkiGenerateIntermediateRequest {
+            common_name: "CA".into(),
+            key_ref,
+            ..Default::default()
+        };
+        for signature in [
+            PkiSignatureOptions::default(),
+            PkiSignatureOptions::default().with_pss(false),
+            PkiSignatureOptions::default()
+                .with_pss(true)
+                .with_signature_bits(512)
+                .unwrap_or_else(|_| panic!("digest failed")),
+        ] {
+            rejected(
+                pki.generate_root_with_signature_options(&source, &root, &signature)
+                    .await,
+                expected,
+            );
+            rejected(
+                pki.generate_issuer_root_with_signature_options(&source, &root, &signature)
+                    .await,
+                expected,
+            );
+            rejected(
+                pki.rotate_root_with_signature_options(&source, &root, &signature)
+                    .await,
+                expected,
+            );
+            rejected(
+                pki.generate_intermediate_with_signature_options(&source, &csr, &signature)
+                    .await,
+                expected,
+            );
+            rejected(
+                pki.generate_issuer_intermediate_with_signature_options(&source, &csr, &signature)
+                    .await,
+                expected,
+            );
+        }
+    }
+    let signature = PkiSignatureOptions::default();
+    let sign = PkiSignIntermediateRequest {
+        csr: "public-csr-fixture".into(),
+        ..Default::default()
+    };
+    rejected(
+        pki.sign_intermediate_with_signature_options(&sign, &signature)
+            .await,
+        expected,
+    );
+    rejected(
+        pki.sign_intermediate_with_issuer_and_signature_options("issuer", &sign, &signature)
+            .await,
+        expected,
+    );
+    #[cfg(feature = "operator-ops")]
+    rejected(
+        pki.cross_sign_intermediate_csr(
+            &PkiGenerateIntermediateRequest {
+                key_ref: Some("default".into()),
+                ..Default::default()
+            },
+            &signature,
+        )
+        .await,
+        expected,
+    );
+    for parameters in [
+        PkiMldsaParameterSet::MlDsa44,
+        PkiMldsaParameterSet::MlDsa65,
+        PkiMldsaParameterSet::MlDsa87,
+    ] {
+        let root = PkiGenerateRootRequest::default().with_mldsa(parameters);
+        let csr = PkiGenerateIntermediateRequest::default().with_mldsa(parameters);
+        let source = PkiAuthorityKeySource::Internal;
+        rejected(
+            pki.generate_root_with_signature_options(&source, &root, &signature)
+                .await,
+            expected,
+        );
+        rejected(
+            pki.generate_issuer_root_with_signature_options(&source, &root, &signature)
+                .await,
+            expected,
+        );
+        rejected(
+            pki.rotate_root_with_signature_options(&source, &root, &signature)
+                .await,
+            expected,
+        );
+        rejected(
+            pki.generate_intermediate_with_signature_options(&source, &csr, &signature)
+                .await,
+            expected,
+        );
+        rejected(
+            pki.generate_issuer_intermediate_with_signature_options(&source, &csr, &signature)
+                .await,
+            expected,
+        );
+    }
+}
+
+#[tokio::test]
+#[cfg(feature = "pki")]
+async fn pki_authority_conflicts_fail_before_health_probe() {
+    use openbao::secrets::pki::*;
+    fn invalid<T>(result: openbao::Result<T>) {
+        assert!(matches!(
+            result,
+            Err(Error::InvalidParameter(_) | Error::InvalidPath(_))
+        ));
+    }
+    fn bundle_rejected<T>(result: openbao::Result<T>) {
+        assert!(
+            matches!(result, Err(Error::InvalidParameter(message)) if message.contains("pem_bundle"))
+        );
+    }
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|_| panic!("nonblocking failed"));
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| {
+            config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            ))
+        })
+        .unwrap_or_else(|_| panic!("config failed"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|_| panic!("client failed"))
+        .with_token(test_secret(&["fixture-", "client-token"]));
+    let pki = client.pki("pki").unwrap_or_else(|_| panic!("mount failed"));
+    let signature = PkiSignatureOptions::default().with_pss(true);
+    let reference = PkiExternalKeyReference::new("provider", "key")
+        .unwrap_or_else(|_| panic!("reference failed"));
+    tokio::time::timeout(Duration::from_secs(2), async {
+        for (source, key_type, bits, key_ref, format) in [
+            (
+                PkiAuthorityKeySource::Internal,
+                None,
+                None,
+                Some("default"),
+                None,
+            ),
+            (
+                PkiAuthorityKeySource::Exported,
+                None,
+                None,
+                Some("default"),
+                None,
+            ),
+            (PkiAuthorityKeySource::Existing, None, None, None, None),
+            (
+                PkiAuthorityKeySource::Existing,
+                None,
+                Some(0),
+                Some("default"),
+                None,
+            ),
+            (
+                PkiAuthorityKeySource::Existing,
+                Some("rsa"),
+                None,
+                Some("default"),
+                None,
+            ),
+            (
+                PkiAuthorityKeySource::Existing,
+                None,
+                None,
+                Some("default"),
+                Some("pkcs8"),
+            ),
+            (
+                PkiAuthorityKeySource::Existing,
+                None,
+                None,
+                Some("a?b"),
+                None,
+            ),
+            (
+                PkiAuthorityKeySource::Kms(reference.clone()),
+                None,
+                Some(0),
+                None,
+                None,
+            ),
+            (
+                PkiAuthorityKeySource::Kms(reference.clone()),
+                Some("rsa"),
+                None,
+                None,
+                None,
+            ),
+            (
+                PkiAuthorityKeySource::Kms(reference.clone()),
+                None,
+                None,
+                Some("default"),
+                None,
+            ),
+            (
+                PkiAuthorityKeySource::Kms(reference.clone()),
+                None,
+                None,
+                None,
+                Some("pkcs8"),
+            ),
+        ] {
+            let root = PkiGenerateRootRequest {
+                key_type: key_type.map(str::to_owned),
+                key_bits: bits,
+                key_ref: key_ref.map(str::to_owned),
+                private_key_format: format.map(str::to_owned),
+                ..Default::default()
+            };
+            let csr = PkiGenerateIntermediateRequest {
+                key_type: root.key_type.clone(),
+                key_bits: bits,
+                key_ref: root.key_ref.clone(),
+                private_key_format: root.private_key_format.clone(),
+                ..Default::default()
+            };
+            invalid(
+                pki.generate_root_with_signature_options(&source, &root, &signature)
+                    .await,
+            );
+            invalid(
+                pki.generate_issuer_root_with_signature_options(&source, &root, &signature)
+                    .await,
+            );
+            invalid(
+                pki.rotate_root_with_signature_options(&source, &root, &signature)
+                    .await,
+            );
+            invalid(
+                pki.generate_intermediate_with_signature_options(&source, &csr, &signature)
+                    .await,
+            );
+            invalid(
+                pki.generate_issuer_intermediate_with_signature_options(&source, &csr, &signature)
+                    .await,
+            );
+            #[cfg(feature = "operator-ops")]
+            if matches!(source, PkiAuthorityKeySource::Existing) {
+                invalid(pki.cross_sign_intermediate_csr(&csr, &signature).await);
+            }
+        }
+        invalid(
+            pki.sign_intermediate_with_issuer_and_signature_options(
+                "a?b",
+                &PkiSignIntermediateRequest::default(),
+                &signature,
+            )
+            .await,
+        );
+        for format in ["pem_bundle", "PEM_BUNDLE"] {
+            let root = PkiGenerateRootRequest {
+                format: Some(format.into()),
+                ..Default::default()
+            };
+            let csr = PkiGenerateIntermediateRequest {
+                format: Some(format.into()),
+                ..Default::default()
+            };
+            let issue = PkiIssueRequest {
+                format: Some(format.into()),
+                ..Default::default()
+            };
+            let legacy = PkiKeyGenerationType::Exported;
+            let source = PkiAuthorityKeySource::Exported;
+            bundle_rejected(pki.generate_root(legacy, &root).await);
+            bundle_rejected(pki.generate_issuer_root(legacy, &root).await);
+            bundle_rejected(pki.rotate_root(legacy, &root).await);
+            bundle_rejected(pki.generate_intermediate(legacy, &csr).await);
+            bundle_rejected(pki.generate_issuer_intermediate(legacy, &csr).await);
+            bundle_rejected(
+                pki.generate_root_with_signature_options(&source, &root, &signature)
+                    .await,
+            );
+            bundle_rejected(
+                pki.generate_issuer_root_with_signature_options(&source, &root, &signature)
+                    .await,
+            );
+            bundle_rejected(
+                pki.rotate_root_with_signature_options(&source, &root, &signature)
+                    .await,
+            );
+            bundle_rejected(
+                pki.generate_intermediate_with_signature_options(&source, &csr, &signature)
+                    .await,
+            );
+            bundle_rejected(
+                pki.generate_issuer_intermediate_with_signature_options(&source, &csr, &signature)
+                    .await,
+            );
+            bundle_rejected(pki.issue("role", &issue).await);
+            bundle_rejected(pki.issue_with_issuer("issuer", "role", &issue).await);
+            bundle_rejected(
+                pki.issue_with_key("role", &issue, &PkiIssuanceKey::ed25519())
+                    .await,
+            );
+            bundle_rejected(
+                pki.issue_with_issuer_and_key("issuer", "role", &issue, &PkiIssuanceKey::ed25519())
+                    .await,
+            );
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("invalid authority input reached transport"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
 #[tokio::test]
 #[cfg(feature = "pki")]
 async fn pki_signing_options_reject_invalid_paths_without_health_probe() {
@@ -2173,6 +2521,7 @@ async fn pki_27_generation_rejects_every_active_and_unselected_profile_before_tr
             assert_pki_mldsa_rejected(&client, expected).await;
             assert_pki_kms_rejected(&client, expected).await;
             assert_pki_signing_options_rejected(&client, expected).await;
+            assert_pki_authority_options_rejected(&client, expected).await;
         })
         .await
         .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));
@@ -2216,6 +2565,7 @@ async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
         assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
         assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
         assert_pki_signing_options_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
+        assert_pki_authority_options_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
     })
     .await
     .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));

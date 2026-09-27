@@ -1,9 +1,9 @@
 # OpenBao 2.7.0 PKI Review
 
-Status: checkpoints 06a/06b/06c add typed ML-DSA selection, KMS generation,
-role signature/issuance options and profile guards. Checkpoint 06 is not complete:
-authority signature options, further response review and live certificate
-evidence remain required.
+Status: checkpoints 06a through 06d add typed ML-DSA selection, KMS generation,
+role/authority signature options, issuance options and profile guards.
+Checkpoint 06 is not complete: live certificate evidence and any fixes it reveals
+remain required.
 OpenBao 2.7 routing is not promoted.
 
 ## Source Contract
@@ -94,19 +94,12 @@ These tests are not a substitute for live provider/certificate evidence.
 
 ## Remaining Checkpoint 06
 
-1. Complete authority signature options across root/rotation/intermediate
-   generation (including KMS), intermediate signing and cross-sign CSR generation.
-   Review response shapes and preserve operator acknowledgement gates. The legacy
-   cross-sign helper uses a signing request/response shape while the tagged
-   handler generates a CSR with an existing key; an additive correct-shape API
-   and live verification are required. Sign-verbatim already exposes `use_pss`
-   and `signature_bits`; do not duplicate those fields or remove its operator gate.
-2. Retain signed-image TLS evidence for ML-DSA certificate/CSR generation,
+1. Retain signed-image TLS evidence for ML-DSA certificate/CSR generation,
    issuance/signing, import/read response shapes, KMS grant denial and provider
    operations, RSA-PSS defaults/overrides, invalid trailing-dot names and
    unsupported ML-DSA OCSP behavior. Verify certificates cryptographically;
    HTTP success or a returned PEM string is not sufficient.
-3. Complete SDK positive dispatch and historical/mixed-profile checks during
+2. Complete SDK positive dispatch and historical/mixed-profile checks during
    checkpoint 10 promotion. No source-only or Python fixture result substitutes
    for those production API checks.
 
@@ -148,3 +141,42 @@ and duplicate rejection. Compile-fail examples prevent generic deserialization
 or direct construction of the template override. Historical mock reads and the
 existing PKI HTTP regressions pass. Actual 2.7 write/PATCH dispatch and header
 checks remain required at promotion; no live certificate result is claimed here.
+
+## 06d Implementation
+
+`PkiAuthorityKeySource` selects internal, exported, existing or KMS keys without
+extending the old exhaustive enum. Five additive generation helpers cover root,
+multi-issuer root, rotation, intermediate and multi-issuer intermediate routes,
+reusing `PkiSignatureOptions`. Two intermediate-signing variants apply signature
+preferences to the issuing CA, not to the CSR's public key. Sign-verbatim already
+has the signature fields and remains operator-gated; no duplicate fields were added.
+
+The new existing-key mode requires an explicit bounded, single-segment `key_ref`
+(including `default` when intended), and rejects key type/size/export format.
+Internal/exported generation rejects `key_ref`; KMS retains 06b's conflict checks.
+Existing ML-DSA parameter and authority `not_before` guards remain in the request
+path. New writes require the reviewed 2.7 profile even with default signature
+options; neither older profiles nor unknown-newer fallback can send them.
+
+`cross_sign_intermediate_csr` is the additive corrected model of
+`intermediate/cross-sign`: it accepts intermediate-generation subject fields,
+reuses an explicit existing key, and decodes `csr`/`key_id` without requiring a
+certificate. It remains behind both operator feature gates. It does not sign an
+input CSR, establish trust by itself, or export a key. The legacy helper's docs
+call out its incompatible 2.7 response model; its public signature is unchanged.
+
+Response review also identified a private-key handling issue beyond the new APIs:
+exported `pem_bundle` puts private material into the ordinary `certificate`/`csr`
+string as well as the secret-aware `private_key` field. Existing and new exported
+authority helpers and ordinary issue helpers now reject that format before any
+health probe or operation. Use `pem` or `der`; public-only bundle output remains
+available. The tagged CEL handler constructs its certificate field separately and
+does not use this bundle-format branch. These checks assume conforming server
+responses; they do not make arbitrary hostile certificate text secret-aware.
+
+Tests cover source conversion/validation, omitted/false/zero signature payloads,
+CSR response shape and private-key Debug redaction, all authority write gates
+across historical/unselected/fallback profiles, preflight conflict rejection, and
+the exported-bundle restriction in both old and new methods. A minimal-feature
+compile-fail doctest checks the cross-sign operator gate. Live cryptographic
+verification and successful 2.7 SDK dispatch are still outstanding.

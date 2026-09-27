@@ -1,5 +1,11 @@
 //! PKI secrets engine support.
+//!
+//! Key-exporting authority generation and ordinary certificate issuance reject
+//! `pem_bundle`: OpenBao embeds private keys in public certificate/CSR fields in
+//! that format. Use `pem` or `der` to keep returned keys in secret-aware storage.
 
+mod authority;
+pub use authority::PkiAuthorityKeySource;
 mod extensions;
 pub use extensions::{PkiExternalKeyReference, PkiGeneratedKeyDetails, PkiMldsaParameterSet};
 mod signing;
@@ -30,6 +36,18 @@ use crate::{
         deserialize_bounded_string_vec,
     },
 };
+
+fn validate_private_key_output_format(
+    format: Option<&str>,
+    exports_private_key: bool,
+) -> Result<()> {
+    if exports_private_key && format.is_some_and(|value| value.eq_ignore_ascii_case("pem_bundle")) {
+        return Err(Error::InvalidParameter(
+            "PKI key export cannot use pem_bundle; use pem or der to keep private keys out of public fields".into(),
+        ));
+    }
+    Ok(())
+}
 
 /// Handle for a mounted PKI secrets engine.
 #[derive(Debug)]
@@ -2027,6 +2045,10 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        validate_private_key_output_format(
+            request.format.as_deref(),
+            matches!(generation_type, PkiKeyGenerationType::Exported),
+        )?;
         self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
             .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
@@ -2045,6 +2067,10 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        validate_private_key_output_format(
+            request.format.as_deref(),
+            matches!(generation_type, PkiKeyGenerationType::Exported),
+        )?;
         self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
             .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
@@ -2068,6 +2094,10 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateRootRequest,
     ) -> Result<PkiAuthorityBundle> {
+        validate_private_key_output_format(
+            request.format.as_deref(),
+            matches!(generation_type, PkiKeyGenerationType::Exported),
+        )?;
         self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
             .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
@@ -2138,6 +2168,10 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateIntermediateRequest,
     ) -> Result<PkiAuthorityBundle> {
+        validate_private_key_output_format(
+            request.format.as_deref(),
+            matches!(generation_type, PkiKeyGenerationType::Exported),
+        )?;
         self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
             .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
@@ -2160,6 +2194,10 @@ impl Pki<'_> {
         generation_type: PkiKeyGenerationType,
         request: &PkiGenerateIntermediateRequest,
     ) -> Result<PkiAuthorityBundle> {
+        validate_private_key_output_format(
+            request.format.as_deref(),
+            matches!(generation_type, PkiKeyGenerationType::Exported),
+        )?;
         self.validate_pki_key_algorithm(request.key_type.as_deref(), request.key_bits)
             .await?;
         self.validate_authority_request_fields(request.not_before.is_some())
@@ -2239,9 +2277,13 @@ impl Pki<'_> {
         .await
     }
 
-    /// Cross-signs an intermediate CA CSR for CA migration workflows.
+    /// Legacy intermediate cross-sign helper retained for source compatibility.
     ///
     /// Available only with `operator-ops` and `operator-ops-acknowledged`.
+    ///
+    /// This legacy request/response shape does not model OpenBao 2.7's CSR
+    /// generation handler. For that contract use [`Self::cross_sign_intermediate_csr`],
+    /// which reuses an existing key and returns a CSR, not a signed certificate.
     #[cfg(feature = "operator-ops")]
     pub async fn cross_sign_intermediate(
         &self,
@@ -2580,6 +2622,7 @@ impl Pki<'_> {
         role: &str,
         request: &PkiIssueRequest,
     ) -> Result<PkiCertificateBundle> {
+        validate_private_key_output_format(request.format.as_deref(), true)?;
         self.enveloped(Method::POST, &self.path(&["issue", role])?, Some(request))
             .await
     }
@@ -2591,6 +2634,7 @@ impl Pki<'_> {
         role: &str,
         request: &PkiIssueRequest,
     ) -> Result<PkiCertificateBundle> {
+        validate_private_key_output_format(request.format.as_deref(), true)?;
         self.enveloped(
             Method::POST,
             &self.path(&["issuer", issuer_ref, "issue", role])?,

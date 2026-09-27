@@ -87,7 +87,7 @@ struct KmsPayload<'a, T> {
     external_key_ref: &'a PkiExternalKeyReference,
 }
 
-fn validate_kms_fields(
+pub(super) fn validate_kms_fields(
     key_type: Option<&str>,
     key_bits: Option<u64>,
     key_ref: Option<&str>,

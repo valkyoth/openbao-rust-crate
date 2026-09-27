@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 05 passed pentest; checkpoints 06a/06b/06c implemented for review;
+Status: checkpoints 01 through 05 passed pentest; checkpoints 06a through 06d implemented for review;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -90,7 +90,10 @@ Subcommit 06b (pentest base `1942e7b`) adds six KMS generation paths, bounded
 external-key references, conflicting-input rejection and additive key metadata.
 Subcommit 06c (pentest base `21ad367`) adds role signature options/readback,
 issuance key selection and CEL issue/sign inputs, preserving template gates.
-Authority signature options and live cryptographic evidence remain required
+Subcommit 06d (pentest base `a0d6bbf`) adds authority signature options, explicit
+key-source selection and a corrected operator-gated cross-sign CSR API. It also
+rejects key-exporting PEM bundles that duplicate private keys into public fields.
+Live cryptographic evidence and any fixes it reveals remain required
 before checkpoint 06 is complete. See [the PKI review](OPENBAO_2_7_0_PKI_REVIEW.md).
 
 ## Security And Compatibility Rules

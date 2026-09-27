@@ -61,6 +61,12 @@ Memory locking covers only the authenticated client's retained token when its
 acknowledged feature is enabled; it does not automatically lock every request
 or response secret.
 
+PKI authority key export and ordinary certificate issuance reject `pem_bundle`:
+the server duplicates private keys into otherwise public certificate/CSR fields.
+Use `pem` or `der` so conforming responses keep private keys in secret-aware
+fields. Public-only bundles remain supported. This is not a guarantee that an
+untrusted server cannot place secret content in arbitrary public text fields.
+
 ## Detailed Model
 
 ML-DSA message and import Base64 syntax validation is bounded but variable-time:

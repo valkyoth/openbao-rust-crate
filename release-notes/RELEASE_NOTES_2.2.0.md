@@ -8,6 +8,14 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 06d adds `PkiAuthorityKeySource`, authority signature-option
+  helpers and operator-gated `cross_sign_intermediate_csr`, preserving existing
+  APIs and requiring the unpromoted 2.7 contract. Live PKI evidence remains open.
+- Security hardening: exported authority generation and ordinary issuance now
+  reject `pem_bundle`, which puts private keys into public certificate/CSR
+  fields. This also applies to existing helpers. Switch those requests to `pem`
+  or `der`; public-only bundle output is unaffected.
+
 - Checkpoint 06c adds `PkiSignatureOptions`, `PkiRoleSigningOptions`,
   `PkiRoleSigningDetails` and `PkiIssuanceKey`, with role write/PATCH/readback,
   ordinary/named-issuer issuance and CEL issue/sign helpers. Signature preferences

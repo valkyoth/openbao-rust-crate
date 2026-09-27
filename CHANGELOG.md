@@ -6,6 +6,13 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Add checkpoint 06d authority signature options and corrected, operator-gated
+  cross-sign CSR generation. Preserve existing public enum/struct shapes and
+  fail closed on conflicting key-source settings and unpromoted profiles.
+- Reject `pem_bundle` for exported PKI authorities and ordinary issuance, in
+  both existing and new helpers: OpenBao duplicates private keys into public
+  certificate/CSR strings in this format. Use `pem` or `der` instead.
+
 - Add checkpoint 06c PKI role signature options and readback, validated issuance
   key selection, and CEL signing inputs. Preserve PATCH omission/false semantics,
   template-override acknowledgement gates and historical APIs. New write paths
