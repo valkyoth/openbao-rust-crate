@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Harden checkpoint 04 after pentest: gate typed PKCS#11 OAEP SHA-1 selection,
+  enforce the server's generic-name grammar, and limit response provider options
+  to 64 with an additional field allowed only for `plugin`. Add feature-gate,
+  name-validation and response-boundary regression coverage.
+
 - Start OpenBao 2.7.0 onboarding with a hash-locked tagged-source inventory
   and a ten-checkpoint implementation and security verification plan.
 - Keep all 25 active profiles through OpenBao 2.6.3 unchanged. OpenBao 2.7.0

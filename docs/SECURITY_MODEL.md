@@ -507,9 +507,12 @@ bind configurations must use `ldaps://` or StartTLS. StartTLS configurations
 with explicit URLs require bounded, credential-free `ldap://` URLs; the SDK
 does not expose LDAP URLs through configuration `Debug` output.
 
-Transit SHA-1 selection is unavailable unless
+Typed Transit and PKCS#11 OAEP SHA-1 selection is unavailable unless
 `allow-sha1-acknowledged` is enabled. Do not enable that feature for new or
 high-assurance deployments; use SHA-2 or stronger algorithms.
+This gates typed selectors, not arbitrary provider JSON: acknowledged custom
+external-key options and partial patches remain operator-reviewed escape
+hatches and must be checked against the deployment's algorithm policy.
 
 Retry jitter uses OS randomness when available. If OS randomness fails, default
 builds skip jitter rather than use a timing-derived fallback. The

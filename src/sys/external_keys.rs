@@ -49,13 +49,19 @@ fn validate_text(value: &str) -> Result<()> {
 }
 
 fn validate_name(value: &str) -> Result<()> {
-    if value.len() > MAX_PROVIDER_NAME_BYTES
-        || value.starts_with('/')
-        || value.ends_with('/')
-        || validate_mount_path(value)?.len() != 1
+    let segments = validate_mount_path(value)?;
+    let bytes = value.as_bytes();
+    let is_word = |byte: u8| byte.is_ascii_alphanumeric() || byte == b'_';
+    if bytes.len() > MAX_PROVIDER_NAME_BYTES
+        || segments.len() != 1
+        || !bytes.first().is_some_and(|byte| is_word(*byte))
+        || !bytes.last().is_some_and(|byte| is_word(*byte))
+        || !bytes
+            .iter()
+            .all(|byte| is_word(*byte) || matches!(byte, b'-' | b'.'))
     {
         return Err(invalid(
-            "external-key name must be one bounded path segment",
+            "external-key name must match the bounded OpenBao generic-name grammar",
         ));
     }
     Ok(())
@@ -342,11 +348,26 @@ pub enum Pkcs11Mechanism {
 }
 
 /// Hash selection for the server's PKCS#11 RSA-OAEP operations.
+#[cfg_attr(
+    not(feature = "allow-sha1-acknowledged"),
+    doc = r#"
+SHA-1 cannot be selected without `allow-sha1-acknowledged`:
+```compile_fail
+use openbao::sys::external_keys::Pkcs11OaepHash;
+let _ = Pkcs11OaepHash::Sha1;
+```
+"#
+)]
 #[derive(Clone, Copy, Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum Pkcs11OaepHash {
     /// Legacy interoperability only; prefer SHA-256 or stronger.
+    #[cfg(feature = "allow-sha1-acknowledged")]
+    #[deprecated(
+        since = "2.2.0",
+        note = "SHA-1 is legacy-only; use SHA-256 or stronger"
+    )]
     Sha1,
     /// SHA-224.
     Sha224,
@@ -557,12 +578,23 @@ mod tests {
             "key?x",
             "key%2f",
             "key.",
+            "a:b",
+            "a!b",
+            ".name",
+            "-name",
+            "name-",
+            "name.",
+            "na\u{ef}ve",
         ] {
             assert!(TransitExternalKey::new(name, 1).is_err());
             assert!(Pkcs11ExternalKeyConfig::new(name, Pkcs11TokenSelector::Slot(1)).is_err());
         }
         assert!(TransitExternalKey::new("x".repeat(MAX_PROVIDER_NAME_BYTES), 1).is_ok());
         assert!(TransitExternalKey::new("x".repeat(MAX_PROVIDER_NAME_BYTES + 1), 1).is_err());
+        for name in ["a", "_", "a_b", "a-b", "a.b", "a..b", "a.-b", "_name_"] {
+            assert!(TransitExternalKey::new(name, 1).is_ok());
+            assert!(Pkcs11ExternalKeyConfig::new(name, Pkcs11TokenSelector::Slot(1)).is_ok());
+        }
     }
 
     #[test]
@@ -626,7 +658,6 @@ mod tests {
             assert_eq!(wire(&mechanism), expected);
         }
         for (hash, expected) in [
-            (Pkcs11OaepHash::Sha1, "sha1"),
             (Pkcs11OaepHash::Sha224, "sha224"),
             (Pkcs11OaepHash::Sha256, "sha256"),
             (Pkcs11OaepHash::Sha384, "sha384"),
@@ -634,6 +665,13 @@ mod tests {
         ] {
             assert_eq!(wire(&hash), expected);
         }
+    }
+
+    #[cfg(feature = "allow-sha1-acknowledged")]
+    #[test]
+    #[allow(deprecated)]
+    fn pkcs11_sha1_requires_explicit_feature() {
+        assert_eq!(wire(&Pkcs11OaepHash::Sha1), "sha1");
     }
 
     #[test]

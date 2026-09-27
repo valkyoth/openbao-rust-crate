@@ -1,6 +1,11 @@
 //! Build-time safety warnings for feature combinations that deserve attention.
 
 fn main() {
+    if std::env::var_os("CARGO_FEATURE_ALLOW_SHA1_ACKNOWLEDGED").is_some() {
+        println!(
+            "cargo:warning=Legacy SHA-1 cryptographic selectors are enabled, including Transit and PKCS#11 OAEP. Prefer SHA-256 or stronger."
+        );
+    }
     if std::env::var_os("CARGO_FEATURE_TLS12_ACKNOWLEDGED").is_some() {
         println!(
             "cargo:warning=TLS 1.2 support has been acknowledged. TLS 1.3 remains the default and is strongly preferred for high-security OpenBao deployments."

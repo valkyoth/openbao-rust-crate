@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 04 pentest hardening: PKCS#11 OAEP SHA-1 requires the existing
+  acknowledgement feature; external-key names match the server grammar;
+  response objects permit at most 64 provider options plus `plugin` metadata.
+  Regression tests cover the feature gate, rejected names and exact limits.
+
 - Development manifests and maintained lockfiles identify 2.2.0.
 - Hash-locked inventory of the exact 2.7.0 tagged API source files, with
   predecessor comparison and offline tamper checks.

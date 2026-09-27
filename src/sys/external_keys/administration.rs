@@ -297,10 +297,12 @@ mod tests {
             Some("sys/external-keys/configs/provider/keys/key/grants/auth/nested")
         );
         for name in [
-            "", "/other", "../other", "a/b", "a?b", "a%2fb", "a#b", "a\nb", "a.",
+            "", "/other", "../other", "a/b", "a?b", "a%2fb", "a#b", "a\nb", "a.", "a:b", "a!b",
+            ".name", "-name", "name-", "name.",
         ] {
             assert!(config_path(name).is_err());
             assert!(key_path("provider", name).is_err());
+            assert!(grant_path("provider", name, "nested/mount").is_err());
         }
         for mount in ["", "../other", "a//b", "a?b", "a%2fb", "a#b", "a\nb"] {
             assert!(grant_path("provider", "key", mount).is_err());

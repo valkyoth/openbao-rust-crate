@@ -121,8 +121,8 @@ operator-ops-acknowledged = []
 # compatibility guarantee and also require the operator-operation gates.
 unstable-internal-ops = ["operator-ops"]
 unstable-internal-ops-acknowledged = []
-# Legacy Transit SHA-1 support. Disabled by default so new builds cannot select
-# SHA-1 without an explicit Cargo feature review.
+# Legacy typed SHA-1 selectors (Transit and PKCS#11 OAEP). Disabled by default
+# so new builds cannot select SHA-1 without an explicit Cargo feature review.
 allow-sha1-acknowledged = []
 # Default TLS backend. Keep this enabled unless a deployment has audited a
 # different transport stack.

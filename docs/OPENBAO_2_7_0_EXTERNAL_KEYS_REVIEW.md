@@ -38,6 +38,9 @@ config request's `plugin` and `verify` fields will be supplied by later wrappers
   certificates and secret keys are supplied as a pair.
 - Transit key mappings require one bounded key name and an explicit version in
   `1..=2147483647` for conservative signed-32-bit server interoperability.
+  Config/key names and provider aliases use the bounded generic-name grammar:
+  ASCII letters/digits/underscore at both ends, with dot/hyphen also allowed
+  internally. Colons cannot enter the `config:key` reference format.
   Prehashing remains enabled unless explicitly disabled.
 - PKCS#11 config requires a registered library alias and at least one slot,
   serial or label selector. Slots serialize as decimal strings, including large

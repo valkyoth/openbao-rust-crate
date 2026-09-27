@@ -100,7 +100,7 @@ impl Serialize for ExternalKeyOptions {
 ///
 /// Do not assume the server redacted every sensitive option. Unknown plugin
 /// parameters remain in sanitizing storage and Debug reveals no fields.
-/// The root object permits 65 fields, allowing 64 options plus `plugin`;
+/// The root object permits 64 provider options plus an optional `plugin` field;
 /// nested objects retain the 64-member bound and the total byte/node limits.
 /// Responses are not request builders: returned redaction markers must not be
 /// written back as credentials. Explicit byte inspection is required.
@@ -249,12 +249,21 @@ impl<'de> Visitor<'de> for Check<'_> {
         }
         let mut keys: Vec<SecretString> = Vec::new();
         let members = MAX_MEMBERS + usize::from(self.depth == 0 && !self.request);
+        let mut non_plugin_members = 0;
         while keys.len() < members && *self.budget > 0 {
             let Some(key) = map.next_key::<SecretString>()? else {
                 return Ok(());
             };
             let text = key.expose_secret();
             Self::string(text)?;
+            if self.depth == 0 && !self.request && text != "plugin" {
+                non_plugin_members += 1;
+                if non_plugin_members > MAX_MEMBERS {
+                    return Err(A::Error::custom(
+                        "external-key response exceeds provider-option limit",
+                    ));
+                }
+            }
             if self.depth == 0
                 && (text.is_empty()
                     || text.len() > 256
@@ -398,6 +407,17 @@ mod tests {
                     .is_ok(),
                 valid
             );
+            for body in [
+                format!("{{\"data\":{{{entries}}}}}"),
+                format!("{{\"data\":{{{entries},\"plugin\":\"custom\"}}}}"),
+                format!("{{\"data\":{{\"plu\\u0067in\":\"custom\",{entries}}}}}"),
+            ] {
+                assert_eq!(
+                    ExternalKeyParameters::from_envelope(SecretVec::from_slice(body.as_bytes()))
+                        .is_ok(),
+                    valid
+                );
+            }
         }
     }
 

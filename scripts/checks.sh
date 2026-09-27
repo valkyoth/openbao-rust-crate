@@ -97,6 +97,7 @@ echo "checks: tests all features"
 cargo test --all-targets --all-features
 
 echo "checks: doctests"
+cargo test --doc --features operator-ops,operator-ops-acknowledged Pkcs11OaepHash
 cargo test --doc --all-features
 
 echo "checks: docs"
