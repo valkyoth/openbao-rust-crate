@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Add checkpoint 06b PKI KMS generation across root, rotation, intermediate
+  and standalone key paths, with bounded registry references, conflict rejection,
+  additive key response metadata and old/fallback-profile rejection tests.
+  PSS/issuance options and live PKI evidence remain required; no 2.7 promotion.
+
 - Start checkpoint 06a with typed PKI ML-DSA parameter selection and validated
   profile guards on existing generation and role-write/PATCH APIs, including
   direct public-field assignments and identity-template override methods.

@@ -1,8 +1,9 @@
 # OpenBao 2.7.0 PKI Review
 
-Status: checkpoint 06a adds typed ML-DSA selection and existing-route profile
-guards. Checkpoint 06 is not complete: additive KMS/PSS APIs, response details
-and live certificate evidence remain required. OpenBao 2.7 routing is not promoted.
+Status: checkpoints 06a/06b add typed ML-DSA selection, KMS generation and
+profile guards. Checkpoint 06 is not complete: PSS/issuance options, further
+response review and live certificate evidence remain required.
+OpenBao 2.7 routing is not promoted.
 
 ## Source Contract
 
@@ -59,19 +60,47 @@ The HTTP tests assert that no operation reaches the listener after the optional
 unauthenticated health probe. Existing classical PKI HTTP regressions also remain
 in the all-feature suite.
 
+## 06b Implementation
+
+Six additive `*_kms` methods cover root generation, multi-issuer root generation,
+root rotation, intermediate and multi-issuer intermediate CSR generation, and
+standalone key registration. They use the existing registered request path and
+require a selected 2.7+ profile, without adding variants to the exhaustive
+`PkiKeyGenerationType` or fields to existing public request structs.
+
+`PkiExternalKeyReference` accepts separate registry config/key names. Each is
+bounded to 256 ASCII bytes with the server generic-name grammar; path delimiters,
+colons, percent encoding, controls and empty names are rejected. This reference
+is metadata, not private key material. Provider availability, signing capability
+and grants for the consuming mount remain server-enforced prerequisites.
+
+Authority requests reject any `key_type`, `key_bits`, `key_ref` or
+`private_key_format`, including explicit empty/zero values, before compatibility
+probing. Standalone requests similarly reject key type/size, which that server
+handler otherwise ignores for KMS. Existing `not_before` guards remain in place.
+KMS is never an export mode. Standalone generation retains the returned reference
+through additive `PkiGeneratedKeyDetails`; authority responses retain their
+existing type because the tagged handlers do not return an external reference.
+Unexpected private-key response fields still use secret-aware storage and
+redacted diagnostics.
+
+Tests cover reference boundaries and injection strings, exact payload fields,
+each conflicting field individually, response parsing/redaction,
+all six method gates across the 25 active profiles and unselected compatibility,
+and rejection after an unauthenticated newer-server health probe. Positive SDK
+dispatch remains blocked, and must be tested during checkpoint 10 promotion.
+These tests are not a substitute for live provider/certificate evidence.
+
 ## Remaining Checkpoint 06
 
-1. Add validated KMS references and generation options without extending the
-   existing exhaustive enum or public struct shapes. Cover root/rotate,
-   intermediate and standalone key paths and conflicting/ignored inputs.
-2. Add PSS/signature and issuance algorithm options across affected role,
+1. Add PSS/signature and issuance algorithm options across affected role,
    issue/sign and authority methods, with additive response details where needed.
    Preserve merge-patch semantics and operator/template acknowledgement gates.
-3. Retain signed-image TLS evidence for ML-DSA certificate/CSR generation,
+2. Retain signed-image TLS evidence for ML-DSA certificate/CSR generation,
    issuance/signing, import/read response shapes, KMS grant denial and provider
    operations, RSA-PSS defaults/overrides, invalid trailing-dot names and
    unsupported ML-DSA OCSP behavior. Verify certificates cryptographically;
    HTTP success or a returned PEM string is not sufficient.
-4. Complete SDK positive dispatch and historical/mixed-profile checks during
+3. Complete SDK positive dispatch and historical/mixed-profile checks during
    checkpoint 10 promotion. No source-only or Python fixture result substitutes
    for those production API checks.

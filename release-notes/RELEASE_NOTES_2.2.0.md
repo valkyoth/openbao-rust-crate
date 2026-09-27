@@ -8,9 +8,14 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 06b adds six PKI KMS generation methods, validated
+  `PkiExternalKeyReference` and `PkiGeneratedKeyDetails`. Conflicting local key
+  settings fail before compatibility probing; all active and fallback profiles
+  reject KMS operations. Live PKI/provider verification remains outstanding.
+
 - Checkpoint 06a adds `PkiMldsaParameterSet`, `with_mldsa` request builders and
   old/fallback-profile rejection on all existing PKI generation/role paths.
-  [The PKI review](../docs/OPENBAO_2_7_0_PKI_REVIEW.md) records remaining KMS/PSS
+  [The PKI review](../docs/OPENBAO_2_7_0_PKI_REVIEW.md) records remaining PSS/issuance
   options and live evidence requirements. This is not completed 2.7 PKI support.
 
 - Follow-up checkpoint 05 hardening removes message-sized constant-time Base64

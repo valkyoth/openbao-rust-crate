@@ -1,7 +1,7 @@
 //! PKI secrets engine support.
 
 mod extensions;
-pub use extensions::PkiMldsaParameterSet;
+pub use extensions::{PkiExternalKeyReference, PkiGeneratedKeyDetails, PkiMldsaParameterSet};
 
 use core::fmt;
 use std::collections::BTreeMap;

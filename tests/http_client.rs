@@ -1847,9 +1847,95 @@ async fn assert_pki_mldsa_rejected(client: &Client<Authenticated>, expected: Ope
     ));
 }
 
+#[cfg(feature = "pki")]
+async fn assert_pki_kms_rejected(client: &Client<Authenticated>, expected: OpenBaoVersion) {
+    use openbao::secrets::pki::*;
+    fn rejected<T>(result: openbao::Result<T>, expected: OpenBaoVersion) {
+        assert!(matches!(result, Err(Error::UnsupportedOpenBaoRequestField {
+            endpoint: "pki.generation", field: "external_key_ref", version,
+        }) if version == expected));
+    }
+    fn invalid<T>(result: openbao::Result<T>) {
+        assert!(matches!(result, Err(Error::InvalidParameter(_))));
+    }
+    let pki = client
+        .pki("nested/pki")
+        .unwrap_or_else(|_| panic!("mount failed"));
+    let reference = PkiExternalKeyReference::new("provider", "signing-key")
+        .unwrap_or_else(|_| panic!("reference failed"));
+    let root = PkiGenerateRootRequest {
+        common_name: "Test CA".into(),
+        ..Default::default()
+    };
+    let csr = PkiGenerateIntermediateRequest {
+        common_name: "Test CA".into(),
+        ..Default::default()
+    };
+    rejected(pki.generate_root_kms(&reference, &root).await, expected);
+    rejected(
+        pki.generate_issuer_root_kms(&reference, &root).await,
+        expected,
+    );
+    rejected(pki.rotate_root_kms(&reference, &root).await, expected);
+    rejected(
+        pki.generate_intermediate_kms(&reference, &csr).await,
+        expected,
+    );
+    rejected(
+        pki.generate_issuer_intermediate_kms(&reference, &csr).await,
+        expected,
+    );
+    rejected(
+        pki.generate_key_kms(&reference, &PkiGenerateKeyRequest::default())
+            .await,
+        expected,
+    );
+    // Public legacy fields can be mutated after construction. Reject even explicit
+    // empty/zero values rather than silently letting the provider override them.
+    for index in 0..4 {
+        let mut root = root.clone();
+        let mut csr = csr.clone();
+        match index {
+            0 => {
+                root.key_type = Some(String::new());
+                csr.key_type = Some(String::new());
+            }
+            1 => {
+                root.key_bits = Some(0);
+                csr.key_bits = Some(0);
+            }
+            2 => {
+                root.key_ref = Some(String::new());
+                csr.key_ref = Some(String::new());
+            }
+            _ => {
+                root.private_key_format = Some(String::new());
+                csr.private_key_format = Some(String::new());
+            }
+        }
+        invalid(pki.generate_root_kms(&reference, &root).await);
+        invalid(pki.generate_issuer_root_kms(&reference, &root).await);
+        invalid(pki.rotate_root_kms(&reference, &root).await);
+        invalid(pki.generate_intermediate_kms(&reference, &csr).await);
+        invalid(pki.generate_issuer_intermediate_kms(&reference, &csr).await);
+    }
+    for key in [
+        PkiGenerateKeyRequest {
+            key_type: Some("rsa".into()),
+            ..Default::default()
+        },
+        PkiGenerateKeyRequest {
+            key_bits: Some(0),
+            ..Default::default()
+        },
+    ] {
+        invalid(pki.generate_key_kms(&reference, &key).await);
+    }
+}
+
 #[tokio::test]
 #[cfg(feature = "pki")]
-async fn pki_mldsa_rejects_every_active_and_unselected_profile_before_transport() {
+async fn pki_27_generation_rejects_every_active_and_unselected_profile_before_transport() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let address = listener
         .local_addr()
@@ -1875,12 +1961,13 @@ async fn pki_mldsa_rejects_every_active_and_unselected_profile_before_transport(
         let client = Client::from_config(config)
             .unwrap_or_else(|error| panic!("{error}"))
             .with_token(test_secret(&["fixture-", "client-token"]));
-        tokio::time::timeout(
-            Duration::from_secs(2),
-            assert_pki_mldsa_rejected(&client, selected.unwrap_or(OpenBaoVersion::new(2, 6, 3))),
-        )
+        tokio::time::timeout(Duration::from_secs(2), async {
+            let expected = selected.unwrap_or(OpenBaoVersion::new(2, 6, 3));
+            assert_pki_mldsa_rejected(&client, expected).await;
+            assert_pki_kms_rejected(&client, expected).await;
+        })
         .await
-        .unwrap_or_else(|_| panic!("PKI ML-DSA reached transport"));
+        .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));
     }
     assert!(
         matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
@@ -1889,7 +1976,7 @@ async fn pki_mldsa_rejects_every_active_and_unselected_profile_before_transport(
 
 #[tokio::test]
 #[cfg(feature = "pki")]
-async fn pki_mldsa_cannot_use_a_newer_server_fallback() {
+async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let address = listener
         .local_addr()
@@ -1917,12 +2004,12 @@ async fn pki_mldsa_cannot_use_a_newer_server_fallback() {
     let client = Client::from_config(config)
         .unwrap_or_else(|error| panic!("{error}"))
         .with_token(test_secret(&["fixture-", "client-token"]));
-    tokio::time::timeout(
-        Duration::from_secs(2),
-        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 6, 3)),
-    )
+    tokio::time::timeout(Duration::from_secs(2), async {
+        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
+        assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
+    })
     .await
-    .unwrap_or_else(|_| panic!("PKI ML-DSA reached transport"));
+    .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));
     let listener = server
         .join()
         .unwrap_or_else(|_| panic!("health fixture failed"));
