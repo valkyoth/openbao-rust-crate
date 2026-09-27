@@ -16,6 +16,9 @@ This release is being developed in pentestable commit checkpoints described in
   capture, a versioned documentation extractor and like-for-like 2.6.3 delta.
   See the [checkpoint 02 review](../docs/OPENBAO_2_7_0_REVIEW.md) for scope and
   discrepancies. This is not profile promotion or application integration.
+- Checkpoint 02 pentest hardening: controlled evidence-tool paths and
+  environments, verified-signature claim checks, aggregate documentation
+  expansion budgets and duplicate/conflict handling with regression tests.
 
 ## Required Before Release
 

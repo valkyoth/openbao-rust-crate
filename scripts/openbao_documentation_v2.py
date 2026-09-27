@@ -15,6 +15,7 @@ import openbao_api_snapshots as base
 SCHEMA = "openbao-tagged-api-documentation/v2"
 VERSION = 2
 MAX_SECTIONS = 8192
+MAX_TOTAL_FIELD_OCCURRENCES = 65_536
 HEADING = re.compile(r"^(#{1,6})\s+(.{1,512})$")
 TABLE_HEADER = re.compile(r"^\s*\|\s*Method\s*\|\s*Path(?:\s+-)?\s*\|", re.IGNORECASE)
 TABLE_ROW = re.compile(r"^\s*\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|")
@@ -62,7 +63,35 @@ def endpoints(lines: list[str]) -> list[tuple[str, str, str]]:
     return result
 
 
-def parse(source: str, text: str) -> list[dict[str, Any]]:
+@dataclass
+class ExpansionBudget:
+    operations: int = base.MAX_OPERATIONS
+    fields: int = MAX_TOTAL_FIELD_OCCURRENCES
+
+    def take(self, operations: int, fields: int) -> None:
+        if operations > self.operations or fields > self.fields:
+            raise base.SnapshotError("documentation expansion exceeds its total limit")
+        self.operations -= operations
+        self.fields -= fields
+
+
+def operation_identity(operation: dict[str, Any]) -> tuple[str, str, str, str]:
+    return tuple(operation[key] for key in ("method", "path", "source", "heading"))
+
+
+def canonical_operations(operations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    unique = {}
+    for operation in operations:
+        identity = operation_identity(operation)
+        if identity in unique and unique[identity] != operation:
+            raise base.SnapshotError("conflicting documentation operation identity")
+        unique[identity] = operation
+    return sorted(unique.values(), key=operation_identity)
+
+
+def parse(source: str, text: str, budget: ExpansionBudget | None = None) -> list[dict[str, Any]]:
+    if budget is None:
+        budget = ExpansionBudget()
     if len(text.encode("utf-8")) > base.MAX_DOC_FILE_BYTES:
         raise base.SnapshotError("documentation source exceeds its byte limit")
     root = Section(0, "document")
@@ -123,6 +152,7 @@ def parse(source: str, text: str) -> list[dict[str, Any]]:
         if not section.endpoints:
             continue
         fields = fields_for(section, "body")
+        budget.take(len(section.endpoints), len(fields) * len(section.endpoints))
         for method, path, style in section.endpoints:
             operations.append({
                 "method": method, "path": path, "path_style": style,
@@ -134,22 +164,31 @@ def parse(source: str, text: str) -> list[dict[str, Any]]:
 
 
 def extract(repository: Path, release: dict[str, Any]) -> dict[str, Any]:
-    document = base.extract_documentation(repository, release)
+    # Do not first expand the same input through the historical parser.
+    document = base.extract_documentation(repository, release, files_only=True)
     operations = []
+    budget = ExpansionBudget()
     for entry in document["files"]:
         data = base.git_output(repository, ["cat-file", "blob", entry["blob_sha1"]], entry["bytes"] + 1)
         if len(data) != entry["bytes"] or base.sha256(data) != entry["sha256"]:
             raise base.SnapshotError("documentation source identity changed")
-        operations.extend(parse(entry["path"], data.decode("utf-8")))
+        operations.extend(parse(entry["path"], data.decode("utf-8"), budget))
         if len(operations) > base.MAX_OPERATIONS:
             raise base.SnapshotError("documentation operation count exceeds its limit")
     document.update(schema=SCHEMA, generator_version=VERSION)
-    document["operations"] = sorted(operations, key=lambda op: (op["method"], op["path"], op["source"], op["heading"]))
+    document["operations"] = canonical_operations(operations)
     validate(document, release)
     return document
 
 
 def validate(document: dict[str, Any], release: dict[str, Any]) -> None:
+    budget = ExpansionBudget()
+    identities = []
+    for operation in document["operations"]:
+        budget.take(1, len(operation["fields"]))
+        identities.append(operation_identity(operation))
+    if identities != sorted(set(identities)):
+        raise base.SnapshotError("documentation operations are duplicated or unordered")
     base.validate_documentation_snapshot(
         document, base.canonical_json(document), release["version"],
         release["source"]["peeled_commit_sha1"], release["documentation"]["source_path"],

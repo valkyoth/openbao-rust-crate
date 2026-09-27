@@ -30,6 +30,7 @@ python3 -B scripts/openbao_2_7_source_inventory.py --self-test
 echo "checks: staged OpenBao 2.7.0 API evidence"
 python3 -B scripts/openbao_2_7_api.py --verify
 python3 -B scripts/openbao_2_7_api.py --self-test
+python3 -B scripts/test_openbao_evidence.py
 
 echo "checks: historical OpenBao 2.6.0 onboarding evidence"
 python3 scripts/openbao_onboarding_api.py --verify

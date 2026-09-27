@@ -17,7 +17,7 @@ import openbao_2_7_source_inventory as inventory
 ROOT = Path(__file__).resolve().parents[1]
 STAGED = ROOT / "compat/onboarding/2.7.0"
 LOCK = STAGED / "api-evidence.lock.json"
-EXPECTED_LOCK_SHA256 = "c7d7b818d63480fd352647f9c0079bfcd31f01ac903420b218ab57103a562034"
+EXPECTED_LOCK_SHA256 = "f0735addf3d20d4aeaca36f7c3a0a4cbbcd0874770381a8cb6cf6b6d6bb50cf8"
 INDEX = "sha256:71156a1c6623a5fa3f5e61b0c6a8ead0faf0df29a778339188443551995d1315"
 AMD64 = "sha256:6d575d906d70d40b9d789149c8dc09897291c5a1707d4d0ba8a459eaaa94c8c4"
 ATTESTATION = "sha256:13771c09cd2f98950d1bfe21ce198d039cd41b071cc626e59f345b0c1f499897"
@@ -86,10 +86,23 @@ def release_evidence() -> dict[str, Any]:
 
 def verify_image_signature() -> None:
     # No ignore-tlog, insecure-registry, or certificate-check bypass is permitted.
-    base.run_bounded([
+    _, output = base.run_bounded([
         "cosign", "verify", "--certificate-identity", IDENTITY,
         "--certificate-oidc-issuer", ISSUER, f"docker.io/openbao/openbao@{INDEX}",
     ], 1024 * 1024, timeout=180)
+    validate_signature_output(output)
+
+
+def validate_signature_output(output: bytes) -> None:
+    signatures = base.parse_json(b'{"signatures":' + output + b'}', 1024 * 1024 + 32)["signatures"]
+    if not isinstance(signatures, list) or not signatures or len(signatures) > 32:
+        raise base.SnapshotError("Cosign did not return bounded verified signatures")
+    for signature in signatures:
+        if not isinstance(signature, dict) or not isinstance(signature.get("critical"), dict):
+            raise base.SnapshotError("Cosign signature claims are malformed")
+        critical = signature["critical"]
+        if critical.get("image") != {"docker-manifest-digest": INDEX} or critical.get("type") != "https://sigstore.dev/cosign/sign/v1":
+            raise base.SnapshotError("Cosign verified a different image or claim type")
 
 
 def fetch_manifest(digest: str) -> bytes:

@@ -14,6 +14,9 @@ All notable changes to this project are documented here.
   Add documentation extractor v2 for comma-separated methods and nested
   operations, retaining historical snapshots and rebaselining only staging
   evidence. External-plugin and behavior coverage remain separate work.
+- Harden evidence acquisition against inherited PATH/configuration overrides;
+  bound aggregate documentation expansion and reject conflicting records.
+  Correct duplicate ACME records in staged documentation only.
 
 ## 2.1.9 - 2026-09-27
 

@@ -87,6 +87,11 @@ The source has moved under `internal/`, and plugin distribution identity is
 now a separate compatibility input. These are fixture/evidence changes, not
 reasons to weaken production dispatch or erase historical engine APIs.
 
+Checkpoint 02's pentest follow-up hardens acquisition tool execution, adds
+aggregate documentation expansion limits, and canonicalizes duplicate ACME
+records while rejecting conflicts. The staged documentation and its lock were
+corrected; active historical evidence and runtime captures were not rewritten.
+
 The immutable checkpoint 01 source inventory intentionally asserts no endpoint
 coverage count. Checkpoint 02 separately locks signed-image evidence, v2
 documentation, built-in-only runtime OpenAPI and an adjacent diff. External

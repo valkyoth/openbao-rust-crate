@@ -21,6 +21,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path, PurePosixPath
 from typing import Any
+import evidence_tools
 
 from validate_openbao_release_lock import (
     EXPECTED_LOCK_SHA256,
@@ -437,6 +438,17 @@ def run_bounded(
     environment: dict[str, str] | None = None,
     accepted_codes: tuple[int, ...] = (0,),
 ) -> tuple[int, bytes]:
+    try:
+        with evidence_tools.invocation(command, environment) as (trusted, safe):
+            return _run_bounded(trusted, maximum, timeout=timeout, environment=safe, accepted_codes=accepted_codes)
+    except ValueError as error:
+        raise SnapshotError(str(error)) from error
+
+
+def _run_bounded(
+    command: list[str], maximum: int, *, timeout: float,
+    environment: dict[str, str], accepted_codes: tuple[int, ...],
+) -> tuple[int, bytes]:
     process = subprocess.Popen(
         command,
         stdin=subprocess.DEVNULL,
@@ -486,6 +498,14 @@ def run_bounded(
 
 
 def run_quiet(command: list[str], *, timeout: float, environment: dict[str, str] | None = None) -> None:
+    try:
+        with evidence_tools.invocation(command, environment) as (trusted, safe):
+            _run_quiet(trusted, timeout=timeout, environment=safe)
+    except ValueError as error:
+        raise SnapshotError(str(error)) from error
+
+
+def _run_quiet(command: list[str], *, timeout: float, environment: dict[str, str]) -> None:
     try:
         result = subprocess.run(
             command,
@@ -598,7 +618,7 @@ def parse_doc_block(source: str, block: list[str]) -> list[dict[str, Any]]:
     return operations
 
 
-def extract_documentation(repository: Path, release: dict[str, Any]) -> dict[str, Any]:
+def extract_documentation(repository: Path, release: dict[str, Any], *, files_only: bool = False) -> dict[str, Any]:
     version = release["version"]
     commit = release["source"]["peeled_commit_sha1"]
     documentation_source = release.get("documentation")
@@ -646,7 +666,7 @@ def extract_documentation(repository: Path, release: dict[str, Any]) -> dict[str
             text = blob.decode("utf-8")
         except UnicodeDecodeError as error:
             raise SnapshotError("tagged documentation is not valid UTF-8") from error
-        lines = text.splitlines()
+        lines = [] if files_only else text.splitlines()
         block: list[str] = []
         for line in lines:
             if line.startswith("## "):
@@ -754,7 +774,7 @@ def deterministic_byte_mutations(seed: bytes, limit: int = 512) -> list[bytes]:
 
 
 def podman_environment(token: str) -> dict[str, str]:
-    environment = os.environ.copy()
+    environment = {}
     environment.update(
         {
             "BAO_ADDR": "http://127.0.0.1:8200",
@@ -762,7 +782,6 @@ def podman_environment(token: str) -> dict[str, str]:
             "BAO_DEV_ROOT_TOKEN_ID": token,
             "BAO_DISABLE_MLOCK": "true",
             "BAO_TOKEN": token,
-            "HOME": "/tmp",
         }
     )
     return environment
@@ -779,7 +798,7 @@ def bao_command(container: str, token: str, arguments: list[str], maximum: int =
             "--env",
             "BAO_TOKEN",
             "--env",
-            "HOME",
+            "HOME=/tmp",
             container,
             "bao",
             *arguments,

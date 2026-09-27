@@ -26,6 +26,23 @@ profiles through 2.6.3 and all historical snapshots remain unchanged.
 
 Fresh online verification: `python3 -B scripts/openbao_2_7_api.py --verify-image`.
 
+Evidence acquisition executes only the system-installed `/usr/bin/cosign`,
+`git`, `skopeo` and `podman`, checking root ownership and non-writable parents
+and resolved targets. It does not search the caller's PATH. Each invocation
+gets a private temporary home/config/cache and an allowlisted environment;
+remote-container, proxy, custom trust-root, dynamic-loader and Git environment
+overrides are not inherited. Cosign must return verified claims for the exact
+index, not merely exit successfully. Install the tools through trusted host
+administration; user-local installations are intentionally not accepted.
+
+This trusts the host OS, system tool packages, system configuration and Python
+runtime. It is not a hermetic, binary-digest-pinned builder and does not defend
+against a compromised root account or a process able to modify the verifier
+itself. Root-owned files remapped to another UID by a sandbox fail closed;
+run acquisition on the actual trusted host. Offline artifact checks need no
+installed acquisition tools. Rootless capture is not established by these
+checks; the verified capture used rootful Podman as described below.
+
 ## Capture Scope
 
 The digest-pinned image reported exactly 2.7.0. Runtime OpenAPI was captured
@@ -53,9 +70,18 @@ It keeps each operation's fields out of sibling operations, rejects malformed
 or duplicate methods, and bounds source bytes, sections, operations and fields.
 The v1 extractor and its historical output are preserved.
 
+An aggregate budget permits at most 65,536 emitted field occurrences and 4,096
+operations across the entire extraction, checked before deep copying. Snapshot
+validation independently enforces the budget before serialization. Exact
+duplicate records are canonicalized; conflicting records with the same method,
+path, source and heading are rejected. The checkpoint 02 pentest corrections
+remove two duplicate ACME rows from each staged document; historical active
+snapshots and the raw runtime capture are unchanged.
+
 The predecessor is re-extracted with v2 from the exact 2.6.3 source, with its
 file identities checked against the immutable v1 snapshot. V2 finds 695
-documented operations there and 713 in 2.7.0. All historical v1 route identities
+records before deduplication, or 693 canonical records, and 711 canonical
+records in 2.7.0. All historical v1 route identities
 must remain present. The six recovered predecessor identities are:
 
 - `GET /sys/internal/inspect/request/root`
@@ -104,6 +130,7 @@ python3 -B scripts/openbao_2_7_source_inventory.py --verify
 python3 -B scripts/openbao_2_7_api.py --verify
 python3 -B scripts/openbao_2_7_api.py --self-test
 python3 -B scripts/openbao_documentation_v2.py
+python3 -B scripts/test_openbao_evidence.py
 ```
 
 Tests cover method expansion, sibling-field isolation, code fences, the
@@ -112,3 +139,7 @@ artifact tampering, provenance bindings, missing mounts, diff reconstruction,
 lost historical routes, and rejection of implicit all-engine promotion. Shared
 snapshot tests retain regular-file/no-follow/nonblocking reads, JSON bounds,
 container limits and historical artifact verification.
+Additional regressions exercise poisoned PATH/environment handling through
+both process launchers, unsafe tool paths, empty/wrong Cosign claims, aggregate
+field expansion before copying/serialization, shared cross-file budgets and
+duplicate/conflicting operation identities.
