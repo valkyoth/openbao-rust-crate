@@ -42,10 +42,15 @@ and reviewed discrepancies. That evidence was promoted into the then-current
 inventory now contains 25 profiles.
 
 OpenBao 2.7.0 is staged separately in `onboarding/2.7.0/`. Its first checkpoint
-contains only a hash-locked tagged-source file inventory, not a signed-image
-record, runtime OpenAPI, or promoted capability profile. Verify it with
+contains only a hash-locked tagged-source file inventory. Checkpoint 02 adds
+signed-image/provenance evidence and built-in-only runtime OpenAPI under a
+separate API evidence lock, without promoting a capability profile. Verify
+the source checkpoint with
 `python3 -B scripts/openbao_2_7_source_inventory.py --verify` and `--self-test`.
 The [2.7.0 plan](../docs/OPENBAO_2_7_0_PLAN.md) tracks the remaining work.
+Run `python3 -B scripts/openbao_2_7_api.py --verify` and `--self-test` for the
+API evidence checkpoint. Its [review](../docs/OPENBAO_2_7_0_REVIEW.md) records
+the removed-engine exclusions, extraction corrections and security boundaries.
 
 OpenBao's OCI indexes and `linux/amd64` manifests were verified with Cosign
 `3.1.1`, built from module tag `v3.1.1` at peeled source commit

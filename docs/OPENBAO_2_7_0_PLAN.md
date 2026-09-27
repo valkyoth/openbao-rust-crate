@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoint 01 implemented; remaining checkpoints are required before
+Status: checkpoints 01 and 02 implemented; remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
 
@@ -22,9 +22,10 @@ Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
 
 The existing documentation extractor accepts slash-separated HTTP methods but
 not the comma-separated method cells used by external-key config/key writes.
-Those APIs also group multiple operations under a level-two heading. Do not use
-the old parser to claim complete endpoint or request-field coverage. Checkpoint
-02 must handle these layouts without regenerating historical evidence.
+Those APIs also group multiple operations under a level-two heading. Checkpoint
+02 adds a separately versioned extractor and rebaselines 2.6.3 in the staging
+directory without regenerating historical evidence. Its capture scope and
+discrepancies are in [OPENBAO_2_7_0_REVIEW.md](OPENBAO_2_7_0_REVIEW.md).
 
 ## Commit Checkpoints
 
@@ -86,6 +87,9 @@ The source has moved under `internal/`, and plugin distribution identity is
 now a separate compatibility input. These are fixture/evidence changes, not
 reasons to weaken production dispatch or erase historical engine APIs.
 
-Source inventory verification intentionally asserts no endpoint coverage count.
-Image identities, runtime evidence and exact field dispositions are pending
-checkpoint 02. There is no claim of usable 2.7.0 support at checkpoint 01.
+The immutable checkpoint 01 source inventory intentionally asserts no endpoint
+coverage count. Checkpoint 02 separately locks signed-image evidence, v2
+documentation, built-in-only runtime OpenAPI and an adjacent diff. External
+plugin capture is pending checkpoint 03; request-field rules, typed APIs,
+behavior tests and profile promotion remain pending later checkpoints. Neither
+source inventory nor staged API evidence claims usable SDK 2.7.0 support.

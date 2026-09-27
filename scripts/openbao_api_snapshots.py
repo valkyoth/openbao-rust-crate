@@ -830,12 +830,26 @@ def verify_container_resource_limits(container: str) -> None:
     validate_container_resource_config(parse_json(output, 64 * 1024))
 
 
+def capture_mount_catalog(version: str, builtin_only_2_7: bool = False) -> tuple[tuple, tuple]:
+    """Keep the staged 2.7 built-in-only capture separate from historical catalogs."""
+    if not builtin_only_2_7:
+        return SECRET_MOUNTS, AUTH_MOUNTS
+    if version != "2.7.0":
+        raise SnapshotError("built-in-only capture is reviewed only for OpenBao 2.7.0")
+    return (
+        tuple(mount for mount in SECRET_MOUNTS if mount[1] != "ldap"),
+        tuple(mount for mount in AUTH_MOUNTS if mount[1] not in {"ldap", "kerberos", "radius"}),
+    )
+
+
 def capture_openapi(
     release: dict[str, Any],
     *,
     legacy_annotation_collisions: bool = False,
+    builtin_only_2_7: bool = False,
 ) -> dict[str, Any]:
     version = release["version"]
+    secret_mounts, auth_mounts = capture_mount_catalog(version, builtin_only_2_7)
     index_digest = release["image"]["index_digest"]
     amd64_digest = release["image"]["linux_amd64_digest"]
     image = f"docker.io/openbao/openbao@{index_digest}"
@@ -932,14 +946,14 @@ def capture_openapi(
 
         bao_command(container, token, ["secrets", "disable", "secret"])
         mounts: list[dict[str, str]] = []
-        for path, plugin_type, options in SECRET_MOUNTS:
+        for path, plugin_type, options in secret_mounts:
             bao_command(
                 container,
                 token,
                 ["secrets", "enable", f"-path={path}", *options, plugin_type],
             )
             mounts.append({"kind": "secret", "path": path, "type": plugin_type})
-        for path, plugin_type in AUTH_MOUNTS:
+        for path, plugin_type in auth_mounts:
             bao_command(container, token, ["auth", "enable", f"-path={path}", plugin_type])
             mounts.append({"kind": "auth", "path": path, "type": plugin_type})
 
@@ -1445,6 +1459,9 @@ def validate_documentation_snapshot(
     version: str,
     source_commit: str,
     expected_source_path: str,
+    *,
+    expected_schema: str = "openbao-tagged-api-documentation/v1",
+    expected_generator_version: int = GENERATOR_VERSION,
 ) -> None:
     require_keys(
         document,
@@ -1460,8 +1477,8 @@ def validate_documentation_snapshot(
         "documentation snapshot",
     )
     if (
-        document["schema"] != "openbao-tagged-api-documentation/v1"
-        or document["generator_version"] != GENERATOR_VERSION
+        document["schema"] != expected_schema
+        or document["generator_version"] != expected_generator_version
         or document["version"] != version
         or document["source_commit_sha1"] != source_commit
         or document["source_path"] != expected_source_path
@@ -1541,6 +1558,7 @@ def validate_openapi_snapshot(
     record: dict[str, Any],
     *,
     expected_schema: str = "openbao-normalized-openapi/v1",
+    builtin_only_2_7: bool = False,
 ) -> None:
     require_keys(
         document,
@@ -1560,12 +1578,13 @@ def validate_openapi_snapshot(
     )
     if canonical_json(document) != data:
         raise SnapshotError("OpenAPI snapshot is not canonical JSON")
+    secret_mounts, auth_mounts = capture_mount_catalog(record["version"], builtin_only_2_7)
     expected_mounts = [
         {"kind": "secret", "path": path, "type": plugin_type}
-        for path, plugin_type, _ in SECRET_MOUNTS
+        for path, plugin_type, _ in secret_mounts
     ] + [
         {"kind": "auth", "path": path, "type": plugin_type}
-        for path, plugin_type in AUTH_MOUNTS
+        for path, plugin_type in auth_mounts
     ]
     if document["mounts"] != expected_mounts:
         raise SnapshotError("OpenAPI snapshot mount catalog changed")

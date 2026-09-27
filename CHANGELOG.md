@@ -10,6 +10,10 @@ All notable changes to this project are documented here.
   and a ten-checkpoint implementation and security verification plan.
 - Keep all 25 active profiles through OpenBao 2.6.3 unchanged. OpenBao 2.7.0
   remains non-routable until its API, plugin and live-test work is complete.
+- Lock staged 2.7.0 image/provenance and built-in-only runtime API evidence.
+  Add documentation extractor v2 for comma-separated methods and nested
+  operations, retaining historical snapshots and rebaselining only staging
+  evidence. External-plugin and behavior coverage remain separate work.
 
 ## 2.1.9 - 2026-09-27
 
