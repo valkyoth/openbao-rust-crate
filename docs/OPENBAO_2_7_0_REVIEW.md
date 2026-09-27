@@ -24,7 +24,7 @@ profiles through 2.6.3 and all historical snapshots remain unchanged.
   hashes and sizes. Offline checks verify unchanged evidence and bindings;
   they do not perform a fresh Sigstore trust verification.
 
-Fresh online verification: `python3 -B scripts/openbao_2_7_api.py --verify-image`.
+Fresh online verification: `/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --verify-image`.
 
 Evidence acquisition executes only the system-installed `/usr/bin/cosign`,
 `git`, `skopeo` and `podman`, checking root ownership and non-writable parents
@@ -34,6 +34,20 @@ remote-container, proxy, custom trust-root, dynamic-loader and Git environment
 overrides are not inherited. Cosign must return verified claims for the exact
 index, not merely exit successfully. Install the tools through trusted host
 administration; user-local installations are intentionally not accepted.
+
+Run evidence Python scripts with `/usr/bin/python3 -E -s -S -B`, as shown
+below and enforced in checks, release gates and compatibility CI. These flags
+ignore Python environment overrides and disable user-site and automatic site
+initialization before imports execute. Executable script shebangs use the
+equivalent `-EsSB`. Plain `python3 -B` is not a trusted verification entry point:
+it honors `PYTHONPATH` and startup customization. The repository's own scripts
+directory remains importable and must be trusted. The host must provision a
+trusted system interpreter and standard library; these flags do not protect
+against a compromised interpreter, OS loader, root account or repository.
+The historical integration harness retains its hash-bound source bytes but is
+no longer executable directly. Run it through `scripts/openbao_integration.sh`
+or the explicit isolated interpreter command; historical evidence is not
+rewritten just to replace its old shebang.
 
 This trusts the host OS, system tool packages, system configuration and Python
 runtime. It is not a hermetic, binary-digest-pinned builder and does not defend
@@ -126,11 +140,11 @@ inputs or substitutes for the tagged documentation and runtime capture.
 ## Offline Checks
 
 ```sh
-python3 -B scripts/openbao_2_7_source_inventory.py --verify
-python3 -B scripts/openbao_2_7_api.py --verify
-python3 -B scripts/openbao_2_7_api.py --self-test
-python3 -B scripts/openbao_documentation_v2.py
-python3 -B scripts/test_openbao_evidence.py
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_source_inventory.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_documentation_v2.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_evidence.py
 ```
 
 Tests cover method expansion, sibling-field isolation, code fences, the
@@ -143,3 +157,7 @@ Additional regressions exercise poisoned PATH/environment handling through
 both process launchers, unsafe tool paths, empty/wrong Cosign claims, aggregate
 field expansion before copying/serialization, shared cross-file budgets and
 duplicate/conflicting operation identities.
+Subprocess tests reproduce a false-green result with hostile `copy.py` and
+`sitecustomize.py`, then prove the production isolated command verifies the
+actual evidence without loading those modules. Entry-point checks prevent
+dropping isolation flags from shell/CI commands or executable Python shebangs.

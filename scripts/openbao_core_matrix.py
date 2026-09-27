@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Generate and verify exact-release OpenBao core-flow evidence."""
 
 from __future__ import annotations

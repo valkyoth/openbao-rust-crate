@@ -19,6 +19,8 @@ This release is being developed in pentestable commit checkpoints described in
 - Checkpoint 02 pentest hardening: controlled evidence-tool paths and
   environments, verified-signature claim checks, aggregate documentation
   expansion budgets and duplicate/conflict handling with regression tests.
+- Isolated system-Python invocation prevents caller-provided import paths and
+  startup customization from bypassing evidence verification.
 
 ## Required Before Release
 

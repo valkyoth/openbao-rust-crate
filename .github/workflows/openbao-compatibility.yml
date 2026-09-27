@@ -34,14 +34,14 @@ jobs:
           persist-credentials: false
 
       - name: Validate compatibility controller
-        run: python3 -B scripts/openbao_ci_matrix.py self-test
+        run: /usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py self-test
 
       - name: Select matrix from immutable inventory
         id: plan
         env:
           OPENBAO_EVENT_NAME: ${{ github.event_name }}
         run: >-
-          python3 -B scripts/openbao_ci_matrix.py plan
+          /usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py plan
           --event "$OPENBAO_EVENT_NAME"
           --github-output "$GITHUB_OUTPUT"
 
@@ -67,7 +67,7 @@ jobs:
         run: |
           podman --version
           openssl version
-          python3 --version
+          /usr/bin/python3 -E -s -S -B --version
 
       - name: Install primary Rust toolchain
         run: |
@@ -79,7 +79,7 @@ jobs:
         env:
           OPENBAO_MATRIX_VERSION: ${{ matrix.version }}
         run: >-
-          python3 -B scripts/openbao_ci_matrix.py run
+          /usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py run
           --version "$OPENBAO_MATRIX_VERSION"
 
       - name: Upload sanitized release result
@@ -127,7 +127,7 @@ jobs:
           OPENBAO_MATRIX_JOB_RESULT: ${{ needs.compatibility.result }}
           OPENBAO_DOWNLOAD_RESULT: ${{ steps.download.outcome }}
         run: >-
-          python3 -B scripts/openbao_ci_matrix.py aggregate
+          /usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py aggregate
           --profile "$OPENBAO_MATRIX_PROFILE"
           --matrix-job-result "$OPENBAO_MATRIX_JOB_RESULT"
           --download-result "$OPENBAO_DOWNLOAD_RESULT"

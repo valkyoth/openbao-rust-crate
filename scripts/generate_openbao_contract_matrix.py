@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Capture, generate, and verify the exact OpenBao 2.5.5 contract backlog."""
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ EXPECTED_EVIDENCE_SHA256 = "1813d10fb9fdc0df7231035d391d5af288f0ba443ed105cb3816
 EXPECTED_OUTPUT_SHA256 = {
     "docs/openbao-2.5-contract-matrix.json": "853a10e33946a5a9e994dd2e8b854137fef842244ead915b25f2d1fbd16925d4",
     "docs/openbao-2.5-endpoint-matrix.csv": "48048cf05cb11664373e0fea05782daab78bb8ec66f6ab931149272eba2bdfa2",
-    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "3de2755e378dc1a0176d5db96481b695457f188b985962e6fe5c7d008da42fa6",
+    "docs/OPENBAO_2_5_ENDPOINT_MATRIX.md": "ba59f3f0905a78f7877148251aa1e6896cfcd57a5278536543b00fcdd88eb2ea",
 }
 MAX_INPUT_BYTES = 16 * 1024 * 1024
 MAX_OUTPUT_BYTES = 32 * 1024 * 1024
@@ -1113,8 +1113,8 @@ def markdown_bytes(matrix: dict[str, Any]) -> bytes:
             "## Verification",
             "",
             "```sh",
-            "python3 scripts/generate_openbao_contract_matrix.py --verify",
-            "python3 scripts/generate_openbao_contract_matrix.py --self-test",
+            "/usr/bin/python3 -E -s -S -B scripts/generate_openbao_contract_matrix.py --verify",
+            "/usr/bin/python3 -E -s -S -B scripts/generate_openbao_contract_matrix.py --self-test",
             "```",
             "",
         ]

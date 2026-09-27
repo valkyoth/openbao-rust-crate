@@ -57,8 +57,8 @@ cargo test --locked --all-features --test tracing_secrets
 cargo test --locked --all-features --test http_client transit_
 cargo clippy --locked --no-default-features --features rustls-tls -- -D warnings
 scripts/checks.sh
-python3 -B scripts/openbao_core_matrix.py --verify
-python3 -B scripts/generate_openbao_version_contracts.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_core_matrix.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_version_contracts.py --verify
 scripts/generate-sbom.sh
 
 echo "release 2.1.8 gate complete"

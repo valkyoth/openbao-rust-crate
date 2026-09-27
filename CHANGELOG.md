@@ -17,6 +17,8 @@ All notable changes to this project are documented here.
 - Harden evidence acquisition against inherited PATH/configuration overrides;
   bound aggregate documentation expansion and reject conflicting records.
   Correct duplicate ACME records in staged documentation only.
+- Isolate evidence Python startup from environment and site-package overrides
+  in checks, release gates, compatibility CI and documented commands.
 
 ## 2.1.9 - 2026-09-27
 

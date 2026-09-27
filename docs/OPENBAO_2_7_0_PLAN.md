@@ -14,10 +14,10 @@ Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
 - `compat/onboarding/2.7.0/source-inventory.json` locks all 122 API source
   files and the 14 added/modified files relative to the locked 2.6.3 snapshot.
   This is source evidence only, not image-signature or runtime evidence.
-- Reproduce with `python3 -B scripts/openbao_2_7_source_inventory.py --write
+- Reproduce with `/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_source_inventory.py --write
   --source-repository /path/to/openbao`; the repository must contain the exact
   official tag. The generator refuses output differing from its reviewed hash.
-- Offline verification: `python3 -B scripts/openbao_2_7_source_inventory.py
+- Offline verification: `/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_source_inventory.py
   --verify` and the corresponding `--self-test`.
 
 The existing documentation extractor accepts slash-separated HTTP methods but

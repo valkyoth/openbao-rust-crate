@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Generate and verify preserved OpenBao 2.6.0 onboarding API evidence."""
 
 from __future__ import annotations

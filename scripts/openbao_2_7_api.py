@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Generate and verify staged 2.7.0 API evidence without promoting runtime support."""
 
 from __future__ import annotations

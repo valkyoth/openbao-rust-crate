@@ -58,6 +58,6 @@ remains authoritative for inventory identity.
 ## Verification
 
 ```sh
-python3 scripts/generate_openbao_contract_matrix.py --verify
-python3 scripts/generate_openbao_contract_matrix.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_contract_matrix.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_contract_matrix.py --self-test
 ```

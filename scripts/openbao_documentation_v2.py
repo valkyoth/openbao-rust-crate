@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Staged, section-aware documentation extractor; historical v1 evidence is immutable."""
 
 from __future__ import annotations

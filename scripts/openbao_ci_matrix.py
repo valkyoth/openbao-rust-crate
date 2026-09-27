@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Plan, execute, and aggregate the version-locked OpenBao CI matrix."""
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ ARTIFACT_ROOT = ROOT / "ci-artifacts"
 RUN_REPORT_PATH = ARTIFACT_ROOT / "openbao-result.json"
 DOWNLOAD_ROOT = ARTIFACT_ROOT / "downloaded"
 AGGREGATE_REPORT_PATH = ARTIFACT_ROOT / "openbao-compatibility-report.json"
-EXPECTED_WORKFLOW_SHA256 = "058365b81b54e8f9a6acbb911b57c7c85bc6f2867984ced4259ca2860caa2c48"
+EXPECTED_WORKFLOW_SHA256 = "19054b68efbd67e7beb6a10d411108b6dc851ea8fbedf7c2e766584764b887be"
 MAX_REPORT_BYTES = 128 * 1024
 MAX_WORKFLOW_BYTES = 128 * 1024
 MAX_ARTIFACT_DIRECTORIES = 64
@@ -697,9 +697,9 @@ def validate_workflow() -> None:
     required = (
         b"permissions:\n  contents: read",
         b"persist-credentials: false",
-        b"python3 -B scripts/openbao_ci_matrix.py plan",
-        b"python3 -B scripts/openbao_ci_matrix.py run",
-        b"python3 -B scripts/openbao_ci_matrix.py aggregate",
+        b"/usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py plan",
+        b"/usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py run",
+        b"/usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py aggregate",
         b"retention-days: 14",
         b"id: download\n        continue-on-error: true",
     )

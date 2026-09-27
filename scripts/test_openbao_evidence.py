@@ -1,10 +1,12 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Regression tests for evidence tool isolation and documentation expansion."""
 
 import copy
 import json
 import os
 import stat
+import shlex
+import subprocess
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
@@ -21,6 +23,59 @@ SAMPLE = "## Write\n| Method | Path |\n| --- | --- |\n| POST | `/x` |\n- `x` `(s
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_python_startup_ignores_injected_modules(self):
+        root = Path(__file__).resolve().parents[1]
+        checks = (root / "scripts/checks.sh").read_text()
+        command = next(line for line in checks.splitlines()
+                       if line.endswith("scripts/openbao_2_7_api.py --verify"))
+        arguments = shlex.split(command)
+        self.assertEqual(arguments[:5], ["/usr/bin/python3", "-E", "-s", "-S", "-B"])
+        with tempfile.TemporaryDirectory() as directory:
+            poison = Path(directory)
+            (poison / "copy.py").write_text('print("IMPORT_POISON_EXECUTED")\nraise SystemExit(0)\n')
+            (poison / "sitecustomize.py").write_text('print("SITE_POISON_EXECUTED")\n')
+            (poison / "usercustomize.py").write_text('print("USER_SITE_POISON_EXECUTED")\n')
+            (poison / "python3").symlink_to("/usr/bin/true")
+            environment = {**os.environ, "PYTHONPATH": directory, "PYTHONUSERBASE": directory, "PATH": directory}
+            # Confirm the fixture reproduces a false-green verification without isolation.
+            control = subprocess.run(["/usr/bin/python3", "-B", *arguments[5:]], cwd=root,
+                                     env=environment, capture_output=True, timeout=30, check=False)
+            self.assertEqual(control.returncode, 0)
+            self.assertIn(b"IMPORT_POISON_EXECUTED", control.stdout)
+            self.assertIn(b"SITE_POISON_EXECUTED", control.stdout)
+            environment["PYTHONHOME"] = str(poison / "invalid-python-home")
+            verified = subprocess.run(arguments, cwd=root, env=environment,
+                                      capture_output=True, timeout=30, check=False)
+            self.assertEqual(verified.returncode, 0, verified.stderr)
+            self.assertIn(b"staged API evidence: ok", verified.stdout)
+            self.assertNotIn(b"POISON_EXECUTED", verified.stdout + verified.stderr)
+            probe = subprocess.run([*arguments[:5], "-c", "import sys; print(sys.flags.ignore_environment, sys.flags.no_user_site, sys.flags.no_site, sys.flags.dont_write_bytecode)"],
+                                   env=environment, capture_output=True, timeout=10, check=False)
+            self.assertEqual(probe.returncode, 0, probe.stderr)
+            self.assertEqual(probe.stdout.strip(), b"1 1 1 1")
+            direct = subprocess.run([str(root / "scripts/openbao_api_snapshots.py"), "--help"],
+                                    cwd=root, env=environment, capture_output=True, timeout=30, check=False)
+            self.assertEqual(direct.returncode, 0, direct.stderr)
+            self.assertIn(b"Generate and verify immutable", direct.stdout)
+            self.assertNotIn(b"POISON_EXECUTED", direct.stdout + direct.stderr)
+
+    def test_evidence_entry_points_use_isolated_python(self):
+        root = Path(__file__).resolve().parents[1]
+        files = list((root / "scripts").glob("*.sh")) + list((root / ".github/workflows").glob("*.yml"))
+        for path in files:
+            for line in path.read_text().splitlines():
+                if "python3" in line and "scripts/" in line:
+                    self.assertIn("/usr/bin/python3 -E -s -S -B ", line, str(path))
+        for path in (root / "scripts").glob("*.py"):
+            first = path.read_text().splitlines()[0]
+            if path.name == "openbao_test_harness.py":
+                # Historical live evidence hashes these exact bytes. Its old
+                # shebang must not remain an executable verification entry point.
+                self.assertEqual(path.stat().st_mode & 0o111, 0)
+                continue
+            if first.startswith("#!"):
+                self.assertEqual(first, "#!/usr/bin/python3 -EsSB", str(path))
+
     def test_environment_and_path_are_not_inherited(self):
         poisoned = {"PATH": "/tmp/evil", "CONTAINER_HOST": "ssh://evil", "LD_PRELOAD": "evil",
                     "GIT_CONFIG_COUNT": "1", "SSL_CERT_FILE": "/tmp/evil", "HOME": "/tmp/evil"}

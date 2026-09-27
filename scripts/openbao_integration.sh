@@ -16,4 +16,4 @@ case "$#" in
     ;;
 esac
 
-exec python3 "$ROOT_DIR/scripts/openbao_test_harness.py" --version "$version"
+exec /usr/bin/python3 -E -s -S -B "$ROOT_DIR/scripts/openbao_test_harness.py" --version "$version"

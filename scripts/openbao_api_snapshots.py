@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Generate and verify immutable OpenBao API evidence snapshots."""
 
 from __future__ import annotations

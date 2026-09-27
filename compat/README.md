@@ -46,9 +46,9 @@ contains only a hash-locked tagged-source file inventory. Checkpoint 02 adds
 signed-image/provenance evidence and built-in-only runtime OpenAPI under a
 separate API evidence lock, without promoting a capability profile. Verify
 the source checkpoint with
-`python3 -B scripts/openbao_2_7_source_inventory.py --verify` and `--self-test`.
+`/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_source_inventory.py --verify` and `--self-test`.
 The [2.7.0 plan](../docs/OPENBAO_2_7_0_PLAN.md) tracks the remaining work.
-Run `python3 -B scripts/openbao_2_7_api.py --verify` and `--self-test` for the
+Run `/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --verify` and `--self-test` for the
 API evidence checkpoint. Its [review](../docs/OPENBAO_2_7_0_REVIEW.md) records
 the removed-engine exclusions, extraction corrections and security boundaries.
 
@@ -93,18 +93,18 @@ above.
 Run:
 
 ```sh
-python3 scripts/validate_openbao_release_lock.py
-python3 scripts/validate_openbao_release_lock.py --self-test
-python3 scripts/openbao_api_snapshots.py --verify
-python3 scripts/openbao_api_snapshots.py --self-test
-python3 -B scripts/generate_openbao_response_fixtures.py --verify
-python3 -B scripts/generate_openbao_response_fixtures.py --self-test
-python3 -B scripts/generate_openbao_version_contracts.py --verify
-python3 -B scripts/generate_openbao_version_contracts.py --self-test
-python3 scripts/openbao_test_harness.py --self-test
-python3 scripts/openbao_core_matrix.py --verify
-python3 scripts/openbao_core_matrix.py --self-test
-python3 -B scripts/openbao_ci_matrix.py self-test
+/usr/bin/python3 -E -s -S -B scripts/validate_openbao_release_lock.py
+/usr/bin/python3 -E -s -S -B scripts/validate_openbao_release_lock.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_api_snapshots.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_api_snapshots.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_response_fixtures.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_response_fixtures.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_version_contracts.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_version_contracts.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_test_harness.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_core_matrix.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_core_matrix.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py self-test
 ```
 
 The validator uses only the Python standard library and performs no network
@@ -203,7 +203,7 @@ live test.
 To reproduce all online evidence from an exact OpenBao source clone:
 
 ```sh
-python3 scripts/openbao_api_snapshots.py \
+/usr/bin/python3 -E -s -S -B scripts/openbao_api_snapshots.py \
   --generate \
   --source-repository /path/to/openbao
 ```
@@ -214,11 +214,11 @@ artifacts are never overwritten with different bytes.
 To reproduce the retained 2.6.0 onboarding evidence from its exact source clone:
 
 ```sh
-python3 scripts/openbao_onboarding_api.py \
+/usr/bin/python3 -E -s -S -B scripts/openbao_onboarding_api.py \
   --generate \
   --source-repository /path/to/openbao-v2.6.0
-python3 scripts/openbao_onboarding_api.py --verify
-python3 scripts/openbao_onboarding_api.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_onboarding_api.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_onboarding_api.py --self-test
 ```
 
 ## Reproducing Online Evidence
@@ -331,8 +331,8 @@ Verify the anchored JSON and Rust outputs plus adversarial range, duplicate,
 policy-downgrade, injection, and determinism checks:
 
 ```sh
-python3 -B scripts/generate_openbao_capability_registry.py --verify
-python3 -B scripts/generate_openbao_capability_registry.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_capability_registry.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_capability_registry.py --self-test
 ```
 
 ## Compatibility CI Matrix

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Generate the complete per-release OpenBao compatibility evidence matrix."""
 
 from __future__ import annotations

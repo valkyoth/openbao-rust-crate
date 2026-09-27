@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Generate and verify the exact-release OpenBao capability registry."""
 
 from __future__ import annotations

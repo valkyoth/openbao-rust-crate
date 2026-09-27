@@ -16,51 +16,51 @@ echo "checks: Rust 1.90.0 MSRV"
 cargo +1.90.0 check --locked --all-targets --all-features
 
 echo "checks: OpenBao release lock"
-python3 scripts/validate_openbao_release_lock.py
-python3 scripts/validate_openbao_release_lock.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/validate_openbao_release_lock.py
+/usr/bin/python3 -E -s -S -B scripts/validate_openbao_release_lock.py --self-test
 
 echo "checks: OpenBao API snapshots"
-python3 scripts/openbao_api_snapshots.py --verify
-python3 scripts/openbao_api_snapshots.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_api_snapshots.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_api_snapshots.py --self-test
 
 echo "checks: staged OpenBao 2.7.0 source inventory"
-python3 -B scripts/openbao_2_7_source_inventory.py --verify
-python3 -B scripts/openbao_2_7_source_inventory.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_source_inventory.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_source_inventory.py --self-test
 
 echo "checks: staged OpenBao 2.7.0 API evidence"
-python3 -B scripts/openbao_2_7_api.py --verify
-python3 -B scripts/openbao_2_7_api.py --self-test
-python3 -B scripts/test_openbao_evidence.py
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_evidence.py
 
 echo "checks: historical OpenBao 2.6.0 onboarding evidence"
-python3 scripts/openbao_onboarding_api.py --verify
-python3 scripts/openbao_onboarding_api.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_onboarding_api.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_onboarding_api.py --self-test
 
 echo "checks: OpenBao 2.5.5 contract matrix"
-python3 scripts/generate_openbao_contract_matrix.py --verify
-python3 scripts/generate_openbao_contract_matrix.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_contract_matrix.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_contract_matrix.py --self-test
 
 echo "checks: OpenBao capability registry"
-python3 -B scripts/generate_openbao_capability_registry.py --verify
-python3 -B scripts/generate_openbao_capability_registry.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_capability_registry.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_capability_registry.py --self-test
 
 echo "checks: versioned OpenBao response fixtures"
-python3 -B scripts/generate_openbao_response_fixtures.py --verify
-python3 -B scripts/generate_openbao_response_fixtures.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_response_fixtures.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_response_fixtures.py --self-test
 
 echo "checks: complete OpenBao version contracts"
-python3 -B scripts/generate_openbao_version_contracts.py --verify
-python3 -B scripts/generate_openbao_version_contracts.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_version_contracts.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_version_contracts.py --self-test
 
 echo "checks: version-locked OpenBao integration harness"
-python3 scripts/openbao_test_harness.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_test_harness.py --self-test
 
 echo "checks: historical OpenBao core-flow evidence"
-python3 scripts/openbao_core_matrix.py --verify
-python3 scripts/openbao_core_matrix.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_core_matrix.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_core_matrix.py --self-test
 
 echo "checks: OpenBao compatibility CI controller"
-python3 -B scripts/openbao_ci_matrix.py self-test
+/usr/bin/python3 -E -s -S -B scripts/openbao_ci_matrix.py self-test
 
 echo "checks: compatibility fuzz targets"
 cargo check --manifest-path fuzz/Cargo.toml --locked --bins

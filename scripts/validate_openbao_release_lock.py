@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Offline fail-closed validation for active and onboarding release evidence."""
 
 from __future__ import annotations

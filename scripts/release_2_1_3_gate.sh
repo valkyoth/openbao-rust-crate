@@ -15,8 +15,8 @@ grep -q '"version": "2.6.1"' compat/core-flow-results.json
 grep -q '| `2.6.1` | 689 | 594 | 93 | 2 |' \
   docs/OPENBAO_VERSION_SUPPORT_MATRIX.md
 scripts/checks.sh
-python3 -B scripts/openbao_core_matrix.py --verify
-python3 -B scripts/generate_openbao_version_contracts.py --verify
+/usr/bin/python3 -E -s -S -B scripts/openbao_core_matrix.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_version_contracts.py --verify
 scripts/generate-sbom.sh
 
 echo "release 2.1.3 gate complete"

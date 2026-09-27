@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Lock source-only OpenBao 2.7.0 onboarding evidence; never promote routes."""
 
 from __future__ import annotations

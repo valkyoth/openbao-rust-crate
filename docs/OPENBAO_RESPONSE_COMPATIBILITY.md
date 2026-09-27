@@ -39,8 +39,8 @@ OpenAPI snapshots show the shape.
 Run the offline fixture checks with:
 
 ```sh
-python3 -B scripts/generate_openbao_response_fixtures.py --verify
-python3 -B scripts/generate_openbao_response_fixtures.py --self-test
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_response_fixtures.py --verify
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_response_fixtures.py --self-test
 cargo test --test serde_fixtures --all-features
 ```
 

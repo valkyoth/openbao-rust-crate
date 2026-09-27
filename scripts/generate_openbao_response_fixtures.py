@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -EsSB
 """Generate evidence-backed response fixtures for every locked OpenBao release."""
 
 from __future__ import annotations
