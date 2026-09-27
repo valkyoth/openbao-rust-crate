@@ -6,6 +6,13 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Validate explicit wrapping tokens consistently before transport on generic
+  unwrap, lookup, rewrap and control-group execution paths. Preserve intentional
+  `wrapping_unwrap(None)` fallback and do not spend attempts on invalid tokens.
+- Refresh the 25-version core-flow evidence after the shared-harness cleanup
+  change, fixing CI's stale metadata rejection without relaxing provenance checks
+  or changing any historical operation result.
+
 - Make generic wrapped responses one-attempt locally, including after errors
   or cancellation; conversion to control-group execution preserves prior attempts.
   Add `is_attempted()` without changing successful-consumption reporting.

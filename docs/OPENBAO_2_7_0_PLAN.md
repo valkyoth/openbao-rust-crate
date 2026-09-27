@@ -127,6 +127,12 @@ pins. Only the shared harness input hash differs from the earlier reports;
 checks and scope are unchanged. Historical results were not relabeled as new
 runs, and no active profile was changed.
 
+The subsequent CI failure also identified stale harness provenance in the
+25-version core-flow matrix. All 25 pinned 2.0.0 through 2.6.3 core integrations
+were rerun successfully; their operation results are unchanged. The refreshed
+matrix and dependent version-contract evidence hashes are anchored separately.
+Stale-harness and stale-test-definition rejection remain enforced and tested.
+
 ## Security And Compatibility Rules
 
 - Preserve every released exact profile and immutable historical snapshot.

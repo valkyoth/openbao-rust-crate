@@ -321,3 +321,11 @@ transmission, blocked reuse and conversion. Offline fixture tests exercise the
 remaining lifecycle with both secure and defective replay outcomes. The v3
 capture was rerun on the pinned image; it still records the upstream defect.
 No server-security guarantee or dependency audit attestation is inferred.
+
+The follow-up review adds one shared explicit-token validator to generic unwrap,
+control-group execution, lookup, rewrap and stateless `wrapping_unwrap(Some)`.
+Empty, oversized and non-visible-ASCII tokens fail before transport without
+spending a local attempt. `wrapping_unwrap(None)` remains intentional fallback.
+Tests cover invalid-token rejection without transport, exact size boundaries
+and fallback wire behavior. The control-group live capture was refreshed again
+against these inputs, preserving the upstream replay failure classification.

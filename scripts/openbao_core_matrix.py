@@ -35,7 +35,7 @@ HISTORICAL_RESULTS_PATH = ROOT / "compat/core-flow-history/through-2.5.5.json"
 HISTORICAL_CHECKSUM_PATH = ROOT / "compat/core-flow-history/through-2.5.5.sha256"
 HARNESS_PATH = ROOT / "scripts/openbao_test_harness.py"
 TEST_PATH = ROOT / "tests/openbao_integration.rs"
-EXPECTED_RESULTS_SHA256 = "ce82568e7fb5e9f5669f5ccd9dfa9624dd2d8d489a280c92064756fd6ca0be25"
+EXPECTED_RESULTS_SHA256 = "e14be6ed682254102e0ca88ada3f4192a78ce3a7de49dde842b729d8aafd64dd"
 HISTORICAL_RESULTS_SHA256 = "d7aa0b1f07d535ae8b762587ae8221cefb073ff5acba12fec3d7d5b03e1e3d8c"
 MAX_RESULTS_BYTES = 512 * 1024
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
@@ -411,6 +411,10 @@ def self_test() -> None:
         raise MatrixError("immutable release inventory validation failed") from error
     validate_matrix(matrix, inventory, require_all_passed=True)
     mutations: list[tuple[str, dict[str, Any]]] = []
+    for field in ("harness_sha256", "test_definition_sha256"):
+        stale_input = copy.deepcopy(matrix)
+        stale_input[field] = "0" * 64
+        mutations.append((f"stale {field}", stale_input))
     missing_release = copy.deepcopy(matrix)
     missing_release["records"].pop()
     mutations.append(("a missing release", missing_release))

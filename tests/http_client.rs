@@ -2904,6 +2904,58 @@ async fn wait_until_unsealed_uses_seal_status_until_ready() {
 }
 
 #[tokio::test]
+async fn explicit_wrapping_token_boundaries_and_intentional_fallback() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    let server = thread::spawn(move || {
+        for size in [Some(1), Some(65536), None] {
+            let (mut stream, _) = listener
+                .accept()
+                .unwrap_or_else(|_| panic!("accept failed"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("POST /v1/sys/wrapping/unwrap HTTP/1.1"));
+            let (_, body) = request
+                .split_once("\r\n\r\n")
+                .unwrap_or_else(|| panic!("headers failed"));
+            match size {
+                Some(size) => {
+                    let value: serde_json::Value =
+                        serde_json::from_str(body).unwrap_or_else(|_| panic!("payload failed"));
+                    assert!(value["token"].as_str().is_some_and(
+                        |value| value.len() == size && value.bytes().all(|byte| byte == b'x')
+                    ));
+                }
+                None => assert!(body.is_empty()),
+            }
+            let body = r#"{"data":{"value":"ok"}}"#;
+            write!(stream, "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{body}", body.len()).unwrap_or_else(|_| panic!("write failed"));
+        }
+    });
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|_| panic!("config failed"))
+        .compatibility_policy(
+            OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 3))
+                .unwrap_or_else(|_| panic!("profile failed")),
+        );
+    let client = Client::from_config(config)
+        .unwrap_or_else(|_| panic!("client failed"))
+        .with_token(SecretString::from("test-token"));
+    for size in [Some(1), Some(65536), None] {
+        let token = size.map(|size| SecretString::from("x".repeat(size)));
+        let value: SecretData = client
+            .sys()
+            .wrapping_unwrap(token.as_ref())
+            .await
+            .unwrap_or_else(|_| panic!("unwrap failed"));
+        assert!(value.value == "ok");
+    }
+    server.join().unwrap_or_else(|_| panic!("server failed"));
+}
+
+#[tokio::test]
 async fn wrapping_context_requests_wrap_ttl_and_typed_unwrap() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
     let addr = listener

@@ -8,6 +8,10 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Reject empty, oversized and non-visible-ASCII explicit wrapping tokens before
+  transport across lookup, rewrap and both unwrap interfaces. Explicit `None`
+  on stateless unwrap still selects the authenticated client's token deliberately.
+
 - Harden `WrappedResponse::try_unwrap`: once an attempt starts, that wrapper
   cannot send another unwrap, even after cancellation or an error. This changes
   explicit retry behavior without changing method signatures. `is_attempted()`

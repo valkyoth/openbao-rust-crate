@@ -96,18 +96,9 @@ impl<T> ControlGroupExecution<'_, T> {
                 "control-group execution was already attempted; do not replay automatically".into(),
             ));
         }
-        let token = self.wrapped.wrap_info.token.expose_secret();
         // OpenBao interprets an empty body token as the caller's auth token.
         // Never let malformed wrapping metadata silently select that fallback.
-        if token.is_empty()
-            || token.len() > 64 * 1024
-            || !token.bytes().all(|byte| (0x21..=0x7e).contains(&byte))
-        {
-            return Err(Error::InvalidParameter(
-                "control-group wrapping token must be 1..=65536 visible ASCII bytes".into(),
-            ));
-        }
-        Ok(())
+        super::super::validate_explicit_wrapping_token(&self.wrapped.wrap_info.token)
     }
 
     /// Attempts execution once, returning the original JSON response bytes.
@@ -543,8 +534,34 @@ mod tests {
             String::new(),
             "token value".into(),
             "token\r\n".into(),
+            "token\u{7f}".into(),
+            "token\u{e9}".into(),
             "x".repeat(65537),
         ] {
+            let token = SecretString::from(value.clone());
+            let mut wrapped = handle(&client).wrapped;
+            wrapped.wrap_info.token = SecretString::from(value.clone());
+            assert!(matches!(
+                wrapped.try_unwrap().await,
+                Err(Error::InvalidParameter(_))
+            ));
+            assert!(!wrapped.is_attempted());
+            assert!(!wrapped.is_consumed());
+            assert!(matches!(
+                client.sys().wrapping_lookup(&token).await,
+                Err(Error::InvalidParameter(_))
+            ));
+            assert!(matches!(
+                client.sys().wrapping_rewrap(&token).await,
+                Err(Error::InvalidParameter(_))
+            ));
+            assert!(matches!(
+                client
+                    .sys()
+                    .wrapping_unwrap::<serde_json::Value>(Some(&token))
+                    .await,
+                Err(Error::InvalidParameter(_))
+            ));
             let mut execution = handle(&client);
             execution.wrapped.wrap_info.token = SecretString::from(value);
             assert!(matches!(
@@ -556,6 +573,12 @@ mod tests {
                 Err(Error::InvalidParameter(_))
             ));
             assert_eq!(execution.state(), ControlGroupExecutionState::Ready);
+        }
+        for token in ["x".to_owned(), "x".repeat(65536)] {
+            assert!(
+                super::super::super::validate_explicit_wrapping_token(&SecretString::from(token))
+                    .is_ok()
+            );
         }
         let mut execution = handle(&client);
         execution.wrapped.wrap_info.token = SecretString::from("x".repeat(65536));

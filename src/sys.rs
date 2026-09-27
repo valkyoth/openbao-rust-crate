@@ -3407,6 +3407,7 @@ impl<'a, T> WrappedResponse<'a, T> {
                 "wrapping token execution was already attempted".into(),
             ));
         }
+        validate_explicit_wrapping_token(&self.wrap_info.token)?;
         self.attempted = true;
         let payload = WrappingTokenPayload {
             token: self.wrap_info.token.expose_secret(),
@@ -9002,8 +9003,9 @@ impl Sys<'_, Authenticated> {
             .await
     }
 
-    /// Looks up a wrapping token.
+    /// Looks up a wrapping token. Explicit tokens must be 1..=65536 visible ASCII bytes.
     pub async fn wrapping_lookup(&self, token: &SecretString) -> Result<WrappingLookup> {
+        validate_explicit_wrapping_token(token)?;
         let payload = WrappingTokenPayload {
             token: token.expose_secret(),
         };
@@ -9036,12 +9038,17 @@ impl Sys<'_, Authenticated> {
     }
 
     /// Unwraps a wrapping token and decodes the original response data.
+    ///
+    /// `Some(token)` requires 1..=65536 visible ASCII bytes; an empty explicit
+    /// token is rejected locally. `None` intentionally uses the authenticated
+    /// client's token. This stateless operation cannot track prior attempts.
     pub async fn wrapping_unwrap<T>(&self, token: Option<&SecretString>) -> Result<T>
     where
         T: for<'de> Deserialize<'de>,
     {
         match token {
             Some(token) => {
+                validate_explicit_wrapping_token(token)?;
                 let payload = WrappingTokenPayload {
                     token: token.expose_secret(),
                 };
@@ -9066,7 +9073,9 @@ impl Sys<'_, Authenticated> {
     }
 
     /// Rewraps a wrapping token and returns replacement wrapping token metadata.
+    /// Explicit tokens must be 1..=65536 visible ASCII bytes.
     pub async fn wrapping_rewrap(&self, token: &SecretString) -> Result<WrapInfo> {
+        validate_explicit_wrapping_token(token)?;
         let payload = WrappingTokenPayload {
             token: token.expose_secret(),
         };
@@ -9076,6 +9085,19 @@ impl Sys<'_, Authenticated> {
             .await?;
         envelope.wrap_info.ok_or(Error::MissingField("wrap_info"))
     }
+}
+
+fn validate_explicit_wrapping_token(token: &SecretString) -> Result<()> {
+    let token = token.expose_secret();
+    if token.is_empty()
+        || token.len() > 64 * 1024
+        || !token.bytes().all(|byte| (0x21..=0x7e).contains(&byte))
+    {
+        return Err(Error::InvalidParameter(
+            "wrapping token must be 1..=65536 visible ASCII bytes".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn validate_dev_bootstrap_options(secret_shares: u8, secret_threshold: u8) -> Result<()> {
