@@ -1,5 +1,13 @@
 //! Transit secrets engine support.
 
+mod extensions;
+pub use extensions::{
+    MldsaParameterSet, TransitExportFormat, TransitExternalKeyCreateRequest,
+    TransitExternalKeyReference, TransitKeyDetails, TransitKeyVersionDetails,
+    TransitMldsaCreateRequest, TransitMldsaImportRequest, TransitMldsaSignMode,
+    TransitMldsaSignRequest, TransitMldsaVerifyRequest,
+};
+
 use core::fmt;
 use std::collections::BTreeMap;
 

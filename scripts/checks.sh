@@ -96,6 +96,9 @@ cargo test --all-targets
 echo "checks: tests all features"
 cargo test --all-targets --all-features
 
+echo "checks: minimal Transit contracts"
+cargo test --no-default-features --features transit,rustls-tls --lib extensions
+
 echo "checks: doctests"
 cargo test --doc --features operator-ops,operator-ops-acknowledged Pkcs11OaepHash
 cargo test --doc --all-features

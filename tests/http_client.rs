@@ -1557,6 +1557,217 @@ async fn external_key_administration_rejects_every_active_profile_before_transpo
     );
 }
 
+#[cfg(feature = "transit")]
+async fn assert_transit_27_rejected(client: &Client<Authenticated>, expected: OpenBaoVersion) {
+    use openbao::secrets::transit::*;
+    fn rejected<T>(result: openbao::Result<T>, expected: OpenBaoVersion) {
+        assert!(
+            matches!(result, Err(Error::UnsupportedOpenBaoCapability { endpoint: "transit.2.7", version }) if version == expected)
+        );
+    }
+    let transit = client
+        .transit("nested/transit")
+        .unwrap_or_else(|_| panic!("mount rejected"));
+    let reference = TransitExternalKeyReference::new("provider", "key")
+        .unwrap_or_else(|_| panic!("reference rejected"));
+    for parameters in [
+        MldsaParameterSet::MlDsa44,
+        MldsaParameterSet::MlDsa65,
+        MldsaParameterSet::MlDsa87,
+    ] {
+        rejected(
+            transit
+                .create_mldsa_key("key", &TransitMldsaCreateRequest::new(parameters))
+                .await,
+            expected,
+        );
+        let import =
+            TransitMldsaImportRequest::new(parameters, test_secret(&["fixture-", "ciphertext"]))
+                .unwrap_or_else(|_| panic!("import fixture rejected"));
+        rejected(transit.import_mldsa_key("key", &import).await, expected);
+    }
+    rejected(
+        transit
+            .create_external_key(
+                "key",
+                &TransitExternalKeyCreateRequest::new(reference.clone()),
+            )
+            .await,
+        expected,
+    );
+    rejected(
+        transit.rotate_external_key("key", &reference).await,
+        expected,
+    );
+    let import = TransitImportVersionRequest::new(test_secret(&["fixture-", "ciphertext"]))
+        .unwrap_or_else(|_| panic!("import fixture rejected"));
+    rejected(
+        transit.import_mldsa_key_version("key", &import).await,
+        expected,
+    );
+    for format in [
+        TransitExportFormat::Default,
+        TransitExportFormat::Raw,
+        TransitExportFormat::Der,
+        TransitExportFormat::Pem,
+    ] {
+        rejected(
+            transit
+                .export_key_with_format(TransitExportKeyType::PublicKey, "key", Some(1), format)
+                .await,
+            expected,
+        );
+    }
+    let sign = TransitMldsaSignRequest::new(
+        test_secret(&["c3lu", "dGhldGlj"]),
+        TransitMldsaSignMode::Message,
+    )
+    .unwrap_or_else(|_| panic!("sign fixture rejected"));
+    let verify = TransitMldsaVerifyRequest::new(
+        test_secret(&["c3lu", "dGhldGlj"]),
+        test_secret(&["vault:v1:", "fixture"]),
+    )
+    .unwrap_or_else(|_| panic!("verify fixture rejected"));
+    rejected(transit.sign_mldsa("key", &sign).await, expected);
+    rejected(transit.verify_mldsa("key", &verify).await, expected);
+    rejected(transit.batch_sign_mldsa("key", &[sign]).await, expected);
+    rejected(transit.batch_verify_mldsa("key", &[verify]).await, expected);
+}
+
+#[tokio::test]
+#[cfg(feature = "transit")]
+async fn transit_27_rejects_every_active_and_unselected_profile_before_transport() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|error| panic!("{error}"));
+    for selected in openbao::openbao_profile_versions()
+        .iter()
+        .copied()
+        .map(Some)
+        .chain([None])
+    {
+        let mut config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|error| panic!("{error}"));
+        if let Some(version) = selected {
+            config = config.compatibility_policy(
+                OpenBaoCompatibilityPolicy::assume(version)
+                    .unwrap_or_else(|error| panic!("{error}")),
+            );
+        }
+        let client = Client::from_config(config)
+            .unwrap_or_else(|error| panic!("{error}"))
+            .with_token(test_secret(&["fixture-", "client-token"]));
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            assert_transit_27_rejected(&client, selected.unwrap_or(OpenBaoVersion::new(2, 6, 3))),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("Transit 2.7 operation reached transport"));
+    }
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+#[cfg(feature = "transit")]
+async fn transit_27_cannot_use_a_newer_server_fallback() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health "));
+        assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+        );
+        listener
+    });
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| {
+            config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            ))
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["fixture-", "client-token"]));
+    tokio::time::timeout(
+        Duration::from_secs(2),
+        assert_transit_27_rejected(&client, OpenBaoVersion::new(2, 6, 3)),
+    )
+    .await
+    .unwrap_or_else(|_| panic!("Transit 2.7 operation reached transport"));
+    let listener = server
+        .join()
+        .unwrap_or_else(|_| panic!("health fixture failed"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+#[cfg(feature = "transit")]
+async fn transit_detailed_read_preserves_existing_profile_and_has_no_get_body() {
+    use openbao::secrets::transit::TransitKeyVersionDetails;
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|error| panic!("{error}"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/nested/transit/keys/key "));
+        assert!(request.ends_with("\r\n\r\n"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"data":{"name":"key","type":"rsa-2048","latest_version":1,"keys":{"1":{"name":"rsa-2048","public_key":"public-fixture","creation_time":"2026-09-27T00:00:00Z"}}}}"#,
+        );
+    });
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| {
+            config.compatibility_policy(
+                OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 3))
+                    .unwrap_or_else(|error| panic!("{error}")),
+            )
+        })
+        .unwrap_or_else(|error| panic!("{error}"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|error| panic!("{error}"))
+        .with_token(test_secret(&["fixture-", "client-token"]));
+    let transit = client
+        .transit("nested/transit")
+        .unwrap_or_else(|error| panic!("{error}"));
+    let response = tokio::time::timeout(Duration::from_secs(2), transit.read_key_details("key"))
+        .await
+        .unwrap_or_else(|_| panic!("read timed out"))
+        .unwrap_or_else(|error| panic!("{error}"));
+    assert!(matches!(
+        response.keys.get("1"),
+        Some(TransitKeyVersionDetails::Asymmetric { .. })
+    ));
+    server
+        .join()
+        .unwrap_or_else(|_| panic!("read fixture failed"));
+}
+
 #[tokio::test]
 #[cfg(feature = "operator-ops")]
 async fn external_key_administration_cannot_use_a_newer_server_fallback() {

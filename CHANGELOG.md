@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Add checkpoint 05a Transit ML-DSA and external-key request APIs, detailed
+  version metadata, explicit export formats, secret-aware mu validation and
+  request-wide batch controls. Preserve existing enums/struct literals and
+  reject new operations on all active profiles. Live crypto evidence is still
+  required in 05b; this does not promote OpenBao 2.7 support.
+
 - Harden checkpoint 04 after pentest: gate typed PKCS#11 OAEP SHA-1 selection,
   enforce the server's generic-name grammar, and limit response provider options
   to 64 with an additional field allowed only for `plugin`. Add feature-gate,
