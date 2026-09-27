@@ -1,10 +1,16 @@
 //! Helpers for building small OpenBao ACL policy documents.
 //!
 //! The builder intentionally supports a narrow, typed subset of ACL policy HCL:
-//! path rules with known OpenBao capabilities. Use [`crate::sys::PolicyWriteRequest`]
+//! path rules with known OpenBao capabilities, wrapping TTLs and narrow identity
+//! approval requirements. Use [`crate::sys::PolicyWriteRequest`]
 //! directly for advanced policy features such as parameter constraints.
 
 use core::fmt;
+
+mod control_groups;
+#[cfg(feature = "sys")]
+pub use control_groups::ControlGroupPolicyWriteRequest;
+pub use control_groups::{ControlGroupFactor, ControlGroupRequirement};
 
 use crate::{
     Error, Result,
@@ -62,6 +68,7 @@ struct AclRule {
     capabilities: Vec<AclCapability>,
     min_wrapping_ttl: Option<String>,
     max_wrapping_ttl: Option<String>,
+    control_group: Option<ControlGroupRequirement>,
 }
 
 /// Builder for bounded, typed OpenBao ACL policy documents.
@@ -116,6 +123,47 @@ impl AclPolicyBuilder {
     /// Adds a deny rule for a path.
     pub fn deny_path(&mut self, path: impl AsRef<str>) -> Result<&mut Self> {
         self.push_rule(path.as_ref(), [AclCapability::Deny])
+    }
+
+    /// Adds an OpenBao 2.7+ rule requiring independent identity approvals.
+    ///
+    /// Every factor controls every listed operation; self-approval is explicitly
+    /// disabled. `Deny`, `Sudo`, duplicate and empty capabilities are rejected.
+    /// Other rules/policies can affect effective ACLs: review the full policy set.
+    /// Exact-path collisions involving a control-group rule are rejected in
+    /// either insertion order; wildcard overlaps remain the caller's concern.
+    /// Use `build_control_group_write_request` with the gated sys write
+    /// helper. Exporting plain HCL through [`Self::build`] leaves compatibility
+    /// and enforcement verification to the caller.
+    pub fn allow_path_with_control_group<I>(
+        &mut self,
+        path: impl AsRef<str>,
+        capabilities: I,
+        requirement: ControlGroupRequirement,
+    ) -> Result<&mut Self>
+    where
+        I: IntoIterator<Item = AclCapability>,
+    {
+        let capabilities = control_groups::validate_operations(capabilities)?;
+        if self.rules.len() >= MAX_POLICY_RULES {
+            return Err(Error::InvalidParameter(
+                "ACL policy rule count exceeds maximum allowed length".into(),
+            ));
+        }
+        let path = validate_policy_path(path.as_ref())?;
+        if self.rules.iter().any(|rule| rule.path == path) {
+            return Err(Error::InvalidParameter(
+                "control-group rules cannot share an exact path with another rule".into(),
+            ));
+        }
+        self.rules.push(AclRule {
+            path,
+            capabilities,
+            min_wrapping_ttl: None,
+            max_wrapping_ttl: None,
+            control_group: Some(requirement),
+        });
+        Ok(self)
     }
 
     /// Allows KV v2 read/list access below a literal prefix.
@@ -292,6 +340,11 @@ impl AclPolicyBuilder {
     }
 
     /// Renders the policy document.
+    ///
+    /// This plain-text export carries no compatibility metadata. Policies with
+    /// control-group rules require OpenBao 2.7+ and independent verification of
+    /// server enforcement. Prefer `build_control_group_write_request` and
+    /// `Sys::write_control_group_policy` for version-gated writes.
     pub fn build(&self) -> Result<String> {
         let mut document = String::new();
         for rule in &self.rules {
@@ -308,7 +361,26 @@ impl AclPolicyBuilder {
     #[cfg(feature = "sys")]
     /// Renders the policy as a sys policy write request.
     pub fn build_write_request(&self) -> Result<crate::sys::PolicyWriteRequest> {
+        if self.rules.iter().any(|rule| rule.control_group.is_some()) {
+            return Err(Error::InvalidParameter("control-group rules require build_control_group_write_request and the gated write helper".into()));
+        }
         Ok(crate::sys::PolicyWriteRequest::new(self.build()?))
+    }
+
+    #[cfg(feature = "sys")]
+    /// Renders a policy containing control-group rules for the gated 2.7+ writer.
+    ///
+    /// The returned request deliberately does not implement Serialize or expose
+    /// its policy field. Use `Sys::write_control_group_policy` to send it.
+    pub fn build_control_group_write_request(&self) -> Result<ControlGroupPolicyWriteRequest> {
+        if !self.rules.iter().any(|rule| rule.control_group.is_some()) {
+            return Err(Error::InvalidParameter(
+                "control-group policy requires at least one protected rule".into(),
+            ));
+        }
+        Ok(ControlGroupPolicyWriteRequest {
+            request: crate::sys::PolicyWriteRequest::new(self.build()?),
+        })
     }
 
     fn push_rule<I>(&mut self, path: &str, capabilities: I) -> Result<&mut Self>
@@ -322,11 +394,13 @@ impl AclPolicyBuilder {
         }
         let capabilities = validate_capabilities(capabilities)?;
         let path = validate_policy_path(path)?;
+        self.reject_control_group_collision(&path)?;
         self.rules.push(AclRule {
             path,
             capabilities,
             min_wrapping_ttl: None,
             max_wrapping_ttl: None,
+            control_group: None,
         });
         Ok(self)
     }
@@ -353,6 +427,7 @@ impl AclPolicyBuilder {
         }
         let capabilities = validate_capabilities(capabilities)?;
         let path = validate_policy_path(path)?;
+        self.reject_control_group_collision(&path)?;
         let min_wrapping_ttl = min_wrapping_ttl
             .map(|ttl| validate_wrapping_policy_ttl(ttl, "min_wrapping_ttl"))
             .transpose()?;
@@ -364,8 +439,22 @@ impl AclPolicyBuilder {
             capabilities,
             min_wrapping_ttl,
             max_wrapping_ttl,
+            control_group: None,
         });
         Ok(self)
+    }
+
+    fn reject_control_group_collision(&self, path: &str) -> Result<()> {
+        if self
+            .rules
+            .iter()
+            .any(|rule| rule.path == path && rule.control_group.is_some())
+        {
+            return Err(Error::InvalidParameter(
+                "control-group rules cannot share an exact path with another rule".into(),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -453,6 +542,9 @@ fn push_rule(document: &mut String, rule: &AclRule) {
         document.push_str("  max_wrapping_ttl = \"");
         push_hcl_string(document, ttl);
         document.push_str("\"\n");
+    }
+    if let Some(group) = &rule.control_group {
+        group.write_hcl(document, &rule.capabilities);
     }
     document.push_str("}\n");
 }

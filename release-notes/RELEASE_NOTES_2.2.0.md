@@ -8,6 +8,12 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 07d adds typed identity factors and TTL requirements to
+  `AclPolicyBuilder`, with all rule operations controlled by every factor and
+  self-approval disabled. `build_control_group_write_request` and
+  `Sys::write_control_group_policy` preserve the unpromoted 2.7 compatibility gate.
+  Live verification of the generated policy remains part of checkpoint 07.
+
 - Checkpoint 07c adds `WrappedResponse::into_control_group_execution` and
   `ControlGroupExecution`. A handle preserves its original client/namespace and
   allows one execution attempt, with no automatic approval or retry. Cancellation

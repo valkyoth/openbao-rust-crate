@@ -1490,10 +1490,33 @@ async fn control_group_operations_reject_active_and_unselected_profiles() {
         let result = client.sys().read_control_group_request(&accessor).await;
         assert!(matches!(result,
             Err(Error::UnsupportedOpenBaoCapability { endpoint: "sys.control-group", version }) if version == expected));
+        let result = client
+            .sys()
+            .write_control_group_policy("approval-policy", &control_group_policy())
+            .await;
+        assert!(matches!(result,
+            Err(Error::UnsupportedOpenBaoCapability { endpoint: "sys.control-group", version }) if version == expected));
     }
     assert!(
         matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
     );
+}
+
+fn control_group_policy() -> openbao::policy::ControlGroupPolicyWriteRequest {
+    use openbao::policy::{
+        AclCapability, AclPolicyBuilder, ControlGroupFactor, ControlGroupRequirement,
+    };
+    let factor = ControlGroupFactor::new("approval", ["operators"], 1)
+        .unwrap_or_else(|_| panic!("factor failed"));
+    let requirement = ControlGroupRequirement::new(Duration::from_secs(300), [factor])
+        .unwrap_or_else(|_| panic!("requirement failed"));
+    let mut builder = AclPolicyBuilder::new();
+    builder
+        .allow_path_with_control_group("secret/data/app", [AclCapability::Read], requirement)
+        .unwrap_or_else(|_| panic!("rule failed"));
+    builder
+        .build_control_group_write_request()
+        .unwrap_or_else(|_| panic!("policy failed"))
 }
 
 #[tokio::test]
@@ -1544,6 +1567,17 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     )
     .await
     .unwrap_or_else(|_| panic!("review reached transport"));
+    assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 6, 3)));
+    let policy = control_group_policy();
+    let result = tokio::time::timeout(
+        Duration::from_secs(2),
+        client
+            .sys()
+            .write_control_group_policy("approval-policy", &policy),
+    )
+    .await
+    .unwrap_or_else(|_| panic!("policy reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
         endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 6, 3)));
     let listener = server.join().unwrap_or_else(|_| panic!("server failed"));

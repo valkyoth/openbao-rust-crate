@@ -6,6 +6,9 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Add checkpoint 07d bounded identity-approval policy requirements, explicit
+  self-approval denial, exact-path collision checks and an opaque, version-gated
+  control-group policy write request. Retain caller-managed advanced HCL.
 - Add checkpoint 07c explicit control-group execution handles with one local
   attempt, outcome-unknown cancellation handling, sanitizing response bytes,
   original-shape typed decoding and credential clearing after accepted responses.
@@ -15,7 +18,7 @@ All notable changes to this project are documented here.
   and secret-free diagnostics. No 2.7 profile promotion or automatic execution.
 - Start checkpoint 07a with explicit control-group authorization, validated
   secret accessors and strict approval responses. Older and fallback profiles
-  remain blocked; wrapping lifecycle work remains open.
+  remain blocked; live lifecycle verification remains open.
 - Fix inherited verification-harness stdout pipe cleanup on success and failure,
   including selector setup errors; add real-process cleanup regression tests.
 - Retain checkpoint 06e signed-image PKI TLS evidence with independent OpenSSL

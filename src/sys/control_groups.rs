@@ -81,6 +81,21 @@ pub struct ControlGroupApproval {
 }
 
 impl Sys<'_, Authenticated> {
+    /// Writes a typed control-group ACL policy after requiring a promoted 2.7+
+    /// profile. Older/unselected/fallback profiles fail before policy transport.
+    ///
+    /// This replaces the named policy. It does not authorize a request or create
+    /// approving groups. Review other policies, namespace and group membership
+    /// before granting tokens access. Server enforcement needs live verification.
+    pub async fn write_control_group_policy(
+        &self,
+        name: &str,
+        request: &crate::policy::ControlGroupPolicyWriteRequest,
+    ) -> Result<crate::response::Empty> {
+        self.require_control_groups().await?;
+        self.write_policy(name, &request.request).await
+    }
+
     async fn require_control_groups(&self) -> Result<()> {
         let report = self.client.compatibility_report().await?;
         let version = report

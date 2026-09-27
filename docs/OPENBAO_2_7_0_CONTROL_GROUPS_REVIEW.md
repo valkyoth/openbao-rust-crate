@@ -1,8 +1,9 @@
 # OpenBao 2.7.0 Control Groups Review
 
-Status: checkpoints 07a/b/c implement explicit authorization, validated secret
-accessors, bounded request review and explicit deferred-execution handling. Checkpoint 07 is not complete:
-live lifecycle evidence and the ACL builder decision remain open. No 2.7 routing
+Status: checkpoints 07a/b/c/d implement explicit authorization, validated secret
+accessors, bounded request review, explicit deferred-execution handling and narrow
+typed policy construction. Checkpoint 07 is not complete:
+live lifecycle evidence remains open. No 2.7 routing
 is promoted.
 
 ## Reviewed Contract
@@ -27,8 +28,9 @@ defines these operations in `internal/vault/logical_system_paths.go` and
 Sources: tagged `website/content/docs/api/system/control-group.mdx`,
 `website/content/docs/concepts/control-groups.mdx`, the handlers above, and
 `internal/vault/wrapping.go`. The concept page contains inconsistent self-approval
-terminology; later policy-builder decisions must use the parser contract rather
-than copying its examples blindly.
+terminology; the policy builder uses the parser contract rather than copying its
+examples blindly. It also requires explicit controlled capabilities where some
+concept examples imply omission is permitted.
 
 ## 07a Implementation
 
@@ -85,14 +87,12 @@ and live server authorization semantics still require later evidence.
 
 ## Remaining Checkpoint 07
 
-1. Review narrowly typed control-group policy construction against the actual
-   parser. Keep opaque `PolicyWriteRequest` available; do not weaken existing
-   policy escaping or capability validation.
-2. Retain live TLS evidence for independent approvers, self-approval denial,
+1. Retain live TLS evidence for independent approvers, self-approval denial,
    insufficient factors, expiration, namespace mismatch, replay and cancellation.
    Test original request/response shapes and metadata redaction. Python evidence
-   alone cannot promote public SDK routing.
-3. At checkpoint 10, exercise successful registered SDK dispatch and mixed/older
+   alone cannot promote public SDK routing. Include policies emitted by the
+   typed builder and verify their actual approval requirements.
+2. At checkpoint 10, exercise successful registered SDK dispatch and mixed/older
    profile regression cases before promoting the staged profile.
 
 ## 07c Execution Ownership
@@ -136,3 +136,55 @@ disconnection and cancellation after the mock server received the request. They
 check local replay rejection and rejection before transport for every active
 profile. These tests do not promote 2.7 or replace live server lifecycle evidence;
 successful public SDK dispatch is still required at checkpoint 10.
+
+## 07d Policy Builder Decision
+
+Implement a deliberately narrow identity-factor form, based on the locked
+`internal/vault/policy/policy.go` parser and `control_group.go` evaluator:
+
+- The actual self-approval key is `self_auth_allowed`, at control-group scope.
+  Emit `false` explicitly. There is no typed option enabling self-approval.
+- Every factor must include nonempty `controlled_capabilities`. Emit all of the
+  rule's operations for every factor, never an implicit default. `Sudo` is not an
+  operation and `Deny` is not an approval workflow; reject both and duplicates.
+- Every applicable factor must meet its threshold. An entity belonging to
+  several groups can contribute to several factors; do not claim disjointness.
+- Only group names are modeled by this parser, not group IDs. The SDK does not
+  invent a group-ID field or resolve identity groups before policy writing.
+
+`ControlGroupFactor` accepts 1..=16 unique names and 1..=128 required approvals.
+Names use a restricted ASCII alphabet (alphanumerics, spaces, `.`, `_`, `-`,
+starting with an alphanumeric), capped at 128 bytes; factor labels use the same
+alphabet capped at 64 bytes. `ControlGroupRequirement` requires 1..=8 unique
+factor labels and a whole-second TTL of 1..=86400 seconds. These are conservative
+SDK bounds, not a claim about the server's maximums. Iterators stop on overflow
+without collecting unbounded lists. Existing 128-rule/16-KiB document limits
+remain enforced. Constructors expose no mutable fields or Deserialize bypass.
+
+`AclPolicyBuilder::allow_path_with_control_group` preserves existing path and
+HCL-string validation, validates before insertion, and rejects exact-path
+collisions involving protected rules in either insertion order. Wildcard
+overlaps, other policies and group membership changes still need operator review.
+Generated HCL uses fixed structural keys and numeric values; accepted labels and
+group names cannot introduce templates, quotes, delimiters or control characters.
+
+The ordinary `build_write_request` rejects builders containing these new rules.
+Use `build_control_group_write_request`, which returns an opaque, non-serializable
+`ControlGroupPolicyWriteRequest`, and `Sys::write_control_group_policy`. That
+writer checks the 2.7 compatibility contract before invoking normal ACL writing;
+all active profiles and newer-server fallback are still rejected before policy
+transport. The operation replaces the named policy; it neither provisions groups
+nor approves requests. Debug redacts the new factor/requirement/request contents.
+
+Plain `build()` export and opaque `PolicyWriteRequest` remain explicit escape
+hatches for advanced naming, selective factor operations, self-approval, combined
+wrapping constraints or other HCL. They carry no structured compatibility guard:
+the caller must verify server support and actual enforcement. The new typed form
+does not change or reinterpret existing ordinary policy documents.
+
+Tests cover exact generated HCL, parser field names, bounds, injection inputs,
+iterator termination, atomic failed insertion, collision ordering, redaction,
+document limits and policy-write rejection on every active/fallback profile.
+Source review and golden-output tests are not live enforcement evidence. The
+remaining TLS lifecycle fixture must exercise this policy with real identities
+before checkpoint 07 can be considered complete.
