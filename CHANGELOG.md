@@ -6,6 +6,8 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Fix inherited verification-harness stdout pipe cleanup on success and failure,
+  including selector setup errors; add real-process cleanup regression tests.
 - Retain checkpoint 06e signed-image PKI TLS evidence with independent OpenSSL
   verification for ML-DSA, RSA-PSS and KMS grants, plus signature-tamper,
   wrong-key, cleanup and evidence-integrity regressions. The 2.7 profile stays

@@ -205,14 +205,16 @@ def run_bounded(
     )
     if process.stdout is None:
         process.kill()
+        process.wait()
         raise HarnessError("bounded command has no output pipe")
-    descriptor = process.stdout.fileno()
-    os.set_blocking(descriptor, False)
-    selector = selectors.DefaultSelector()
-    selector.register(descriptor, selectors.EVENT_READ)
-    deadline = time.monotonic() + timeout
+    selector = None
     output = bytearray()
     try:
+        descriptor = process.stdout.fileno()
+        os.set_blocking(descriptor, False)
+        selector = selectors.DefaultSelector()
+        selector.register(descriptor, selectors.EVENT_READ)
+        deadline = time.monotonic() + timeout
         while selector.get_map():
             remaining = deadline - time.monotonic()
             if remaining <= 0:
@@ -240,7 +242,11 @@ def run_bounded(
         process.wait()
         raise
     finally:
-        selector.close()
+        try:
+            if selector is not None:
+                selector.close()
+        finally:
+            process.stdout.close()
     if return_code not in accepted_codes:
         raise HarnessError("subprocess failed")
     return bytes(output)

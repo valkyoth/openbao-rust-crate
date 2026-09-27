@@ -7,6 +7,14 @@ Checkpoint 06e retains passing signed-image TLS certificate evidence. Checkpoint
 checkpoint 10 promotion requirement.
 OpenBao 2.7 routing is not promoted.
 
+Pentest follow-up: the shared bounded subprocess runner now explicitly closes
+its stdout pipe on successful, failed and interrupted execution, including
+selector setup errors, and reaps failed children. Real subprocess regression
+tests retain exception tracebacks to prove cleanup does not depend on garbage
+collection. The PKI crypto tests no longer emit unclosed-pipe ResourceWarnings.
+The four 2.7 TLS evidence reports require recapture for this changed harness;
+their previous input hashes are not rewritten as if they were new runs.
+
 ## Source Contract
 
 Reviewed tagged source: `ca305a02daa68b203325daa1b25c18d7a252d4b3`, including

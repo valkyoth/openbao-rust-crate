@@ -8,6 +8,10 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Fix inherited subprocess stdout-pipe cleanup in the verification harness,
+  with real-process tests for normal exit, failures, timeout, overflow,
+  interruption and selector setup errors.
+
 - Retain checkpoint 06e signed-image PKI TLS evidence with independent OpenSSL
   certificate, CSR and key-matching verification, local tamper/wrong-key controls
   and input-bound evidence validation. This is server-contract evidence, not SDK
