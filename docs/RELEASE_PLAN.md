@@ -970,8 +970,8 @@ Stop criteria:
 
 ### 2.1.9 - OpenBao 2.6.3 Compatibility
 
-Status: implemented; final release validation, pentesting, and GitHub approval
-are required before tagging. The tagged-source review and verification scope are in
+Status: released as signed tag `v2.1.9` at `0d0d755` after release validation,
+pentesting, and GitHub approval. The tagged-source review and verification scope are in
 [`OPENBAO_2_6_3_REVIEW.md`](OPENBAO_2_6_3_REVIEW.md).
 
 Stop criteria:
@@ -989,6 +989,13 @@ Stop criteria:
   GitHub CI, and CodeQL before tagging `v2.1.9`.
 
 OpenBao `2.7.0` onboarding belongs to `2.2.0`, after `2.1.9` is released.
+
+### 2.2.0 - OpenBao 2.7.0 Compatibility
+
+Status: in development. The ten pentestable commit checkpoints and security
+acceptance criteria are in [OPENBAO_2_7_0_PLAN.md](OPENBAO_2_7_0_PLAN.md).
+Checkpoint 01 establishes source evidence only. The active supported server
+profiles remain unchanged through 2.6.3 until the final promotion checkpoint.
 
 ### 2.1.8 - Transit Lifecycle Assurance
 

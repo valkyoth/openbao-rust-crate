@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### 2.2.0 Development
+
+- Start OpenBao 2.7.0 onboarding with a hash-locked tagged-source inventory
+  and a ten-checkpoint implementation and security verification plan.
+- Keep all 25 active profiles through OpenBao 2.6.3 unchanged. OpenBao 2.7.0
+  remains non-routable until its API, plugin and live-test work is complete.
+
 ## 2.1.9 - 2026-09-27
 
 ### Added

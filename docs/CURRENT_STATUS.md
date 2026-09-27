@@ -8,6 +8,10 @@ the [README](../README.md). For endpoint-level classifications, see
 
 ## Release Snapshot
 
+Main is developing `2.2.0`; [OpenBao 2.7.0 onboarding](OPENBAO_2_7_0_PLAN.md)
+has started but is not yet runtime support. The following inventory describes
+the unchanged active profiles inherited from stable `2.1.9`.
+
 The current stable line is `2.1.x`. It provides explicit, fail-closed OpenBao
 server-version compatibility for every published stable release from `2.0.0`
 through `2.6.3`. The active registry contains 691 operation identities across

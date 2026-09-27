@@ -40,6 +40,10 @@ The current `2.1.x` line supports every published stable OpenBao release from
 `2.0.0` through `2.6.3` through immutable compatibility profiles. Rust `1.98.1`
 is the primary checked toolchain and Rust `1.90.0` is the MSRV.
 
+Main is developing `2.2.0` for OpenBao `2.7.0`; that server version is not yet
+supported. Follow the [onboarding checkpoints](docs/OPENBAO_2_7_0_PLAN.md).
+The installation example below continues to use stable `2.1.9`.
+
 ## Install
 
 ```toml

@@ -41,6 +41,12 @@ and reviewed discrepancies. That evidence was promoted into the then-current
 22-profile locks, capability registry, contracts, and live matrix. The active
 inventory now contains 25 profiles.
 
+OpenBao 2.7.0 is staged separately in `onboarding/2.7.0/`. Its first checkpoint
+contains only a hash-locked tagged-source file inventory, not a signed-image
+record, runtime OpenAPI, or promoted capability profile. Verify it with
+`python3 -B scripts/openbao_2_7_source_inventory.py --verify` and `--self-test`.
+The [2.7.0 plan](../docs/OPENBAO_2_7_0_PLAN.md) tracks the remaining work.
+
 OpenBao's OCI indexes and `linux/amd64` manifests were verified with Cosign
 `3.1.1`, built from module tag `v3.1.1` at peeled source commit
 `7914231b348c4057891edeb321772aad3ed04fce`. Verification constrained the

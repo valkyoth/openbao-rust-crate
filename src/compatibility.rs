@@ -1015,6 +1015,37 @@ mod tests {
     }
 
     #[test]
+    fn staged_openbao_2_7_source_evidence_does_not_promote_runtime_support() -> Result<()> {
+        let staged = OpenBaoVersion::new(2, 7, 0);
+        let latest = OpenBaoVersion::new(2, 6, 3);
+        assert!(!is_routable_profile(staged));
+        assert!(OpenBaoCapabilityProfile::for_version(staged).is_none());
+        assert!(OpenBaoCompatibilityPolicy::exact(staged).is_err());
+        assert!(OpenBaoCompatibilityPolicy::assume(staged).is_err());
+        assert!(
+            OpenBaoCompatibilityPolicy::range(OpenBaoVersionRequirement::inclusive(
+                latest, staged,
+            )?)
+            .is_err()
+        );
+        assert_eq!(
+            OpenBaoCompatibilityPolicy::automatic_strict().evaluate_detected(staged),
+            Err(OpenBaoCompatibilityFailure::UnknownVersion(staged))
+        );
+        let acknowledged = OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+            UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+        )
+        .evaluate_detected(staged)
+        .map_err(|_| Error::Internal("acknowledged newer policy rejected staged version"))?;
+        assert_eq!(acknowledged.profile_version(), Some(latest));
+        assert_eq!(
+            acknowledged.status(),
+            OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
+        );
+        Ok(())
+    }
+
+    #[test]
     fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
         let strict = OpenBaoCompatibilityPolicy::automatic_strict();
         let unknown = OpenBaoVersion::new(2, 6, 4);
