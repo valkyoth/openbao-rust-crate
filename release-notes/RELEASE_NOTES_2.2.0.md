@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Add offline adversarial tests and a staged TLS fixture for sanitized-config
+  additions and ordinary wrapping-token revoke-self. Passing source-bound live
+  evidence is retained; this does not address the separate upstream control-group replay
+  defect or enable the 2.7 profile.
+
 - Stage a workflow CAS guard limited to exact verified OpenBao 2.7.0, with
   historical, assumed, fallback and range-profile rejection tests. Public 2.7
   dispatch remains disabled. Checkpoint 09b retains refreshed source-bound CAS,

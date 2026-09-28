@@ -17,9 +17,9 @@ This review supplements the checkpoint 02 inventory, not replaces it.
 | OCI digest and default command | Declarative server configuration changes, not optional SHA-256/command fields on catalog HTTP registration. `internal/vault/logical_system.go::handlePluginCatalogUpdate` still rejects missing SHA-256 and command, and requires a decoded 32-byte digest. Keep SDK registration validation. Server provisioning is not an SDK download/execution feature. |
 | Plugin prune | `internal/command/plugin_prune.go` is local configuration/storage administration. Do not invent an HTTP route. |
 | Latest plugin selection | `internal/vault/plugin_catalog.go` recognizes `latest`. Review existing mount/auth option serialization and version guards before claiming coverage. This is not verification of any external plugin artifact. |
-| Sanitized configuration | Existing `sanitized_config_state_json` accommodates additive JSON fields. Verify the new server fields live; do not infer their presence from decoding success. |
+| Sanitized configuration | Existing `sanitized_config_state_json` accommodates additive JSON fields. 09c verifies the three new explicit boolean defaults live; non-default combinations and public 2.7 SDK dispatch are not claimed. |
 | Envoy certificate decoder | `internal/http/handler.go` and `internal/http/util.go` implement listener-side XFCC decoding. This is not a cert-auth role/config field. Do not add an SDK header-spoofing path; server administrators own trusted proxy configuration. |
-| Wrapping-token revoke-self | `internal/vault/request_handling.go` changes token handling for the existing route. Verify consumption and subsequent rejection live; do not add automatic retries. |
+| Wrapping-token revoke-self | 09c verifies immediate accessor removal and subsequent unwrap/reuse rejection live, with a successful independent unwrap control. Existing SDK methods remain unchanged; no automatic retries. |
 | Raw backup reads | Review protected storage paths and test only disposable backups, preserving operator gates and secret-aware results. No raw access privilege is widened by this review. |
 | MFA TOTP | `internal/vault/login_mfa.go` returns `url` and `barcode`; existing `IdentityMfaTotpSecret` stores both as secrets. The staged documentation field delta adds the already-modeled admin-destroy method/entity IDs. Generation/destruction behavior still needs live verification. |
 | Workflow CAS | Handler now passes the supplied CAS to the store. Require exact-version adversarial evidence before adding a version-scoped SDK exception. See below. |
@@ -95,3 +95,52 @@ digest-pinned against the current sources and SDK test executable. Their scope
 is unchanged: CAS server behavior and SDK consistency checks passed, while the
 control-group report still records the known upstream replay failure. No
 validator was relaxed and no public profile was promoted.
+
+## 09c Sanitized Configuration And Wrapping Revocation
+
+Based on `55015ec`, the next fixture checks two server behavior changes without
+changing production Rust code. The tagged `internal/command/server/config.go`
+adds `disable_standby_reads`, `allow_unauthenticated_workflows` and
+`unsafe_relative_paths` to sanitized configuration. The fixture requires all
+three explicit boolean defaults in the returned data, rather than accepting
+missing fields or JSON decoding alone. Non-default configuration combinations
+are not claimed by this check.
+
+The tagged `internal/vault/request_handling.go` synchronously revokes a token
+on its final use when the request is `auth/token/revoke-self`. The fixture
+mirrors the upstream wrapping-token regression: verify a separate wrapping
+token can unwrap, look up the test token by accessor, revoke it using itself,
+require immediate accessor removal, then require unwrap and reuse to fail.
+It accepts only the expected denial status and cause, not arbitrary errors.
+The first live run reached post-revocation checks but exposed an incorrect
+fixture expectation: wrapping validation rejects a revoked token with HTTP 400
+and the invalid-wrapping-token error before ordinary ACL handling. The fixture
+now distinguishes that from revoke-self's HTTP 403 permission denial, matching
+the tagged request handler and response-status mapping. Offline regressions
+reject swapped statuses, swapped causes and unrelated errors. The corrected
+fixture subsequently passed its fresh live run.
+This is ordinary response wrapping, not a fix for the distinct control-group
+replay defect.
+
+`scripts/openbao_2_7_system_behavior.py` uses the existing signed image,
+constrained container, isolated network and certificate-verified TLS 1.3
+harness. Reports bind the fixture, shared harness and relevant SDK source,
+contain no returned credentials or configuration, and are emitted only after
+checks and cleanup. Python secret copies are not claimed to be sanitized.
+Offline tests cover mutated evidence claims and inputs, incomplete or mistyped
+configuration, revocation defects, bounded responses, token header validation
+and partial-setup/probe/cleanup failure without a success report.
+
+The passing live report is retained at
+`compat/onboarding/2.7.0/system-behavior-tls.json`. The verifier
+`scripts/verify_openbao_2_7_system_behavior.py` requires its independent digest,
+canonical encoding and exact current source/scope contract. CI tests reject
+changed claims, omitted or changed inputs, altered bytes and noncanonical JSON.
+To repeat the live capture:
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_system_behavior.py
+```
+
+This is server-fixture evidence, not public SDK dispatch evidence. Existing SDK
+methods and historical profiles are unchanged; 2.7 promotion remains blocked.

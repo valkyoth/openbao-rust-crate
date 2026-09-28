@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Stage checkpoint 09c's sanitized-config and wrapping-token revoke-self TLS
+  fixture with offline evidence, response, revocation and cleanup regressions.
+  Retain passing source-bound live evidence with an independent digest pin;
+  no runtime behavior or profile promotion changes.
+
 - Stage checkpoint 09b's workflow CAS guard for exact verified OpenBao 2.7.0,
   preserving old/assumed/fallback/range rejection and the independent prefix
   block. Public routing remains unpromoted; refreshed source-bound CAS,

@@ -152,6 +152,10 @@ base. All active historical CAS blocks and prefix listing remain blocked; 2.7
 still requires checkpoint 10 promotion. Refreshed source-bound CAS, control-group
 and SDK consistency reports are retained; the known server replay failure remains
 explicitly recorded. The remaining checkpoint 09 inventory is not yet complete.
+09b is committed as `55015ec`. Checkpoint 09c adds a constrained sanitized-config
+and wrapping-token revoke-self fixture with offline adversarial tests; its live
+capture passed and is retained with an independent digest pin and strict
+source/scope verification. The pentest base for 09c is `55015ec`.
 
 ## Security And Compatibility Rules
 
