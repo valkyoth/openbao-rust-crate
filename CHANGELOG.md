@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Stage checkpoint 09e's exact-verified-profile guard for mount/auth dynamic
+  `latest` plugin selection, preserving explicit and omitted versions.
+  Public 2.7 routing remains blocked; refreshed source-bound live evidence is
+  retained without changing its scope or the known server replay-failure claim.
+
 - Stage checkpoint 09d's MFA TOTP enrollment/removal fixture and adversarial
   offline tests. Retain passing source-bound TLS evidence with an independent
   digest pin and strict scope checks. Document that admin-destroy removes

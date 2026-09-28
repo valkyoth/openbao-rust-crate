@@ -161,6 +161,10 @@ lifecycle fixture and adversarial offline tests, with passing source-bound live
 evidence retained and independently digest-pinned.
 Its pentest base is `904abb4`; it does not claim storage erasure, login
 enforcement or public 2.7 dispatch.
+09d is committed as `26a90ec`. Checkpoint 09e gates dynamic `latest` selection
+for mount/auth enable and tune to the reviewed exact verified profile, preserving
+explicit and omitted versions. Regression tests and refreshed source-bound live
+evidence are retained with unchanged scope. Its pentest base is `26a90ec`.
 
 ## Security And Compatibility Rules
 

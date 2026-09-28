@@ -2989,7 +2989,9 @@ pub struct MountConfig {
         skip_serializing_if = "Option::is_none"
     )]
     pub allowed_response_headers: Option<Vec<String>>,
-    /// Plugin version.
+    /// Plugin version. The dynamic `latest` selector requires an exact verified
+    /// OpenBao 2.7.0 profile after routing promotion. It selects an installed
+    /// plugin dynamically, not an independently verified plugin artifact.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plugin_version: Option<String>,
     /// Token type used by auth mounts.
@@ -7137,12 +7139,11 @@ impl Sys<'_, Authenticated> {
         mount_path: &str,
         request: &MountEnableRequest,
     ) -> Result<Empty> {
+        let path = sys_path("sys/mounts", mount_path, None)?;
+        self.validate_latest_plugin_selection(request.config.as_ref())
+            .await?;
         self.client
-            .request_sys_json_internal(
-                Method::POST,
-                &sys_path("sys/mounts", mount_path, None)?,
-                Some(request),
-            )
+            .request_sys_json_internal(Method::POST, &path, Some(request))
             .await
     }
 
@@ -7180,12 +7181,10 @@ impl Sys<'_, Authenticated> {
 
     /// Tunes a secrets engine.
     pub async fn tune_mount(&self, mount_path: &str, config: &MountConfig) -> Result<Empty> {
+        let path = sys_path("sys/mounts", mount_path, Some("tune"))?;
+        self.validate_latest_plugin_selection(Some(config)).await?;
         self.client
-            .request_sys_json_internal(
-                Method::POST,
-                &sys_path("sys/mounts", mount_path, Some("tune"))?,
-                Some(config),
-            )
+            .request_sys_json_internal(Method::POST, &path, Some(config))
             .await
     }
 
@@ -7217,12 +7216,11 @@ impl Sys<'_, Authenticated> {
         mount_path: &str,
         request: &AuthEnableRequest,
     ) -> Result<Empty> {
+        let path = sys_path("sys/auth", mount_path, None)?;
+        self.validate_latest_plugin_selection(request.config.as_ref())
+            .await?;
         self.client
-            .request_sys_json_internal(
-                Method::POST,
-                &sys_path("sys/auth", mount_path, None)?,
-                Some(request),
-            )
+            .request_sys_json_internal(Method::POST, &path, Some(request))
             .await
     }
 
@@ -7251,13 +7249,18 @@ impl Sys<'_, Authenticated> {
 
     /// Tunes an auth method.
     pub async fn tune_auth_method(&self, mount_path: &str, config: &MountConfig) -> Result<Empty> {
+        let path = sys_path("sys/auth", mount_path, Some("tune"))?;
+        self.validate_latest_plugin_selection(Some(config)).await?;
         self.client
-            .request_sys_json_internal(
-                Method::POST,
-                &sys_path("sys/auth", mount_path, Some("tune"))?,
-                Some(config),
-            )
+            .request_sys_json_internal(Method::POST, &path, Some(config))
             .await
+    }
+
+    async fn validate_latest_plugin_selection(&self, config: Option<&MountConfig>) -> Result<()> {
+        if config.and_then(|config| config.plugin_version.as_deref()) == Some("latest") {
+            validate_latest_plugin_profile(self.client.compatibility_report().await?)?;
+        }
+        Ok(())
     }
 
     /// Reads `/sys/internal/ui/mounts/:path`.
@@ -9966,6 +9969,27 @@ fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> R
     Ok(())
 }
 
+fn validate_latest_plugin_profile(report: crate::OpenBaoCompatibilityReport) -> Result<()> {
+    use crate::compatibility::{OpenBaoCompatibilityPolicyKind, OpenBaoCompatibilityStatus};
+    let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
+    if report.status() != OpenBaoCompatibilityStatus::Verified
+        || !matches!(
+            report.policy(),
+            Some(
+                OpenBaoCompatibilityPolicyKind::Exact
+                    | OpenBaoCompatibilityPolicyKind::AutomaticStrict
+            )
+        )
+        || report.profile_version() != Some(reviewed)
+        || report.detected_version() != Some(reviewed)
+    {
+        return Err(Error::InvalidParameter(
+            "latest plugin selection requires an exact verified OpenBao 2.7.0 profile".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn validate_workflow_json(contents: &SecretVec) -> Result<()> {
     if contents.len() > MAX_WORKFLOW_DATA_BYTES {
         return Err(Error::InvalidParameter(
@@ -11021,6 +11045,41 @@ mod tests {
             super::validate_workflow_cas_profile(crate::OpenBaoCompatibilityReport::unverified())
                 .is_err()
         );
+    }
+
+    #[test]
+    fn latest_plugin_selection_requires_exact_verified_profile() {
+        use crate::compatibility::{
+            OpenBaoCompatibilityPolicyKind as Policy, OpenBaoCompatibilityReport as Report,
+        };
+        let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
+        for version in crate::compatibility::openbao_profile_versions() {
+            assert!(super::validate_latest_plugin_profile(Report::assumed(*version)).is_err());
+            assert!(
+                super::validate_latest_plugin_profile(Report::verified(
+                    Policy::Exact,
+                    *version,
+                    None
+                ))
+                .is_err()
+            );
+        }
+        for policy in [Policy::Exact, Policy::AutomaticStrict] {
+            assert!(
+                super::validate_latest_plugin_profile(Report::verified(policy, reviewed, None))
+                    .is_ok()
+            );
+        }
+        for report in [
+            Report::unverified(),
+            Report::assumed(reviewed),
+            Report::verified(Policy::Range, reviewed, None),
+            Report::verified(Policy::Exact, crate::OpenBaoVersion::new(2, 7, 1), None),
+            Report::acknowledged_unknown_newer(reviewed, crate::OpenBaoVersion::new(2, 6, 3)),
+            Report::acknowledged_unknown_newer(crate::OpenBaoVersion::new(2, 8, 0), reviewed),
+        ] {
+            assert!(super::validate_latest_plugin_profile(report).is_err());
+        }
     }
 
     #[test]

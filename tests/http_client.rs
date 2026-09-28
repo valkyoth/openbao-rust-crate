@@ -5053,6 +5053,211 @@ async fn workflow_operations_reject_pre_2_6_profiles_before_transport() {
     ));
 }
 
+async fn assert_latest_plugin_rejected(client: &Client<Authenticated>) {
+    let config = openbao::sys::MountConfig {
+        plugin_version: Some("latest".into()),
+        ..Default::default()
+    };
+    let mut mount = openbao::sys::MountEnableRequest::new("kv");
+    mount.config = Some(config.clone());
+    let mut auth = openbao::sys::AuthEnableRequest::new("userpass");
+    auth.config = Some(config.clone());
+    tokio::time::timeout(Duration::from_secs(2), async {
+        assert!(matches!(
+            client.sys().enable_mount("fixture-plugin", &mount).await,
+            Err(Error::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            client
+                .sys()
+                .enable_auth_method("fixture-plugin", &auth)
+                .await,
+            Err(Error::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            client.sys().tune_mount("fixture-plugin", &config).await,
+            Err(Error::InvalidParameter(_))
+        ));
+        assert!(matches!(
+            client
+                .sys()
+                .tune_auth_method("fixture-plugin", &config)
+                .await,
+            Err(Error::InvalidParameter(_))
+        ));
+    })
+    .await
+    .unwrap_or_else(|_| panic!("plugin selection reached transport"));
+}
+
+#[tokio::test]
+async fn latest_plugin_guard_preserves_explicit_and_omitted_versions() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    let server = thread::spawn(move || {
+        for version in [None, Some("v1.2.3")] {
+            for (path, nested) in [
+                ("sys/mounts/fixture-plugin", true),
+                ("sys/auth/fixture-plugin", true),
+                ("sys/mounts/fixture-plugin/tune", false),
+                ("sys/auth/fixture-plugin/tune", false),
+            ] {
+                let (mut stream, _) = listener
+                    .accept()
+                    .unwrap_or_else(|_| panic!("accept failed"));
+                let request = read_http_request(&mut stream);
+                assert!(request.starts_with(&format!("POST /v1/{path} ")));
+                let (_, body) = request
+                    .split_once("\r\n\r\n")
+                    .unwrap_or_else(|| panic!("body missing"));
+                let payload: serde_json::Value =
+                    serde_json::from_str(body).unwrap_or_else(|_| panic!("invalid JSON"));
+                let config = if nested { &payload["config"] } else { &payload };
+                assert_eq!(
+                    config
+                        .get("plugin_version")
+                        .and_then(serde_json::Value::as_str),
+                    version
+                );
+                write_json_response(&mut stream, "204 No Content", "");
+            }
+        }
+    });
+    let policy = OpenBaoCompatibilityPolicy::assume(OpenBaoVersion::new(2, 6, 3))
+        .unwrap_or_else(|_| panic!("policy failed"));
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(policy))
+        .unwrap_or_else(|_| panic!("config failed"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(test_secret(&["fixture-", "client-token"])))
+        .unwrap_or_else(|_| panic!("client failed"));
+    for version in [None, Some("v1.2.3")] {
+        let config = openbao::sys::MountConfig {
+            plugin_version: version.map(str::to_owned),
+            ..Default::default()
+        };
+        let mut mount = openbao::sys::MountEnableRequest::new("kv");
+        mount.config = Some(config.clone());
+        let mut auth = openbao::sys::AuthEnableRequest::new("userpass");
+        auth.config = Some(config.clone());
+        assert!(
+            client
+                .sys()
+                .enable_mount("fixture-plugin", &mount)
+                .await
+                .is_ok()
+        );
+        assert!(
+            client
+                .sys()
+                .enable_auth_method("fixture-plugin", &auth)
+                .await
+                .is_ok()
+        );
+        assert!(
+            client
+                .sys()
+                .tune_mount("fixture-plugin", &config)
+                .await
+                .is_ok()
+        );
+        assert!(
+            client
+                .sys()
+                .tune_auth_method("fixture-plugin", &config)
+                .await
+                .is_ok()
+        );
+    }
+    server
+        .join()
+        .unwrap_or_else(|_| panic!("transport fixture failed"));
+}
+
+#[tokio::test]
+async fn latest_plugin_rejects_historical_assumed_profiles_without_io() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    for version in openbao::compatibility::openbao_profile_versions() {
+        let policy = OpenBaoCompatibilityPolicy::assume(*version)
+            .unwrap_or_else(|_| panic!("policy failed"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|_| panic!("config failed"));
+        let client = Client::from_config(config)
+            .and_then(|client| client.try_with_token(test_secret(&["fixture-", "client-token"])))
+            .unwrap_or_else(|_| panic!("client failed"));
+        assert_latest_plugin_rejected(&client).await;
+    }
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|_| panic!("nonblocking failed"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+async fn latest_plugin_rejects_verified_old_and_newer_fallback_without_write() {
+    for (version, fallback) in [
+        ("2.6.0", false),
+        ("2.6.3", false),
+        ("2.7.0", true),
+        ("2.8.0", true),
+    ] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|_| panic!("address failed"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener
+                .accept()
+                .unwrap_or_else(|_| panic!("accept failed"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("GET /v1/sys/health "));
+            assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+            let body =
+                serde_json::json!({"initialized": true, "sealed": false, "version": version})
+                    .to_string();
+            write_json_response(&mut stream, "200 OK", &body);
+            listener
+        });
+        let policy = if fallback {
+            OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            )
+        } else {
+            OpenBaoCompatibilityPolicy::exact(
+                version.parse().unwrap_or_else(|_| panic!("version failed")),
+            )
+            .unwrap_or_else(|_| panic!("policy failed"))
+        };
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|_| panic!("config failed"));
+        let client = Client::from_config(config)
+            .and_then(|client| client.try_with_token(test_secret(&["fixture-", "client-token"])))
+            .unwrap_or_else(|_| panic!("client failed"));
+        assert_latest_plugin_rejected(&client).await;
+        let listener = server
+            .join()
+            .unwrap_or_else(|_| panic!("health fixture failed"));
+        listener
+            .set_nonblocking(true)
+            .unwrap_or_else(|_| panic!("nonblocking failed"));
+        assert!(
+            matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+        );
+    }
+}
+
 async fn assert_workflow_cas_rejected(client: &Client<Authenticated>) {
     for (cas, required) in [
         (Some(-1), false),

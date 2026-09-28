@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Stage a guarded mount/auth `latest` plugin selector with historical-profile
+  rejection and unchanged explicit/omitted payload tests. Refreshed source-bound
+  evidence is retained; external plugin artifact support and 2.7 promotion are
+  not claimed by this change.
+
 - Add a staged MFA TOTP enrollment/removal fixture and offline regressions.
   Passing source-bound live evidence is retained with an independent digest pin.
   The source review distinguishes entity association

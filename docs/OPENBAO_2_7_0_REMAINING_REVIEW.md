@@ -16,7 +16,7 @@ This review supplements the checkpoint 02 inventory, not replaces it.
 | --- | --- |
 | OCI digest and default command | Declarative server configuration changes, not optional SHA-256/command fields on catalog HTTP registration. `internal/vault/logical_system.go::handlePluginCatalogUpdate` still rejects missing SHA-256 and command, and requires a decoded 32-byte digest. Keep SDK registration validation. Server provisioning is not an SDK download/execution feature. |
 | Plugin prune | `internal/command/plugin_prune.go` is local configuration/storage administration. Do not invent an HTTP route. |
-| Latest plugin selection | `internal/vault/plugin_catalog.go` recognizes `latest`. Review existing mount/auth option serialization and version guards before claiming coverage. This is not verification of any external plugin artifact. |
+| Latest plugin selection | 09e stages an exact-verified-2.7 guard on the existing mount/auth enable and tune configuration field. Explicit versions and omission remain unchanged. External artifact execution/selection evidence and public 2.7 dispatch are not claimed. |
 | Sanitized configuration | Existing `sanitized_config_state_json` accommodates additive JSON fields. 09c verifies the three new explicit boolean defaults live; non-default combinations and public 2.7 SDK dispatch are not claimed. |
 | Envoy certificate decoder | `internal/http/handler.go` and `internal/http/util.go` implement listener-side XFCC decoding. This is not a cert-auth role/config field. Do not add an SDK header-spoofing path; server administrators own trusted proxy configuration. |
 | Wrapping-token revoke-self | 09c verifies immediate accessor removal and subsequent unwrap/reuse rejection live, with a successful independent unwrap control. Existing SDK methods remain unchanged; no automatic retries. |
@@ -194,3 +194,36 @@ To repeat the live capture:
 ```sh
 sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_mfa_totp.py
 ```
+
+## 09e Dynamic Plugin Version Selection
+
+Based on `26a90ec`, the tagged `logical_system.go::validateVersion` distinguishes
+an omitted version (select now and pin) from `latest` (resolve dynamically when
+setting up the backend). The tune handler also handles that exact selector.
+`plugin_catalog.go::getExternal` lists installed versions and chooses the
+highest semantic version; this is not downloading or authenticating an artifact.
+
+The existing `MountConfig.plugin_version` already represents the wire field.
+Enable requests serialize it within `config`, and tune requests serialize it
+at the top level. All four mount/auth enable/tune methods now require an exact
+verified 2.7.0 profile when selecting `latest`. Assumed, unverified, range,
+historical and acknowledged-unknown-newer fallback profiles fail closed.
+The generated registry still independently blocks unpromoted 2.7 dispatch.
+Paths are validated before compatibility probing. Omitted and explicitly
+versioned requests keep their existing dispatch and serialization behavior.
+
+Unit tests cover the report boundary. HTTP tests cover rejection without I/O
+on every historical assumed profile, health-only probing for verified older
+and fallback profiles, and unchanged explicit/omitted request payloads on the
+historical 2.6.3 profile. These are not external plugin execution tests. The
+separately excluded LDAP, Kerberos and RADIUS plugins remain excluded; catalog
+SHA-256 and command requirements are not relaxed. Database plugin configuration
+is a separate engine contract, not covered by these mount/auth checks.
+
+This production source change invalidated the previous source-bound CAS,
+control-group, SDK consistency, system-behavior and MFA reports. Fresh live
+captures are now retained with independent digest pins and verified current
+source inputs; both SDK reports match the test executable. Evidence scope is
+unchanged, including the known upstream control-group replay failure. No old
+report was edited to substitute current source hashes. Raw backup reads and
+final delta reconciliation remain checkpoint 09 obligations.
