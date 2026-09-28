@@ -20,7 +20,7 @@ This review supplements the checkpoint 02 inventory, not replaces it.
 | Sanitized configuration | Existing `sanitized_config_state_json` accommodates additive JSON fields. 09c verifies the three new explicit boolean defaults live; non-default combinations and public 2.7 SDK dispatch are not claimed. |
 | Envoy certificate decoder | `internal/http/handler.go` and `internal/http/util.go` implement listener-side XFCC decoding. This is not a cert-auth role/config field. Do not add an SDK header-spoofing path; server administrators own trusted proxy configuration. |
 | Wrapping-token revoke-self | 09c verifies immediate accessor removal and subsequent unwrap/reuse rejection live, with a successful independent unwrap control. Existing SDK methods remain unchanged; no automatic retries. |
-| Raw backup reads | Review protected storage paths and test only disposable backups, preserving operator gates and secret-aware results. No raw access privilege is widened by this review. |
+| Raw backup reads | 09f retains passing real unseal-backup raw/dedicated API equivalence, deletion, ACL and protected-path evidence. Recovery/upgrade scenarios are not verified. Operator gates and secret-aware SDK results are unchanged. |
 | MFA TOTP | Existing `IdentityMfaTotpSecret` stores URL/barcode as secrets; admin method/entity IDs are already modeled. 09d retains passing generation, denial, association removal and fresh-enrollment evidence. Stored-key erasure, QR decoding and login enforcement are not claimed. |
 | Workflow CAS | Handler now passes the supplied CAS to the store. Require exact-version adversarial evidence before adding a version-scoped SDK exception. See below. |
 | Workflow prefix listing | The tagged handler reads `data.Get("parent").(string)` although its route declares `path`, not `parent`. Source review does not justify lifting the independent prefix block. Keep the block; any live diagnostic is separate from CAS evidence. |
@@ -227,3 +227,54 @@ source inputs; both SDK reports match the test executable. Evidence scope is
 unchanged, including the known upstream control-group replay failure. No old
 report was edited to substitute current source hashes. Raw backup reads and
 final delta reconciliation remain checkpoint 09 obligations.
+
+## 09f Raw Unseal Backup Reads
+
+Based on `d324862`, the tagged `logical_raw.go::storageByPath` now includes
+`core/unseal-keys-backup` and `core/recovery-keys-backup` among the special
+upper-barrier paths. The root namespace reads these through physical storage;
+an ordinary raw entry does not test this change. `core/keyring` and
+`core/cluster/local/info` remain protected.
+
+`scripts/openbao_2_7_raw_backup.py` enables raw storage only in its own disposable
+in-memory TLS server. It initializes and unseals that server, then uses the
+authenticated root rotation ceremony with a PGP public test recipient and backup enabled.
+This creates a real physical unseal-share backup rather than injecting one
+through raw writes. The fixture compares the raw JSON nonce and encrypted
+shares with the rotation result, checks base64 read equivalence, checks the modern
+dedicated backup API and rereads raw storage after that handler runs.
+It denies a raw read to an explicitly deny-only token, checks exact protected
+path errors even for the root token, deletes the backup through the dedicated
+API and requires a subsequent raw read to return absent.
+
+The attributed public recipient is from the exact tagged upstream test suite.
+Its private counterpart is public test material upstream: this recipient must
+never be used for a real deployment. No private key is imported into this
+repository, and no generated shares, backup contents or credentials are logged
+or retained. Python copies are not claimed to sanitize secret memory.
+The temporary root is private, the server uses the signed image with existing
+resource/network/TLS checks, and reports require completed cleanup.
+
+The report is deliberately limited to a newly created unseal backup and
+server-fixture behavior. Recovery backup, cross-release upgrade, backup
+decryption and public SDK dispatch are not verified by this fixture.
+Production raw-access acknowledgement gates and secret response types are
+unchanged. Offline regressions cover scope/input tampering, wrong backup data,
+encoding mismatch, ineffective deletion, ACL/protected-path bypass, and
+partial-setup/probe/cleanup failure without emitting success.
+
+The first live run stopped with HTTP 405 on the legacy rekey route, whose
+unauthenticated handlers are disabled by default in 2.7. The fixture now uses
+authenticated POSTs to `sys/rotate/root/init` and `sys/rotate/root/update`
+and requires their data envelopes. Tests assert both the methods and the root
+credential context; server listener defaults are not weakened.
+The corrected live run passed. Its report is retained at
+`compat/onboarding/2.7.0/raw-backup-tls.json`. The verifier
+`scripts/verify_openbao_2_7_raw_backup.py` requires the independent digest pin,
+canonical encoding and exact current source/scope fields. CI regressions reject
+changed claims, omitted or changed inputs, changed bytes and noncanonical JSON.
+To repeat the live capture:
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_raw_backup.py
+```

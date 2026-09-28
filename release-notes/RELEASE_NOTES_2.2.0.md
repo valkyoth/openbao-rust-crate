@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Add a staged real unseal-backup fixture with raw/dedicated API comparison and
+  adversarial offline tests. Passing source-bound live evidence is retained;
+  recovery backup, upgrade
+  and decryption verification are not claimed by this slice.
+
 - Stage a guarded mount/auth `latest` plugin selector with historical-profile
   rejection and unchanged explicit/omitted payload tests. Refreshed source-bound
   evidence is retained; external plugin artifact support and 2.7 promotion are

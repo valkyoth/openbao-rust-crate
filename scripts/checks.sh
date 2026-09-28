@@ -50,6 +50,8 @@ echo "checks: staged OpenBao 2.7 external-plugin availability and local fixture"
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_workflow_cas.py
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_system_behavior.py
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_mfa_totp.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_raw_backup.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_raw_backup.py
 /usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_mfa_totp.py
 /usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_system_behavior.py
 /usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_workflow_cas.py

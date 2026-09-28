@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Stage checkpoint 09f's real disposable unseal backup fixture, raw/backup API
+  equivalence checks and permission/protected-path regressions. Passing
+  source-bound live evidence is retained with an independent digest pin;
+  no production raw privilege or profile-promotion change is made.
+
 - Stage checkpoint 09e's exact-verified-profile guard for mount/auth dynamic
   `latest` plugin selection, preserving explicit and omitted versions.
   Public 2.7 routing remains blocked; refreshed source-bound live evidence is

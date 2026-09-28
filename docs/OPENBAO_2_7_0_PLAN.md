@@ -165,6 +165,11 @@ enforcement or public 2.7 dispatch.
 for mount/auth enable and tune to the reviewed exact verified profile, preserving
 explicit and omitted versions. Regression tests and refreshed source-bound live
 evidence are retained with unchanged scope. Its pentest base is `26a90ec`.
+09e is committed as `d324862`. Checkpoint 09f adds a disposable real
+PGP-encrypted unseal backup fixture with raw/dedicated API comparison and
+protected-path regressions. Passing source-bound live evidence is retained
+with an independent digest pin; recovery and upgrade
+coverage are not claimed. Its pentest base is `d324862`.
 
 ## Security And Compatibility Rules
 
