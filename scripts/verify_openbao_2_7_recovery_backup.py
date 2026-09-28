@@ -1,22 +1,22 @@
 #!/usr/bin/python3 -EsSB
-"""Verify staged system behavior evidence without promoting SDK routing."""
+"""Verify recovery-backup evidence without claiming upgrade or promotion."""
 
 import argparse
 
-import openbao_2_7_system_behavior as fixture
+import openbao_2_7_recovery_backup as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/system-behavior-tls.json"
-EXPECTED_SHA256 = "f22b76964f9b47b92c2ad3b80e7be91b77b85e4edd947e07aa8db45bf4d1f80c"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/recovery-backup-tls.json"
+EXPECTED_SHA256 = "5a7cda0b2761e1e590e02b7e590ae2db53adc80551f902df63871a5e11d279ec"
 
 
 def verify():
     data = snapshots.read_regular_file(RESULT, 64 * 1024)
     if snapshots.sha256(data) != EXPECTED_SHA256:
-        raise snapshots.SnapshotError("system behavior evidence digest changed")
+        raise snapshots.SnapshotError("recovery backup evidence digest changed")
     report = snapshots.parse_json(data, 64 * 1024)
     if snapshots.canonical_json(report) != data:
-        raise snapshots.SnapshotError("system behavior evidence is not canonical")
+        raise snapshots.SnapshotError("recovery backup evidence is not canonical")
     fixture.validate_report(report)
     return report
 
@@ -26,9 +26,9 @@ def main():
     try:
         verify()
     except (fixture.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
-        print("System behavior evidence verification failed")
+        print("Recovery backup evidence verification failed")
         return 1
-    print("System behavior server evidence verified; public profile remains blocked")
+    print("Recovery backup server evidence verified; upgrade not claimed; profile remains blocked")
     return 0
 
 

@@ -6,6 +6,27 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Fix modern rotation response-envelope decoding while preserving legacy rekey
+  contracts. Add grouped backup results that preserve multiple encrypted shares
+  per fingerprint; the existing single-share return API rejects non-singleton
+  groups rather than truncating them. All affected source-bound evidence has
+  been freshly captured and independently pinned; checkpoint 09 awaits pentest.
+
+- Account for all 189 staged API delta records and six recovered historical
+  route identities, with a digest-pinned ledger and omission/tamper tests.
+  Fix the modern-rotation response-envelope gap discovered by that review;
+  public profile promotion remains a separate checkpoint 10 requirement.
+
+- Retain verified 2.6.3-to-2.7.0 recovery-backup upgrade evidence on single-node
+  Raft, including exact backup contents, preserved physical bytes, access controls
+  and deletion. Add digest/source verification and tamper regressions; this is
+  not general upgrade certification or public profile promotion.
+
+- Retain checkpoint 09 recovery-backup TLS evidence using disposable static
+  auto-unseal, with raw/dedicated API equivalence and access-control checks.
+  Add evidence-integrity and cleanup regressions; upgrade coverage and public
+  2.7 routing are not claimed by this fixture.
+
 - Stage checkpoint 09f's real disposable unseal backup fixture, raw/backup API
   equivalence checks and permission/protected-path regressions. Passing
   source-bound live evidence is retained with an independent digest pin;

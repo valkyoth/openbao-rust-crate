@@ -1,6 +1,7 @@
 # OpenBao 2.7.0 Remaining Behavior Review
 
-Checkpoint 09 is in progress, based on `e8d2402`. The checkpoint 08 pentest and
+Checkpoint 09 implementation and evidence refresh are ready for pentest, based
+on `e8d2402`. The checkpoint 08 pentest and
 GitHub checks passed, including closure of the test-harness CodeQL findings.
 No 2.7 profile is promoted. All active historical workflow CAS blocks and the
 independent prefix-listing block remain enforced.
@@ -20,11 +21,11 @@ This review supplements the checkpoint 02 inventory, not replaces it.
 | Sanitized configuration | Existing `sanitized_config_state_json` accommodates additive JSON fields. 09c verifies the three new explicit boolean defaults live; non-default combinations and public 2.7 SDK dispatch are not claimed. |
 | Envoy certificate decoder | `internal/http/handler.go` and `internal/http/util.go` implement listener-side XFCC decoding. This is not a cert-auth role/config field. Do not add an SDK header-spoofing path; server administrators own trusted proxy configuration. |
 | Wrapping-token revoke-self | 09c verifies immediate accessor removal and subsequent unwrap/reuse rejection live, with a successful independent unwrap control. Existing SDK methods remain unchanged; no automatic retries. |
-| Raw backup reads | 09f retains passing real unseal-backup raw/dedicated API equivalence, deletion, ACL and protected-path evidence. Recovery/upgrade scenarios are not verified. Operator gates and secret-aware SDK results are unchanged. |
+| Raw backup reads | 09f retains passing real unseal-backup evidence; the recovery fixture separately verifies fresh recovery-backup reads and access controls. A separate passing single-node Raft fixture verifies recovery-backup preservation from 2.6.3 to 2.7.0. General upgrade and unseal-backup migration are not claimed. Operator gates and secret-aware SDK results are unchanged. |
 | MFA TOTP | Existing `IdentityMfaTotpSecret` stores URL/barcode as secrets; admin method/entity IDs are already modeled. 09d retains passing generation, denial, association removal and fresh-enrollment evidence. Stored-key erasure, QR decoding and login enforcement are not claimed. |
 | Workflow CAS | Handler now passes the supplied CAS to the store. Require exact-version adversarial evidence before adding a version-scoped SDK exception. See below. |
 | Workflow prefix listing | The tagged handler reads `data.Get("parent").(string)` although its route declares `path`, not `parent`. Source review does not justify lifting the independent prefix block. Keep the block; any live diagnostic is separate from CAS evidence. |
-| Remaining inventory | Reconcile all staged operation/schema/documentation deltas and the six recovered historical route identities before checkpoint 10. No aggregate 100% coverage claim is made here. |
+| Remaining inventory | All 189 records and six recovered identities now have explicit accounting. Modern-rotation envelopes and grouped backup decoding are fixed with regressions; all affected source-bound evidence has been freshly captured and verified. No aggregate 100% coverage claim is made here. |
 
 ## 09a Workflow CAS Evidence
 
@@ -278,3 +279,106 @@ To repeat the live capture:
 ```sh
 sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_raw_backup.py
 ```
+
+## Recovery Backup Evidence
+
+The separate `scripts/openbao_2_7_recovery_backup.py` fixture passed against
+the signed 2.7.0 image. It uses the built-in static auto-unseal provider with
+a fresh 32-byte seal key in a private temporary file, not an environment
+variable or command argument. It initializes recovery shares and requires the
+server to be unsealed, then performs authenticated recovery rotation with the
+same public test PGP recipient described above.
+
+The fixture compares the real encrypted recovery backup with both raw read
+encodings and the dedicated recovery-backup API. It checks explicit deny-only
+ACL rejection, protected keyring/cluster paths, and absence after deletion.
+Cleanup destroys owned containers/networks and explicitly sanitizes the
+temporary seal-key file before removing the directory. This is best-effort
+file cleanup, not a claim about storage-device erasure or Python secret memory.
+
+The live report is retained at
+`compat/onboarding/2.7.0/recovery-backup-tls.json`. Its verifier checks an
+independent digest, canonical encoding and exact current source hashes.
+Offline regressions cover changed scope/input claims, digest and encoding
+tampering, incorrect backup data, ACL bypass, ineffective deletion, incorrect
+initialization and partial setup/probe/cleanup failures, including seal-key
+cleanup failure. No success report is emitted after those failures.
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_recovery_backup.py
+```
+
+This is fresh-server recovery-backup evidence, not backup decryption,
+cross-release upgrade or public SDK dispatch evidence. The existing unseal
+report remains unchanged. The separate upgrade fixture below supplies narrowly
+scoped migration evidence. Checkpoint 09 still requires complete delta
+reconciliation; checkpoint 10 owns public profile promotion.
+
+## Recovery Backup Upgrade Evidence
+
+The cross-release fixture `scripts/openbao_2_7_backup_upgrade.py` passed its
+live run. It creates a real PGP-encrypted recovery backup on locked,
+signature-verified 2.6.3, stops that container, then starts locked,
+signature-verified 2.7.0 with the same single-node Raft storage and static seal key. It
+requires an unchanged cluster ID and captures physical backup bytes before invoking
+the dedicated read handler, which can otherwise migrate storage. It checks exact
+nonce/share preservation through the dedicated API and unchanged base64-decoded
+physical bytes across that read, protected paths, deny-only access and deletion. The source
+and target share TLS configuration without disabling certificate validation.
+
+Offline tests exercise bounded readiness, exact signature claims, backup
+corruption, access-control failures, interrupted replacement and cleanup
+failure. A passing report requires cleanup and unchanged source inputs; it
+claims only this recovery-backup/single-node-Raft migration, not general
+upgrade compatibility, unseal-backup migration or public SDK dispatch.
+The passing report is retained at `compat/onboarding/2.7.0/backup-upgrade-tls.json`.
+`scripts/verify_openbao_2_7_backup_upgrade.py` checks an independent digest pin,
+canonical encoding, exact current source inputs and scope. CI regressions reject
+altered report bytes, noncanonical encoding and broadened assurance claims.
+
+The initial fixture incorrectly selected the file storage backend: 2.6.3
+accepted it, but 2.7.0 removes it from the server backend registry (it remains
+available to the migration command). Both fixture servers now use Raft instead,
+with an unchanged node ID and storage directory. Readiness waits for auto-unseal
+and active leadership before comparing cluster identity. This is not a test of
+file-to-Raft migration, which requires a separate operator migration procedure.
+
+The subsequent run reached backup verification. Exact predecessor source review
+(`63a65e6b907589dbb952c371a70260a065bf8bd7`, `vault/rotate.go::pgpEncryptShares`)
+shows that 2.6.3 writes through the barrier, unlike 2.7.0's physical root-namespace
+write. The initial fixture incorrectly expected raw JSON after upgrading.
+It now reads the old physical ciphertext with base64 (default string encoding
+can lose binary data), checks the dedicated API against the original rotation
+result, and rejects any physical-byte change across the dedicated read.
+This does not claim that historical physical backup bytes are plaintext JSON.
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_backup_upgrade.py
+```
+
+## Recovered Route Review In Progress
+
+Two of the six recovered documentation identities conflict with the tagged
+implementation and must not automatically become routable:
+
+- `PATCH /ssh/issuer/:issuer_ref`: the documentation's combined POST/PATCH
+  row is present, but `internal/builtin/logical/ssh/path_issuers.go::pathIssuers`
+  registers read, update and delete only, with no patch operation. The existing
+  SDK `update_issuer` sends POST. A recovered documentation row is not evidence
+  for adding PATCH dispatch.
+- `GET /sys/internal/inspect/request/root`: the documentation table contains
+  `/root`, but its own sample request omits it. The tagged
+  `internal/vault/logical_system_paths.go::introspectionPaths` registers
+  `internal/inspect/request` without that suffix. Keep this discrepancy explicit
+  in the final reconciliation rather than altering immutable historical evidence.
+
+These are source-review observations, not new live route-verification claims.
+All six identities and all 189 adjacent delta records are accounted for in the
+[delta reconciliation](OPENBAO_2_7_0_DELTA_RECONCILIATION.md), with an exact-record
+ledger, digest pin and omission/substitution regressions. Accounting is not
+runtime verification: the modern-rotation decoder fixes changed `src/sys.rs`.
+All nine affected source-bound reports listed in that review were freshly
+captured and verified against current inputs, preserving their original scope.
+The control-group replay defect remains explicitly recorded. Checkpoint 09
+awaits full-checkpoint pentest; checkpoint 10 still owns public dispatch and
+profile promotion.

@@ -1,0 +1,1329 @@
+{
+  "schema": "openbao-2.7-delta-review/v1",
+  "scope": "record-reconciliation-not-profile-promotion",
+  "changes": [
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /auth/{kerberos_mount_path}/groups/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /auth/{ldap_mount_path}/groups/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /auth/{ldap_mount_path}/users/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /auth/{radius_mount_path}/users/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /sys/external-keys/configs/{config}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /sys/external-keys/configs/{config}/keys/{key}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /sys/external-keys/configs/{config}/keys/{key}/grants/{mount}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /{ldap_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /{ldap_mount_path}/library/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /{ldap_mount_path}/role/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "DELETE /{ldap_mount_path}/static-role/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{kerberos_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{kerberos_mount_path}/config/ldap",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{kerberos_mount_path}/groups",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{kerberos_mount_path}/groups/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{kerberos_mount_path}/login",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{ldap_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{ldap_mount_path}/groups",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{ldap_mount_path}/groups/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{ldap_mount_path}/users",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{ldap_mount_path}/users/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{radius_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{radius_mount_path}/users",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /auth/{radius_mount_path}/users/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /sys/external-keys/configs",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /sys/external-keys/configs/{config}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /sys/external-keys/configs/{config}/keys",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /sys/external-keys/configs/{config}/keys/{key}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /sys/external-keys/configs/{config}/keys/{key}/grants",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "changed",
+      "evidence": "openapi-operation",
+      "field": "/operationId",
+      "identity": "GET /sys/workflows/manage",
+      "review_group": "workflow-list-projection"
+    },
+    {
+      "change": "changed",
+      "evidence": "openapi-operation",
+      "field": "/parameters/0/name",
+      "identity": "GET /sys/workflows/manage",
+      "review_group": "workflow-list-projection"
+    },
+    {
+      "change": "changed",
+      "evidence": "openapi-operation",
+      "field": "/parameters/1/name",
+      "identity": "GET /sys/workflows/manage",
+      "review_group": "workflow-list-projection"
+    },
+    {
+      "change": "changed",
+      "evidence": "openapi-operation",
+      "field": "/responses/200/content/application~1json/schema/$ref",
+      "identity": "GET /sys/workflows/manage",
+      "review_group": "workflow-list-projection"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/creds/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/library",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/library/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/library/{name}/status",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/role",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/role/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/static-cred/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/static-role",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "GET /{ldap_mount_path}/static-role/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "PATCH /sys/external-keys/configs/{config}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "PATCH /sys/external-keys/configs/{config}/keys/{key}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{kerberos_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{kerberos_mount_path}/config/ldap",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{kerberos_mount_path}/groups/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{kerberos_mount_path}/login",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{ldap_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{ldap_mount_path}/groups/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{ldap_mount_path}/login/{username}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{ldap_mount_path}/users/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{radius_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{radius_mount_path}/login",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{radius_mount_path}/login/{urlusername}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /auth/{radius_mount_path}/users/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /sys/control-group/authorize",
+      "review_group": "control-groups"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /sys/control-group/request",
+      "review_group": "control-groups"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /sys/external-keys/configs/{config}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /sys/external-keys/configs/{config}/keys/{key}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /sys/external-keys/configs/{config}/keys/{key}/grants/{mount}",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/config",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/library/manage/{name}/check-in",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/library/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/library/{name}/check-in",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/library/{name}/check-out",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/role/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/rotate-role/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/rotate-root",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-operation",
+      "field": "/",
+      "identity": "POST /{ldap_mount_path}/static-role/{name}",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/requestBody/content/application~1json/schema/$ref",
+      "identity": "POST /{transit_mount_path}/keys/{name}/rotate",
+      "review_group": "transit"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-operation",
+      "field": "/requestBody/required",
+      "identity": "POST /{transit_mount_path}/keys/{name}/rotate",
+      "review_group": "transit"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "AuthorizeRequest",
+      "review_group": "control-groups"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ControlGroupAuthorizeResponse",
+      "review_group": "control-groups"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ControlGroupRequestResponse",
+      "review_group": "control-groups"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ExternalKeysListConfigsResponse",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ExternalKeysListGrantsResponse",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ExternalKeysListKeysResponse",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ExternalKeysPatchConfigsRequest",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ExternalKeysPatchKeysRequest",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ExternalKeysWriteConfigsRequest",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ExternalKeysWriteKeysRequest",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "KerberosConfigureLdapRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "KerberosConfigureRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "KerberosLoginRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "KerberosWriteGroupRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapConfigureAuthRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapConfigureRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapLibraryCheckInRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapLibraryCheckOutRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapLibraryConfigureRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapLibraryForceCheckInRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapLoginRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapWriteDynamicRoleRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapWriteGroupRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapWriteStaticRoleRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "LdapWriteUserRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiCrossSignIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiCrossSignIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/use_pss/default",
+      "identity": "PkiCrossSignIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/use_pss/type",
+      "identity": "PkiCrossSignIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiCrossSignIntermediateResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateExportedKeyRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiGenerateExportedKeyRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateExportedKeyResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiGenerateIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/use_pss/default",
+      "identity": "PkiGenerateIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/use_pss/type",
+      "identity": "PkiGenerateIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateIntermediateResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateInternalKeyRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiGenerateInternalKeyRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateInternalKeyResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateKmsKeyRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiGenerateKmsKeyRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateKmsKeyResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateRootRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiGenerateRootRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiGenerateRootResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/4",
+      "identity": "PkiIssueWithCelRoleRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/4",
+      "identity": "PkiIssueWithRoleRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/4",
+      "identity": "PkiIssuerIssueWithRoleRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiIssuersGenerateIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiIssuersGenerateIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/use_pss/default",
+      "identity": "PkiIssuersGenerateIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/use_pss/type",
+      "identity": "PkiIssuersGenerateIntermediateRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiIssuersGenerateIntermediateResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiIssuersGenerateRootRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiIssuersGenerateRootRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiIssuersGenerateRootResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "changed",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiPatchRoleRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/4",
+      "identity": "PkiPatchRoleRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiRotateRootRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiRotateRootRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "PkiRotateRootResponse",
+      "review_group": "pki"
+    },
+    {
+      "change": "changed",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/3",
+      "identity": "PkiWriteRoleRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/key_type/enum/4",
+      "identity": "PkiWriteRoleRequest",
+      "review_group": "pki"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "RadiusConfigureRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "RadiusLoginRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "RadiusLoginWithUsernameRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "RadiusWriteUserRequest",
+      "review_group": "external-plugin-exclusion"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "ReadRequest",
+      "review_group": "control-groups"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/properties/external_key_ref/type",
+      "identity": "TransitCreateKeyRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "added",
+      "evidence": "openapi-schema",
+      "field": "/",
+      "identity": "TransitRotateKeyRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/properties/algorithm/default",
+      "identity": "TransitSignRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/properties/hash_algorithm/default",
+      "identity": "TransitSignRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/properties/algorithm/default",
+      "identity": "TransitSignWithAlgorithmRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/properties/hash_algorithm/default",
+      "identity": "TransitSignWithAlgorithmRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/properties/algorithm/default",
+      "identity": "TransitVerifyRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/properties/hash_algorithm/default",
+      "identity": "TransitVerifyRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/properties/algorithm/default",
+      "identity": "TransitVerifyWithAlgorithmRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "openapi-schema",
+      "field": "/properties/hash_algorithm/default",
+      "identity": "TransitVerifyWithAlgorithmRequest",
+      "review_group": "transit"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "DELETE /sys/external-keys/configs/:config_name/keys/:key_name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "DELETE /sys/external-keys/configs/:config_name/keys/:key_name/grants/:mount-path",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "DELETE /sys/external-keys/configs/:name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "GET /sys/external-keys/configs/:config_name/keys/:key_name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "GET /sys/external-keys/configs/:name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "LIST /sys/external-keys/configs",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "LIST /sys/external-keys/configs/:config_name/keys",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "LIST /sys/external-keys/configs/:config_name/keys/:key_name/grants",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "PATCH /sys/external-keys/configs/:config_name/keys/:key_name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "PATCH /sys/external-keys/configs/:name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:entity_id:string: <required>",
+      "identity": "POST /identity/mfa/method/totp/admin-destroy",
+      "review_group": "mfa-totp"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:method_id:string: <required>",
+      "identity": "POST /identity/mfa/method/totp/admin-destroy",
+      "review_group": "mfa-totp"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /pki/intermediate/cross-sign",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:use_pss:bool: false",
+      "identity": "POST /pki/intermediate/cross-sign",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /pki/intermediate/generate/:type",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:use_pss:bool: false",
+      "identity": "POST /pki/intermediate/generate/:type",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /pki/issuers/generate/intermediate/:type",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:use_pss:bool: false",
+      "identity": "POST /pki/issuers/generate/intermediate/:type",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /pki/issuers/generate/root/:type",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /pki/keys/generate/:type",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /pki/root/generate/:type",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /pki/root/rotate/:type",
+      "review_group": "pki"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "POST /sys/control-group/authorize",
+      "review_group": "control-groups"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "POST /sys/control-group/request",
+      "review_group": "control-groups"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "POST /sys/external-keys/configs/:config_name/keys/:key_name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "POST /sys/external-keys/configs/:config_name/keys/:key_name/grants/:mount-path",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "POST /sys/external-keys/configs/:name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /transit/keys/:name",
+      "review_group": "transit"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:external_key_ref:string: \"\"",
+      "identity": "POST /transit/keys/:name/rotate",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "tagged-documentation",
+      "field": "parameters:hash_algorithm:string: \"sha2-256\"",
+      "identity": "POST /transit/sign/:name(/:hash_algorithm)",
+      "review_group": "transit"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:hash_algorithm:string: <optional>",
+      "identity": "POST /transit/sign/:name(/:hash_algorithm)",
+      "review_group": "transit"
+    },
+    {
+      "change": "removed",
+      "evidence": "tagged-documentation",
+      "field": "parameters:hash_algorithm:string: \"sha2-256\"",
+      "identity": "POST /transit/verify/:name(/:hash_algorithm)",
+      "review_group": "transit"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "parameters:hash_algorithm:string: <optional>",
+      "identity": "POST /transit/verify/:name(/:hash_algorithm)",
+      "review_group": "transit"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "PUT /sys/external-keys/configs/:config_name/keys/:key_name",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "PUT /sys/external-keys/configs/:config_name/keys/:key_name/grants/:mount-path",
+      "review_group": "external-keys"
+    },
+    {
+      "change": "added",
+      "evidence": "tagged-documentation",
+      "field": "/",
+      "identity": "PUT /sys/external-keys/configs/:name",
+      "review_group": "external-keys"
+    }
+  ]
+}

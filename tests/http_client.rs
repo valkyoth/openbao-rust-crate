@@ -657,15 +657,23 @@ async fn versioned_operator_rotation_extensions_use_documented_paths() {
             let request = read_http_request(&mut stream);
             assert!(request.starts_with(path));
             let body = match step {
-                0 | 11 => {
+                0 => {
                     r#"{"nonce":"backup","keys":{"fingerprint":"encrypted"},"keys_base64":{"fingerprint":"encoded"}}"#
+                }
+                11 => {
+                    r#"{"nonce":"backup","keys":{"fingerprint":["encrypted"]},"keys_base64":{"fingerprint":["encoded"]}}"#
                 }
                 2 | 3 | 13 | 15 => r#"{"started":true,"nonce":"nonce","progress":0,"required":1}"#,
                 4 | 14 => r#"{"complete":true,"nonce":"nonce"}"#,
                 7 | 9 => r#"{"data":{"enabled":true,"interval":3600,"max_operations":1000}}"#,
                 _ => "{}",
             };
-            write_json_response(&mut stream, "200 OK", body);
+            let body = if matches!(step, 11 | 13 | 14 | 15) {
+                format!(r#"{{"data":{body}}}"#)
+            } else {
+                body.to_owned()
+            };
+            write_json_response(&mut stream, "200 OK", &body);
         }
     });
     let client = Client::from_config(
@@ -743,6 +751,144 @@ async fn versioned_operator_rotation_extensions_use_documented_paths() {
 #[allow(dead_code)]
 struct NumericSecretData {
     value: u64,
+}
+
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
+async fn modern_operator_rotation_requires_data_envelopes_for_both_targets() {
+    use openbao::sys::{
+        OperatorKeyShareUpdateRequest, OperatorKeySharesRequest, OperatorRotateTarget,
+    };
+    for target in [OperatorRotateTarget::Root, OperatorRotateTarget::Recovery] {
+        for (valid, body) in [
+            (
+                true,
+                r#"{"data":{"nonce":"fixture-operation","started":true,"complete":true}}"#,
+            ),
+            (
+                false,
+                r#"{"nonce":"fixture-operation","started":true,"complete":true}"#,
+            ),
+            (false, r#"{"data":null}"#),
+            (false, r#"{"data":{},"data":{}}"#),
+        ] {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|e| panic!("{e}"));
+            let addr = listener.local_addr().unwrap_or_else(|e| panic!("{e}"));
+            let server = thread::spawn(move || {
+                for _ in 0..8 {
+                    let (mut stream, _) = listener.accept().unwrap_or_else(|e| panic!("{e}"));
+                    let _ = read_http_request(&mut stream);
+                    write_json_response(&mut stream, "200 OK", body);
+                }
+            });
+            let client = Client::from_config(
+                OpenBaoConfig::new(format!("http://{addr}"))
+                    .and_then(allow_mock_http)
+                    .unwrap_or_else(|e| panic!("{e}")),
+            )
+            .unwrap_or_else(|e| panic!("{e}"))
+            .with_token(SecretString::from("fixture-token"));
+            let sys = client.sys();
+            let options = OperatorKeySharesRequest::new(1, 1).unwrap_or_else(|e| panic!("{e}"));
+            let share = OperatorKeyShareUpdateRequest::new(
+                SecretString::from("fixture-share"),
+                test_operation_id(),
+            );
+            let results = [
+                sys.operator_rotate_status(target).await.map(|v| v.nonce),
+                sys.operator_rotate_start(target, &options)
+                    .await
+                    .map(|v| v.nonce),
+                sys.operator_rotate_update(target, &share)
+                    .await
+                    .map(|v| v.nonce),
+                sys.operator_rotate_verify_status(target)
+                    .await
+                    .map(|v| v.nonce),
+                sys.operator_rotate_verify_update(target, &share)
+                    .await
+                    .map(|v| v.nonce),
+                sys.operator_rotate_verify_cancel(target)
+                    .await
+                    .map(|v| v.nonce),
+                sys.operator_rotate_backup(target).await.map(|v| v.nonce),
+                sys.operator_rotate_backup_grouped(target)
+                    .await
+                    .map(|v| v.nonce),
+            ];
+            for result in results {
+                if valid {
+                    assert_eq!(
+                        result.unwrap_or_else(|e| panic!("{e}")),
+                        Some("fixture-operation".to_owned())
+                    );
+                } else {
+                    assert!(result.is_err(), "malformed rotation envelope accepted");
+                }
+            }
+            server
+                .join()
+                .unwrap_or_else(|_| panic!("rotation mock failed"));
+        }
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+#[tokio::test]
+async fn operator_rotation_backup_preserves_groups_without_silent_truncation() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|e| panic!("{e}"));
+    let addr = listener.local_addr().unwrap_or_else(|e| panic!("{e}"));
+    let server = thread::spawn(move || {
+        for _ in 0..2 {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|e| panic!("{e}"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("GET /v1/sys/rotate/recovery/backup "));
+            write_json_response(
+                &mut stream,
+                "200 OK",
+                r#"{"data":{"nonce":"fixture-nonce","keys":{"fixture-recipient":["fixture-share-a","fixture-share-b"]},"keys_base64":{}}}"#,
+            );
+        }
+    });
+    let client = Client::from_config(
+        OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|e| panic!("{e}")),
+    )
+    .unwrap_or_else(|e| panic!("{e}"))
+    .with_token(SecretString::from("fixture-token"));
+    let sys = client.sys();
+    let target = openbao::sys::OperatorRotateTarget::Recovery;
+    let backup = sys
+        .operator_rotate_backup_grouped(target)
+        .await
+        .unwrap_or_else(|e| panic!("{e}"));
+    let shares = &backup.keys["fixture-recipient"];
+    assert_eq!(shares.len(), 2);
+    assert!(shares[0].expose_secret() == "fixture-share-a");
+    assert!(shares[1].expose_secret() == "fixture-share-b");
+    assert!(!format!("{backup:?}").contains("fixture-share"));
+    assert!(sys.operator_rotate_backup(target).await.is_err());
+    server
+        .join()
+        .unwrap_or_else(|_| panic!("rotation mock failed"));
+}
+
+#[cfg(feature = "operator-ops")]
+#[test]
+fn operator_rotation_backup_groups_are_bounded_and_duplicate_rejecting() {
+    use openbao::sys::OperatorRotationBackup;
+    for invalid in [
+        r#"{"keys":{"recipient":"not-a-list"}}"#,
+        r#"{"keys":{"recipient":null}}"#,
+        r#"{"keys":{"recipient":[],"recipient":[]}}"#,
+        r#"{"keys":{"recipient":[42]}}"#,
+    ] {
+        assert!(serde_json::from_str::<OperatorRotationBackup>(invalid).is_err());
+    }
+    let values = vec!["fixture-share"; openbao::MAX_RESPONSE_STRINGS + 1];
+    let oversized = serde_json::json!({"keys": {"recipient": values}});
+    assert!(serde_json::from_value::<OperatorRotationBackup>(oversized).is_err());
 }
 
 #[derive(Serialize)]
@@ -15246,6 +15392,11 @@ async fn operator_ops_use_documented_paths_and_redact_material() {
                     "{}".to_owned()
                 }
                 _ => unreachable!(),
+            };
+            let body = if matches!(index, 8..=10) {
+                format!(r#"{{"data":{body}}}"#)
+            } else {
+                body
             };
             let response = format!(
                 "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{}",

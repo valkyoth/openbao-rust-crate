@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 08 passed pentest; checkpoint 08 follow-up `e8d2402` is green on GitHub with both CodeQL alerts closed. Checkpoint 09 is in progress;
+Status: checkpoints 01 through 08 passed pentest; checkpoint 08 follow-up `e8d2402` is green on GitHub with both CodeQL alerts closed. Checkpoint 09 implementation and refreshed evidence are ready for full-checkpoint pentest;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -170,6 +170,19 @@ PGP-encrypted unseal backup fixture with raw/dedicated API comparison and
 protected-path regressions. Passing source-bound live evidence is retained
 with an independent digest pin; recovery and upgrade
 coverage are not claimed. Its pentest base is `d324862`.
+09f is committed as `683b176`. A separate recovery-backup fixture now retains
+passing source-bound live evidence using disposable static auto-unseal, with
+digest verification and adversarial cleanup/scope tests. A separate passing
+single-node Raft fixture now retains recovery-backup preservation evidence from
+2.6.3 to 2.7.0, including access controls and deletion, with independent digest
+and source verification. This does not claim general upgrade compatibility or
+unseal-backup migration. The [delta reconciliation](OPENBAO_2_7_0_DELTA_RECONCILIATION.md)
+now accounts for all 189 changes and six recovered route identities. It found
+a modern-rotation response-envelope and grouped-backup mismatch. Both now have
+decoder fixes and regression coverage. Fresh captures of all nine affected
+source-bound reports are retained and independently pinned, including both SDK
+consistency reports from the rebuilt executable. Checkpoint 09 is ready for
+pentest; checkpoint 10 profile promotion and release assurance have not started.
 
 ## Security And Compatibility Rules
 

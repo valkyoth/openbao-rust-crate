@@ -2653,6 +2653,70 @@ impl fmt::Debug for OperatorRecoveryKeyBackup {
     }
 }
 
+/// Modern rotation backup preserving every encrypted share per PGP fingerprint.
+#[cfg(feature = "operator-ops")]
+#[derive(Clone, Deserialize)]
+pub struct OperatorRotationBackup {
+    /// Nonce of the backed-up rotation operation.
+    #[serde(default)]
+    pub nonce: Option<String>,
+    /// Hex-encoded encrypted shares, grouped by recipient fingerprint.
+    #[serde(default, deserialize_with = "deserialize_rotation_backup_map")]
+    pub keys: BTreeMap<String, Vec<SecretString>>,
+    /// Base64-encoded encrypted shares, grouped by recipient fingerprint.
+    #[serde(default, deserialize_with = "deserialize_rotation_backup_map")]
+    pub keys_base64: BTreeMap<String, Vec<SecretString>>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl fmt::Debug for OperatorRotationBackup {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OperatorRotationBackup")
+            .field("keys_count", &self.keys.len())
+            .field("keys_base64_count", &self.keys_base64.len())
+            .finish_non_exhaustive()
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+fn deserialize_rotation_backup_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, Vec<SecretString>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(transparent)]
+    struct Shares(
+        #[serde(deserialize_with = "deserialize_bounded_secret_string_vec")] Vec<SecretString>,
+    );
+    let entries = deserializer.deserialize_map(BoundedMapVisitor::<
+        Shares,
+        { crate::response::MAX_RESPONSE_STRINGS },
+    > {
+        message: "OpenBao rotation backup map exceeds item limit",
+        _marker: PhantomData,
+    })?;
+    Ok(entries
+        .into_iter()
+        .map(|(key, value)| (key, value.0))
+        .collect())
+}
+
+#[cfg(feature = "operator-ops")]
+fn single_rotation_shares(
+    groups: BTreeMap<String, Vec<SecretString>>,
+) -> Result<BTreeMap<String, SecretString>> {
+    groups.into_iter().map(|(fingerprint, mut shares)| {
+        if shares.len() != 1 {
+            return Err(Error::Decode("rotation backup requires operator_rotate_backup_grouped for non-singleton share groups".into()));
+        }
+        let share = shares.pop().ok_or_else(|| Error::Decode("rotation backup share is missing".into()))?;
+        Ok((fingerprint, share))
+    }).collect()
+}
+
 /// Target for authenticated OpenBao v2.4+ key-share rotation endpoints.
 #[cfg(feature = "operator-ops")]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -6433,13 +6497,15 @@ impl Sys<'_, Authenticated> {
         &self,
         target: OperatorRotateTarget,
     ) -> Result<OperatorKeySharesStatus> {
-        self.client
+        let envelope: ResponseEnvelope<OperatorKeySharesStatus> = self
+            .client
             .request_sys_json_internal(
                 Method::GET,
                 &rotate_init_path(target),
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Starts OpenBao v2.4+ key-share rotation.
@@ -6458,9 +6524,11 @@ impl Sys<'_, Authenticated> {
                 request.stored_shares.is_some(),
             )])
             .await?;
-        self.client
+        let envelope: ResponseEnvelope<OperatorKeySharesStatus> = self
+            .client
             .request_sys_json_internal(Method::POST, &rotate_init_path(target), Some(request))
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Cancels OpenBao v2.4+ key-share rotation.
@@ -6486,7 +6554,8 @@ impl Sys<'_, Authenticated> {
         target: OperatorRotateTarget,
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
-        self.client
+        let envelope: ResponseEnvelope<OperatorKeyShareUpdateResponse> = self
+            .client
             .request_sys_json_internal(
                 Method::POST,
                 &rotate_update_path(target),
@@ -6495,7 +6564,8 @@ impl Sys<'_, Authenticated> {
                     nonce: &request.nonce,
                 }),
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Rotates the barrier encryption key through the legacy all-version path.
@@ -6520,13 +6590,15 @@ impl Sys<'_, Authenticated> {
         &self,
         target: OperatorRotateTarget,
     ) -> Result<OperatorKeySharesStatus> {
-        self.client
+        let envelope: ResponseEnvelope<OperatorKeySharesStatus> = self
+            .client
             .request_sys_json_internal(
                 Method::GET,
                 &rotate_verify_path(target),
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Submits one new share to key-share rotation verification.
@@ -6536,7 +6608,8 @@ impl Sys<'_, Authenticated> {
         target: OperatorRotateTarget,
         request: &OperatorKeyShareUpdateRequest,
     ) -> Result<OperatorKeyShareUpdateResponse> {
-        self.client
+        let envelope: ResponseEnvelope<OperatorKeyShareUpdateResponse> = self
+            .client
             .request_sys_json_internal(
                 Method::POST,
                 &rotate_verify_path(target),
@@ -6545,7 +6618,8 @@ impl Sys<'_, Authenticated> {
                     nonce: &request.nonce,
                 }),
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Cancels key-share rotation verification.
@@ -6557,28 +6631,53 @@ impl Sys<'_, Authenticated> {
         &self,
         target: OperatorRotateTarget,
     ) -> Result<OperatorKeySharesStatus> {
-        self.client
+        let envelope: ResponseEnvelope<OperatorKeySharesStatus> = self
+            .client
             .request_sys_json_internal(
                 Method::DELETE,
                 &rotation_verify_cancel_path(target),
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Reads a PGP-encrypted key-share rotation backup.
+    ///
+    /// This compatibility return type supports one share per fingerprint only.
+    /// Empty or multiple-share groups return an error without dropping shares silently.
+    /// Use [`Self::operator_rotate_backup_grouped`] to preserve all groups.
     #[cfg(feature = "operator-ops")]
     pub async fn operator_rotate_backup(
         &self,
         target: OperatorRotateTarget,
     ) -> Result<OperatorRecoveryKeyBackup> {
-        self.client
+        let backup = self.operator_rotate_backup_grouped(target).await?;
+        Ok(OperatorRecoveryKeyBackup {
+            nonce: backup.nonce,
+            keys: single_rotation_shares(backup.keys)?,
+            keys_base64: single_rotation_shares(backup.keys_base64)?,
+        })
+    }
+
+    /// Reads a modern rotation backup, preserving every share per fingerprint.
+    ///
+    /// Requires the same operator acknowledgements and compatibility checks as
+    /// [`Self::operator_rotate_backup`]. No extra requests or retries are performed.
+    #[cfg(feature = "operator-ops")]
+    pub async fn operator_rotate_backup_grouped(
+        &self,
+        target: OperatorRotateTarget,
+    ) -> Result<OperatorRotationBackup> {
+        let envelope: ResponseEnvelope<OperatorRotationBackup> = self
+            .client
             .request_sys_json_internal(
                 Method::GET,
                 &rotate_backup_path(target),
                 Option::<&Empty>::None,
             )
-            .await
+            .await?;
+        Ok(envelope.data)
     }
 
     /// Deletes a PGP-encrypted key-share rotation backup.
