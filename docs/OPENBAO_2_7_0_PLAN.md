@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 06 passed pentest; checkpoint 06 evidence refreshed after harness cleanup; checkpoint 07e live compatibility evidence retained with an explicitly accepted upstream replay limitation, ready for pentest;
+Status: checkpoints 01 through 07 passed pentest through `c6c4480`; checkpoint 08a implements typed consistency-header foundations, pending review;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -117,7 +117,7 @@ accepted API support with this known upstream limitation, separate from server
 replay-security results. The strict replay test remains available; the default
 fixture continues the other checks with an explicit limitation in its evidence.
 The complete live compatibility report is retained and digest-pinned; checkpoint
-07 is ready for pentest under this scope. Public SDK dispatch remains gated until
+07 passed pentest through `c6c4480` under this scope. Public SDK dispatch remains gated until
 checkpoint 10. The report does not claim server replay protection.
 
 The checkpoint 06 pipe-cleanup fix passed pentest and is committed as `7419d1b`.
@@ -132,6 +132,12 @@ The subsequent CI failure also identified stale harness provenance in the
 were rerun successfully; their operation results are unchanged. The refreshed
 matrix and dependent version-contract evidence hashes are anchored separately.
 Stale-harness and stale-test-definition rejection remain enforced and tested.
+
+Checkpoint 08 is split into 08a bounded header types and source-contract review,
+08b scoped/profile-gated transport, and 08c multi-node live verification.
+08a's pentest base is `c6c4480`. Its optional `consistency` module sends no
+requests and does not promote 2.7. See
+[the consistency review](OPENBAO_2_7_0_CONSISTENCY_REVIEW.md) for remaining work.
 
 ## Security And Compatibility Rules
 

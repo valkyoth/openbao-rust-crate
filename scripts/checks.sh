@@ -99,6 +99,9 @@ cargo clippy --all-targets --all-features -- -D warnings
 
 echo "checks: clippy client-only feature set"
 cargo clippy --no-default-features --features rustls-tls -- -D warnings
+echo "checks: minimal consistency header contracts"
+cargo clippy --locked --no-default-features --features consistency,rustls-tls -- -D warnings
+cargo test --locked --no-default-features --features consistency,rustls-tls --lib consistency::
 
 echo "checks: reqwest TLS feature unification"
 cargo run --manifest-path tests/fixtures/reqwest-native-unification/Cargo.toml --locked

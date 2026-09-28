@@ -178,6 +178,7 @@ Important non-default features include:
 | Feature | Purpose |
 | --- | --- |
 | `http2` | Enable HTTP/2 negotiation through TLS ALPN. |
+| `consistency` | Staged bounded consistency-header types; scoped transport and 2.7 profile support remain pending. |
 | `time` | Parse timestamps into `time` crate types. |
 | `tokio-helpers` | Add Tokio-backed bounded readiness waits. |
 | `tracing` | Emit redacted request spans without an OpenTelemetry SDK dependency. |

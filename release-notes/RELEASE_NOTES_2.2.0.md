@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 08a adds the non-default `consistency` feature with bounded,
+  secret-aware index parsing and explicit fail/forward/await-state policy values.
+  This is a types-only foundation, not yet scoped transport or live consistency
+  support; the 2.7 profile remains unpromoted.
+
 - Reject empty, oversized and non-visible-ASCII explicit wrapping tokens before
   transport across lookup, rewrap and both unwrap interfaces. Explicit `None`
   on stateless unwrap still selects the authenticated client's token deliberately.

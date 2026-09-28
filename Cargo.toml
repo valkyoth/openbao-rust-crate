@@ -51,6 +51,7 @@ default = [
 approle = []
 cert-auth = []
 cubbyhole = []
+consistency = ["dep:base64-ng"]
 database = []
 identity = ["dep:base64-ng"]
 jwt-auth = []

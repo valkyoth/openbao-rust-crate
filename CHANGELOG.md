@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Start checkpoint 08a with opt-in bounded consistency-index parsing and typed
+  ordered inconsistency policies. Scoped transport and multi-node verification
+  remain pending; no 2.7 routing or consistency guarantee is promoted.
+
 - Validate explicit wrapping tokens consistently before transport on generic
   unwrap, lookup, rewrap and control-group execution paths. Preserve intentional
   `wrapping_unwrap(None)` fallback and do not spend attempts on invalid tokens.

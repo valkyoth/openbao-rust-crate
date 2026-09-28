@@ -206,6 +206,8 @@ compile_error!(
 pub mod bootstrap;
 mod client;
 pub mod compatibility;
+#[cfg(feature = "consistency")]
+pub mod consistency;
 pub mod duration;
 mod error;
 mod path;
