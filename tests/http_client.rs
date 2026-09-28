@@ -661,7 +661,7 @@ async fn versioned_operator_rotation_extensions_use_documented_paths() {
                     r#"{"nonce":"backup","keys":{"fingerprint":"encrypted"},"keys_base64":{"fingerprint":"encoded"}}"#
                 }
                 11 => {
-                    r#"{"nonce":"backup","keys":{"fingerprint":["encrypted"]},"keys_base64":{"fingerprint":["encoded"]}}"#
+                    r#"{"nonce":"backup","keys":{"0123456789abcdef0123456789abcdef01234567":["aa"]},"keys_base64":{"0123456789abcdef0123456789abcdef01234567":["qg=="]}}"#
                 }
                 2 | 3 | 13 | 15 => r#"{"started":true,"nonce":"nonce","progress":0,"required":1}"#,
                 4 | 14 => r#"{"complete":true,"nonce":"nonce"}"#,
@@ -846,7 +846,7 @@ async fn operator_rotation_backup_preserves_groups_without_silent_truncation() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"data":{"nonce":"fixture-nonce","keys":{"fixture-recipient":["fixture-share-a","fixture-share-b"]},"keys_base64":{}}}"#,
+                r#"{"data":{"nonce":"fixture-nonce","keys":{"0123456789abcdef0123456789abcdef01234567":["aabb","ccdd"]},"keys_base64":{}}}"#,
             );
         }
     });
@@ -863,11 +863,11 @@ async fn operator_rotation_backup_preserves_groups_without_silent_truncation() {
         .operator_rotate_backup_grouped(target)
         .await
         .unwrap_or_else(|e| panic!("{e}"));
-    let shares = &backup.keys["fixture-recipient"];
+    let shares = &backup.keys["0123456789abcdef0123456789abcdef01234567"];
     assert_eq!(shares.len(), 2);
-    assert!(shares[0].expose_secret() == "fixture-share-a");
-    assert!(shares[1].expose_secret() == "fixture-share-b");
-    assert!(!format!("{backup:?}").contains("fixture-share"));
+    assert!(shares[0].expose_secret() == "aabb");
+    assert!(shares[1].expose_secret() == "ccdd");
+    assert!(!format!("{backup:?}").contains("aabb"));
     assert!(sys.operator_rotate_backup(target).await.is_err());
     server
         .join()
@@ -884,11 +884,93 @@ fn operator_rotation_backup_groups_are_bounded_and_duplicate_rejecting() {
         r#"{"keys":{"recipient":[],"recipient":[]}}"#,
         r#"{"keys":{"recipient":[42]}}"#,
     ] {
-        assert!(serde_json::from_str::<OperatorRotationBackup>(invalid).is_err());
+        let invalid = invalid.replace("recipient", "0123456789abcdef0123456789abcdef01234567");
+        assert!(serde_json::from_str::<OperatorRotationBackup>(&invalid).is_err());
     }
-    let values = vec!["fixture-share"; openbao::MAX_RESPONSE_STRINGS + 1];
-    let oversized = serde_json::json!({"keys": {"recipient": values}});
+    let values = vec!["aa"; openbao::MAX_RESPONSE_STRINGS + 1];
+    let oversized =
+        serde_json::json!({"keys": {"0123456789abcdef0123456789abcdef01234567": values}});
     assert!(serde_json::from_value::<OperatorRotationBackup>(oversized).is_err());
+}
+
+#[cfg(feature = "operator-ops")]
+#[test]
+fn rotation_backup_aggregate_limits_and_encodings() {
+    use openbao::sys::OperatorRotationBackup;
+    let fingerprint = "0123456789abcdef0123456789abcdef01234567";
+    for (field, share) in [("keys", "aa"), ("keys_base64", "qg==")] {
+        let decode = |groups: serde_json::Value| {
+            serde_json::from_value::<OperatorRotationBackup>(serde_json::json!({field: groups}))
+        };
+        let mut groups = serde_json::Map::new();
+        for i in 0..2 {
+            groups.insert(format!("{i:040x}"), serde_json::json!(vec![share; 2048]));
+        }
+        assert!(decode(groups.clone().into()).is_ok());
+        groups.insert(format!("{:040x}", 2), serde_json::json!([share]));
+        let error = decode(groups.into())
+            .err()
+            .unwrap_or_else(|| panic!("overflow accepted"));
+        assert!(error.to_string().contains("aggregate share limit"));
+
+        let mut groups = serde_json::Map::new();
+        for i in 0..256 {
+            groups.insert(format!("{i:040x}"), serde_json::json!([share]));
+        }
+        assert!(decode(groups.clone().into()).is_ok());
+        groups.insert(format!("{:040x}", 256), serde_json::json!([share]));
+        let error = decode(groups.into())
+            .err()
+            .unwrap_or_else(|| panic!("overflow accepted"));
+        assert!(error.to_string().contains("group limit"));
+
+        for invalid in [
+            "".to_owned(),
+            "a".repeat(39),
+            "a".repeat(41),
+            "A".repeat(40),
+            "g".repeat(40),
+        ] {
+            assert!(decode(serde_json::json!({invalid: [share]})).is_err());
+        }
+        assert!(decode(serde_json::json!({fingerprint: []})).is_err());
+        let boundary = "a".repeat(16 * 1024);
+        assert!(decode(serde_json::json!({fingerprint: [&boundary]})).is_ok());
+        assert!(decode(serde_json::json!({fingerprint: [format!("{boundary}aaaa")]})).is_err());
+        for invalid in ["", "not-a-share", "a", "Zh==", "Zg", "Zg===", "Z g=="] {
+            let error = decode(serde_json::json!({fingerprint: [invalid]}))
+                .err()
+                .unwrap_or_else(|| panic!("malformed encoding accepted"));
+            assert!(
+                error
+                    .to_string()
+                    .starts_with("rotation backup share has invalid length or encoding")
+            );
+        }
+
+        // Overflow is rejected before the next value is parsed, even if it is invalid JSON.
+        let full = serde_json::to_string(&vec![share; 4096])
+            .unwrap_or_else(|_| panic!("serialization failed"));
+        let input = format!(
+            "{{\"{field}\":{{\"{fingerprint}\":{},\"{:040x}\":[INVALID]}}}}",
+            full, 99
+        );
+        let error = serde_json::from_str::<OperatorRotationBackup>(&input)
+            .err()
+            .unwrap_or_else(|| panic!("overflow accepted"));
+        assert!(error.to_string().contains("aggregate share limit"));
+        let duplicate = format!(
+            "{{\"{field}\":{{\"{fingerprint}\":[\"{share}\"],\"{fingerprint}\":INVALID}}}}"
+        );
+        let error = serde_json::from_str::<OperatorRotationBackup>(&duplicate)
+            .err()
+            .unwrap_or_else(|| panic!("duplicate accepted"));
+        assert!(
+            error
+                .to_string()
+                .contains("duplicate rotation backup fingerprint")
+        );
+    }
 }
 
 #[derive(Serialize)]

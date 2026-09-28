@@ -9,7 +9,7 @@ import openbao_api_snapshots as snapshots
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULT = ROOT / "compat/onboarding/2.7.0/control-group-tls.json"
-EXPECTED_SHA256 = "4a38fa7eaccc0fe839099812a65932931b6202ee7fb71b551aeaaddfe423d019"
+EXPECTED_SHA256 = "39ba830cd735494d8245458fcd86d56e7b5827fa5f60632bf9e973953c8f6d9e"
 
 
 def verify():

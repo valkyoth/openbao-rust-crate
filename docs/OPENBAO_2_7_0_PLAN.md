@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 08 passed pentest; checkpoint 08 follow-up `e8d2402` is green on GitHub with both CodeQL alerts closed. Checkpoint 09 implementation and refreshed evidence are ready for full-checkpoint pentest;
+Status: checkpoints 01 through 08 passed pentest; checkpoint 08 follow-up `e8d2402` is green on GitHub with both CodeQL alerts closed. Checkpoint 09 pentest follow-up hardens grouped backup decoding; refreshed source-bound evidence is verified and follow-up review is pending;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -179,10 +179,12 @@ and source verification. This does not claim general upgrade compatibility or
 unseal-backup migration. The [delta reconciliation](OPENBAO_2_7_0_DELTA_RECONCILIATION.md)
 now accounts for all 189 changes and six recovered route identities. It found
 a modern-rotation response-envelope and grouped-backup mismatch. Both now have
-decoder fixes and regression coverage. Fresh captures of all nine affected
-source-bound reports are retained and independently pinned, including both SDK
-consistency reports from the rebuilt executable. Checkpoint 09 is ready for
-pentest; checkpoint 10 profile promotion and release assurance have not started.
+decoder fixes and regression coverage. The subsequent pentest identified missing
+aggregate share limits and encoding validation. These are now enforced per map
+with regression coverage. All nine affected source-bound reports have been
+recaptured and verified, including both SDK consistency reports against the
+rebuilt executable. Checkpoint 09 is ready for follow-up pentest review.
+Checkpoint 10 profile promotion and release assurance have not started.
 
 ## Security And Compatibility Rules
 

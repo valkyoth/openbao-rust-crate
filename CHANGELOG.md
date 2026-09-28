@@ -6,11 +6,19 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Harden grouped rotation-backup decoding after checkpoint 09 review: each
+  encoding map permits at most 256 groups and 4096 cumulative shares, with
+  nonempty groups, validated PGP fingerprints and bounded hex/canonical Base64
+  shares. Regression tests cover aggregate exhaustion, exact limits, malformed
+  encodings and secret-free errors. All nine affected live evidence reports
+  have been refreshed and verified; OpenBao 2.7 remains non-routable.
+
 - Fix modern rotation response-envelope decoding while preserving legacy rekey
   contracts. Add grouped backup results that preserve multiple encrypted shares
   per fingerprint; the existing single-share return API rejects non-singleton
-  groups rather than truncating them. All affected source-bound evidence has
-  been freshly captured and independently pinned; checkpoint 09 awaits pentest.
+  groups rather than truncating them. The initial source-bound evidence was
+  captured and independently pinned, then refreshed after decoder hardening.
+  Checkpoint 09 awaits follow-up pentest review.
 
 - Account for all 189 staged API delta records and six recovered historical
   route identities, with a digest-pinned ledger and omission/tamper tests.

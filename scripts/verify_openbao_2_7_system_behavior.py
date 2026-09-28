@@ -7,7 +7,7 @@ import openbao_2_7_system_behavior as fixture
 
 snapshots = fixture.snapshots
 RESULT = fixture.ROOT / "compat/onboarding/2.7.0/system-behavior-tls.json"
-EXPECTED_SHA256 = "f22b76964f9b47b92c2ad3b80e7be91b77b85e4edd947e07aa8db45bf4d1f80c"
+EXPECTED_SHA256 = "ca49eeb33d1c16512d0f1bdb9d3b4bcdcad1370564e8833ba58deb5410b8e959"
 
 
 def verify():

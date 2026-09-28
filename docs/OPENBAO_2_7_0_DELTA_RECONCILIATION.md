@@ -90,15 +90,21 @@ preserve all shares with bounded, duplicate-rejecting decoding and secret-aware
 Debug. The existing return type is preserved: `operator_rotate_backup` accepts
 singleton groups and errors on empty or multiple-share groups instead of silently
 discarding shares. Tests cover multi-share preservation, malformed groups,
-duplicate fingerprints, bounds and redaction.
+duplicate fingerprints, bounds and redaction. The checkpoint 09 pentest follow-up
+adds a cumulative 4096-share budget per encoding map, at most 256 groups,
+nonempty groups, lowercase 40-character hex fingerprints, and nonempty shares
+of at most 16 KiB with valid hex or canonical standard Base64 encoding. Syntax
+validation does not authenticate or decrypt the PGP payload.
 
 The `src/sys.rs` change invalidated the retained control-group, workflow CAS,
 system-behavior, MFA, raw-backup, recovery-backup, backup-upgrade and SDK
-consistency reports. All nine reports have now been freshly captured, validated
-against current inputs and retained with independent digest pins. The SDK reports
-also match the rebuilt executable. No report source hashes were substituted.
+consistency reports. All nine reports have been recaptured after the additional
+pentest hardening and verified against current inputs with independent digest
+pins. SDK reports match the rebuilt executable. No report source hashes were
+substituted.
 The control-group report still records the known upstream replay failure.
-Checkpoint 09 is ready for full-range pentest; profile promotion is still blocked.
+Checkpoint 09 awaits follow-up review; profile promotion is
+still blocked.
 
 ## Checkpoint 10 Obligations
 

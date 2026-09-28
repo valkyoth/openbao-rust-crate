@@ -2654,6 +2654,12 @@ impl fmt::Debug for OperatorRecoveryKeyBackup {
 }
 
 /// Modern rotation backup preserving every encrypted share per PGP fingerprint.
+///
+/// Each encoding map accepts at most 256 recipient groups and 4096 total shares.
+/// Groups must be nonempty, with lowercase 40-character hex PGP fingerprints.
+/// Each share is nonempty, at most 16 KiB of encoded text, and valid hex or
+/// canonical standard Base64. Encoding validation does not authenticate or
+/// decrypt the encrypted PGP payload; independently verify recovery procedures.
 #[cfg(feature = "operator-ops")]
 #[derive(Clone, Deserialize)]
 pub struct OperatorRotationBackup {
@@ -2664,7 +2670,7 @@ pub struct OperatorRotationBackup {
     #[serde(default, deserialize_with = "deserialize_rotation_backup_map")]
     pub keys: BTreeMap<String, Vec<SecretString>>,
     /// Base64-encoded encrypted shares, grouped by recipient fingerprint.
-    #[serde(default, deserialize_with = "deserialize_rotation_backup_map")]
+    #[serde(default, deserialize_with = "deserialize_rotation_backup_base64_map")]
     pub keys_base64: BTreeMap<String, Vec<SecretString>>,
 }
 
@@ -2686,24 +2692,145 @@ fn deserialize_rotation_backup_map<'de, D>(
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
-    #[serde(transparent)]
-    struct Shares(
-        #[serde(deserialize_with = "deserialize_bounded_secret_string_vec")] Vec<SecretString>,
-    );
-    let entries = deserializer.deserialize_map(BoundedMapVisitor::<
-        Shares,
-        { crate::response::MAX_RESPONSE_STRINGS },
-    > {
-        message: "OpenBao rotation backup map exceeds item limit",
-        _marker: PhantomData,
-    })?;
-    Ok(entries
-        .into_iter()
-        .map(|(key, value)| (key, value.0))
-        .collect())
+    deserializer.deserialize_map(RotationBackupMap { base64: false })
 }
 
+#[cfg(feature = "operator-ops")]
+fn deserialize_rotation_backup_base64_map<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<String, Vec<SecretString>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_map(RotationBackupMap { base64: true })
+}
+
+#[cfg(feature = "operator-ops")]
+struct RotationBackupMap {
+    base64: bool,
+}
+
+#[cfg(feature = "operator-ops")]
+const MAX_ROTATION_BACKUP_GROUPS: usize = 256;
+#[cfg(feature = "operator-ops")]
+const MAX_ENCRYPTED_SHARE_TEXT_BYTES: usize = 16 * 1024;
+
+#[cfg(feature = "operator-ops")]
+impl<'de> Visitor<'de> for RotationBackupMap {
+    type Value = BTreeMap<String, Vec<SecretString>>;
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("bounded encrypted rotation backup groups")
+    }
+    fn visit_map<A>(self, mut map: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut groups = BTreeMap::new();
+        let mut remaining = MAX_RESPONSE_STRINGS;
+        while groups.len() < MAX_ROTATION_BACKUP_GROUPS {
+            let Some(fingerprint) = map.next_key::<String>()? else {
+                return Ok(groups);
+            };
+            if fingerprint.len() != 40
+                || !fingerprint
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            {
+                return Err(A::Error::custom("invalid rotation backup PGP fingerprint"));
+            }
+            if groups.contains_key(&fingerprint) {
+                return Err(A::Error::custom("duplicate rotation backup fingerprint"));
+            }
+            let shares = map.next_value_seed(RotationBackupShares {
+                limit: remaining,
+                base64: self.base64,
+            })?;
+            remaining = remaining
+                .checked_sub(shares.len())
+                .ok_or_else(|| A::Error::custom("rotation backup exceeds aggregate share limit"))?;
+            groups.insert(fingerprint, shares);
+        }
+        if map
+            .next_key_seed(crate::response::RejectOverflow::new(
+                "rotation backup exceeds group limit",
+            ))?
+            .is_some()
+        {
+            return Err(A::Error::custom("rotation backup exceeds group limit"));
+        }
+        Ok(groups)
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+struct RotationBackupShares {
+    limit: usize,
+    base64: bool,
+}
+
+#[cfg(feature = "operator-ops")]
+impl<'de> serde::de::DeserializeSeed<'de> for RotationBackupShares {
+    type Value = Vec<SecretString>;
+    fn deserialize<D>(self, deserializer: D) -> core::result::Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(self)
+    }
+}
+
+#[cfg(feature = "operator-ops")]
+impl<'de> Visitor<'de> for RotationBackupShares {
+    type Value = Vec<SecretString>;
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("bounded nonempty encrypted backup shares")
+    }
+    fn visit_seq<A>(self, mut seq: A) -> core::result::Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut shares = Vec::new();
+        while shares.len() < self.limit {
+            let Some(share) = seq
+                .next_element::<SecretString>()
+                .map_err(|_| A::Error::custom("invalid rotation backup share"))?
+            else {
+                if shares.is_empty() {
+                    return Err(A::Error::custom("rotation backup share group is empty"));
+                }
+                return Ok(shares);
+            };
+            let bytes = share.expose_secret().as_bytes();
+            let valid = !bytes.is_empty()
+                && bytes.len() <= MAX_ENCRYPTED_SHARE_TEXT_BYTES
+                && if self.base64 {
+                    base64_ng::STANDARD.validate_result(bytes).is_ok()
+                } else {
+                    bytes.len() % 2 == 0 && bytes.iter().all(u8::is_ascii_hexdigit)
+                };
+            if !valid {
+                return Err(A::Error::custom(
+                    "rotation backup share has invalid length or encoding",
+                ));
+            }
+            shares.push(share);
+        }
+        if seq
+            .next_element_seed(crate::response::RejectOverflow::new(
+                "rotation backup exceeds aggregate share limit",
+            ))?
+            .is_some()
+        {
+            return Err(A::Error::custom(
+                "rotation backup exceeds aggregate share limit",
+            ));
+        }
+        if shares.is_empty() {
+            return Err(A::Error::custom("rotation backup share group is empty"));
+        }
+        Ok(shares)
+    }
+}
 #[cfg(feature = "operator-ops")]
 fn single_rotation_shares(
     groups: BTreeMap<String, Vec<SecretString>>,
