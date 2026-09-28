@@ -1,7 +1,7 @@
 # OpenBao 2.7.0 Consistency Controls
 
-Status: checkpoint 08a implements bounded header types only. No client transport
-integration, profile promotion or live multi-node guarantee is claimed.
+Status: checkpoint 08a implements bounded header types; 08b adds staged scoped
+transport. No profile promotion or live multi-node guarantee is claimed.
 
 ## Tagged Contract
 
@@ -42,7 +42,7 @@ Matching a cluster string is not proof of cluster provenance or namespace scope.
 
 `ConsistencyPolicy` only emits fixed ordered values. Await-state always has an
 explicit typed fallback; it does not silently depend on listener defaults.
-These values do not enable retries, background tracking, redirection or transport.
+These values alone do not enable retries, background tracking or transport.
 No numeric ordering, maximum-index merge, or arrival-order state tracker is added.
 
 Tests cover encoding round trips, header sensitivity, redaction, duplicate
@@ -50,24 +50,49 @@ headers, missing/duplicate/unknown JSON fields, type errors, non-ASCII/control
 bytes, malformed Base64, exact and exceeded limits, and every policy mapping.
 Minimal consistency-only builds are checked independently of optional engines.
 
+## 08b Scoped Transport
+
+`Client::consistency().await` creates an independent context borrowing an immutable
+authenticated client. It checks the effective compatibility report and discovers
+cluster identity through bounded TLS health decoding without sending credentials.
+Only a verified exact/automatic reviewed profile can qualify; assumed, rolling
+range, historical and unknown-newer fallback profiles fail closed. The additional
+routable-profile gate still blocks 2.7.0 until checkpoint 10.
+
+`ConsistencyContext::request_json` is an advanced interface requiring both raw-API
+acknowledgement features. Engine-specific body validation remains caller-owned,
+as with the existing raw and wrapping APIs. It accepts no arbitrary headers.
+Every request rechecks the profile, context ownership and current cluster health
+before sending credentials. Health must identify an initialized, unsealed 2.7.0
+server and the context's original nonempty cluster. The policy's ordered header
+occurrences are appended separately, not joined or overwritten. Existing token,
+namespace, encrypted-transport, sanitizing-body and response-size controls apply.
+
+`ConsistencyResponse<T>` preserves the full JSON response and optional scoped
+index; it does not change ordinary response structs. Captured indices carry an
+unforgeable in-process context identity. Even another context on the same client
+cannot reuse them. Unscoped parsing types cannot be imported into this transport.
+Missing response indices are accepted; malformed, duplicate or wrong-cluster
+indices fail. No global latest-index tracker, ordering, merge, retry or background
+task is added. HTTP 429 returns a redacted API error, including for writes.
+
+Cluster preflight and the target operation each use the client request timeout,
+not a combined deadline. Cancellation or a response-decoding error after a write
+does not establish rollback or make replay safe. A preflight cannot atomically
+bind a subsequent operation to a cluster: a load balancer spanning clusters, or a
+restored cluster retaining its identity, remains outside this guarantee. Use a
+trusted endpoint serving one cluster. SDK context scoping does not repair the
+server's lack of namespace scoping or its index-check error semantics.
+
+Regression tests exercise the production transport helper beneath the promotion
+gate against local mocks, not a public 2.7 routing bypass. They cover capture and
+reuse, separate await/fallback headers, namespace/token handling, context rejection,
+changed cluster and invalid health, invalid response metadata/JSON, body limits,
+serialization errors, sanitizing-body cleanup, 429 without replay, and timeout and
+cancellation after transport begins. Public methods remain tested to reject all
+currently active profiles. The private mock setup does not constitute live proof.
+
 ## Remaining Checkpoint 08
-
-08b must provide explicit request/response metadata through a scoped context,
-without changing ordinary response structs or maintaining a global latest index.
-Capture is not yet client-bound: the transport API must bind captured metadata to
-the originating client configuration, namespace, and verified cluster identity.
-An index from another context must not silently proceed as an unconstrained read.
-Initial cluster discovery, restored clusters and namespace changes require tests.
-Raw advanced APIs remain caller-owned; parsing types must not imply those paths
-enforce the future scoped-context contract.
-
-Every opt-in transport path must check the effective reviewed profile before
-sending these headers. Active historical, assumed, rolling-intersection and
-newer-server fallback profiles remain unsupported until the normal promotion.
-Reserved-header conflicts, repeated/malformed response headers and read responses
-without indices need deterministic behavior. Client request timeout bounds the
-whole request; server await-state timeout and forwarding are separate semantics.
-Keep write retries disabled even on 429, and never interpret timeout as rollback.
 
 08c requires a constrained multi-node TLS fixture with read-enabled standby
 behavior, stale-index failure, await success/deadline, forwarding, cluster and

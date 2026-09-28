@@ -1,8 +1,12 @@
 //! Bounded OpenBao consistency-header values (opt-in `consistency` feature).
 //!
-//! These types parse and encode metadata only. They do not configure client
-//! transport, select a compatibility profile, or provide a consistency guarantee.
-//! A captured index must remain bound to its cluster and request namespace.
+//! Raw index types parse metadata only. [`ConsistencyContext`] binds captured
+//! indices to one client context and rechecks cluster identity before transport.
+//! No consistency guarantee or profile promotion follows from header support.
+
+pub use crate::client::consistency::{
+    ConsistencyContext, ConsistencyResponse, ScopedConsistencyIndex,
+};
 
 use core::fmt;
 use reqwest::header::{HeaderMap, HeaderValue};

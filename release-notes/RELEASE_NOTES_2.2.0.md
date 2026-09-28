@@ -8,10 +8,16 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 08b stages scoped consistency transport with explicit policy headers,
+  cluster/context validation, redacted errors and no automatic retries. Mock
+  regression coverage includes response capture, cancellation and sanitizing-body
+  cleanup. This is not live replication proof: 08c and checkpoint 10 promotion
+  remain required before the public 2.7 path is enabled.
+
 - Checkpoint 08a adds the non-default `consistency` feature with bounded,
   secret-aware index parsing and explicit fail/forward/await-state policy values.
-  This is a types-only foundation, not yet scoped transport or live consistency
-  support; the 2.7 profile remains unpromoted.
+  This supplies the metadata foundation used by 08b; live consistency
+  verification remains pending and the 2.7 profile remains unpromoted.
 
 - Reject empty, oversized and non-visible-ASCII explicit wrapping tokens before
   transport across lookup, rewrap and both unwrap interfaces. Explicit `None`

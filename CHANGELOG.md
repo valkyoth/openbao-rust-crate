@@ -6,9 +6,14 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Add checkpoint 08b scoped consistency contexts, bounded cluster preflights and
+  single-attempt JSON transport with context-bound response indices. Preserve
+  raw-API acknowledgement, sanitizing buffers and non-routable 2.7 status;
+  multi-node verification and profile promotion remain pending.
+
 - Start checkpoint 08a with opt-in bounded consistency-index parsing and typed
-  ordered inconsistency policies. Scoped transport and multi-node verification
-  remain pending; no 2.7 routing or consistency guarantee is promoted.
+  ordered inconsistency policies, providing the foundation for 08b transport.
+  No 2.7 routing or consistency guarantee is promoted.
 
 - Validate explicit wrapping tokens consistently before transport on generic
   unwrap, lookup, rewrap and control-group execution paths. Preserve intentional

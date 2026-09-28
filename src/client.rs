@@ -1,5 +1,8 @@
 //! OpenBao client construction and raw request helpers.
 
+#[cfg(feature = "consistency")]
+pub(crate) mod consistency;
+
 use core::{
     fmt,
     future::Future,
