@@ -6,10 +6,28 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Retain checkpoint 08c's successful constrained three-node Raft server-protocol
+  evidence with digest/source validation and offline regression tests. No
+  public support claim is promoted.
+
+- Retain successful staged SDK consistency TLS evidence from an ignored test and
+  a separate constrained runner that drops privileges before executing the test.
+  The coordinated test also verifies independent-cluster preflight rejection.
+
+- Retain coordinated SDK controlled-lag TLS evidence, including same-context
+  real-index enforcement, namespace-context rejection without dispatch,
+  cancellation/timeout after upstream transmission, no retries, recovery, and
+  changed-cluster rejection before authenticated dispatch at the same endpoint.
+  Refresh the SDK baseline with the same rebuilt test executable.
+
+- Retain controlled-lag server evidence: container-local Raft isolation,
+  observed stale KV2 reads, real-index rejection without write mutation, short
+  await expiry and bounded await recovery. No SDK controlled-lag claim is made.
+
 - Add checkpoint 08b scoped consistency contexts, bounded cluster preflights and
   single-attempt JSON transport with context-bound response indices. Preserve
   raw-API acknowledgement, sanitizing buffers and non-routable 2.7 status;
-  multi-node verification and profile promotion remain pending.
+  multi-node verification is recorded in 08c; profile promotion remains pending.
 
 - Start checkpoint 08a with opt-in bounded consistency-index parsing and typed
   ordered inconsistency policies, providing the foundation for 08b transport.

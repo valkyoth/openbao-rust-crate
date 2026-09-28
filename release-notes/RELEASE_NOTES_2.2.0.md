@@ -8,6 +8,27 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Verify a three-node Raft consistency protocol fixture with strict TLS and
+  resource isolation, real index propagation and explicit synthetic-index checks.
+  Its live capture is retained and digest-pinned; it does not claim controlled replication-lag or
+  SDK live verification and does not complete checkpoint 08.
+
+- Verify a staged SDK TLS test beneath the public consistency profile gate,
+  with a bounded runner executing the compiled test as the non-root invoking
+  user. Retained evidence binds the sources and executable digest.
+
+- Verify coordinated SDK controlled lag, namespace-context rejection,
+  cancellation and timeout after upstream TLS transmission, no retries, and
+  recovery. The baseline was rerun with the same executable. A fourth independent
+  cluster verifies preflight rejection at the same SDK endpoint before any
+  authenticated operation is dispatched. Checkpoint 08c is ready for pentest;
+  this does not protect against backend changes between preflight and dispatch.
+
+- Verify controlled replication lag at the server-protocol level using a
+  container-local Raft traffic filter, observed stale reads, real-index rejection,
+  no write mutation, and bounded await recovery. Retained evidence does not claim
+  SDK execution under controlled lag or complete checkpoint 08.
+
 - Checkpoint 08b stages scoped consistency transport with explicit policy headers,
   cluster/context validation, redacted errors and no automatic retries. Mock
   regression coverage includes response capture, cancellation and sanitizing-body
@@ -16,8 +37,8 @@ This release is being developed in pentestable commit checkpoints described in
 
 - Checkpoint 08a adds the non-default `consistency` feature with bounded,
   secret-aware index parsing and explicit fail/forward/await-state policy values.
-  This supplies the metadata foundation used by 08b; live consistency
-  verification remains pending and the 2.7 profile remains unpromoted.
+  This supplies the metadata foundation used by 08b and verified live in 08c;
+  the 2.7 profile remains unpromoted.
 
 - Reject empty, oversized and non-visible-ASCII explicit wrapping tokens before
   transport across lookup, rewrap and both unwrap interfaces. Explicit `None`

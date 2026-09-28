@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 #![cfg(all(
     feature = "identity",
     feature = "jwt-auth",
@@ -9,7 +10,6 @@
     feature = "token",
     feature = "totp"
 ))]
-#![allow(missing_docs)]
 
 use std::collections::BTreeMap;
 use std::error::Error;

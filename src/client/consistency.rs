@@ -4,6 +4,9 @@ use crate::consistency::{ConsistencyIndex, ConsistencyPolicy};
 
 const REVIEWED_VERSION: OpenBaoVersion = OpenBaoVersion::new(2, 7, 0);
 
+#[cfg(test)]
+mod live;
+
 fn require_consistency_profile(report: OpenBaoCompatibilityReport) -> Result<()> {
     // An assumed or newer-server fallback profile cannot establish this contract.
     if report.status() != OpenBaoCompatibilityStatus::Verified
