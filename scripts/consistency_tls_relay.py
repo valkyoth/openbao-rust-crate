@@ -215,7 +215,9 @@ class Relay:
                         self.send_header("Content-Type", "application/json")
                         self.send_header("Content-Length", str(len(data)))
                         for name, value in metadata:
-                            self.send_header(name, value)
+                            # Metadata was rejected above if it contained controls.
+                            # Keep CR/LF removal explicit at the HTTP output boundary.
+                            self.send_header(name, value.replace("\r", "").replace("\n", ""))
                         self.end_headers()
                         self.wfile.write(data)
                 except (OSError, ValueError, http.client.HTTPException):

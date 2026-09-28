@@ -6,6 +6,10 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Harden the consistency test relay's response-header output with explicit CR/LF
+  removal after strict rejection, and set an explicit TLS floor in its untrusted-CA
+  negative test. Add malformed and duplicate upstream-header regression tests.
+
 - Retain checkpoint 08c's successful constrained three-node Raft server-protocol
   evidence with digest/source validation and offline regression tests. No
   public support claim is promoted.

@@ -26,7 +26,7 @@ class RelayTests(unittest.TestCase):
         cls.tls, cls.ca = harness.generate_tls(root, "/usr/bin/openssl", {"PATH": "/usr/bin:/bin", "HOME": str(root)})
 
     @contextlib.contextmanager
-    def upstream(self, label):
+    def upstream(self, label, response_headers=None):
         calls = []
         class Handler(http.server.BaseHTTPRequestHandler):
             def log_message(self, *_): pass
@@ -40,7 +40,8 @@ class RelayTests(unittest.TestCase):
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(body)))
-                self.send_header("X-Vault-Index", "synthetic-index")
+                for name, value in response_headers if response_headers is not None else [("X-Vault-Index", "synthetic-index")]:
+                    self.send_header(name, value)
                 self.end_headers()
                 self.wfile.write(body)
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -132,12 +133,24 @@ class RelayTests(unittest.TestCase):
         with self.upstream("node") as (node, calls), subject.Relay(node, node, self.ca, self.tls, "synthetic-token") as relay:
             for trusted in (False, True):
                 context = subject.tls_fixture.context(self.ca) if trusted else ssl.create_default_context()
+                context.minimum_version = ssl.TLSVersion.TLSv1_3
                 if trusted:
                     context.minimum_version = ssl.TLSVersion.TLSv1_2
                     context.maximum_version = ssl.TLSVersion.TLSv1_2
                 with socket.create_connection(("127.0.0.1", subject.port_for(relay.address)), timeout=3) as stream:
                     with self.assertRaises(ssl.SSLError): context.wrap_socket(stream, server_hostname="127.0.0.1")
             self.assertEqual(calls, [])
+
+    def test_response_metadata_rejects_controls_duplicates_and_oversize(self):
+        for name in ("X-Vault-Index", "Retry-After"):
+            for values in (("safe\r\n folded",), ("safe\tvalue",), ("safe\x00value",),
+                           ("safe\x7fvalue",), ("x" * 4097,), ("one", "two")):
+                with self.subTest(name=name, values=values):
+                    with self.upstream("node", [(name, value) for value in values]) as (node, calls):
+                        with subject.Relay(node, node, self.ca, self.tls, "synthetic-token") as relay:
+                            with self.assertRaises((OSError, http.client.HTTPException)):
+                                self.request(relay.address)
+                            self.assertEqual(len(calls), 1)
 
     def test_destinations_reject_non_loopback_plaintext_or_url_overrides(self):
         for value in ("http://127.0.0.1:1", "https://example.org:1", "https://user@127.0.0.1:1",
