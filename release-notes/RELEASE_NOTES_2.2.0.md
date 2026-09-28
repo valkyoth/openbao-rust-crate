@@ -8,6 +8,12 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Stage a workflow CAS guard limited to exact verified OpenBao 2.7.0, with
+  historical, assumed, fallback and range-profile rejection tests. Public 2.7
+  dispatch remains disabled. Checkpoint 09b retains refreshed source-bound CAS,
+  control-group and SDK consistency evidence, including the known server replay
+  failure without claiming it is fixed.
+
 - Checkpoint 09a adds exact-source behavior review and retained workflow CAS
   server evidence, including rejected-write integrity and concurrent updates.
   Evidence scope and provenance are checked in CI. This does not lift SDK CAS

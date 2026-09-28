@@ -7,7 +7,7 @@ import openbao_2_7_consistency_sdk as fixture
 
 snapshots = fixture.server.snapshots
 RESULT = fixture.ROOT / "compat/onboarding/2.7.0/consistency-sdk-tls.json"
-EXPECTED_SHA256 = "5a8ebc3693a719c8ae392320a99c3de47c60a714f25b6b7b3468481551361280"
+EXPECTED_SHA256 = "c5007d03ee4d0e8870cf9784656034cea06aec89fac281fa86c29aef50c6d6a5"
 TEST_BINARY_SHA256 = "6d3ff4e652ac8250ee5ebb060605f437772d81af2be396b8f868324d95401a44"
 
 

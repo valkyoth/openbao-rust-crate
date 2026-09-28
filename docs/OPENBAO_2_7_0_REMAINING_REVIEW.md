@@ -2,7 +2,8 @@
 
 Checkpoint 09 is in progress, based on `e8d2402`. The checkpoint 08 pentest and
 GitHub checks passed, including closure of the test-harness CodeQL findings.
-No 2.7 profile is promoted, and neither workflow security block is lifted.
+No 2.7 profile is promoted. All active historical workflow CAS blocks and the
+independent prefix-listing block remain enforced.
 
 ## Exact Source Review
 
@@ -65,3 +66,32 @@ partial resource cleanup, redacted diagnostics and refusal to emit a report
 after failure. Later 09 work can use this evidence when implementing a narrowly
 version-gated CAS exception, with SDK request and historical-profile tests. Older server
 profiles and prefix listing remain blocked regardless of this fixture result.
+
+## 09b Staged SDK CAS Guard
+
+Based on `2615d7e`, `Sys::write_workflow` now has a narrow profile-dependent CAS
+guard instead of unconditional CAS rejection. Only an exact verified 2.7.0
+profile selected through automatic-strict or exact policy qualifies. Assumed,
+unverified, rolling-range and unknown-newer fallback reports are rejected, as
+are historical releases and unreviewed future patch versions. The operation
+still goes through the existing generated routing registry; the currently
+unpromoted 2.7 profile cannot send a public workflow request.
+
+Definitions and paths are validated before compatibility probing. Existing
+non-CAS writes retain their normal dispatch path. Secret-aware serialization,
+response decoding and single-attempt transport are unchanged. CAS versions
+`-1`, zero and positive values, as well as `cas_required` without a CAS value,
+all trigger the guard. Invalid or stale CAS is never automatically retried.
+
+Unit tests exercise the report boundary, while HTTP regressions verify all
+historical assumed profiles perform no I/O, verified old and acknowledged-newer
+profiles send only an unauthenticated health probe, and strict detection of
+unpromoted 2.7 still fails before a workflow write. Positive public SDK dispatch
+remains a checkpoint 10 obligation, not a claim of these tests.
+
+The `src/sys.rs` change invalidated the prior CAS, control-group and SDK
+consistency evidence inputs. Fresh live captures are retained and independently
+digest-pinned against the current sources and SDK test executable. Their scope
+is unchanged: CAS server behavior and SDK consistency checks passed, while the
+control-group report still records the known upstream replay failure. No
+validator was relaxed and no public profile was promoted.

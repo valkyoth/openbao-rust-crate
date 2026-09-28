@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Stage checkpoint 09b's workflow CAS guard for exact verified OpenBao 2.7.0,
+  preserving old/assumed/fallback/range rejection and the independent prefix
+  block. Public routing remains unpromoted; refreshed source-bound CAS,
+  control-group and SDK consistency evidence is retained with unchanged scope.
+
 - Start checkpoint 09 with exact-source behavior review and an isolated workflow
   CAS fixture, including concurrent-write and rejection-integrity regressions.
   Retain passing source-bound TLS evidence with tamper regressions; workflow

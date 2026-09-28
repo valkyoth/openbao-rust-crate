@@ -3456,10 +3456,10 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
 /// Create or update parameters for an OpenBao workflow.
 ///
 /// Workflow definitions can embed request templates and literal values, so
-/// `Debug` always redacts the definition. OpenBao 2.6.0 through 2.6.2 contain an
-/// upstream handler defect that discards the `cas` field. The SDK models the
-/// wire field but rejects CAS-selected writes locally for affected profiles,
-/// and never retries workflow writes.
+/// `Debug` always redacts the definition. CAS-selected writes require an exact
+/// verified OpenBao 2.7.0 profile after its routing promotion. Older, assumed,
+/// rolling-range and unknown-newer fallback profiles remain blocked. The SDK
+/// never retries workflow writes.
 pub struct WorkflowWriteRequest {
     workflow: SecretString,
     description: Option<String>,
@@ -6065,17 +6065,22 @@ impl Sys<'_, Authenticated> {
 
     /// Creates or updates one workflow without automatic retry.
     ///
-    /// OpenBao 2.6.0 through 2.6.2 discard the supplied workflow `cas` value.
-    /// The SDK therefore rejects CAS-selected writes before transport for
-    /// those reviewed profiles. Support for a future fixed profile must update
-    /// both compatibility dispatch and this validation rule.
+    /// CAS requires the exact verified OpenBao 2.7.0 profile (automatic strict
+    /// detection or exact selection), and still passes normal routing promotion
+    /// checks. Older, assumed, rolling-range and unknown-newer fallback profiles
+    /// are rejected before the workflow request is sent. No prefix-listing block
+    /// is lifted by this support. A timeout or malformed response after writing
+    /// leaves the outcome unknown; do not automatically replay the write.
     pub async fn write_workflow(
         &self,
         path: &str,
         request: &WorkflowWriteRequest,
     ) -> Result<WorkflowInfo> {
-        validate_workflow_write_request(request)?;
+        validate_workflow_definition(request.workflow.expose_secret())?;
         let path = workflow_path("sys/workflows/manage", path)?;
+        if request.cas.is_some() || request.cas_required {
+            validate_workflow_cas_profile(self.client.compatibility_report().await?)?;
+        }
         let payload = WorkflowWritePayload {
             workflow: request.workflow.expose_secret(),
             description: request.description.as_deref(),
@@ -9938,12 +9943,24 @@ fn validate_workflow_definition(workflow: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_workflow_write_request(request: &WorkflowWriteRequest) -> Result<()> {
-    validate_workflow_definition(request.workflow.expose_secret())?;
-    if request.cas.is_some() || request.cas_required {
+fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> Result<()> {
+    use crate::compatibility::{OpenBaoCompatibilityPolicyKind, OpenBaoCompatibilityStatus};
+    let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
+    // Routing independently requires promotion; a verified version alone never
+    // bypasses the generated endpoint registry.
+    if report.status() != OpenBaoCompatibilityStatus::Verified
+        || !matches!(
+            report.policy(),
+            Some(
+                OpenBaoCompatibilityPolicyKind::Exact
+                    | OpenBaoCompatibilityPolicyKind::AutomaticStrict
+            )
+        )
+        || report.profile_version() != Some(reviewed)
+        || report.detected_version() != Some(reviewed)
+    {
         return Err(Error::InvalidParameter(
-            "workflow CAS is unsafe on OpenBao 2.6.0 through 2.6.2 because the server discards the cas field"
-                .into(),
+            "workflow CAS requires an exact verified OpenBao 2.7.0 profile".into(),
         ));
     }
     Ok(())
@@ -11000,7 +11017,63 @@ mod tests {
                 .and_then(|request| request.with_cas(-2))
                 .is_err()
         );
-        assert!(super::validate_workflow_write_request(&request).is_err());
+        assert!(
+            super::validate_workflow_cas_profile(crate::OpenBaoCompatibilityReport::unverified())
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn workflow_cas_requires_exact_verified_reviewed_profile() {
+        use crate::compatibility::{
+            OpenBaoCompatibilityPolicyKind as Policy, OpenBaoCompatibilityReport as Report,
+        };
+        let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
+        for version in crate::compatibility::openbao_profile_versions() {
+            assert!(super::validate_workflow_cas_profile(Report::assumed(*version)).is_err());
+            assert!(
+                super::validate_workflow_cas_profile(Report::verified(
+                    Policy::Exact,
+                    *version,
+                    None
+                ))
+                .is_err()
+            );
+        }
+        for policy in [Policy::Exact, Policy::AutomaticStrict] {
+            assert!(
+                super::validate_workflow_cas_profile(Report::verified(policy, reviewed, None))
+                    .is_ok()
+            );
+        }
+        assert!(super::validate_workflow_cas_profile(Report::assumed(reviewed)).is_err());
+        assert!(
+            super::validate_workflow_cas_profile(Report::verified(Policy::Range, reviewed, None))
+                .is_err()
+        );
+        assert!(super::validate_workflow_cas_profile(Report::unverified()).is_err());
+        assert!(
+            super::validate_workflow_cas_profile(Report::acknowledged_unknown_newer(
+                reviewed,
+                crate::OpenBaoVersion::new(2, 6, 3)
+            ))
+            .is_err()
+        );
+        assert!(
+            super::validate_workflow_cas_profile(Report::acknowledged_unknown_newer(
+                crate::OpenBaoVersion::new(2, 8, 0),
+                reviewed
+            ))
+            .is_err()
+        );
+        assert!(
+            super::validate_workflow_cas_profile(Report::verified(
+                Policy::Exact,
+                crate::OpenBaoVersion::new(2, 7, 1),
+                None
+            ))
+            .is_err()
+        );
     }
 
     #[test]

@@ -146,6 +146,12 @@ digest/source verification and mutation tests; no workflow block is lifted.
 Remaining fields and behaviors are tracked in
 [the checkpoint 09 review](OPENBAO_2_7_0_REMAINING_REVIEW.md), including explicit
 distinctions between server configuration, local CLI operations and HTTP APIs.
+09a is committed as `2615d7e`. Checkpoint 09b adds the exact-verified-profile CAS
+guard and before-dispatch rejection regressions, with `2615d7e` as its pentest
+base. All active historical CAS blocks and prefix listing remain blocked; 2.7
+still requires checkpoint 10 promotion. Refreshed source-bound CAS, control-group
+and SDK consistency reports are retained; the known server replay failure remains
+explicitly recorded. The remaining checkpoint 09 inventory is not yet complete.
 
 ## Security And Compatibility Rules
 

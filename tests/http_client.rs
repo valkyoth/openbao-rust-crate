@@ -5053,6 +5053,166 @@ async fn workflow_operations_reject_pre_2_6_profiles_before_transport() {
     ));
 }
 
+async fn assert_workflow_cas_rejected(client: &Client<Authenticated>) {
+    for (cas, required) in [
+        (Some(-1), false),
+        (Some(0), false),
+        (Some(1), false),
+        (None, true),
+    ] {
+        let mut request = openbao::sys::WorkflowWriteRequest::new(test_secret(&[
+            "fixture-",
+            "workflow-definition",
+        ]))
+        .unwrap_or_else(|_| panic!("request construction failed"))
+        .require_cas(required);
+        if let Some(cas) = cas {
+            request = request
+                .with_cas(cas)
+                .unwrap_or_else(|_| panic!("CAS construction failed"));
+        }
+        let result = tokio::time::timeout(
+            Duration::from_secs(2),
+            client.sys().write_workflow("fixture-cas", &request),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("CAS request reached transport"));
+        assert!(matches!(result, Err(Error::InvalidParameter(_))));
+    }
+}
+
+#[tokio::test]
+async fn workflow_cas_rejects_every_historical_assumed_profile_without_io() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    for version in openbao::compatibility::openbao_profile_versions() {
+        let policy = OpenBaoCompatibilityPolicy::assume(*version)
+            .unwrap_or_else(|_| panic!("policy failed"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|_| panic!("config failed"));
+        let client = Client::from_config(config)
+            .and_then(|client| client.try_with_token(test_secret(&["fixture-", "client-token"])))
+            .unwrap_or_else(|_| panic!("client failed"));
+        assert_workflow_cas_rejected(&client).await;
+    }
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|_| panic!("nonblocking failed"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[tokio::test]
+async fn workflow_cas_rejects_verified_old_and_newer_fallback_without_write() {
+    for (version, fallback) in [
+        ("2.6.0", false),
+        ("2.6.3", false),
+        ("2.7.0", true),
+        ("2.8.0", true),
+    ] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|_| panic!("address failed"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener
+                .accept()
+                .unwrap_or_else(|_| panic!("accept failed"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("GET /v1/sys/health "));
+            assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+            let body =
+                serde_json::json!({"initialized": true, "sealed": false, "version": version})
+                    .to_string();
+            write_json_response(&mut stream, "200 OK", &body);
+            listener
+        });
+        let policy = if fallback {
+            OpenBaoCompatibilityPolicy::automatic_allow_unknown_newer(
+                UnknownNewerOpenBaoAcknowledgement::acknowledge(),
+            )
+        } else {
+            OpenBaoCompatibilityPolicy::exact(
+                version.parse().unwrap_or_else(|_| panic!("version failed")),
+            )
+            .unwrap_or_else(|_| panic!("policy failed"))
+        };
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|_| panic!("config failed"));
+        let client = Client::from_config(config)
+            .and_then(|client| client.try_with_token(test_secret(&["fixture-", "client-token"])))
+            .unwrap_or_else(|_| panic!("client failed"));
+        assert_workflow_cas_rejected(&client).await;
+        let listener = server
+            .join()
+            .unwrap_or_else(|_| panic!("health fixture failed"));
+        listener
+            .set_nonblocking(true)
+            .unwrap_or_else(|_| panic!("nonblocking failed"));
+        assert!(
+            matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+        );
+    }
+}
+
+#[tokio::test]
+async fn workflow_cas_still_rejects_unpromoted_27_before_write() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener
+            .accept()
+            .unwrap_or_else(|_| panic!("accept failed"));
+        let request = read_http_request(&mut stream);
+        assert!(request.starts_with("GET /v1/sys/health "));
+        assert!(!request.to_ascii_lowercase().contains("x-vault-token"));
+        write_json_response(
+            &mut stream,
+            "200 OK",
+            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+        );
+        listener
+    });
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(allow_mock_http)
+        .map(|config| config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict()))
+        .unwrap_or_else(|_| panic!("config failed"));
+    let client = Client::from_config(config)
+        .and_then(|client| client.try_with_token(test_secret(&["fixture-", "client-token"])))
+        .unwrap_or_else(|_| panic!("client failed"));
+    let request =
+        openbao::sys::WorkflowWriteRequest::new(test_secret(&["fixture-", "workflow-definition"]))
+            .and_then(|request| request.with_cas(-1))
+            .unwrap_or_else(|_| panic!("request failed"));
+    let result = tokio::time::timeout(
+        Duration::from_secs(2),
+        client.sys().write_workflow("fixture-cas", &request),
+    )
+    .await
+    .unwrap_or_else(|_| panic!("CAS request reached transport"));
+    assert!(
+        matches!(result, Err(Error::UnknownOpenBaoVersion(version)) if version == OpenBaoVersion::new(2, 7, 0))
+    );
+    let listener = server
+        .join()
+        .unwrap_or_else(|_| panic!("health fixture failed"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|_| panic!("nonblocking failed"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
 #[tokio::test]
 async fn authentication_2_6_contracts_reject_old_profiles_before_transport() {
     let version = OpenBaoVersion::new(2, 5, 5);
