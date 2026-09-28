@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Stage checkpoint 09d's MFA TOTP enrollment/removal fixture and adversarial
+  offline tests. Retain passing source-bound TLS evidence with an independent
+  digest pin and strict scope checks. Document that admin-destroy removes
+  the entity association, not the stored key; no secure-erasure claim is made.
+
 - Stage checkpoint 09c's sanitized-config and wrapping-token revoke-self TLS
   fixture with offline evidence, response, revocation and cleanup regressions.
   Retain passing source-bound live evidence with an independent digest pin;

@@ -21,7 +21,7 @@ This review supplements the checkpoint 02 inventory, not replaces it.
 | Envoy certificate decoder | `internal/http/handler.go` and `internal/http/util.go` implement listener-side XFCC decoding. This is not a cert-auth role/config field. Do not add an SDK header-spoofing path; server administrators own trusted proxy configuration. |
 | Wrapping-token revoke-self | 09c verifies immediate accessor removal and subsequent unwrap/reuse rejection live, with a successful independent unwrap control. Existing SDK methods remain unchanged; no automatic retries. |
 | Raw backup reads | Review protected storage paths and test only disposable backups, preserving operator gates and secret-aware results. No raw access privilege is widened by this review. |
-| MFA TOTP | `internal/vault/login_mfa.go` returns `url` and `barcode`; existing `IdentityMfaTotpSecret` stores both as secrets. The staged documentation field delta adds the already-modeled admin-destroy method/entity IDs. Generation/destruction behavior still needs live verification. |
+| MFA TOTP | Existing `IdentityMfaTotpSecret` stores URL/barcode as secrets; admin method/entity IDs are already modeled. 09d retains passing generation, denial, association removal and fresh-enrollment evidence. Stored-key erasure, QR decoding and login enforcement are not claimed. |
 | Workflow CAS | Handler now passes the supplied CAS to the store. Require exact-version adversarial evidence before adding a version-scoped SDK exception. See below. |
 | Workflow prefix listing | The tagged handler reads `data.Get("parent").(string)` although its route declares `path`, not `parent`. Source review does not justify lifting the independent prefix block. Keep the block; any live diagnostic is separate from CAS evidence. |
 | Remaining inventory | Reconcile all staged operation/schema/documentation deltas and the six recovered historical route identities before checkpoint 10. No aggregate 100% coverage claim is made here. |
@@ -144,3 +144,53 @@ sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_system_behavior.py
 
 This is server-fixture evidence, not public SDK dispatch evidence. Existing SDK
 methods and historical profiles are unchanged; 2.7 promotion remains blocked.
+
+## 09d MFA TOTP Enrollment Lifecycle
+
+Based on `904abb4`, this slice verifies the existing admin-generate/admin-destroy
+wire contract rather than adding another SDK API. The tagged
+`internal/vault/login_mfa.go::HandleMFAGenerateTOTP` returns both `url` and
+`barcode`, already modeled as secret strings by `IdentityMfaTotpSecret`.
+Repeated generation returns a warning without redisclosing the secret.
+Both admin operations already send the documented method and entity IDs.
+
+An important limitation appears explicitly in the tagged
+`internal/vault/identity/mfa.go::handleLoginMFAAdminDestroyUpdate`: it removes
+the MFA association from the entity but does not remove the stored TOTP key.
+The SDK operation name mirrors the server endpoint; it is not a secure-erasure
+guarantee. The fixture does not read raw storage or claim that historical secret
+material is erased.
+
+`scripts/openbao_2_7_mfa_totp.py` creates a disposable SHA-256 TOTP method and
+two entities. It checks the bounded enrollment URL's account, issuer, algorithm,
+digits, period and base32 secret, plus the bounded barcode's PNG header and
+dimensions. It checks warning-only duplicate generation, denies administrative
+operations to an explicitly deny-only token, removes one association and verifies fresh
+enrollment with a different secret while the control entity remains enrolled.
+The resource lifecycle uses the existing signed-image, isolated-network,
+constrained-container and certificate-verified TLS 1.3 harness.
+
+This is server-fixture coverage, not public SDK dispatch, TOTP login-enforcement,
+QR decoding or storage-erasure evidence. Those exclusions are explicit report
+fields. Returned secrets never enter reports or diagnostic output; Python
+allocations are not claimed to sanitize secret bytes. Reports bind the fixture,
+shared transport and relevant SDK sources, and require successful cleanup.
+Offline tests reject claim/input tampering, malformed enrollment metadata,
+duplicate secret disclosure, path-injecting IDs, removal/regeneration defects,
+permission failures with the wrong cause and partial resource cleanup failures.
+
+The initial live run stopped at the child-token policy assertion: an empty
+policy list inherits the parent's policies in the tagged token store.
+The fixture now creates a deny-all ACL policy and verifies that the child's
+returned policies contain exactly that policy before any negative MFA probe.
+Offline regressions reject inherited root, extra default and missing policies.
+The corrected live run passed. Its report is retained at
+`compat/onboarding/2.7.0/mfa-totp-tls.json`; the verifier
+`scripts/verify_openbao_2_7_mfa_totp.py` checks an independent digest pin,
+canonical JSON and exact current source/scope fields. CI tests reject changed
+claims, missing or changed inputs, altered bytes and noncanonical encoding.
+To repeat the live capture:
+
+```sh
+sudo /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_mfa_totp.py
+```

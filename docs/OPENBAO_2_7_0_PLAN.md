@@ -156,6 +156,11 @@ explicitly recorded. The remaining checkpoint 09 inventory is not yet complete.
 and wrapping-token revoke-self fixture with offline adversarial tests; its live
 capture passed and is retained with an independent digest pin and strict
 source/scope verification. The pentest base for 09c is `55015ec`.
+09c is committed as `904abb4`. Checkpoint 09d adds the MFA TOTP enrollment
+lifecycle fixture and adversarial offline tests, with passing source-bound live
+evidence retained and independently digest-pinned.
+Its pentest base is `904abb4`; it does not claim storage erasure, login
+enforcement or public 2.7 dispatch.
 
 ## Security And Compatibility Rules
 

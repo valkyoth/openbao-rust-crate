@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Add a staged MFA TOTP enrollment/removal fixture and offline regressions.
+  Passing source-bound live evidence is retained with an independent digest pin.
+  The source review distinguishes entity association
+  removal from stored-key erasure; no production API or routing change is made.
+
 - Add offline adversarial tests and a staged TLS fixture for sanitized-config
   additions and ordinary wrapping-token revoke-self. Passing source-bound live
   evidence is retained; this does not address the separate upstream control-group replay
