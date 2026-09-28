@@ -6,12 +6,20 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Cross-check grouped rotation backup representations: reject empty backups,
+  mismatched recipients/counts and unequal ordered ciphertext. Base64 decoding
+  uses sanitizing storage; hex comparison avoids another decoded allocation.
+  This is consistency validation, not PGP authentication. Source-bound evidence
+  is refreshed and verified after this follow-up; live SDK backup acceptance remains an
+  explicit checkpoint 10 promotion requirement.
+
 - Harden grouped rotation-backup decoding after checkpoint 09 review: each
   encoding map permits at most 256 groups and 4096 cumulative shares, with
   nonempty groups, validated PGP fingerprints and bounded hex/canonical Base64
   shares. Regression tests cover aggregate exhaustion, exact limits, malformed
-  encodings and secret-free errors. All nine affected live evidence reports
-  have been refreshed and verified; OpenBao 2.7 remains non-routable.
+  encodings and secret-free errors. The initial nine affected reports were
+  refreshed, then recaptured and verified after cross-representation hardening.
+  OpenBao 2.7 remains non-routable.
 
 - Fix modern rotation response-envelope decoding while preserving legacy rekey
   contracts. Add grouped backup results that preserve multiple encrypted shares

@@ -94,19 +94,26 @@ duplicate fingerprints, bounds and redaction. The checkpoint 09 pentest follow-u
 adds a cumulative 4096-share budget per encoding map, at most 256 groups,
 nonempty groups, lowercase 40-character hex fingerprints, and nonempty shares
 of at most 16 KiB with valid hex or canonical standard Base64 encoding. Syntax
-validation does not authenticate or decrypt the PGP payload.
+validation does not authenticate or decrypt the PGP payload. Whole-backup
+validation additionally requires both maps to be nonempty with identical
+recipients, share counts and ordered ciphertext.
 
 The `src/sys.rs` change invalidated the retained control-group, workflow CAS,
 system-behavior, MFA, raw-backup, recovery-backup, backup-upgrade and SDK
-consistency reports. All nine reports have been recaptured after the additional
-pentest hardening and verified against current inputs with independent digest
-pins. SDK reports match the rebuilt executable. No report source hashes were
+consistency reports. All nine reports have been recaptured against current
+inputs after whole-backup validation, verified and independently pinned.
+SDK reports match the rebuilt executable. No report source hashes were
 substituted.
 The control-group report still records the known upstream replay failure.
 Checkpoint 09 awaits follow-up review; profile promotion is
 still blocked.
 
 ## Checkpoint 10 Obligations
+
+Create a real PGP-backed rotation backup and read it through the public SDK's
+`operator_rotate_backup_grouped`, checking fingerprint acceptance and decoded
+hex/Base64 equivalence. Include disposable-key share decryption where feasible.
+Retained server-only backup evidence is not SDK integration evidence.
 
 Before promotion, resolve the actual method/path identities and field rules in
 the generated registry, including the documentation discrepancies above. Test

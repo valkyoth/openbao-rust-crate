@@ -775,9 +775,14 @@ async fn modern_operator_rotation_requires_data_envelopes_for_both_targets() {
             let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|e| panic!("{e}"));
             let addr = listener.local_addr().unwrap_or_else(|e| panic!("{e}"));
             let server = thread::spawn(move || {
-                for _ in 0..8 {
+                for step in 0..8 {
                     let (mut stream, _) = listener.accept().unwrap_or_else(|e| panic!("{e}"));
                     let _ = read_http_request(&mut stream);
+                    let body = if valid && step >= 6 {
+                        r#"{"data":{"nonce":"fixture-operation","keys":{"0123456789abcdef0123456789abcdef01234567":["aa"]},"keys_base64":{"0123456789abcdef0123456789abcdef01234567":["qg=="]}}}"#
+                    } else {
+                        body
+                    };
                     write_json_response(&mut stream, "200 OK", body);
                 }
             });
@@ -846,7 +851,7 @@ async fn operator_rotation_backup_preserves_groups_without_silent_truncation() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"data":{"nonce":"fixture-nonce","keys":{"0123456789abcdef0123456789abcdef01234567":["aabb","ccdd"]},"keys_base64":{}}}"#,
+                r#"{"data":{"nonce":"fixture-nonce","keys":{"0123456789abcdef0123456789abcdef01234567":["aabb","ccdd"]},"keys_base64":{"0123456789abcdef0123456789abcdef01234567":["qrs=","zN0="]}}}"#,
             );
         }
     });
@@ -902,11 +907,17 @@ fn rotation_backup_aggregate_limits_and_encodings() {
         let decode = |groups: serde_json::Value| {
             serde_json::from_value::<OperatorRotationBackup>(serde_json::json!({field: groups}))
         };
+        // A valid isolated map reaches the whole-response missing-counterpart check.
+        let map_accepted = |result: Result<OperatorRotationBackup, serde_json::Error>| {
+            assert!(result.err().is_some_and(
+                |error| error.to_string() == "rotation backup contains no recovery shares"
+            ));
+        };
         let mut groups = serde_json::Map::new();
         for i in 0..2 {
             groups.insert(format!("{i:040x}"), serde_json::json!(vec![share; 2048]));
         }
-        assert!(decode(groups.clone().into()).is_ok());
+        map_accepted(decode(groups.clone().into()));
         groups.insert(format!("{:040x}", 2), serde_json::json!([share]));
         let error = decode(groups.into())
             .err()
@@ -917,7 +928,7 @@ fn rotation_backup_aggregate_limits_and_encodings() {
         for i in 0..256 {
             groups.insert(format!("{i:040x}"), serde_json::json!([share]));
         }
-        assert!(decode(groups.clone().into()).is_ok());
+        map_accepted(decode(groups.clone().into()));
         groups.insert(format!("{:040x}", 256), serde_json::json!([share]));
         let error = decode(groups.into())
             .err()
@@ -935,7 +946,7 @@ fn rotation_backup_aggregate_limits_and_encodings() {
         }
         assert!(decode(serde_json::json!({fingerprint: []})).is_err());
         let boundary = "a".repeat(16 * 1024);
-        assert!(decode(serde_json::json!({fingerprint: [&boundary]})).is_ok());
+        map_accepted(decode(serde_json::json!({fingerprint: [&boundary]})));
         assert!(decode(serde_json::json!({fingerprint: [format!("{boundary}aaaa")]})).is_err());
         for invalid in ["", "not-a-share", "a", "Zh==", "Zg", "Zg===", "Z g=="] {
             let error = decode(serde_json::json!({fingerprint: [invalid]}))
@@ -971,6 +982,41 @@ fn rotation_backup_aggregate_limits_and_encodings() {
                 .contains("duplicate rotation backup fingerprint")
         );
     }
+}
+
+#[cfg(feature = "operator-ops")]
+#[test]
+fn rotation_backup_requires_matching_representations() {
+    use openbao::sys::OperatorRotationBackup;
+    let fp = "0123456789abcdef0123456789abcdef01234567";
+    let other = "1123456789abcdef0123456789abcdef01234567";
+    let decode = |value| serde_json::from_value::<OperatorRotationBackup>(value);
+    for value in [
+        serde_json::json!({}),
+        serde_json::json!({"keys":{}, "keys_base64":{}}),
+        serde_json::json!({"keys":{fp:["aabb"]}}),
+        serde_json::json!({"keys_base64":{fp:["qrs="]}}),
+        serde_json::json!({"keys":{fp:["aabb"]}, "keys_base64":{other:["qrs="]}}),
+        serde_json::json!({"keys":{fp:["aabb"]}, "keys_base64":{fp:["qrs="],other:["qrs="]}}),
+        serde_json::json!({"keys":{fp:["aabb","ccdd"]}, "keys_base64":{fp:["qrs="]}}),
+        serde_json::json!({"keys":{fp:["aabb"]}, "keys_base64":{fp:["zN0="]}}),
+        serde_json::json!({"keys":{fp:["aabb"]}, "keys_base64":{fp:["qg=="]}}),
+        serde_json::json!({"keys":{fp:["aabb","ccdd"]}, "keys_base64":{fp:["zN0=","qrs="]}}),
+    ] {
+        let error = decode(value)
+            .err()
+            .unwrap_or_else(|| panic!("inconsistent backup accepted"));
+        assert!(!error.to_string().contains(fp));
+        assert!(!error.to_string().contains("aabb"));
+        assert!(!error.to_string().contains("zN0="));
+    }
+    for count in [1, 4096] {
+        let backup = decode(serde_json::json!({"keys":{fp:vec!["AaBb";count]}, "keys_base64":{fp:vec!["qrs=";count]}}))
+            .unwrap_or_else(|_| panic!("matching backup rejected"));
+        assert_eq!(backup.keys[fp].len(), count);
+        assert!(!format!("{backup:?}").contains("AaBb"));
+    }
+    assert!(decode(serde_json::json!({"keys":{fp:["aa".repeat(8192)]}, "keys_base64":{fp:[format!("{}qqo=", "qqqq".repeat(2730))]}})).is_ok());
 }
 
 #[derive(Serialize)]

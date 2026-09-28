@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 08 passed pentest; checkpoint 08 follow-up `e8d2402` is green on GitHub with both CodeQL alerts closed. Checkpoint 09 pentest follow-up hardens grouped backup decoding; refreshed source-bound evidence is verified and follow-up review is pending;
+Status: checkpoints 01 through 08 passed pentest; checkpoint 08 follow-up `e8d2402` is green on GitHub with both CodeQL alerts closed. Checkpoint 09 follow-up adds cross-representation backup validation; refreshed source-bound evidence is verified and follow-up review is pending;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -181,9 +181,13 @@ now accounts for all 189 changes and six recovered route identities. It found
 a modern-rotation response-envelope and grouped-backup mismatch. Both now have
 decoder fixes and regression coverage. The subsequent pentest identified missing
 aggregate share limits and encoding validation. These are now enforced per map
-with regression coverage. All nine affected source-bound reports have been
-recaptured and verified, including both SDK consistency reports against the
-rebuilt executable. Checkpoint 09 is ready for follow-up pentest review.
+with regression coverage. A further review added whole-backup validation:
+nonempty matching maps, recipient/count equality and ordered ciphertext equality.
+All nine affected source-bound reports have been recaptured and verified after
+this change, including both SDK consistency reports against the rebuilt executable.
+Checkpoint 10 must test real PGP backup acceptance through
+`operator_rotate_backup_grouped` and hex/Base64 equivalence before promotion;
+server-only backup evidence does not satisfy that requirement.
 Checkpoint 10 profile promotion and release assurance have not started.
 
 ## Security And Compatibility Rules

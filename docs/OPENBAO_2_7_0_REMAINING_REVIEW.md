@@ -1,7 +1,8 @@
 # OpenBao 2.7.0 Remaining Behavior Review
 
 Checkpoint 09 pentest follow-up adds aggregate backup share limits and encoding
-validation; refreshed source-bound evidence is verified. The checkpoint 08 pentest and
+validation, plus cross-representation consistency; refreshed evidence is verified.
+The checkpoint 08 pentest and
 GitHub checks passed, including closure of the test-harness CodeQL findings.
 No 2.7 profile is promoted. All active historical workflow CAS blocks and the
 independent prefix-listing block remain enforced.
@@ -25,7 +26,7 @@ This review supplements the checkpoint 02 inventory, not replaces it.
 | MFA TOTP | Existing `IdentityMfaTotpSecret` stores URL/barcode as secrets; admin method/entity IDs are already modeled. 09d retains passing generation, denial, association removal and fresh-enrollment evidence. Stored-key erasure, QR decoding and login enforcement are not claimed. |
 | Workflow CAS | Handler now passes the supplied CAS to the store. Require exact-version adversarial evidence before adding a version-scoped SDK exception. See below. |
 | Workflow prefix listing | The tagged handler reads `data.Get("parent").(string)` although its route declares `path`, not `parent`. Source review does not justify lifting the independent prefix block. Keep the block; any live diagnostic is separate from CAS evidence. |
-| Remaining inventory | All 189 records and six recovered identities now have explicit accounting. Modern-rotation envelopes and grouped backup decoding are fixed with regressions; pentest follow-up adds aggregate and encoding validation with refreshed, verified source-bound evidence. No aggregate 100% coverage claim is made here. |
+| Remaining inventory | All 189 records and six recovered identities now have explicit accounting. Modern-rotation envelopes and grouped backup decoding are fixed with regressions; whole-backup consistency hardening has refreshed, verified evidence. Live SDK PGP-backup acceptance is required before checkpoint 10 promotion. No aggregate 100% coverage claim is made here. |
 
 ## 09a Workflow CAS Evidence
 
@@ -377,8 +378,8 @@ All six identities and all 189 adjacent delta records are accounted for in the
 [delta reconciliation](OPENBAO_2_7_0_DELTA_RECONCILIATION.md), with an exact-record
 ledger, digest pin and omission/substitution regressions. Accounting is not
 runtime verification: the modern-rotation decoder fixes changed `src/sys.rs`.
-All nine affected source-bound reports listed in that review have fresh,
-verified captures after decoder hardening, preserving their original scope.
+All nine affected source-bound reports have been recaptured and verified after
+whole-backup consistency hardening, preserving their original scope.
 The decoder now bounds each map to 256 groups and 4096 total shares, validates
 40-character lowercase hex fingerprints and nonempty shares of at most 16 KiB,
 and requires valid hex or canonical Base64. This is syntax validation, not PGP

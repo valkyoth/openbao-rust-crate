@@ -2660,18 +2660,86 @@ impl fmt::Debug for OperatorRecoveryKeyBackup {
 /// Each share is nonempty, at most 16 KiB of encoded text, and valid hex or
 /// canonical standard Base64. Encoding validation does not authenticate or
 /// decrypt the encrypted PGP payload; independently verify recovery procedures.
+/// Both maps must be nonempty and represent identical recipients and ordered shares.
 #[cfg(feature = "operator-ops")]
 #[derive(Clone, Deserialize)]
+#[serde(try_from = "RotationBackupWire")]
 pub struct OperatorRotationBackup {
     /// Nonce of the backed-up rotation operation.
-    #[serde(default)]
     pub nonce: Option<String>,
     /// Hex-encoded encrypted shares, grouped by recipient fingerprint.
-    #[serde(default, deserialize_with = "deserialize_rotation_backup_map")]
     pub keys: BTreeMap<String, Vec<SecretString>>,
     /// Base64-encoded encrypted shares, grouped by recipient fingerprint.
-    #[serde(default, deserialize_with = "deserialize_rotation_backup_base64_map")]
     pub keys_base64: BTreeMap<String, Vec<SecretString>>,
+}
+
+#[cfg(feature = "operator-ops")]
+#[derive(Deserialize)]
+struct RotationBackupWire {
+    #[serde(default)]
+    nonce: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_rotation_backup_map")]
+    keys: BTreeMap<String, Vec<SecretString>>,
+    #[serde(default, deserialize_with = "deserialize_rotation_backup_base64_map")]
+    keys_base64: BTreeMap<String, Vec<SecretString>>,
+}
+
+#[cfg(feature = "operator-ops")]
+impl TryFrom<RotationBackupWire> for OperatorRotationBackup {
+    type Error = &'static str;
+
+    fn try_from(wire: RotationBackupWire) -> core::result::Result<Self, Self::Error> {
+        if wire.keys.is_empty() || wire.keys_base64.is_empty() {
+            return Err("rotation backup contains no recovery shares");
+        }
+        if wire.keys.len() != wire.keys_base64.len() {
+            return Err("rotation backup encodings have different recipients");
+        }
+        for (fingerprint, hex_shares) in &wire.keys {
+            let encoded_shares = wire
+                .keys_base64
+                .get(fingerprint)
+                .ok_or("rotation backup encodings have different recipients")?;
+            if hex_shares.len() != encoded_shares.len() {
+                return Err("rotation backup encodings have different share counts");
+            }
+            for (hex, encoded) in hex_shares.iter().zip(encoded_shares) {
+                let decoded = base64_ng::ct::STANDARD
+                    .decode_secret(encoded.expose_secret().as_bytes())
+                    .map_err(|_| "invalid rotation backup encoding")?;
+                let decoded = SecretVec::from_vec(
+                    decoded
+                        .into_exposed_vec()
+                        .into_exposed_unprotected_vec_caller_must_zeroize(),
+                );
+                // Compare hex digits directly, without a second decoded allocation.
+                let equal = decoded.with_secret(|bytes| {
+                    let hex = hex.expose_secret().as_bytes();
+                    hex.len() / 2 == bytes.len()
+                        && hex
+                            .as_chunks::<2>()
+                            .0
+                            .iter()
+                            .zip(bytes)
+                            .all(|(pair, byte)| {
+                                let high = char::from(pair[0]).to_digit(16);
+                                let low = char::from(pair[1]).to_digit(16);
+                                high.zip(low).is_some_and(|(high, low)| {
+                                    (high << 4) | low == u32::from(*byte)
+                                })
+                            })
+                });
+                if !equal {
+                    return Err("rotation backup encodings disagree");
+                }
+            }
+        }
+        Ok(Self {
+            nonce: wire.nonce,
+            keys: wire.keys,
+            keys_base64: wire.keys_base64,
+        })
+    }
 }
 
 #[cfg(feature = "operator-ops")]
