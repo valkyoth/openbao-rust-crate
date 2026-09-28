@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 07 passed pentest through `c6c4480`; checkpoint 08b is committed as `8662b26`; 08c's server-protocol, server controlled-lag, SDK TLS, and coordinated SDK lag/cancellation/cross-cluster evidence are retained and verified. Checkpoint 08c is ready for pentest;
+Status: checkpoints 01 through 08 passed pentest; checkpoint 08 follow-up `e8d2402` is green on GitHub with both CodeQL alerts closed. Checkpoint 09 is in progress;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -139,6 +139,13 @@ Checkpoint 08 is split into 08a bounded header types and source-contract review,
 `4005c59`; it adds context-bound metadata and advanced single-attempt transport,
 with the public path blocked until profile promotion. 08c now has passing live evidence; its pentest base is `8662b26`. See
 [the consistency review](OPENBAO_2_7_0_CONSISTENCY_REVIEW.md) for remaining work.
+
+Checkpoint 09 starts with 09a's exact-source review and adversarial workflow CAS
+fixture (base `e8d2402`). The live result passed and is retained with independent
+digest/source verification and mutation tests; no workflow block is lifted.
+Remaining fields and behaviors are tracked in
+[the checkpoint 09 review](OPENBAO_2_7_0_REMAINING_REVIEW.md), including explicit
+distinctions between server configuration, local CLI operations and HTTP APIs.
 
 ## Security And Compatibility Rules
 

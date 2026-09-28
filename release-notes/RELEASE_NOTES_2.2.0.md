@@ -8,6 +8,11 @@ This release is being developed in pentestable commit checkpoints described in
 
 ## Completed
 
+- Checkpoint 09a adds exact-source behavior review and retained workflow CAS
+  server evidence, including rejected-write integrity and concurrent updates.
+  Evidence scope and provenance are checked in CI. This does not lift SDK CAS
+  or prefix-listing blocks; the remaining checkpoint 09 work is still required.
+
 - Verify a three-node Raft consistency protocol fixture with strict TLS and
   resource isolation, real index propagation and explicit synthetic-index checks.
   Its live capture is retained and digest-pinned; it does not claim controlled replication-lag or

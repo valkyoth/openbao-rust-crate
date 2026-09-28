@@ -6,6 +6,11 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Start checkpoint 09 with exact-source behavior review and an isolated workflow
+  CAS fixture, including concurrent-write and rejection-integrity regressions.
+  Retain passing source-bound TLS evidence with tamper regressions; workflow
+  security blocks and 2.7 routing are unchanged.
+
 - Harden the consistency test relay's response-header output with explicit CR/LF
   removal after strict rejection, and set an explicit TLS floor in its untrusted-CA
   negative test. Add malformed and duplicate upstream-header regression tests.
