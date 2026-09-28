@@ -178,7 +178,7 @@ Important non-default features include:
 | Feature | Purpose |
 | --- | --- |
 | `http2` | Enable HTTP/2 negotiation through TLS ALPN. |
-| `consistency` | Staged scoped consistency transport and bounded metadata; live multi-node verification and 2.7 profile promotion remain pending. |
+| `consistency` | Staged scoped consistency transport and bounded metadata; live multi-node, controlled-lag, cancellation, and cross-cluster evidence is retained. OpenBao 2.7 profile promotion remains pending. |
 | `time` | Parse timestamps into `time` crate types. |
 | `tokio-helpers` | Add Tokio-backed bounded readiness waits. |
 | `tracing` | Emit redacted request spans without an OpenTelemetry SDK dependency. |
