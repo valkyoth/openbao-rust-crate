@@ -32,14 +32,25 @@ class CandidateSdkTests(unittest.TestCase):
             destination = Path(directory) / "build"
             destination.mkdir()
             with patch.object(Path, "home", return_value=home), \
+                 patch.object(subject.shutil, "which", return_value=str(home / ".cargo/bin/rustup")) as locate, \
                  patch.object(subject.subprocess, "check_output", return_value=str(tools / "cargo")), \
                  patch.dict(os.environ, {"RUSTC_WRAPPER": "/untrusted", "RUSTFLAGS": "injected", "LD_PRELOAD": "injected", "CARGO_HOME": "/untrusted"}):
                 env = subject.build_environment(destination)
+            locate.assert_called_once_with("rustup", path=f"{home / '.cargo/bin'}:/usr/bin:/bin")
             for key in ("RUSTC_WRAPPER", "RUSTFLAGS", "LD_PRELOAD"):
                 self.assertNotIn(key, env)
             self.assertEqual(env["CARGO_HOME"], str(destination / "cargo-home"))
             self.assertFalse((destination / "cargo-home/config.toml").exists())
             self.assertEqual(env["RUSTC"], str(tools / "rustc"))
+
+    def test_missing_rustup_fails_closed_before_execution(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(subject.shutil, "which", return_value=None), \
+             patch.object(subject.subprocess, "check_output") as execute:
+            with self.assertRaises(subject.registry.RegistryError):
+                subject.build_environment(Path(directory))
+            execute.assert_not_called()
+
     @classmethod
     def setUpClass(cls):
         cls.candidate = subject.candidate.verify()
