@@ -37,15 +37,15 @@ def binary_hash(binary, uid):
     return server.snapshots.sha256(server.snapshots.read_regular_file(binary, 256 * 1024 * 1024))
 
 
-def run_test(binary, uid, gid, addresses, ca, token):
+def run_test(binary, uid, gid, addresses, ca, token, *, test=TEST):
     tool = str(server.evidence_tools.protected_path(Path("/usr/bin/setpriv")))
     command = [tool, f"--reuid={uid}", f"--regid={gid}", "--clear-groups", "--no-new-privs",
                "--bounding-set=-all", "--inh-caps=-all", "--ambient-caps=-all",
-               str(binary), "--ignored", "--exact", TEST, "--test-threads=1"]
+               str(binary), "--ignored", "--exact", test, "--test-threads=1"]
     environment = {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"}
     listing = server.harness.run_bounded(command + ["--list"], maximum=1024, timeout=10, environment=environment)
     # libtest exits successfully even when a filter selects zero tests.
-    server.require(listing == f"{TEST}: test\n\n1 test, 0 benchmarks\n".encode())
+    server.require(listing == f"{test}: test\n\n1 test, 0 benchmarks\n".encode())
     payload = server.snapshots.canonical_json({"addresses": addresses, "ca_pem": ca.read_text(encoding="ascii"),
                                                "token": token})
     server.require(len(payload) < 65536)

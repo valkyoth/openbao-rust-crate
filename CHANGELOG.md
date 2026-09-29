@@ -6,6 +6,14 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Start checkpoint 10a with a public-SDK TLS backup acceptance fixture using
+  real PGP-encrypted recovery shares, grouped/singleton reads and independent
+  hex/Base64 comparison. The runner drops privileges and requires exactly one
+  successful test invocation; it does not claim strict-profile support or PGP
+  decryption. Passing source/binary-bound evidence is retained with tamper tests
+  and CI verification. All nine affected older reports have been refreshed and
+  verified without changing their scope or promoting the public 2.7 profile.
+
 - Cross-check grouped rotation backup representations: reject empty backups,
   mismatched recipients/counts and unequal ordered ciphertext. Base64 decoding
   uses sanitizing storage; hex comparison avoids another decoded allocation.
@@ -26,7 +34,7 @@ All notable changes to this project are documented here.
   per fingerprint; the existing single-share return API rejects non-singleton
   groups rather than truncating them. The initial source-bound evidence was
   captured and independently pinned, then refreshed after decoder hardening.
-  Checkpoint 09 awaits follow-up pentest review.
+  Checkpoint 09 passed follow-up pentest review through `83a56e4`.
 
 - Account for all 189 staged API delta records and six recovered historical
   route identities, with a digest-pinned ledger and omission/tamper tests.

@@ -2,6 +2,9 @@
 
 pub mod control_groups;
 
+#[cfg(all(test, feature = "operator-ops"))]
+mod backup_live;
+
 #[cfg(feature = "operator-ops")]
 pub mod external_keys;
 

@@ -144,7 +144,13 @@ class RecoveryBackupTests(unittest.TestCase):
                     with self.assertRaises(subject.harness.HarnessError):
                         subject.probe("address", Path("ca"), "fixture-root", "fixture-share")
                 else:
-                    subject.probe("address", Path("ca"), "fixture-root", "fixture-share")
+                    observed = []
+                    def observer(address, ca, token):
+                        self.assertTrue(exists)
+                        self.assertEqual((address, ca, token), ("address", Path("ca"), "fixture-root"))
+                        observed.append(True)
+                    subject.probe("address", Path("ca"), "fixture-root", "fixture-share", observer)
+                    self.assertEqual(observed, [True])
                     self.assertFalse(exists)
 
     def test_partial_setup_probe_and_cleanup_failures_never_emit_report(self):

@@ -105,8 +105,11 @@ inputs after whole-backup validation, verified and independently pinned.
 SDK reports match the rebuilt executable. No report source hashes were
 substituted.
 The control-group report still records the known upstream replay failure.
-Checkpoint 09 awaits follow-up review; profile promotion is
-still blocked.
+Checkpoint 09 passed follow-up review through `83a56e4`. Checkpoint 10a now adds
+passing unverified-mode public SDK backup evidence with independent source/binary
+pins and tamper tests. All nine reports affected by its source/test harness
+changes have fresh verified captures and independent digest pins;
+profile promotion is still blocked.
 
 ## Checkpoint 10 Obligations
 

@@ -70,7 +70,7 @@ def protected(status, response, path):
             and response.get("errors") == [f'cannot access "{path}"'])
 
 
-def probe(address, ca, token, key):
+def probe(address, ca, token, key, backup_observer=None):
     def call(method, path, payload=None, status=200):
         actual, response = system.request(address, ca, token, method, path, payload)
         fixture.require_status(actual, status)
@@ -104,6 +104,8 @@ def probe(address, ca, token, key):
     require(base64.b64decode(encoded, validate=True) == raw.encode())
     dedicated = call("GET", "sys/rotate/recovery/backup")["data"]
     require(dedicated.get("nonce") == nonce and dedicated.get("keys") == {fingerprint: [ciphertext]})
+    if backup_observer is not None:
+        backup_observer(address, ca, token)
     # Recheck storage after the dedicated backup handler reads it.
     backup_matches(call("GET", RAW)["data"]["value"], nonce, fingerprint, ciphertext)
     print("Recovery backup fixture: denied read and protected storage paths", flush=True)
@@ -133,7 +135,7 @@ def validate_report(report):
     require(snapshots.canonical_json(report) == snapshots.canonical_json(report_for(input_hashes())))
 
 
-def run():
+def run(backup_observer=None):
     require(os.geteuid() == 0)
     inputs = input_hashes()
     print("Recovery backup fixture: verifying signed image", flush=True)
@@ -167,7 +169,10 @@ def run():
         fixture.wait_for_health(podman, container, environment, address, ca)
         fixture.probe_tls(port, ca)
         token, key = initialize(address, ca)
-        probe(address, ca, token, key)
+        if backup_observer is None:
+            probe(address, ca, token, key)
+        else:
+            probe(address, ca, token, key, backup_observer)
     finally:
         token = key = ""
         failed = False

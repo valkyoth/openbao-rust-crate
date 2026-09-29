@@ -7,7 +7,7 @@ import openbao_2_7_backup_upgrade as fixture
 
 snapshots = fixture.snapshots
 RESULT = fixture.ROOT / "compat/onboarding/2.7.0/backup-upgrade-tls.json"
-EXPECTED_SHA256 = "173729a70a099abcbdba016cdebb52405b0cc95e96334af33e765bc6bbed406c"
+EXPECTED_SHA256 = "73cf5428fab2950af7892d8e4c09ccb38ccf1c142e28dbeec1d38c02f48bac29"
 
 
 def verify():

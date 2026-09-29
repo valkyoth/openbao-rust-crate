@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 08 passed pentest; checkpoint 08 follow-up `e8d2402` is green on GitHub with both CodeQL alerts closed. Checkpoint 09 follow-up adds cross-representation backup validation; refreshed source-bound evidence is verified and follow-up review is pending;
+Status: checkpoints 01 through 09 passed pentest; checkpoint 09 follow-up `83a56e4` is green on GitHub. Checkpoint 10a has verified live public-SDK backup acceptance in unverified mode and refreshed all nine affected older reports; it is ready for pentest;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -188,7 +188,27 @@ this change, including both SDK consistency reports against the rebuilt executab
 Checkpoint 10 must test real PGP backup acceptance through
 `operator_rotate_backup_grouped` and hex/Base64 equivalence before promotion;
 server-only backup evidence does not satisfy that requirement.
-Checkpoint 10 profile promotion and release assurance have not started.
+Checkpoint 10 is split into reviewable subcommits:
+
+- 10a (base `83a56e4`): public SDK backup acceptance with a real PGP-encrypted
+  recovery backup. The new fixture runs an ignored Rust test as the invoking
+  non-root user, using only private stdin for credentials, and reuses the
+  constrained TLS server and cleanup checks. It reads both grouped and singleton
+  backups and independently compares encoded ciphertext. This first stage uses
+  the existing unverified client mode and historical route selection; it does
+  not prove strict 2.7 dispatch or decrypt a recovery share. Passing live evidence
+  is retained in `compat/onboarding/2.7.0/backup-sdk-tls.json`, independently pinned
+  and checked by `scripts/verify_openbao_2_7_backup_sdk.py`, with tamper regressions
+  and CI verification. All nine affected older reports are freshly captured,
+  source/binary-verified and independently pinned. This subcommit is ready for
+  pentest; strict-profile promotion remains blocked.
+- 10b: complete generated 2.7 route/field contracts and explicit exclusions,
+  then test candidate strict dispatch and all historical/mixed profiles before
+  changing public promotion state. Repeat SDK backup coverage through the strict
+  profile. Preserve the known control-group replay limitation and security gates.
+- 10c: finish public promotion, documentation, migration/examples, dependency
+  audit and full release verification; pentest and exact-commit GitHub checks
+  remain required before any tag.
 
 ## Security And Compatibility Rules
 
