@@ -2,6 +2,11 @@
 
 pub mod control_groups;
 
+#[cfg(feature = "unstable-internal-ops")]
+mod inspection;
+#[cfg(feature = "unstable-internal-ops")]
+pub use inspection::InternalRequestInspection;
+
 #[cfg(all(test, feature = "operator-ops"))]
 mod backup_live;
 
@@ -7673,17 +7678,18 @@ impl Sys<'_, Authenticated> {
     /// Inspects unstable internal requests using the selected profile's route.
     ///
     /// Availability is checked independently for each exact server profile.
+    /// The complete JSON envelope can contain raw authentication credentials.
+    /// It is retained in sanitizing storage with redacted diagnostics; access
+    /// requires an explicit callback. See [`InternalRequestInspection`].
     #[cfg(feature = "unstable-internal-ops")]
-    pub async fn internal_request_inspection(&self) -> Result<JsonValue> {
-        let envelope: ResponseEnvelope<BoundedJsonValue> = self
+    pub async fn internal_request_inspection(&self) -> Result<InternalRequestInspection> {
+        let contents = self
             .client
-            .request_literal_endpoint_json_accepting(
+            .request_literal_endpoint_secret_json(
                 crate::compatibility::generated::GENERATED_SYS_INTERNAL_REQUEST_INSPECTION,
-                Option::<&Empty>::None,
-                &[StatusCode::OK],
             )
             .await?;
-        Ok(envelope.data.into_inner())
+        InternalRequestInspection::from_envelope(contents)
     }
 
     /// Inspects one unstable internal router index.

@@ -394,7 +394,7 @@ async fn unstable_internal_system_helpers_are_gated_and_typed() {
         sys.internal_request_inspection()
             .await
             .unwrap_or_else(|error| panic!("{error}"))
-            .is_object()
+            .with_json_bytes(|bytes| bytes.starts_with(b"{"))
     );
     let router = sys
         .internal_router_inspection(openbao::sys::InternalRouterTarget::Root)

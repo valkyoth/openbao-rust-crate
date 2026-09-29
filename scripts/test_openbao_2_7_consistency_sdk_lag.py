@@ -71,7 +71,7 @@ class CoordinatedSdkTests(unittest.TestCase):
 
     def test_expected_test_must_exist_before_spawn_and_privileges_are_dropped(self):
         with patch.object(subject.server.evidence_tools, "protected_path", side_effect=lambda path: path), \
-             patch.object(subject.server.harness, "run_bounded", return_value=b"0 tests, 0 benchmarks\n"), \
+             patch.object(subject.sdk, "test_listing", return_value=b"0 tests, 0 benchmarks\n"), \
              patch.object(subject.subprocess, "Popen") as spawn:
             child = subject.Session(Path("/test"), 1000, 1001)
             for flag in ("--reuid=1000", "--regid=1001", "--no-new-privs", "--clear-groups", "--bounding-set=-all"):
@@ -206,9 +206,9 @@ class CoordinatedSdkTests(unittest.TestCase):
                 mock(subject.server.harness, "cleanup_private_files", return_value=True)
                 with contextlib.redirect_stdout(io.StringIO()):
                     if fails:
-                        with self.assertRaises(subject.server.harness.HarnessError): subject.run(Path("/test"))
+                        with self.assertRaises(subject.server.harness.HarnessError): subject.run.__wrapped__(Path("/test"))
                     else:
-                        old, new = subject.run(Path("/test"))
+                        old, new = subject.run.__wrapped__(Path("/test"))
                         self.assertEqual(old["inputs"], {"baseline": "hash"})
                         self.assertIs(old["controlled_replication_lag_verified"], False)
                         self.assertIs(new["routable"], False)

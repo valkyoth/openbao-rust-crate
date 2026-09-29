@@ -6,8 +6,10 @@ import json
 import os
 from pathlib import Path
 import signal
+import shutil
 import subprocess
 import tempfile
+import tomllib
 
 import generate_openbao_2_7_candidate as candidate
 
@@ -82,6 +84,39 @@ def prepare(destination, inputs, verified_candidate):
     generated.write_bytes(registry.rust_output(verified_candidate, verification_candidate=True))
 
 
+def build_environment(destination):
+    """Exclude ambient compiler wrappers, Cargo config, flags and loader overrides.
+
+    Installed toolchains and cached dependency sources remain trusted inputs;
+    this local build is not independently signed source-to-binary provenance.
+    """
+    for directory in (destination, *destination.parents):
+        for name in ("config", "config.toml"):
+            config = directory / ".cargo" / name
+            if config.exists() or config.is_symlink():
+                raise registry.RegistryError("ambient ancestor Cargo configuration is forbidden")
+    home = Path.home()
+    channel = tomllib.loads((ROOT / "rust-toolchain.toml").read_text())["toolchain"]["channel"]
+    lookup = {"HOME": str(home), "PATH": f"{home / '.cargo/bin'}:/usr/bin:/bin", "LANG": "C.UTF-8"}
+    rustup = shutil.which("rustup", path=lookup["PATH"])
+    if rustup is None:
+        raise registry.RegistryError("rustup unavailable in trusted tool locations")
+    cargo = Path(subprocess.check_output(
+        [rustup, "which", "--toolchain", channel, "cargo"],
+        env=lookup, cwd=destination, timeout=30, text=True).strip())
+    if not cargo.is_absolute() or not cargo.is_file() or not (cargo.parent / "rustc").is_file():
+        raise registry.RegistryError("pinned candidate toolchain unavailable")
+    cargo_home = destination / "cargo-home"
+    cargo_home.mkdir(mode=0o700)
+    # Only the offline registry cache is shared, never config.toml or credentials.
+    (cargo_home / "registry").symlink_to(home / ".cargo/registry", target_is_directory=True)
+    return {"HOME": str(destination), "CARGO_HOME": str(cargo_home),
+            "PATH": f"{cargo.parent}:/usr/bin:/bin", "LANG": "C.UTF-8",
+            "RUSTC": str(cargo.parent / "rustc"), "RUSTDOC": str(cargo.parent / "rustdoc"),
+            "RUSTUP_TOOLCHAIN": channel, "CARGO_INCREMENTAL": "0",
+            "CARGO_TARGET_DIR": str(ROOT / "target/candidate-sdk")}
+
+
 def main(build_backup=False):
     if os.geteuid() == 0:
         print("Candidate SDK verification must run without root")
@@ -95,8 +130,7 @@ def main(build_backup=False):
         with tempfile.TemporaryDirectory(prefix="openbao-candidate-sdk-") as temporary:
             destination = Path(temporary)
             prepare(destination, inputs, verified)
-            env = os.environ.copy()
-            env["CARGO_TARGET_DIR"] = str(ROOT / "target/candidate-sdk")
+            env = build_environment(destination)
             if build_backup:
                 messages = run(["cargo", "test", "--locked", "--offline", "--no-default-features",
                                 "--features", "sys,operator-ops,operator-ops-acknowledged,rustls-tls",

@@ -35,7 +35,7 @@ def input_hashes(strict_candidate=False):
 
 def report_for(inputs, binary, strict_candidate=False, strict=False):
     recovery.require(not (strict_candidate and strict))
-    report = {"schema": "openbao-backup-sdk-tls/v1", "version": recovery.fixture.VERSION,
+    report = {**sdk.EXECUTION_ASSURANCE, "schema": "openbao-backup-sdk-tls/v1", "version": recovery.fixture.VERSION,
             "inputs": inputs, "test_binary_sha256": binary, "test": TEST,
             "image_linux_amd64_digest": recovery.staged.AMD64,
             "scope": "public-sdk-unverified-mode", "outcome": "passed",
@@ -66,6 +66,7 @@ def validate_report(report, binary, strict_candidate=False, strict=False):
         report_for(input_hashes(strict_candidate), binary, strict_candidate, strict)))
 
 
+@sdk.frozen_runner
 def run(binary, strict_candidate=False, strict=False):
     recovery.require(not (strict_candidate and strict))
     recovery.require(os.geteuid() == 0)

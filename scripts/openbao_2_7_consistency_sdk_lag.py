@@ -33,6 +33,7 @@ def input_hashes():
 
 class Session:
     def __init__(self, binary, uid, gid):
+        self.binary = binary
         tool = str(server.evidence_tools.protected_path(Path("/usr/bin/setpriv")))
         self.command = [tool, f"--reuid={uid}", f"--regid={gid}", "--clear-groups", "--no-new-privs",
                         "--bounding-set=-all", "--inh-caps=-all", "--ambient-caps=-all", str(binary),
@@ -44,11 +45,11 @@ class Session:
         self.stage = 0
 
     def __enter__(self):
-        listing = server.harness.run_bounded(self.command + ["--list"], maximum=1024, timeout=10, environment=self.environment)
+        listing = sdk.test_listing(self.command, self.environment, self.binary)
         server.require(listing == f"{TEST}: test\n\n1 test, 0 benchmarks\n".encode())
         self.process = subprocess.Popen(self.command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, env=self.environment, cwd=server.ROOT,
-                                        close_fds=True, start_new_session=True)
+                                        close_fds=True, pass_fds=(self.binary.fd,), start_new_session=True)
         try:
             os.set_blocking(self.process.stdin.fileno(), False)
             os.set_blocking(self.process.stdout.fileno(), False)
@@ -188,6 +189,7 @@ def independent_cluster(podman, image, network, run_id, root, tls, ca, internal,
     return public
 
 
+@sdk.frozen_runner
 def run(binary):
     server.require(os.geteuid() == 0)
     uid, gid = int(os.environ.get("SUDO_UID", "0")), int(os.environ.get("SUDO_GID", "0"))
@@ -267,11 +269,11 @@ def run(binary):
             failed = True
         server.require(not failed)
     server.require(inputs == input_hashes() and digest == sdk.binary_hash(binary, uid))
-    baseline = {"schema": "openbao-consistency-sdk-tls/v1", "version": server.fixture.VERSION,
+    baseline = {**sdk.EXECUTION_ASSURANCE, "schema": "openbao-consistency-sdk-tls/v1", "version": server.fixture.VERSION,
                 "inputs": baseline_inputs, "test_binary_sha256": digest, "test": sdk.TEST, "outcome": "passed",
                 "image_linux_amd64_digest": server.staged.AMD64, "routable": False,
                 "scope": "sdk-production-transport-beneath-profile-gate", "controlled_replication_lag_verified": False}
-    combined = {"schema": "openbao-consistency-sdk-lag-tls/v2", "version": server.fixture.VERSION,
+    combined = {**sdk.EXECUTION_ASSURANCE, "schema": "openbao-consistency-sdk-lag-tls/v2", "version": server.fixture.VERSION,
                 "inputs": inputs, "test_binary_sha256": digest, "test": TEST, "outcome": "passed",
                 "image_linux_amd64_digest": server.staged.AMD64, "routable": False,
                 "scope": "sdk-controlled-lag-beneath-profile-gate",

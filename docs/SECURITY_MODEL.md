@@ -31,6 +31,36 @@ a mirror authenticates its publisher, not the correctness of its contents.
 Any future upstream audit gate must contain genuine reviews with a defined
 scope and maintenance owner, not blanket exemptions that merely make CI pass.
 
+### Local SDK Fixture Provenance
+
+Privileged SDK fixtures copy the selected executable once into a sealed Linux
+memfd. The immutable bytes are hashed and the same descriptor is used for test
+listing and execution after dropping privileges. Workspace pathname replacement
+cannot substitute another executable between these steps. The descriptor closes
+on success, failure or interruption. Candidate builds use an allowlisted
+environment, isolated Cargo configuration and the pinned installed toolchain;
+ambient wrappers, compiler flags and loader overrides are not inherited.
+
+This is execution-byte integrity, not independently attested build provenance.
+The invoking user, build host, installed toolchain, dynamic libraries, dependency
+cache and build outputs remain trusted. A compromised build user can supply a
+malicious initial executable or interfere with its own processes; sealing does
+not establish that source hashes produced the binary. Reports explicitly say
+`local-trusted-builder-not-attested`. Deployments requiring that stronger claim
+must build in a clean trusted worker and retain signed provenance binding the
+commit/tree, lockfile, toolchain, commands/features, executable digest, SBOM and
+worker identity. The local fixtures do not provide such certification.
+
+### Internal Request Inspection
+
+The unstable request-inspection endpoint may return raw authentication tokens,
+accessors, headers and identity metadata. `InternalRequestInspection` retains
+the complete envelope in sanitizing storage, redacts Debug and exposes only an
+explicit byte callback. Validation rejects duplicate keys and bounds bytes,
+depth, nodes, container members and strings. Callers must protect any copies
+they deliberately create. Dependency parser scratch space and HTTP/TLS buffers
+remain outside the SDK's full-cleanup guarantee.
+
 ### SDK Controls
 
 - `unsafe_code = "forbid"` applies to this crate's own Rust sources. It does

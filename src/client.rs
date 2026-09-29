@@ -1551,6 +1551,32 @@ impl<State> Client<State> {
         .await
     }
 
+    #[cfg(all(feature = "sys", feature = "unstable-internal-ops"))]
+    pub(crate) async fn request_literal_endpoint_secret_json(
+        &self,
+        endpoint: OpenBaoEndpointSpec,
+    ) -> Result<SecretVec> {
+        let (resolved, path) = self.resolve_openbao_literal_endpoint(endpoint).await?;
+        let response = self
+            .send_sensitive_json_request(
+                resolved.method(),
+                self.url_for_path(&path)?,
+                &[],
+                Option::<&crate::response::Empty>::None,
+            )
+            .await?;
+        let status = response.status();
+        if status != StatusCode::OK {
+            drop(response);
+            return Err(Error::Api {
+                status,
+                errors: Vec::new(),
+            });
+        }
+        validate_json_content_type(&response)?;
+        read_response_bytes(response, self.config.max_response_bytes.min(512 * 1024)).await
+    }
+
     pub(crate) async fn request_resolved_literal_endpoint_json_accepting<T, B>(
         &self,
         resolved: &ResolvedOpenBaoEndpoint,

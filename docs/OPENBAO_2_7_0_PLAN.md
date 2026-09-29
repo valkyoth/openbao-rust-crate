@@ -1,5 +1,29 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
+## Checkpoint 10 Pentest Follow-Up
+
+The review of `83a56e4..88bf99d` found unsafe plain JSON storage for privileged
+request inspection and a pathname race in SDK executable evidence. Inspection
+now retains the complete bounded envelope in sanitizing storage with explicit
+access and redacted diagnostics. SDK runners hash and execute one sealed memfd;
+candidate builds exclude ambient wrappers/flags/configuration. Local build
+provenance remains explicitly unattested, with trusted host/user/toolchain/cache
+requirements documented in the security model.
+
+The prior passing handoff below is historical. Twelve fresh reports are now
+validated and retained: workflow CAS, control groups, system behavior, MFA TOTP, raw backup,
+recovery backup, backup upgrade, both consistency SDK reports, and all three
+backup SDK scopes (unverified, strict candidate, strict normal). Capture bytes
+are unchanged; independent pins were updated only after validating current
+source inputs and SDK executable hashes. The known server replay limitation is
+still explicit. The full local `scripts/checks.sh` passed after this refresh,
+including MSRV, Rust/Python tests, Clippy, historical contracts, packaging,
+fresh audits and Kani. All 193 OpenBao 2.7 Python tests also passed together.
+The package checked at 493,052 bytes. Retest and exact-commit GitHub checks
+remain required before release; follow-up pentest base is `88bf99d`.
+
+## Prior Checkpoint 10 Handoff
+
 Status: checkpoints 01 through 09 passed pentest; checkpoint 09 follow-up
 `83a56e4` is green on GitHub. Checkpoint 10a is committed as `41680bd` and
 10b1 as `b5ce50d`. Checkpoint 10b2 work now includes compiled non-routable

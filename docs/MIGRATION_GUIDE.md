@@ -1,5 +1,15 @@
 # Migration Guide
 
+## Request Inspection Hardening In 2.2.0
+
+The unstable `Sys::internal_request_inspection` no longer returns `JsonValue`.
+It returns a redacted `InternalRequestInspection` holding the complete JSON
+envelope in sanitizing storage. Use `with_json_bytes` for explicit access and
+protect any copies made inside the callback. Validation now imposes the
+documented 512 KiB, depth, node, member and string limits and rejects duplicate
+keys throughout the response. This prevents raw tokens from being retained in
+an implicitly printable or cloneable JSON tree.
+
 This guide tracks migrations between stable OpenBao SDK releases. The current
 contract inventory contains 707 operation identities across the
 supported OpenBao release union. Every operation available in a supported

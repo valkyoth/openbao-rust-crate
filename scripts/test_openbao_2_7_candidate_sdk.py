@@ -11,6 +11,35 @@ import check_openbao_2_7_candidate_sdk as subject
 
 
 class CandidateSdkTests(unittest.TestCase):
+    def test_ancestor_cargo_configuration_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".cargo").mkdir()
+            (root / ".cargo/config.toml").write_text('[build]\nrustc-wrapper="untrusted"\n')
+            destination = root / "build"
+            destination.mkdir()
+            with self.assertRaises(subject.registry.RegistryError):
+                subject.build_environment(destination)
+
+    def test_build_environment_excludes_ambient_wrappers_flags_and_config(self):
+        import os
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory) / "home"
+            tools = home / "toolchain/bin"
+            tools.mkdir(parents=True)
+            (tools / "cargo").touch()
+            (tools / "rustc").touch()
+            destination = Path(directory) / "build"
+            destination.mkdir()
+            with patch.object(Path, "home", return_value=home), \
+                 patch.object(subject.subprocess, "check_output", return_value=str(tools / "cargo")), \
+                 patch.dict(os.environ, {"RUSTC_WRAPPER": "/untrusted", "RUSTFLAGS": "injected", "LD_PRELOAD": "injected", "CARGO_HOME": "/untrusted"}):
+                env = subject.build_environment(destination)
+            for key in ("RUSTC_WRAPPER", "RUSTFLAGS", "LD_PRELOAD"):
+                self.assertNotIn(key, env)
+            self.assertEqual(env["CARGO_HOME"], str(destination / "cargo-home"))
+            self.assertFalse((destination / "cargo-home/config.toml").exists())
+            self.assertEqual(env["RUSTC"], str(tools / "rustc"))
     @classmethod
     def setUpClass(cls):
         cls.candidate = subject.candidate.verify()
@@ -59,6 +88,7 @@ class CandidateSdkTests(unittest.TestCase):
                  patch.object(subject.candidate, "verify", return_value=self.candidate), \
                  patch.object(subject, "source_inputs", return_value={}), \
                  patch.object(subject, "prepare"), \
+                 patch.object(subject, "build_environment", return_value={}), \
                  patch.object(subject, "run", return_value=listing) as run:
                 self.assertEqual(subject.main(), 1)
                 self.assertEqual(run.call_count, 1)

@@ -2,16 +2,21 @@
 """Run staged SDK TLS transport tests as the invoking non-root user."""
 
 import argparse
+import fcntl
+import functools
+import hashlib
 import os
 from pathlib import Path
 import pwd
 import re
 import secrets
+import selectors
 import shutil
 import signal
 import stat
 import subprocess
 import tempfile
+import time
 
 import openbao_2_7_consistency as server
 
@@ -19,6 +24,8 @@ ROOT = server.ROOT
 TEST = "client::consistency::live::staged_consistency_tls"
 INPUTS = (*server.INPUTS, "scripts/openbao_2_7_consistency_sdk.py", "Cargo.toml", "Cargo.lock",
           "build.rs", "rust-toolchain.toml")
+EXECUTION_ASSURANCE = {"executable_storage": "sealed-memfd",
+                       "build_provenance": "local-trusted-builder-not-attested"}
 
 
 def input_hashes():
@@ -28,6 +35,10 @@ def input_hashes():
 
 
 def binary_hash(binary, uid, *, candidate=False):
+    if isinstance(binary, FrozenBinary):
+        server.require(binary.uid == uid and binary.candidate == candidate)
+        binary.verify_seals()
+        return binary.digest
     binary = Path(binary)
     directory = "target/candidate-sdk/debug/deps" if candidate else "target/debug/deps"
     server.require(binary.is_absolute() and binary.parent == ROOT / directory
@@ -38,13 +49,118 @@ def binary_hash(binary, uid, *, candidate=False):
     return server.snapshots.sha256(server.snapshots.read_regular_file(binary, 256 * 1024 * 1024))
 
 
+class FrozenBinary:
+    """One sealed executable snapshot; pathname changes cannot affect execution.
+
+    This binds execution to bytes, not to source provenance. The build host,
+    compiler, dynamic libraries and dependency cache must still be trusted.
+    """
+    SEALS = fcntl.F_SEAL_WRITE | fcntl.F_SEAL_GROW | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_SEAL
+
+    def __init__(self, path, uid, *, candidate=False):
+        path = Path(path)
+        directory = "target/candidate-sdk/debug/deps" if candidate else "target/debug/deps"
+        server.require(path.is_absolute() and path.parent == ROOT / directory
+                       and re.fullmatch(r"openbao-[0-9a-f]{16}", path.name) is not None)
+        self.fd = None
+        self.uid, self.candidate = uid, candidate
+        source = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+        try:
+            metadata = os.fstat(source)
+            server.require(stat.S_ISREG(metadata.st_mode) and metadata.st_uid == uid
+                           and metadata.st_mode & 0o111 and not metadata.st_mode & 0o022
+                           and 0 < metadata.st_size <= 256 * 1024 * 1024)
+            self.fd = os.memfd_create("openbao-sdk-test", os.MFD_ALLOW_SEALING | os.MFD_CLOEXEC)
+            total = 0
+            while chunk := os.read(source, 65536):
+                total += len(chunk)
+                server.require(total <= 256 * 1024 * 1024)
+                remaining = memoryview(chunk)
+                while remaining:
+                    written = os.write(self.fd, remaining)
+                    server.require(written > 0)
+                    remaining = remaining[written:]
+            server.require(total == metadata.st_size)
+            os.fchmod(self.fd, 0o555)
+            fcntl.fcntl(self.fd, fcntl.F_ADD_SEALS, self.SEALS)
+            self.verify_seals()
+            os.lseek(self.fd, 0, os.SEEK_SET)
+            digest = hashlib.sha256()
+            while chunk := os.read(self.fd, 65536):
+                digest.update(chunk)
+            self.digest = digest.hexdigest()
+            os.lseek(self.fd, 0, os.SEEK_SET)
+        except BaseException:
+            self.close()
+            raise
+        finally:
+            os.close(source)
+
+    def verify_seals(self):
+        server.require(self.fd is not None and
+                       fcntl.fcntl(self.fd, fcntl.F_GET_SEALS) & self.SEALS == self.SEALS)
+
+    def __str__(self):
+        self.verify_seals()
+        return f"/proc/self/fd/{self.fd}"
+
+    def close(self):
+        if self.fd is not None:
+            os.close(self.fd)
+            self.fd = None
+
+
+def frozen_runner(function):
+    @functools.wraps(function)
+    def wrapped(binary, *args, **kwargs):
+        server.require(os.geteuid() == 0)
+        uid = int(os.environ.get("SUDO_UID", "0"))
+        gid = int(os.environ.get("SUDO_GID", "0"))
+        server.require(uid > 0 and gid > 0 and pwd.getpwuid(uid).pw_gid == gid)
+        candidate = kwargs.get("strict_candidate", args[0] if args else False)
+        frozen = FrozenBinary(binary, uid, candidate=candidate)
+        try:
+            return function(frozen, *args, **kwargs)
+        finally:
+            frozen.close()
+    return wrapped
+
+
+def test_listing(command, environment, binary):
+    binary.verify_seals()
+    process = subprocess.Popen(command + ["--list"], stdin=subprocess.DEVNULL,
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                               env=environment, close_fds=True, pass_fds=(binary.fd,),
+                               start_new_session=True, cwd=ROOT)
+    output = bytearray()
+    deadline = time.monotonic() + 10
+    try:
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ)
+            while True:
+                remaining = deadline - time.monotonic()
+                server.require(remaining > 0 and selector.select(remaining))
+                chunk = os.read(process.stdout.fileno(), 1025)
+                if not chunk:
+                    break
+                output.extend(chunk)
+                server.require(len(output) <= 1024)
+        server.require(process.wait(timeout=max(0.001, deadline - time.monotonic())) == 0)
+        return bytes(output)
+    finally:
+        if process.poll() is None:
+            os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+        process.stdout.close()
+
+
 def run_test(binary, uid, gid, addresses, ca, token, *, test=TEST):
     tool = str(server.evidence_tools.protected_path(Path("/usr/bin/setpriv")))
     command = [tool, f"--reuid={uid}", f"--regid={gid}", "--clear-groups", "--no-new-privs",
                "--bounding-set=-all", "--inh-caps=-all", "--ambient-caps=-all",
                str(binary), "--ignored", "--exact", test, "--test-threads=1"]
     environment = {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"}
-    listing = server.harness.run_bounded(command + ["--list"], maximum=1024, timeout=10, environment=environment)
+    listing = test_listing(command, environment, binary)
     # libtest exits successfully even when a filter selects zero tests.
     server.require(listing == f"{test}: test\n\n1 test, 0 benchmarks\n".encode())
     payload = server.snapshots.canonical_json({"addresses": addresses, "ca_pem": ca.read_text(encoding="ascii"),
@@ -53,7 +169,7 @@ def run_test(binary, uid, gid, addresses, ca, token, *, test=TEST):
     # Never execute a workspace-built program as root or inherit credentials,
     # loader overrides, proxies, extra descriptors, or a root-readable output file.
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
-                               stderr=subprocess.DEVNULL, cwd=ROOT, close_fds=True,
+                               stderr=subprocess.DEVNULL, cwd=ROOT, close_fds=True, pass_fds=(binary.fd,),
                                start_new_session=True, env=environment)
     try:
         process.communicate(payload, timeout=90)
@@ -64,6 +180,7 @@ def run_test(binary, uid, gid, addresses, ca, token, *, test=TEST):
         process.wait()
 
 
+@frozen_runner
 def run(binary):
     server.require(os.geteuid() == 0)
     uid, gid = int(os.environ.get("SUDO_UID", "0")), int(os.environ.get("SUDO_GID", "0"))
@@ -130,7 +247,7 @@ def run(binary):
             failed = True
         server.require(not failed)
     server.require(inputs == input_hashes() and digest == binary_hash(binary, uid))
-    return {"schema": "openbao-consistency-sdk-tls/v1", "version": server.fixture.VERSION,
+    return {**EXECUTION_ASSURANCE, "schema": "openbao-consistency-sdk-tls/v1", "version": server.fixture.VERSION,
             "inputs": inputs, "test_binary_sha256": digest, "test": TEST, "outcome": "passed",
             "image_linux_amd64_digest": server.staged.AMD64, "routable": False,
             "scope": "sdk-production-transport-beneath-profile-gate", "controlled_replication_lag_verified": False}

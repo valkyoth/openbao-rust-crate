@@ -30,7 +30,12 @@ Select exact 2.7 or strict automatic detection to use new 2.7 controls.
 Assumed profiles are not verified; workflow CAS and consistency require stricter
 verified policies and reject rolling ranges and unknown-newer fallback.
 
-Two hardening changes affect existing callers:
+Additional pentest hardening changes the unstable request-inspection return type
+to `InternalRequestInspection`. Use `with_json_bytes` for explicit access to the
+complete response envelope; it is no longer an ordinary `JsonValue` data object.
+The new type has redacted diagnostics and bounded sanitizing storage.
+
+Two other hardening changes affect existing callers:
 
 - A wrapped-response handle permits only one unwrap attempt, including after
   cancellation or an error. Do not treat an unknown outcome as safe to replay.
@@ -58,6 +63,12 @@ The existing [security model](../docs/SECURITY_MODEL.md) continues to apply.
 
 ## Verification
 
+The checkpoint 10 pentest follow-up changes Rust sources and SDK runners.
+All twelve affected live reports have been recaptured and validated. Sealed binary
+execution is not signed source-to-binary provenance; local build inputs and the
+invoking user remain trusted. The full local check suite also passed after
+the refresh. Retest and exact-commit GitHub checks are still required.
+
 The full local `scripts/checks.sh` passed, including MSRV 1.90.0, strict Clippy,
 Rust tests and doctests, historical contracts, packaging, dependency policy,
 fresh RustSec audits and Kani. Rust 1.98.1 remains the primary toolchain.
@@ -68,7 +79,7 @@ consistency lag/cancellation/isolation. Exact-profile normal-build SDK backup
 evidence is distinct from disposable candidate evidence. Reports retain their
 individual scopes; this is not a claim of live execution of every endpoint.
 
-The package checked at 491,230 bytes, below the 512 KiB limit. Checkpoint history,
+The package checked at 493,052 bytes, below the 512 KiB limit. Checkpoint history,
 reviewed discrepancies and evidence details remain in the
 [onboarding plan](../docs/OPENBAO_2_7_0_PLAN.md). Do not tag or publish before the
 checkpoint 10 pentest and exact-commit GitHub checks complete.

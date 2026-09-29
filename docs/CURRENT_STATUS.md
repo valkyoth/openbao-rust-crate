@@ -10,9 +10,10 @@ the [README](../README.md). For endpoint-level classifications, see
 
 Main is developing `2.2.0`; [OpenBao 2.7.0 onboarding](OPENBAO_2_7_0_PLAN.md)
 has enabled development-build routing. The generated Rust inventory contains
-707 operation identities across 26 profiles. Source-bound live evidence and
-the full local check suite have passed; checkpoint 10 pentest and exact-commit
-GitHub checks remain required before release.
+707 operation identities across 26 profiles. The checkpoint 10 pentest follow-up
+hardens inspection storage and executable custody; affected source-bound live
+evidence has been recaptured and validated, and the full local release checks
+passed. Retest and exact-commit GitHub checks remain required before release.
 
 The 2.7 additions include external keys, Transit and PKI ML-DSA/KMS controls,
 control groups, scoped consistency, workflow CAS and grouped rotation backups.

@@ -229,17 +229,43 @@ async fn strict_inspection_routes_are_version_specific() {
             "/v1/sys/internal/inspect/request",
         ),
     ] {
-        let (client, server) = fixture(
-            version,
-            vec![Step {
-                method: "GET",
-                path,
-                body: None,
-                response: r#"{"data":{}}"#,
-            }],
-        );
-        ok(client.sys().internal_request_inspection().await);
-        ok(server.join());
+        for (response, accepted) in [
+            (
+                r#"{"data":{"client_token":"synthetic-private","headers":{"x":"escaped\u002dvalue"}},"unknown":"sensitive"}"#,
+                true,
+            ),
+            (
+                r#"{"data":{"client_token":"synthetic-private","client_token":"duplicate"}}"#,
+                false,
+            ),
+            (r#"{"data":{},"unknown":{"x":1,"\u0078":2}}"#, false),
+            (r#"{"data":[]} "#, false),
+            (r#"{"data":{}} trailing-private"#, false),
+        ] {
+            let (client, server) = fixture(
+                version,
+                vec![Step {
+                    method: "GET",
+                    path,
+                    body: None,
+                    response,
+                }],
+            );
+            let result = client.sys().internal_request_inspection().await;
+            if accepted {
+                let inspection = ok(result);
+                assert!(inspection.with_json_bytes(|bytes| bytes == response.as_bytes()));
+                assert_eq!(
+                    format!("{inspection:?}"),
+                    "InternalRequestInspection { .. }"
+                );
+            } else {
+                assert!(
+                    matches!(result, Err(openbao::Error::Decode(message)) if message == "invalid or oversized request inspection response")
+                );
+            }
+            ok(server.join());
+        }
     }
 }
 

@@ -10,7 +10,7 @@ use reqwest::{Method, StatusCode};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
-mod review;
+pub(super) mod review;
 pub use review::{ControlGroupAuthorization, ControlGroupRequest, ControlGroupRequestData};
 mod execution;
 pub use execution::{ControlGroupExecution, ControlGroupExecutionState};

@@ -26,7 +26,7 @@ class BackupSdkTests(unittest.TestCase):
              patch.object(subject.recovery, "run", side_effect=server), \
              patch.object(subject.recovery, "validate_report"), \
              patch.object(subject.sdk, "run_test") as runner:
-            result = subject.run(Path("/test"), strict=True)
+            result = subject.run.__wrapped__(Path("/test"), strict=True)
             self.assertEqual(runner.call_args.kwargs, {"test": subject.STRICT_TEST})
             self.assertEqual(binary.call_count, 2)
             for call in binary.call_args_list:
@@ -101,6 +101,8 @@ class BackupSdkTests(unittest.TestCase):
             subject.validate_report(original, "c" * 64)
             for field, value in (("routable", True), ("strict_profile_verified", True),
                                  ("backup_decryption_verified", True), ("outcome", "failed"),
+                                 ("executable_storage", "workspace-path"),
+                                 ("build_provenance", "signed-ci-provenance"),
                                  ("scope", "strict-public-sdk"), ("test", "other"),
                                  ("test_binary_sha256", "d" * 64), ("checks", [])):
                 changed = copy.deepcopy(original)
@@ -145,12 +147,12 @@ class BackupSdkTests(unittest.TestCase):
                  patch.object(subject.sdk, "run_test") as runner:
                 if mode == "failed": runner.side_effect = subject.recovery.harness.HarnessError("test failed")
                 if mode == "success":
-                    result = subject.run(Path("/test"))
+                    result = subject.run.__wrapped__(Path("/test"))
                     self.assertFalse(result["strict_profile_verified"])
                     self.assertFalse(result["routable"])
                     self.assertEqual(runner.call_args.kwargs, {"test": subject.TEST})
                 else:
-                    with self.assertRaises(subject.recovery.harness.HarnessError): subject.run(Path("/test"))
+                    with self.assertRaises(subject.recovery.harness.HarnessError): subject.run.__wrapped__(Path("/test"))
 
 
 if __name__ == "__main__":

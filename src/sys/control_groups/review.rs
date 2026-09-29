@@ -139,7 +139,7 @@ impl ControlGroupRequest {
 
 // First pass validates all fields without constructing a plain secret-bearing
 // value tree. Temporary duplicate-detection keys have sanitizing ownership.
-fn validate(bytes: &[u8]) -> core::result::Result<(), serde_json::Error> {
+pub(in crate::sys) fn validate(bytes: &[u8]) -> core::result::Result<(), serde_json::Error> {
     let mut budget = MAX_NODES;
     let mut decoder = serde_json::Deserializer::from_slice(bytes);
     Check {

@@ -6,6 +6,17 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Protect internal request-inspection responses with a redacted, non-cloneable
+  `InternalRequestInspection` containing the complete JSON envelope in sanitizing
+  storage. Enforce bounded duplicate-rejecting validation and explicit byte access;
+  raw tokens and unknown fields no longer become an ordinary JSON value tree.
+- Freeze SDK fixture executables into sealed descriptors for hashing, listing and
+  execution. Candidate builds exclude ambient compiler/loader overrides and Cargo
+  configuration. Evidence explicitly records the trusted-local-builder boundary,
+  not signed source-to-binary provenance. Twelve affected live reports are
+  freshly captured, source/binary-validated and independently pinned; earlier
+  evidence is not relabelled as current.
+
 - Refresh all eleven affected server/SDK reports after the routing changes,
   validating current source inputs and SDK executable hashes before retaining
   the original capture bytes. Preserve the known upstream control-group replay
