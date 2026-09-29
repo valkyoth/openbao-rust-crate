@@ -4,7 +4,12 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-### 2.2.0 Development
+## 2.2.0 - 2026-09-29
+
+The development entries below record the onboarding sequence. Final-source live
+evidence and local release checks passed, the final security retest was clean,
+and Rust CI and CodeQL passed on `eb85bf9`. Intermediate staging and pending
+statements below describe historical checkpoints, not the final release scope.
 
 - Protect internal request-inspection responses with a redacted, non-cloneable
   `InternalRequestInspection` containing the complete JSON envelope in sanitizing

@@ -1,5 +1,15 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
+## Final Release Scope
+
+All ten implementation checkpoints are complete. The final security retest of
+the inspection/executable fixes was clean; the test-only CI portability fix is
+`eb85bf9`, with passing Rust CI and CodeQL. Twelve refreshed live reports and
+the full local release suite passed. The release retains the explicit external
+plugin exclusions, workflow security blocks and known server replay limitation.
+The sections below preserve the checkpoint history; intermediate pending or
+non-routable statements do not override this final scope.
+
 ## Checkpoint 10 Pentest Follow-Up
 
 The review of `83a56e4..88bf99d` found unsafe plain JSON storage for privileged

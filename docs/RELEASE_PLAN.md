@@ -992,10 +992,11 @@ OpenBao `2.7.0` onboarding belongs to `2.2.0`, after `2.1.9` is released.
 
 ### 2.2.0 - OpenBao 2.7.0 Compatibility
 
-Status: in development. The ten pentestable commit checkpoints and security
+Status: implementation and security retest complete. Rust CI and CodeQL passed
+on `eb85bf9`; release documentation is finalized separately. All 26 reviewed
+profiles through OpenBao 2.7.0 are enabled, with the documented external-plugin
+exclusions and security limitations. The ten checkpoints, retained evidence and
 acceptance criteria are in [OPENBAO_2_7_0_PLAN.md](OPENBAO_2_7_0_PLAN.md).
-Checkpoint 01 establishes source evidence only. The active supported server
-profiles remain unchanged through 2.6.3 until the final promotion checkpoint.
 
 ### 2.1.8 - Transit Lifecycle Assurance
 

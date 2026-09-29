@@ -40,11 +40,11 @@ OpenBao-to-backend boundaries.
 profiles from `2.0.0` through `2.6.3`. Rust `1.98.1` is the primary checked
 toolchain and Rust `1.90.0` is the MSRV.
 
-Release status: `2.2.0` is not yet published. Checkpoint 10 pentest fixes have
-fresh live evidence; retest and exact-commit GitHub checks remain required. The latest
-published SDK is `2.1.9`. Follow the [onboarding checkpoints](docs/OPENBAO_2_7_0_PLAN.md).
+See the [2.2.0 release notes](release-notes/RELEASE_NOTES_2.2.0.md) for migration
+changes, tested support and explicit limitations. The
+[onboarding history](docs/OPENBAO_2_7_0_PLAN.md) records the implementation and review checkpoints.
 
-In the development build, clients without a compatibility policy retain the
+Clients without a compatibility policy retain the
 unverified 2.6.3 API contract. Select an explicit profile (preferably exact or
 automatic strict verification) to use 2.7 controls. LDAP auth/secrets, Kerberos
 and RADIUS remain excluded on 2.7, while older profiles retain those engines.

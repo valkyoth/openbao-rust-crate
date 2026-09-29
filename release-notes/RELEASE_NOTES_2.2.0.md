@@ -1,7 +1,7 @@
 # openbao 2.2.0
 
 Version: 2.2.0
-Status: unreleased; checkpoint 10 pentest and exact-commit GitHub checks pending
+Release date: 2026-09-29
 
 ## OpenBao 2.7.0
 
@@ -67,7 +67,9 @@ The checkpoint 10 pentest follow-up changes Rust sources and SDK runners.
 All twelve affected live reports have been recaptured and validated. Sealed binary
 execution is not signed source-to-binary provenance; local build inputs and the
 invoking user remain trusted. The full local check suite also passed after
-the refresh. Retest and exact-commit GitHub checks are still required.
+the refresh. The final security retest found no open exploitable findings;
+Rust CI and CodeQL passed on `eb85bf9`. Release-documentation changes do not
+alter the tested implementation or captured source inputs.
 
 The full local `scripts/checks.sh` passed, including MSRV 1.90.0, strict Clippy,
 Rust tests and doctests, historical contracts, packaging, dependency policy,
@@ -81,5 +83,4 @@ individual scopes; this is not a claim of live execution of every endpoint.
 
 The package checked at 493,052 bytes, below the 512 KiB limit. Checkpoint history,
 reviewed discrepancies and evidence details remain in the
-[onboarding plan](../docs/OPENBAO_2_7_0_PLAN.md). Do not tag or publish before the
-checkpoint 10 pentest and exact-commit GitHub checks complete.
+[onboarding plan](../docs/OPENBAO_2_7_0_PLAN.md).

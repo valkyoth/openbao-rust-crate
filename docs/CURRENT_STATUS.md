@@ -8,12 +8,13 @@ the [README](../README.md). For endpoint-level classifications, see
 
 ## Release Snapshot
 
-Main is developing `2.2.0`; [OpenBao 2.7.0 onboarding](OPENBAO_2_7_0_PLAN.md)
-has enabled development-build routing. The generated Rust inventory contains
+`2.2.0` adds [OpenBao 2.7.0 support](OPENBAO_2_7_0_PLAN.md).
+The generated Rust inventory contains
 707 operation identities across 26 profiles. The checkpoint 10 pentest follow-up
 hardens inspection storage and executable custody; affected source-bound live
 evidence has been recaptured and validated, and the full local release checks
-passed. Retest and exact-commit GitHub checks remain required before release.
+passed. The final security retest was clean, and Rust CI and CodeQL passed on
+implementation commit `eb85bf9`.
 
 The 2.7 additions include external keys, Transit and PKI ML-DSA/KMS controls,
 control groups, scoped consistency, workflow CAS and grouped rotation backups.
@@ -31,7 +32,7 @@ do not claim live execution of every endpoint.
 The following inventory describes the unchanged profiles inherited from
 stable `2.1.9`.
 
-The current stable line is `2.1.x`. It provides explicit, fail-closed OpenBao
+The preceding stable line, `2.1.x`, provides explicit, fail-closed OpenBao
 server-version compatibility for every published stable release from `2.0.0`
 through `2.6.3`. The active registry contains 691 operation identities across
 25 exact profiles and 17,275 explicit operation/profile cells.
@@ -172,9 +173,8 @@ explicit-compression creation caveat and the corrected raw-read envelope.
 - Generated read-only capability profiles with 707 stable, secret-free
   operation identities, including 16 added identities. The immutable
   historical registry retains 691 identities across 25 profiles;
-  the development build can dispatch against 26 reviewed profiles including
-  2.7. Affected live evidence is refreshed; final release assurance remains
-  pending. Unselected
+  2.2.0 can dispatch against 26 reviewed profiles including
+  2.7. Affected live evidence is refreshed. Unselected
   clients retain the unverified 2.6.3 API contract, not an implicit 2.7 upgrade.
 
 ## Evidence And History
