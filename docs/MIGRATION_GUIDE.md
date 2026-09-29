@@ -1,11 +1,42 @@
 # Migration Guide
 
 This guide tracks migrations between stable OpenBao SDK releases. The current
-contract inventory contains 691 logical operation identities across the
+contract inventory contains 707 operation identities across the
 supported OpenBao release union. Every operation available in a supported
 profile is classified as typed, typed-gated, or security-blocked; there are no
 planned, decision, partial, raw, external, rejected, or unlinked generated
 contract dispositions.
+
+## From `openbao` 2.1.9 To 2.2.0
+
+`2.2.0` adds the exact OpenBao `2.7.0` profile while preserving all 25 historical
+profiles. Existing clients without a compatibility policy continue to use the
+unverified `2.6.3` contract. To use new 2.7 controls, select exact 2.7 or strict
+automatic detection; do not rely on a dependency upgrade to change that policy.
+See [version selection](OPENBAO_VERSION_SELECTION.md#openbao-27-selection).
+
+New APIs cover external-key administration, Transit ML-DSA and external keys,
+PKI ML-DSA/KMS options, control groups and explicit consistency controls.
+The additions preserve existing request types where adding public fields or
+enum variants would break callers. Existing optional payload defaults remain
+server-controlled. Control-group calls do not automatically approve, unwrap or
+retry a deferred request; the known upstream replay defect remains a limitation.
+
+LDAP auth/secrets, Kerberos and RADIUS are excluded for 2.7 until external
+plugin artifacts are separately verified. Older built-in profiles retain them.
+Workflow CAS and consistency require verified policies; assumed selection,
+rolling ranges and unknown-newer fallback cannot enable those guarded paths.
+Workflow prefix listing remains security-blocked.
+
+Two existing behaviors are hardened: `WrappedResponse::try_unwrap` cannot be
+retried on the same handle after an attempt, including cancellation or error;
+and secret-bearing PKI generation/issuance rejects `pem_bundle`. Use `pem` or
+`der` for those requests. Public-only bundle output remains available. A local
+one-attempt guard does not guarantee server-wide wrapping-token consumption.
+
+Compatibility does not certify server security, hardware providers, FIPS status,
+or complete secret erasure. Review the [security model](SECURITY_MODEL.md) and
+[2.7 onboarding decisions](OPENBAO_2_7_0_PLAN.md) before upgrading production.
 
 ## From `openbao` 2.1.8 To 2.1.9
 

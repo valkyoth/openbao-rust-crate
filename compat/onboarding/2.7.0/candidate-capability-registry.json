@@ -67,6 +67,21 @@
           "operation_id": "openbao.post.sys.generate.root.token.update.741304409be7b3ee"
         }
       ]
+    },
+    {
+      "id": "sys.internal-request-inspection",
+      "variants": [
+        {
+          "maximum": "2.5.5",
+          "minimum": "2.5.5",
+          "operation_id": "openbao.get.sys.internal.inspect.request.root.885b10e9019aa2b4"
+        },
+        {
+          "maximum": "2.7.0",
+          "minimum": "2.7.0",
+          "operation_id": "openbao.get.sys.internal.inspect.request.260346bda50bbaf2"
+        }
+      ]
     }
   ],
   "operations": [

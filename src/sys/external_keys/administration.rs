@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     Authenticated, Error, Result,
-    compatibility::{OpenBaoVersion, latest_routable_profile},
+    compatibility::{OpenBaoVersion, legacy_unverified_profile},
     path::{validate_endpoint_path, validate_mount_path},
     response::{
         Empty, ListEntries, ListPageOptions, ResponseEnvelope, deserialize_bounded_string_vec,
@@ -56,9 +56,15 @@ impl Sys<'_, Authenticated> {
         let report = self.client.compatibility_report().await?;
         let version = report
             .profile_version()
-            .or_else(latest_routable_profile)
+            .or_else(legacy_unverified_profile)
             .ok_or(Error::Internal("no external-key compatibility profile"))?;
-        if version < OpenBaoVersion::new(2, 7, 0) {
+        if version < OpenBaoVersion::new(2, 7, 0)
+            || !matches!(
+                report.status(),
+                crate::OpenBaoCompatibilityStatus::Verified
+                    | crate::OpenBaoCompatibilityStatus::Assumed
+            )
+        {
             return Err(Error::UnsupportedOpenBaoCapability {
                 endpoint: "sys.external-keys",
                 version,

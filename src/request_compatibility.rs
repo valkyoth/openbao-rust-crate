@@ -43,6 +43,29 @@ impl VersionedRequestField {
     fn supports(self, version: OpenBaoVersion) -> bool {
         version >= self.minimum && self.maximum.is_none_or(|maximum| version <= maximum)
     }
+
+    pub(crate) fn validate_selection(
+        self,
+        version: OpenBaoVersion,
+        status: crate::OpenBaoCompatibilityStatus,
+    ) -> Result<()> {
+        // Newly introduced controls must not become enabled merely because the
+        // default/fallback profile advances during a dependency update.
+        if self.minimum >= OpenBaoVersion::new(2, 7, 0)
+            && !matches!(
+                status,
+                crate::OpenBaoCompatibilityStatus::Verified
+                    | crate::OpenBaoCompatibilityStatus::Assumed
+            )
+        {
+            return Err(Error::UnsupportedOpenBaoRequestField {
+                endpoint: self.endpoint,
+                field: self.field,
+                version,
+            });
+        }
+        Ok(())
+    }
 }
 
 pub(crate) fn validate_request_fields(
@@ -238,6 +261,24 @@ mod tests {
 
     use super::{fields, validate_request_fields};
     use crate::{Error, compatibility::OpenBaoVersion};
+
+    #[test]
+    fn new_controls_require_selection_without_changing_legacy_fields() {
+        use crate::OpenBaoCompatibilityStatus::{
+            AcknowledgedUnknownNewer, Assumed, Unverified, Verified,
+        };
+        let version = OpenBaoVersion::new(2, 7, 0);
+        let new = super::VersionedRequestField::since("fixture", "new", version);
+        let old =
+            super::VersionedRequestField::since("fixture", "old", OpenBaoVersion::new(2, 6, 0));
+        for status in [Verified, Assumed, Unverified, AcknowledgedUnknownNewer] {
+            assert_eq!(
+                new.validate_selection(version, status).is_ok(),
+                matches!(status, Verified | Assumed)
+            );
+            assert!(old.validate_selection(version, status).is_ok());
+        }
+    }
 
     #[test]
     fn selected_fields_fail_outside_their_reviewed_range() {

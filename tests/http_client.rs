@@ -1628,7 +1628,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"initialized":true,"sealed":false,"version":"2.6.4"}"#,
+                r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
             );
         });
         let policy = if acknowledged {
@@ -1650,7 +1650,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
                 report.status(),
                 OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
             );
-            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 6, 3)));
+            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 7, 0)));
         } else {
             assert!(matches!(result, Err(Error::UnknownOpenBaoVersion(_))));
         }
@@ -1749,6 +1749,10 @@ async fn control_group_operations_reject_active_and_unselected_profiles() {
             .and_then(allow_mock_http)
             .unwrap_or_else(|_| panic!("config rejected"));
         if let Some(version) = version {
+            if version == OpenBaoVersion::new(2, 7, 0) {
+                assert!(OpenBaoCompatibilityPolicy::assume(version).is_ok());
+                continue;
+            }
             config = config.compatibility_policy(
                 OpenBaoCompatibilityPolicy::assume(version)
                     .unwrap_or_else(|_| panic!("profile rejected")),
@@ -1810,7 +1814,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
         );
         listener
     });
@@ -1834,7 +1838,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("operation reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 6, 3)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 0)));
     let result = tokio::time::timeout(
         Duration::from_secs(2),
         client.sys().read_control_group_request(&accessor),
@@ -1842,7 +1846,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("review reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 6, 3)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 0)));
     let policy = control_group_policy();
     let result = tokio::time::timeout(
         Duration::from_secs(2),
@@ -1853,7 +1857,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("policy reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 6, 3)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 0)));
     let listener = server.join().unwrap_or_else(|_| panic!("server failed"));
     listener
         .set_nonblocking(true)
@@ -1898,6 +1902,10 @@ async fn external_key_administration_rejects_every_active_profile_before_transpo
     let config_patch = ExternalKeyConfigPatch::new(options(), ack());
     let key_patch = ExternalKeyKeyPatch::new(options(), ack());
     for version in openbao::openbao_profile_versions().iter().copied() {
+        if version == OpenBaoVersion::new(2, 7, 0) {
+            assert!(OpenBaoCompatibilityPolicy::assume(version).is_ok());
+            continue;
+        }
         let policy =
             OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
         let config = OpenBaoConfig::new(format!("http://{address}"))
@@ -2064,6 +2072,10 @@ async fn transit_27_rejects_every_active_and_unselected_profile_before_transport
             .and_then(allow_mock_http)
             .unwrap_or_else(|error| panic!("{error}"));
         if let Some(version) = selected {
+            if version == OpenBaoVersion::new(2, 7, 0) {
+                assert!(OpenBaoCompatibilityPolicy::assume(version).is_ok());
+                continue;
+            }
             config = config.compatibility_policy(
                 OpenBaoCompatibilityPolicy::assume(version)
                     .unwrap_or_else(|error| panic!("{error}")),
@@ -2099,7 +2111,7 @@ async fn transit_27_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
         );
         listener
     });
@@ -2116,7 +2128,7 @@ async fn transit_27_cannot_use_a_newer_server_fallback() {
         .with_token(test_secret(&["fixture-", "client-token"]));
     tokio::time::timeout(
         Duration::from_secs(2),
-        assert_transit_27_rejected(&client, OpenBaoVersion::new(2, 6, 3)),
+        assert_transit_27_rejected(&client, OpenBaoVersion::new(2, 7, 0)),
     )
     .await
     .unwrap_or_else(|_| panic!("Transit 2.7 operation reached transport"));
@@ -2918,6 +2930,10 @@ async fn pki_27_generation_rejects_every_active_and_unselected_profile_before_tr
             .and_then(allow_mock_http)
             .unwrap_or_else(|error| panic!("{error}"));
         if let Some(version) = selected {
+            if version == OpenBaoVersion::new(2, 7, 0) {
+                assert!(OpenBaoCompatibilityPolicy::assume(version).is_ok());
+                continue;
+            }
             config = config.compatibility_policy(
                 OpenBaoCompatibilityPolicy::assume(version)
                     .unwrap_or_else(|error| panic!("{error}")),
@@ -2956,7 +2972,7 @@ async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
         );
         listener
     });
@@ -2972,10 +2988,10 @@ async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
         .unwrap_or_else(|error| panic!("{error}"))
         .with_token(test_secret(&["fixture-", "client-token"]));
     tokio::time::timeout(Duration::from_secs(2), async {
-        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
-        assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
-        assert_pki_signing_options_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
-        assert_pki_authority_options_rejected(&client, OpenBaoVersion::new(2, 6, 3)).await;
+        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 7, 0)).await;
+        assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 7, 0)).await;
+        assert_pki_signing_options_rejected(&client, OpenBaoVersion::new(2, 7, 0)).await;
+        assert_pki_authority_options_rejected(&client, OpenBaoVersion::new(2, 7, 0)).await;
     })
     .await
     .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));
@@ -3006,7 +3022,7 @@ async fn external_key_administration_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
         );
         listener
     });
@@ -5642,7 +5658,7 @@ async fn workflow_cas_rejects_verified_old_and_newer_fallback_without_write() {
 }
 
 #[tokio::test]
-async fn workflow_cas_still_rejects_unpromoted_27_before_write() {
+async fn workflow_cas_rejects_unknown_27_patch_before_write() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
     let address = listener
         .local_addr()
@@ -5657,7 +5673,7 @@ async fn workflow_cas_still_rejects_unpromoted_27_before_write() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
         );
         listener
     });
@@ -5679,7 +5695,7 @@ async fn workflow_cas_still_rejects_unpromoted_27_before_write() {
     .await
     .unwrap_or_else(|_| panic!("CAS request reached transport"));
     assert!(
-        matches!(result, Err(Error::UnknownOpenBaoVersion(version)) if version == OpenBaoVersion::new(2, 7, 0))
+        matches!(result, Err(Error::UnknownOpenBaoVersion(version)) if version == OpenBaoVersion::new(2, 7, 1))
     );
     let listener = server
         .join()

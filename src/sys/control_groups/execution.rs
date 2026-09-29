@@ -479,6 +479,9 @@ mod tests {
     async fn execution_profile_rejection_does_not_spend_attempt() {
         let listener = listener();
         for version in crate::openbao_profile_versions() {
+            if *version >= crate::OpenBaoVersion::new(2, 7, 0) {
+                continue;
+            }
             let client = client_with(
                 listener
                     .local_addr()

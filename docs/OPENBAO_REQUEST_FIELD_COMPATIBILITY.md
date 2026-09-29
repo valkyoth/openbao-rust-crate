@@ -13,6 +13,10 @@ field to make a request appear compatible.
 
 ## Reviewed Availability Rules
 
+The historical rules below remain unchanged while 2.7 is staged. The additive
+2.7 controls are summarized separately at the end; compiling candidate metadata
+does not make it a routable profile.
+
 | Endpoint | Public field | First profile | Last profile |
 | --- | --- | --- | --- |
 | `auth.jwt.config` | `skip_jwks_validation` | `2.3.1` | `-` |
@@ -117,7 +121,30 @@ proof when tagged documentation or live behavior contradicts it.
   always sends a validated Shamir `seal` document and never silently creates
   an ordinary namespace when the selected profile lacks namespace sealing.
 
-## Boundary
+## Staged 2.7 Controls
+
+Checkpoint 10 reviewed the additive request surfaces against the
+[anchored delta accounting](OPENBAO_2_7_0_DELTA_RECONCILIATION.md). These controls
+complement, rather than rewrite, the historical field table:
+
+| Surface | Gate and preserved behavior |
+| --- | --- |
+| PKI `external_key_ref` | The KMS methods apply a local `VersionedRequestField` beginning at 2.7.0, then registered routing. Type/size, existing-key references and exported private-key formats cannot be combined with KMS generation. |
+| PKI `key_type=mldsa` | Shared algorithm validation applies the 2.7.0 field floor to direct field assignment as well as builders. Parameter-set bounds remain enforced. |
+| Transit ML-DSA and external keys | Additive methods require a selected 2.7+ profile before registered dispatch. The legacy key-type enum does not acquire unchecked string variants. External rotation sends `external_key_ref`; legacy rotation stays bodyless. |
+| Transit hash defaults | Existing optional URL algorithm selection remains optional. The SDK does not inject a new body default; ML-DSA message and external-mu paths select their reviewed explicit algorithms. |
+| PKI RSA-PSS defaults | Existing optional signing controls remain optional; server default changes are not encoded as an unconditional SDK override. |
+| External-key provider options | The complete operation requires 2.7+ and operator acknowledgement. Reviewed typed providers enforce their own input constraints; custom options and merge patches retain explicit schema-review acknowledgement. This is not a claim to validate arbitrary provider schemas. |
+| Control-group payloads | Accessors and review data remain bounded and secret-aware; operation-level profile checks precede registered routing. Approval never automatically executes a request. |
+| Workflow CAS and dynamic plugin `latest` | Exact verified 2.7.0 or automatic-strict detection is required; assumed, range and acknowledged fallback reports are rejected. |
+
+The isolated candidate SDK tests exercise representative field-bearing requests,
+all newly added route identities, historical rejection and rolling-range CAS
+rejection. Existing serializer, bounds and no-transport tests remain required.
+The field review does not substitute for the pending strict live SDK backup test,
+fresh source-bound evidence or public profile promotion.
+
+## Raw-Transport Boundary
 
 This guarantee applies to typed helpers that expose the fields above. Public
 raw transports and deployment-specific external plugin JSON cannot be

@@ -7670,15 +7670,17 @@ impl Sys<'_, Authenticated> {
         Ok(envelope.data)
     }
 
-    /// Inspects the unstable internal request root (OpenBao 2.5.5+).
+    /// Inspects unstable internal requests using the selected profile's route.
+    ///
+    /// Availability is checked independently for each exact server profile.
     #[cfg(feature = "unstable-internal-ops")]
     pub async fn internal_request_inspection(&self) -> Result<JsonValue> {
         let envelope: ResponseEnvelope<BoundedJsonValue> = self
             .client
-            .request_sys_json_internal(
-                Method::GET,
-                "sys/internal/inspect/request/root",
+            .request_literal_endpoint_json_accepting(
+                crate::compatibility::generated::GENERATED_SYS_INTERNAL_REQUEST_INSPECTION,
                 Option::<&Empty>::None,
+                &[StatusCode::OK],
             )
             .await?;
         Ok(envelope.data.into_inner())
@@ -11352,6 +11354,9 @@ mod tests {
         let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
         for version in crate::compatibility::openbao_profile_versions() {
             assert!(super::validate_latest_plugin_profile(Report::assumed(*version)).is_err());
+            if *version == reviewed {
+                continue;
+            }
             assert!(
                 super::validate_latest_plugin_profile(Report::verified(
                     Policy::Exact,
@@ -11387,6 +11392,9 @@ mod tests {
         let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
         for version in crate::compatibility::openbao_profile_versions() {
             assert!(super::validate_workflow_cas_profile(Report::assumed(*version)).is_err());
+            if *version == reviewed {
+                continue;
+            }
             assert!(
                 super::validate_workflow_cas_profile(Report::verified(
                     Policy::Exact,

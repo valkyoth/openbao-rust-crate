@@ -1,9 +1,58 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 09 passed pentest; checkpoint 09 follow-up `83a56e4` is green on GitHub. Checkpoint 10a is committed as `41680bd`. Checkpoint 10b1 stages the non-routable candidate registry and historical-preservation checks; strict dispatch and promotion remain incomplete;
-remaining checkpoints are required before
-release. The active supported server range remains 2.0.0 through 2.6.3.
-Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
+Status: checkpoints 01 through 09 passed pentest; checkpoint 09 follow-up
+`83a56e4` is green on GitHub. Checkpoint 10a is committed as `41680bd` and
+10b1 as `b5ce50d`. Checkpoint 10b2 work now includes compiled non-routable
+candidate metadata, passing strict disposable-build dispatch tests, and retained
+strict candidate public-SDK backup TLS evidence. Checkpoint 10c now enables
+2.7 routing in the development build while retaining the unselected 2.6.3
+contract. The affected live evidence has been refreshed against these sources;
+final release assurance remains incomplete.
+The published supported server range remains 2.0.0 through 2.6.3.
+Do not publish 2.2.0 from this checkpoint.
+
+The exact-profile normal-build public SDK backup fixture has now passed and
+is independently anchored in `backup-sdk-strict-tls.json`. It verifies current
+source inputs, real recipient fingerprints, grouped/singleton reads and
+hex/Base64 ciphertext equivalence, but not PGP decryption. The eleven affected
+older reports have also been recaptured, validated and retained unchanged with
+new independent digest pins. The known upstream control-group replay failure
+remains explicitly recorded, not converted into a passing security claim.
+
+### Checkpoint 10 Handoff
+
+The strict candidate backup capture verifies actual OpenBao recipient fingerprints
+and grouped/singleton hex/Base64 ciphertext equivalence through the public SDK.
+It does not prove PGP decryption or execution from a publicly promoted build.
+Eight disposable-build tests cover dispatch, historical rotation behavior,
+rolling-version policy restrictions, and the 2.7 external-plugin exclusions.
+
+Checkpoint 10 verification status:
+
+1. Completed: verify the promotion change and version-policy behavior, including
+   unselected clients, unknown-newer fallback, exact/assumed selection and
+   mixed-version ranges. Preserve plugin exclusions and workflow security blocks.
+2. Completed for current inputs: refresh affected live evidence,
+   and validate the final promoted SDK, not only the disposable candidate.
+   Keep candidate captures separately scoped; never substitute current hashes
+   into an older report to make it pass.
+3. Local full `scripts/checks.sh` passed after the evidence refresh, including
+   tooling/dependency freshness, MSRV, historical contracts, Rust/Python tests,
+   Clippy, docs, packaging, dependency policy, fresh RustSec audits and Kani.
+   The archive checked at 491,230 bytes, below the 512 KiB ceiling. User-facing
+   support documentation and migration notes are reconciled. Implementation
+   is ready for the full checkpoint 10 pentest (`83a56e4..HEAD`), followed by
+   exact-commit GitHub checks before tagging. Neither gate is waived.
+
+The pre-promotion source-input audit found ten older reports requiring refresh:
+workflow CAS, control groups, system behavior, MFA TOTP, raw backup, recovery
+backup, backup upgrade, unverified SDK backup, SDK consistency baseline, and
+SDK consistency lag. The subsequent promotion changes also invalidate the
+strict candidate backup capture and reports bound to the new control guards.
+All eleven reports are now refreshed. Protocol
+and controlled-lag server reports, external-key, Transit and PKI reports have
+unchanged inputs; their full validators still apply. Any further input change
+requires repeating this audit. This is not a passing final release gate.
 
 Checkpoint 03a records external-plugin availability and refreshes the local
 development fixture. The approved checkpoint 03 scope now excludes LDAP
@@ -185,10 +234,13 @@ with regression coverage. A further review added whole-backup validation:
 nonempty matching maps, recipient/count equality and ordered ciphertext equality.
 All nine affected source-bound reports have been recaptured and verified after
 this change, including both SDK consistency reports against the rebuilt executable.
-Checkpoint 10 must test real PGP backup acceptance through
+Checkpoint 10's promotion requirement was to test real PGP backup acceptance through
 `operator_rotate_backup_grouped` and hex/Base64 equivalence before promotion;
 server-only backup evidence does not satisfy that requirement.
-Checkpoint 10 is split into reviewable subcommits:
+The requirement is now satisfied by the separately retained strict normal-build
+SDK report described above. Checkpoint 10's subcommit history follows; statements
+about blocked promotion or stale evidence describe those intermediate stages,
+not the current handoff status.
 
 - 10a (base `83a56e4`): public SDK backup acceptance with a real PGP-encrypted
   recovery backup. The new fixture runs an ignored Rust test as the invoking
@@ -210,9 +262,30 @@ Checkpoint 10 is split into reviewable subcommits:
   registry with 16 new identities and unchanged historical cells. See the
   [candidate registry review](OPENBAO_2_7_0_CANDIDATE_REGISTRY.md) for route
   discrepancies, static tests and the still-required dispatch/field work.
+  Work in progress 10b2 compiles candidate metadata without adding 2.7 to the
+  routable inventory and wires the internal inspection route variant. Historical
+  gaps and staged-policy rejection remain tested. Source-bound live reports now
+  require recapture after the remaining Rust work. This is not completion of 10b
+  or readiness for the full checkpoint pentest.
+  The isolated candidate build now tests strict public SDK wire dispatch without
+  changing main's promotion gate: workflow LIST/SCAN, both Transit rotation
+  shapes, inspection variants, all 13 external-key routes and both control-group
+  routes. Historical-profile, PKI field and rolling-range checks are included. Its eight
+  tests are explicitly inventoried and run in CI; this is mock evidence, not
+  final promotion.
+  The strict live backup candidate executable is now built and its constrained
+  runner supports an explicitly separate candidate report. The rootful TLS
+  capture passed and is retained in `backup-sdk-strict-candidate-tls.json`, with
+  independent report/binary pins and tamper regressions. Exact-profile public SDK
+  grouped/singleton reads and ciphertext equivalence are verified; no PGP
+  decryption or public promotion is claimed. Normal source-bound reports remain stale until
+  refreshed; no input hashes have been substituted into retained results.
 - 10c: finish public promotion, documentation, migration/examples, dependency
   audit and full release verification; pentest and exact-commit GitHub checks
   remain required before any tag.
+  Local implementation, documentation and verification are complete, including
+  normal-build routing, all eleven report refreshes and strict normal-build SDK
+  backup evidence. The full checkpoint pentest and GitHub gates are next.
 
 ## Security And Compatibility Rules
 

@@ -6,6 +6,40 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Refresh all eleven affected server/SDK reports after the routing changes,
+  validating current source inputs and SDK executable hashes before retaining
+  the original capture bytes. Preserve the known upstream control-group replay
+  limitation and each report's scope. Full release assurance remains pending.
+
+- Retain passing exact-profile backup TLS evidence from the normal SDK build,
+  distinct from the earlier disposable candidate. Anchor report and executable
+  digests and reject source-input drift, omitted inputs and stronger assurance
+  claims in CI. The remaining release evidence refresh is still pending.
+
+- Enable the reviewed 2.7 profile in development builds, with all 25 historical
+  profiles preserved. Keep unselected clients on the unverified 2.6.3 contract;
+  new 2.7 controls require selected profiles and reject unknown-newer fallback.
+  Preserve external-plugin exclusions and stricter verified-only workflow CAS
+  and consistency requirements. Final-source live evidence and release gates
+  are still pending; earlier captures are not relabelled as current.
+
+- Retain passing strict-candidate public SDK backup TLS evidence for exact 2.7
+  selection, grouped/singleton reads and hex/Base64 ciphertext equivalence.
+  Independent report/binary pins and input/scope tamper checks preserve the
+  distinction between candidate verification, public promotion and PGP decryption.
+
+- Add a disposable candidate SDK build with strict-profile wire regressions for
+  the new route identities, workflow method projection, Transit rotation bodies,
+  historical profiles and rolling-range CAS restrictions. The verifier rejects
+  root execution and missing tests, cleans up interrupted process groups, and
+  leaves the repository's public promotion gate unchanged.
+
+- Compile the staged 2.7 capability metadata while preserving the separate
+  runtime promotion gate and immutable historical registry. Route internal
+  inspection through exact-version variants, retaining the 2.5.5 `/root` path
+  and historical gaps. Add generation and route-selection regressions; strict
+  public 2.7 dispatch and refreshed live evidence remain pending.
+
 - Stage checkpoint 10b1's separately generated, non-routable 2.7 candidate
   registry with 707 identities, historical-cell preservation, explicit plugin
   exclusions and reviewed route corrections. Add digest verification and

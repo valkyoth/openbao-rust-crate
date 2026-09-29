@@ -10,7 +10,7 @@ import openbao_2_7_api as staged
 import verify_openbao_2_7_delta_review as delta
 
 RESULT = staged.STAGED / "candidate-capability-registry.json"
-EXPECTED_SHA256 = "23e56311592358f0a2b3a721da246c43feb26ad730f22f829d7057a4e2076ddd"
+EXPECTED_SHA256 = "28dfa6898f34c481dae31aa208bfff0cf56f4c75dfb8528cd5291f7eb38dcdd0"
 VERSION = "2.7.0"
 EXCLUDED_PREFIXES = ("/auth/ldap/", "/auth/kerberos/", "/auth/radius/", "/ldap/")
 CONFIG = "/sys/external-keys/configs/:name"
@@ -103,6 +103,12 @@ def build(active, documentation, openapi):
     for endpoint in endpoints:
         require(endpoint["variants"][-1]["maximum"] == active["versions"][-1], "root-token variant boundary changed")
         endpoint["variants"][-1]["maximum"] = VERSION
+    endpoints.append({"id": "sys.internal-request-inspection", "variants": [
+        {"operation_id": registry.stable_id("GET", "/sys/internal/inspect/request/root"),
+         "minimum": "2.5.5", "maximum": "2.5.5"},
+        {"operation_id": registry.stable_id("GET", "/sys/internal/inspect/request"),
+         "minimum": VERSION, "maximum": VERSION},
+    ]})
     return {"schema": "openbao-2.7-candidate-capability-registry/v1",
             "scope": "candidate-contracts-not-public-dispatch", "routable": False,
             "active_registry_sha256": registry.EXPECTED_REGISTRY_SHA256,
@@ -117,7 +123,7 @@ def build(active, documentation, openapi):
 
 
 def inputs():
-    registry.verify_outputs()
+    registry.verify_historical_registry()
     artifacts = staged.verify()
     delta.verify()
     return (registry.load_json(registry.REGISTRY_PATH), staged.parse(artifacts["documentation.json"]),

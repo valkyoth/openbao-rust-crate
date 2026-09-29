@@ -68,6 +68,26 @@ class CandidateTests(unittest.TestCase):
             self.assertEqual(old["id"], new["id"])
             self.assertEqual(old["variants"][:-1], new["variants"][:-1])
             self.assertEqual(dict(old["variants"][-1], maximum=subject.VERSION), new["variants"][-1])
+        inspection = self.candidate["logical_endpoints"][-1]
+        self.assertEqual(inspection["id"], "sys.internal-request-inspection")
+        self.assertEqual(len(inspection["variants"]), 2)
+        for variant, path in zip(inspection["variants"],
+                                 ("/sys/internal/inspect/request/root", "/sys/internal/inspect/request")):
+            self.assertEqual(variant["operation_id"], self.operation("GET", path)["id"])
+        self.assertEqual(inspection["variants"][0]["minimum"], "2.5.5")
+        self.assertEqual(inspection["variants"][0]["maximum"], "2.5.5")
+        self.assertEqual(inspection["variants"][1]["minimum"], "2.7.0")
+
+    def test_generated_rust_promotes_only_reviewed_candidate_inventory(self):
+        output = subject.registry.rust_output(self.candidate).decode()
+        profiles, rest = output.split("GENERATED_ROUTABLE_PROFILE_VERSIONS", 1)
+        routable, operations = rest.split("GENERATED_OPERATIONS", 1)
+        self.assertIn("OpenBaoVersion::new(2, 7, 0)", profiles)
+        self.assertIn("OpenBaoVersion::new(2, 7, 0)", routable)
+        self.assertEqual(routable.count("OpenBaoVersion::new("), 26)
+        self.assertEqual(operations.count("OpenBaoOperation::generated("), 707)
+        for method, path in subject.NEW_RUNTIME:
+            self.assertIn(subject.registry.stable_id(method, path), operations)
 
     def test_runtime_disappearance_or_discrepancy_changes_fail_closed(self):
         for method, path in set(subject.NEW_RUNTIME.values()):

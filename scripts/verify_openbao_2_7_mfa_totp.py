@@ -7,7 +7,7 @@ import openbao_2_7_mfa_totp as fixture
 
 snapshots = fixture.snapshots
 RESULT = fixture.ROOT / "compat/onboarding/2.7.0/mfa-totp-tls.json"
-EXPECTED_SHA256 = "b707bce0b0d8e1c4cbfff07a48ada1418e95e93ee0989d34ad2df79930f46cbd"
+EXPECTED_SHA256 = "c5aed94e822a57210435c3ada19c3f4d07f88817d310e25b9f5b8f55d3d6fb9b"
 
 
 def verify():

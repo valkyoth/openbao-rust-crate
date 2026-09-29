@@ -27,9 +27,10 @@ def input_hashes():
             for path in paths}
 
 
-def binary_hash(binary, uid):
+def binary_hash(binary, uid, *, candidate=False):
     binary = Path(binary)
-    server.require(binary.is_absolute() and binary.parent == ROOT / "target/debug/deps"
+    directory = "target/candidate-sdk/debug/deps" if candidate else "target/debug/deps"
+    server.require(binary.is_absolute() and binary.parent == ROOT / directory
                    and re.fullmatch(r"openbao-[0-9a-f]{16}", binary.name) is not None)
     metadata = binary.lstat()
     server.require(stat.S_ISREG(metadata.st_mode) and metadata.st_uid == uid

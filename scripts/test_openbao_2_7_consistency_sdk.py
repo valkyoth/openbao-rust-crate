@@ -40,11 +40,17 @@ class SdkFixtureTests(unittest.TestCase):
         with patch.object(Path, "lstat", return_value=SimpleNamespace(st_mode=0o100755, st_uid=1000)), \
              patch.object(subject.server.snapshots, "read_regular_file", return_value=b"test"):
             self.assertEqual(subject.binary_hash(binary, 1000), subject.server.snapshots.sha256(b"test"))
+            candidate = subject.ROOT / "target/candidate-sdk/debug/deps" / binary.name
+            self.assertEqual(subject.binary_hash(candidate, 1000, candidate=True), subject.server.snapshots.sha256(b"test"))
+            with self.assertRaises(subject.server.harness.HarnessError): subject.binary_hash(candidate, 1000)
+            with self.assertRaises(subject.server.harness.HarnessError): subject.binary_hash(binary, 1000, candidate=True)
             for value in (Path("relative"), Path("/tmp/openbao-0123456789abcdef"), binary.with_name("other")):
                 with self.assertRaises(subject.server.harness.HarnessError): subject.binary_hash(value, 1000)
         for mode, uid in ((0o120755, 1000), (0o100777, 1000), (0o100644, 1000), (0o100755, 0)):
             with patch.object(Path, "lstat", return_value=SimpleNamespace(st_mode=mode, st_uid=uid)):
                 with self.assertRaises(subject.server.harness.HarnessError): subject.binary_hash(binary, 1000)
+                with self.assertRaises(subject.server.harness.HarnessError): subject.binary_hash(
+                    subject.ROOT / "target/candidate-sdk/debug/deps" / binary.name, 1000, candidate=True)
 
     def test_child_drops_privileges_and_keeps_credentials_off_command_and_environment(self):
         for outcome in ("success", "failure", "timeout", "interrupt", "no-test"):

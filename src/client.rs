@@ -47,7 +47,7 @@ use crate::{
         OpenBaoCapabilityAvailability, OpenBaoCompatibilityFailure, OpenBaoCompatibilityPolicy,
         OpenBaoCompatibilityReport, OpenBaoEndpointSpec, OpenBaoHttpMethod, OpenBaoOperation,
         OpenBaoOperationDisposition, OpenBaoVersion, is_generated_profile, is_routable_profile,
-        latest_routable_profile, openbao_operation, openbao_profile_versions,
+        legacy_unverified_profile, openbao_operation, openbao_profile_versions,
     },
     path::{validate_endpoint_path, validate_mount_path},
     response::ErrorEnvelope,
@@ -1306,7 +1306,7 @@ impl<State> Client<State> {
         let report = self.ensure_compatibility().await?;
         let version = report.profile_version().or_else(|| {
             (report.status() == crate::compatibility::OpenBaoCompatibilityStatus::Unverified)
-                .then(latest_routable_profile)
+                .then(legacy_unverified_profile)
                 .flatten()
         });
         let version = version.ok_or(Error::Internal(
@@ -1314,6 +1314,11 @@ impl<State> Client<State> {
         ))?;
         if !is_routable_profile(version) {
             return Err(Error::UnsupportedOpenBaoVersion(version));
+        }
+        for (field, selected) in fields {
+            if *selected {
+                field.validate_selection(version, report.status())?;
+            }
         }
         crate::request_compatibility::validate_request_fields(version, fields)
     }
@@ -1457,7 +1462,7 @@ impl<State> Client<State> {
             None if report.status()
                 == crate::compatibility::OpenBaoCompatibilityStatus::Unverified =>
             {
-                latest_routable_profile().ok_or(Error::Internal(
+                legacy_unverified_profile().ok_or(Error::Internal(
                     "OpenBao compatibility profile inventory is empty",
                 ))?
             }
@@ -1493,7 +1498,7 @@ impl<State> Client<State> {
             None if report.status()
                 == crate::compatibility::OpenBaoCompatibilityStatus::Unverified =>
             {
-                latest_routable_profile().ok_or(Error::Internal(
+                legacy_unverified_profile().ok_or(Error::Internal(
                     "OpenBao compatibility profile inventory is empty",
                 ))?
             }
@@ -1657,7 +1662,7 @@ impl<State> Client<State> {
         let report = self.ensure_compatibility().await?;
         let version = report.profile_version().or_else(|| {
             (report.status() == crate::compatibility::OpenBaoCompatibilityStatus::Unverified)
-                .then(latest_routable_profile)
+                .then(legacy_unverified_profile)
                 .flatten()
         });
         let version = version.ok_or(Error::Internal(
@@ -4595,6 +4600,36 @@ mod tests {
     }
 
     #[test]
+    fn inspection_route_selection_preserves_historical_gaps() {
+        let endpoint = crate::compatibility::generated::GENERATED_SYS_INTERNAL_REQUEST_INSPECTION;
+        for (version, path) in [
+            (
+                OpenBaoVersion::new(2, 5, 5),
+                "/sys/internal/inspect/request/root",
+            ),
+            (
+                OpenBaoVersion::new(2, 7, 0),
+                "/sys/internal/inspect/request",
+            ),
+        ] {
+            let resolved = resolve_openbao_endpoint_for_profile(endpoint, version)
+                .unwrap_or_else(|error| panic!("{error}"));
+            assert_eq!(resolved.method(), reqwest::Method::GET);
+            assert_eq!(resolved.operation().path_template(), path);
+        }
+        for version in crate::compatibility::openbao_profile_versions() {
+            if *version == OpenBaoVersion::new(2, 5, 5) || *version == OpenBaoVersion::new(2, 7, 0)
+            {
+                continue;
+            }
+            assert!(matches!(
+                resolve_openbao_endpoint_for_profile(endpoint, *version),
+                Err(Error::UnsupportedOpenBaoCapability { .. })
+            ));
+        }
+    }
+
+    #[test]
     fn root_token_route_selection_is_exact_and_does_not_fallback() {
         for (endpoint, method, legacy_path, current_path) in [
             (
@@ -4633,6 +4668,11 @@ mod tests {
                     .unwrap_or_else(|error| panic!("{error}"));
             assert_eq!(current.method(), method);
             assert_eq!(current.operation().path_template(), current_path);
+            let staged =
+                resolve_openbao_endpoint_for_profile(endpoint, OpenBaoVersion::new(2, 7, 0))
+                    .unwrap_or_else(|error| panic!("{error}"));
+            assert_eq!(staged.method(), method);
+            assert_eq!(staged.operation().path_template(), current_path);
         }
 
         assert!(matches!(

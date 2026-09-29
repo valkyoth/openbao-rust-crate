@@ -50,7 +50,7 @@ EXPECTED_OPERATION_COUNT = 691
 EXPECTED_STAGED_OPERATION_COUNT = 690
 EXPECTED_REGISTRY_SHA256 = "df09afef362fa0301eafbf1c04782452559e140a0af09d33baac41f690062748"
 EXPECTED_STAGED_REGISTRY_SHA256 = "397f94126d3756d51cd779bbbef91aa8f993287f85561d4330a3734902f2a87e"
-EXPECTED_RUST_SHA256 = "d78f4ab780c4d21aa4a2b19a637b7bc827374d4ab47f7097a4ed7b05aae573e8"
+EXPECTED_RUST_SHA256 = "0768de2e3272752fa9d6e4e2d374fdff36911f4072c8090b11271521c95fc14f"
 HISTORICAL_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -896,7 +896,7 @@ def rust_version(value: str) -> str:
     return f"OpenBaoVersion::new({major}, {minor}, {patch})"
 
 
-def rust_output(registry: dict[str, Any]) -> bytes:
+def rust_output(registry: dict[str, Any], *, verification_candidate: bool = False) -> bytes:
     registry_versions = tuple(registry["versions"])
     if registry_versions[: len(EXPECTED_VERSIONS)] != EXPECTED_VERSIONS:
         raise RegistryError(
@@ -929,7 +929,15 @@ def rust_output(registry: dict[str, Any]) -> bytes:
             "pub(super) const GENERATED_ROUTABLE_PROFILE_VERSIONS: &[OpenBaoVersion] = &[",
         ]
     )
-    for version in EXPECTED_VERSIONS:
+    # Preserve historical generation while promoting only the reviewed extension.
+    routable = EXPECTED_VERSIONS
+    if registry_versions == (*EXPECTED_VERSIONS, "2.7.0"):
+        routable = registry_versions
+    if verification_candidate:
+        if registry_versions != (*EXPECTED_VERSIONS, "2.7.0"):
+            raise RegistryError("verification build requires the exact staged inventory")
+        routable = registry_versions
+    for version in routable:
         lines.append(f"    {rust_version(version)},")
     lines.extend(["];", "", "pub(super) static GENERATED_OPERATIONS: &[OpenBaoOperation] = &["])
     for operation in registry["operations"]:
@@ -983,10 +991,12 @@ def rust_output(registry: dict[str, Any]) -> bytes:
 
 
 def outputs() -> dict[Path, bytes]:
+    import generate_openbao_2_7_candidate as candidate
+
     active = build_registry()
     return {
         REGISTRY_PATH: canonical_json(active),
-        RUST_PATH: rust_output(active),
+        RUST_PATH: rust_output(candidate.verify()),
     }
 
 
@@ -1010,6 +1020,15 @@ def atomic_write(path: Path, data: bytes) -> None:
     finally:
         if temporary.exists():
             temporary.unlink()
+
+
+def verify_historical_registry() -> None:
+    """Validate the immutable input without depending on candidate Rust output."""
+    expected = canonical_json(build_registry())
+    if sha256(expected) != EXPECTED_REGISTRY_SHA256:
+        raise RegistryError("historical capability registry checksum changed")
+    if read_regular_file(REGISTRY_PATH, MAX_OUTPUT_BYTES) != expected:
+        raise RegistryError("historical capability registry is stale")
 
 
 def verify_outputs() -> None:

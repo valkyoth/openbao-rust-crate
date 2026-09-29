@@ -7,7 +7,7 @@ import openbao_2_7_workflow_cas as fixture
 
 snapshots = fixture.snapshots
 RESULT = fixture.ROOT / "compat/onboarding/2.7.0/workflow-cas-tls.json"
-EXPECTED_SHA256 = "5404ba3582caeab6f8c5dc8db0ee6d78b4ce6cad60401bb2933ce956f14e5eb2"
+EXPECTED_SHA256 = "43230bb3ccf6c89acf602799d74a8e148aadbce917c086b33e65f521c082a73d"
 
 
 def validate_report(report):

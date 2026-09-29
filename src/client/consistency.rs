@@ -322,14 +322,17 @@ mod tests {
     }
 
     #[test]
-    fn unpromoted_assumed_and_fallback_profiles_cannot_enable_transport() {
+    fn only_reviewed_verified_profiles_enable_transport() {
         for version in crate::compatibility::openbao_profile_versions() {
             let report = OpenBaoCompatibilityReport::verified(
                 OpenBaoCompatibilityPolicyKind::Exact,
                 *version,
                 None,
             );
-            assert!(require_consistency_profile(report).is_err());
+            assert_eq!(
+                require_consistency_profile(report).is_ok(),
+                *version == REVIEWED_VERSION
+            );
             assert!(
                 require_consistency_profile(OpenBaoCompatibilityReport::assumed(*version)).is_err()
             );
@@ -337,8 +340,8 @@ mod tests {
         assert!(require_consistency_profile(OpenBaoCompatibilityReport::unverified()).is_err());
         assert!(
             require_consistency_profile(OpenBaoCompatibilityReport::acknowledged_unknown_newer(
+                OpenBaoVersion::new(2, 7, 1),
                 REVIEWED_VERSION,
-                OpenBaoVersion::new(2, 6, 3),
             ))
             .is_err()
         );
@@ -348,7 +351,7 @@ mod tests {
                 REVIEWED_VERSION,
                 None,
             ))
-            .is_err()
+            .is_ok()
         );
     }
 

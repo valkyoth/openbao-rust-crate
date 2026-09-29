@@ -17,7 +17,7 @@ pub use execution::{ControlGroupExecution, ControlGroupExecutionState};
 
 use crate::{
     Authenticated, Error, Result,
-    compatibility::{OpenBaoVersion, latest_routable_profile},
+    compatibility::{OpenBaoVersion, legacy_unverified_profile},
     response::ResponseEnvelope,
     sys::Sys,
 };
@@ -100,9 +100,15 @@ impl Sys<'_, Authenticated> {
         let report = self.client.compatibility_report().await?;
         let version = report
             .profile_version()
-            .or_else(latest_routable_profile)
+            .or_else(legacy_unverified_profile)
             .ok_or(Error::Internal("no control-group compatibility profile"))?;
-        if version < OpenBaoVersion::new(2, 7, 0) {
+        if version < OpenBaoVersion::new(2, 7, 0)
+            || !matches!(
+                report.status(),
+                crate::OpenBaoCompatibilityStatus::Verified
+                    | crate::OpenBaoCompatibilityStatus::Assumed
+            )
+        {
             return Err(Error::UnsupportedOpenBaoCapability {
                 endpoint: "sys.control-group",
                 version,

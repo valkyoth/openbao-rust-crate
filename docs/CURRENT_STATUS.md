@@ -9,8 +9,26 @@ the [README](../README.md). For endpoint-level classifications, see
 ## Release Snapshot
 
 Main is developing `2.2.0`; [OpenBao 2.7.0 onboarding](OPENBAO_2_7_0_PLAN.md)
-has started but is not yet runtime support. The following inventory describes
-the unchanged active profiles inherited from stable `2.1.9`.
+has enabled development-build routing. The generated Rust inventory contains
+707 operation identities across 26 profiles. Source-bound live evidence and
+the full local check suite have passed; checkpoint 10 pentest and exact-commit
+GitHub checks remain required before release.
+
+The 2.7 additions include external keys, Transit and PKI ML-DSA/KMS controls,
+control groups, scoped consistency, workflow CAS and grouped rotation backups.
+LDAP auth/secrets, Kerberos and RADIUS remain excluded on 2.7 pending verified
+external plugins; their older built-in profiles remain supported. The known
+upstream control-group replay defect is not fixed by the SDK.
+
+Unconfigured clients retain the unverified 2.6.3 contract. See
+[version selection](OPENBAO_VERSION_SELECTION.md) for explicit 2.7 selection
+and stricter workflow CAS/consistency requirements. The separate 2.7 reports
+do not claim live execution of every endpoint.
+
+### Published Historical Baseline
+
+The following inventory describes the unchanged profiles inherited from
+stable `2.1.9`.
 
 The current stable line is `2.1.x`. It provides explicit, fail-closed OpenBao
 server-version compatibility for every published stable release from `2.0.0`
@@ -150,8 +168,13 @@ explicit-compression creation caveat and the corrected raw-read envelope.
 - Local TLS OpenBao Podman stack on `9940` and `9941`.
 - Version-locked real OpenBao integration harness plus a committed core-flow
   baseline covering all 25 exact releases from `2.0.0` through `2.6.3`.
-- Generated read-only capability profiles with 691 stable, secret-free
-  operation identities and complete exact-release range coverage.
+- Generated read-only capability profiles with 707 stable, secret-free
+  operation identities, including 16 added identities. The immutable
+  historical registry retains 691 identities across 25 profiles;
+  the development build can dispatch against 26 reviewed profiles including
+  2.7. Affected live evidence is refreshed; final release assurance remains
+  pending. Unselected
+  clients retain the unverified 2.6.3 API contract, not an implicit 2.7 upgrade.
 
 ## Evidence And History
 

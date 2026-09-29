@@ -1,7 +1,7 @@
 //! Additive OpenBao 2.7 Transit contracts. Never bypass registered dispatch.
 
 use super::*;
-use crate::compatibility::{OpenBaoVersion, latest_routable_profile};
+use crate::compatibility::{OpenBaoVersion, legacy_unverified_profile};
 use serde::ser::SerializeStruct;
 
 /// ML-DSA parameter set. This describes server-side signing, not TLS support.
@@ -623,9 +623,15 @@ impl Transit<'_> {
         let report = self.client.compatibility_report().await?;
         let version = report
             .profile_version()
-            .or_else(latest_routable_profile)
+            .or_else(legacy_unverified_profile)
             .ok_or(Error::Internal("no Transit compatibility profile"))?;
-        if version < OpenBaoVersion::new(2, 7, 0) {
+        if version < OpenBaoVersion::new(2, 7, 0)
+            || !matches!(
+                report.status(),
+                crate::OpenBaoCompatibilityStatus::Verified
+                    | crate::OpenBaoCompatibilityStatus::Assumed
+            )
+        {
             return Err(Error::UnsupportedOpenBaoCapability {
                 endpoint: "transit.2.7",
                 version,

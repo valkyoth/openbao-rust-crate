@@ -3,9 +3,9 @@
 OpenBao documents its HTTP API below `/v1`, but that prefix is not a
 backwards-compatibility guarantee. The SDK therefore selects an immutable
 exact-release profile before a typed request is serialized. Active profiles
-cover all 25 published stable releases from `2.0.0` through `2.6.3`. Exact,
+cover 26 reviewed releases from `2.0.0` through `2.7.0`. Exact,
 assumed, range, strict-detection, and acknowledged-newer policies may select
-`2.6.3`; generated route dispatch never probes or falls back to an older
+`2.7.0`; generated route dispatch never probes or falls back to an older
 profile after a server error.
 
 The recommended policy for new applications is strict automatic detection:
@@ -132,9 +132,27 @@ if report.status() != OpenBaoCompatibilityStatus::Verified {
 # }
 ```
 
-An unconfigured client remains `Unverified` and assumes the newest reviewed
+An unconfigured client remains `Unverified` and uses the fixed `2.6.3`
 profile for dispatch compatibility. This preserves migration compatibility,
 but it is not a server-version check. Select a strict policy for production.
+
+## OpenBao 2.7 Selection
+
+Select `exact(OpenBaoVersion::new(2, 7, 0))` or strict automatic detection to
+enable the reviewed 2.7 profile. The new external-key, Transit, PKI and
+control-group controls reject unconfigured and unknown-newer fallback clients.
+Assumed 2.7 selection enables those controls but does not verify the server.
+Workflow CAS and consistency require stricter verified policies; an assumed
+profile or rolling range does not satisfy those requirements.
+
+LDAP auth/secrets, Kerberos and RADIUS are excluded on 2.7 pending separately
+verified external plugins. Their historical profiles remain available. Selecting
+an older profile is not a workaround for a removed engine on a 2.7 server.
+
+The historical matrix covers 25 releases through 2.6.3. The separately retained
+[2.7 evidence and reviews](OPENBAO_2_7_0_PLAN.md) cover the new profile. Neither
+set claims that every operation was executed live, and neither establishes
+compatibility with unreviewed external services or plugins.
 
 ## Raw APIs And External Plugins
 
