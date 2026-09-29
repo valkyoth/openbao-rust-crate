@@ -1,6 +1,6 @@
 # OpenBao 2.7.0 Onboarding For openbao 2.2.0
 
-Status: checkpoints 01 through 09 passed pentest; checkpoint 09 follow-up `83a56e4` is green on GitHub. Checkpoint 10a has verified live public-SDK backup acceptance in unverified mode and refreshed all nine affected older reports; it is ready for pentest;
+Status: checkpoints 01 through 09 passed pentest; checkpoint 09 follow-up `83a56e4` is green on GitHub. Checkpoint 10a is committed as `41680bd`. Checkpoint 10b1 stages the non-routable candidate registry and historical-preservation checks; strict dispatch and promotion remain incomplete;
 remaining checkpoints are required before
 release. The active supported server range remains 2.0.0 through 2.6.3.
 Do not publish 2.2.0 or promote 2.7.0 routing from this checkpoint.
@@ -206,6 +206,10 @@ Checkpoint 10 is split into reviewable subcommits:
   then test candidate strict dispatch and all historical/mixed profiles before
   changing public promotion state. Repeat SDK backup coverage through the strict
   profile. Preserve the known control-group replay limitation and security gates.
+  First subcommit 10b1 (base `41680bd`) adds the separate 707-identity candidate
+  registry with 16 new identities and unchanged historical cells. See the
+  [candidate registry review](OPENBAO_2_7_0_CANDIDATE_REGISTRY.md) for route
+  discrepancies, static tests and the still-required dispatch/field work.
 - 10c: finish public promotion, documentation, migration/examples, dependency
   audit and full release verification; pentest and exact-commit GitHub checks
   remain required before any tag.

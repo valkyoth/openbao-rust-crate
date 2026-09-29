@@ -6,6 +6,12 @@ All notable changes to this project are documented here.
 
 ### 2.2.0 Development
 
+- Stage checkpoint 10b1's separately generated, non-routable 2.7 candidate
+  registry with 707 identities, historical-cell preservation, explicit plugin
+  exclusions and reviewed route corrections. Add digest verification and
+  adversarial CI tests. Active Rust routing, field rules and public promotion
+  are unchanged; strict dispatch verification remains outstanding.
+
 - Start checkpoint 10a with a public-SDK TLS backup acceptance fixture using
   real PGP-encrypted recovery shares, grouped/singleton reads and independent
   hex/Base64 comparison. The runner drops privileges and requires exactly one
