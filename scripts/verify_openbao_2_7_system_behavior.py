@@ -6,8 +6,8 @@ import argparse
 import openbao_2_7_system_behavior as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/system-behavior-tls.json"
-EXPECTED_SHA256 = "9a3d79db484494ed3fa80f78a702f29c075325b9ee716e7646d935181cd7123a"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/system-behavior-tls-v2.json"
+EXPECTED_SHA256 = "b8ecbcef474e5d2f1678a95c101e9e2743a0fe75e139ca61f37d209e4c9de3f8"
 
 
 def verify():
@@ -28,7 +28,7 @@ def main():
     except (fixture.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
         print("System behavior evidence verification failed")
         return 1
-    print("System behavior server evidence verified; public profile remains blocked")
+    print("System behavior server evidence verified; no SDK integration or release-approval claim")
     return 0
 
 

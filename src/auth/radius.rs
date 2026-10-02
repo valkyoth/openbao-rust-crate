@@ -225,7 +225,7 @@ impl fmt::Debug for RadiusConfig {
 /// RADIUS user policy mapping request.
 #[derive(Clone, Debug, Default)]
 pub struct RadiusUserRequest {
-    /// Policies mapped to this RADIUS user.
+    /// Policies mapped to this RADIUS user (at most 4096 names and 1 MiB joined UTF-8).
     pub policies: Vec<String>,
 }
 
@@ -266,9 +266,81 @@ struct RadiusUserPayload {
 /// RADIUS user policy mapping returned by OpenBao.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct RadiusUserInfo {
-    /// Comma-separated policy list returned by OpenBao.
-    #[serde(default)]
+    /// Comma-separated policies, accepting OpenBao's array response and legacy strings.
+    #[serde(default, deserialize_with = "deserialize_radius_policies")]
     pub policies: String,
+}
+
+const MAX_RADIUS_POLICY_BYTES: usize = super::mapping::MAX_MAPPING_BYTES;
+
+fn deserialize_radius_policies<'de, D>(deserializer: D) -> core::result::Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct Policies;
+    impl<'de> serde::de::Visitor<'de> for Policies {
+        type Value = String;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("a bounded policy string or string array")
+        }
+
+        fn visit_unit<E: serde::de::Error>(self) -> core::result::Result<String, E> {
+            Ok(String::new())
+        }
+
+        fn visit_str<E: serde::de::Error>(self, value: &str) -> core::result::Result<String, E> {
+            if value.len() > MAX_RADIUS_POLICY_BYTES {
+                return Err(E::custom("RADIUS policy response exceeds byte limit"));
+            }
+            if !value.is_empty() {
+                for (index, policy) in value.split(',').enumerate() {
+                    if index >= crate::response::MAX_RESPONSE_STRINGS {
+                        return Err(E::custom("RADIUS policy response exceeds item limit"));
+                    }
+                    validate_radius_policy_name(policy, "RADIUS")
+                        .map_err(|_| E::custom("invalid RADIUS policy response"))?;
+                }
+            }
+            Ok(value.to_owned())
+        }
+
+        fn visit_seq<A: serde::de::SeqAccess<'de>>(
+            self,
+            mut seq: A,
+        ) -> core::result::Result<String, A::Error> {
+            use serde::de::Error;
+            let mut output = String::new();
+            for index in 0..crate::response::MAX_RESPONSE_STRINGS {
+                let Some(policy) = seq.next_element::<String>()? else {
+                    return Ok(output);
+                };
+                validate_radius_policy_name(&policy, "RADIUS")
+                    .map_err(|_| A::Error::custom("invalid RADIUS policy response"))?;
+                let separator = usize::from(index > 0);
+                if output
+                    .len()
+                    .saturating_add(separator)
+                    .saturating_add(policy.len())
+                    > MAX_RADIUS_POLICY_BYTES
+                {
+                    return Err(A::Error::custom(
+                        "RADIUS policy response exceeds byte limit",
+                    ));
+                }
+                if separator != 0 {
+                    output.push(',');
+                }
+                output.push_str(&policy);
+            }
+            // Reject an overflow element before deserializing its contents.
+            seq.next_element_seed(crate::response::RejectOverflow::new(
+                "RADIUS policy response exceeds item limit",
+            ))?;
+            Ok(output)
+        }
+    }
+    deserializer.deserialize_any(Policies)
 }
 
 /// RADIUS user list.
@@ -453,7 +525,7 @@ impl RadiusAuthAdmin<'_> {
         let username = validate_radius_username(username)?;
         user.validate()?;
         let payload = RadiusUserPayload {
-            policies: user.policies.join(","),
+            policies: super::mapping::encode_values(&user.policies, "RADIUS user policies")?,
         };
         self.client
             .request_auth_json_internal(
@@ -586,29 +658,11 @@ fn validate_radius_username(username: &str) -> Result<&str> {
 }
 
 fn validate_radius_policy_names(policies: &[String], field: &'static str) -> Result<()> {
-    for policy in policies {
-        validate_radius_policy_name(policy, field)?;
-    }
-    Ok(())
+    super::mapping::encoded_length(policies, field).map(|_| ())
 }
 
 fn validate_radius_policy_name(policy: &str, field: &'static str) -> Result<()> {
-    if policy.trim().is_empty() {
-        return Err(Error::InvalidParameter(format!(
-            "{field} policy name must not be empty"
-        )));
-    }
-    if policy.contains(',') {
-        return Err(Error::InvalidParameter(format!(
-            "{field} policy name must not contain a comma"
-        )));
-    }
-    if policy.as_bytes().iter().any(u8::is_ascii_control) {
-        return Err(Error::InvalidParameter(format!(
-            "{field} policy name must not contain control characters"
-        )));
-    }
-    Ok(())
+    super::mapping::validate_name(policy, field)
 }
 
 #[cfg(test)]
@@ -698,6 +752,83 @@ mod tests {
     fn radius_user_request_joins_policies() {
         let request = RadiusUserRequest::new("dev").with_policy("prod");
         assert_eq!(request.policies.join(","), "dev,prod");
+    }
+
+    #[test]
+    fn radius_user_response_accepts_arrays_and_legacy_strings() {
+        for input in [
+            r#"{"policies":["dev","prod"]}"#,
+            r#"{"policies":"dev,prod"}"#,
+        ] {
+            let value: super::RadiusUserInfo =
+                serde_json::from_str(input).unwrap_or_else(|_| panic!("decode failed"));
+            assert_eq!(value.policies, "dev,prod");
+        }
+        for input in [
+            "{}",
+            r#"{"policies":[]}"#,
+            r#"{"policies":null}"#,
+            r#"{"policies":""}"#,
+        ] {
+            let value: super::RadiusUserInfo =
+                serde_json::from_str(input).unwrap_or_else(|_| panic!("decode failed"));
+            assert!(value.policies.is_empty());
+        }
+    }
+
+    #[test]
+    fn radius_user_response_is_bounded_and_rejects_ambiguous_names() {
+        for input in [
+            r#"{"policies":["dev,admin"]}"#,
+            r#"{"policies":[""]}"#,
+            r#"{"policies":["private-marker\n"]}"#,
+            r#"{"policies":[{}]}"#,
+            r#"{"policies":true}"#,
+            r#"{"policies":"dev,,prod"}"#,
+        ] {
+            let error = serde_json::from_str::<super::RadiusUserInfo>(input)
+                .err()
+                .unwrap_or_else(|| panic!("invalid policies accepted"));
+            assert!(!error.to_string().contains("private-marker"));
+        }
+        let names = vec!["p"; crate::response::MAX_RESPONSE_STRINGS];
+        for policies in [serde_json::json!(names), serde_json::json!(names.join(","))] {
+            assert!(
+                serde_json::from_value::<super::RadiusUserInfo>(
+                    serde_json::json!({"policies":policies})
+                )
+                .is_ok()
+            );
+        }
+        let names = vec!["p"; crate::response::MAX_RESPONSE_STRINGS + 1];
+        for policies in [serde_json::json!(names), serde_json::json!(names.join(","))] {
+            assert!(
+                serde_json::from_value::<super::RadiusUserInfo>(
+                    serde_json::json!({"policies":policies})
+                )
+                .is_err()
+            );
+        }
+        for length in [
+            super::MAX_RADIUS_POLICY_BYTES,
+            super::MAX_RADIUS_POLICY_BYTES + 1,
+        ] {
+            let policy = "p".repeat(length);
+            for policies in [serde_json::json!([policy]), serde_json::json!(policy)] {
+                let result = serde_json::from_value::<super::RadiusUserInfo>(
+                    serde_json::json!({"policies":policies}),
+                );
+                assert!(result.is_ok() == (length == super::MAX_RADIUS_POLICY_BYTES));
+            }
+        }
+        let prefix = format!(
+            "{{\"policies\":[{},",
+            vec!["\"p\""; crate::response::MAX_RESPONSE_STRINGS].join(",")
+        );
+        let error = serde_json::from_str::<super::RadiusUserInfo>(&(prefix + "{malformed"))
+            .err()
+            .unwrap_or_else(|| panic!("overflow accepted"));
+        assert!(error.to_string().contains("item limit"));
     }
 
     #[test]

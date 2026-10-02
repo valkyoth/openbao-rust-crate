@@ -37,6 +37,228 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use support::read_http_request;
 
+#[cfg(all(
+    feature = "ldap-auth",
+    feature = "kerberos-auth",
+    feature = "radius-auth"
+))]
+#[tokio::test]
+async fn auth_mapping_injection_and_allocation_limits_reject_before_transport() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    listener
+        .set_nonblocking(true)
+        .unwrap_or_else(|_| panic!("nonblocking failed"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|_| panic!("config failed"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|_| panic!("client failed"))
+        .with_token(SecretString::from("mapping-test-token"));
+    let ldap = client
+        .ldap_auth_admin()
+        .unwrap_or_else(|_| panic!("LDAP admin failed"));
+    let kerberos = client
+        .kerberos_auth_admin()
+        .unwrap_or_else(|_| panic!("Kerberos admin failed"));
+    let radius = client
+        .radius_admin()
+        .unwrap_or_else(|_| panic!("RADIUS admin failed"));
+    let cases = [
+        vec!["fixture-marker,root".into()],
+        vec!["fixture-marker\nroot".into()],
+        vec![" ".into()],
+        vec!["".into()],
+        vec!["p".into(); 4097],
+        vec!["p".repeat(1024 * 1024 + 1)],
+        vec!["p".repeat(1024 * 1024 - 1), "p".into()],
+    ];
+    for values in cases {
+        let mapping = openbao::auth::ldap::LdapAuthMappingRequest {
+            policies: values.clone(),
+            groups: vec![],
+        };
+        let groups = openbao::auth::ldap::LdapAuthMappingRequest {
+            policies: vec!["reader".into()],
+            groups: values.clone(),
+        };
+        let kerberos_request = openbao::auth::kerberos::KerberosGroupRequest {
+            policies: values.clone(),
+        };
+        let radius_request = openbao::auth::radius::RadiusUserRequest { policies: values };
+        let results = [
+            ldap.write_user("alice", &mapping).await,
+            ldap.write_group("team", &mapping).await,
+            ldap.write_user("alice", &groups).await,
+            ldap.write_group("team", &groups).await,
+            kerberos.write_group("team", &kerberos_request).await,
+            radius.write_user("alice", &radius_request).await,
+        ];
+        for result in results {
+            let error = match result {
+                Err(error) => error,
+                Ok(_) => panic!("invalid mapping accepted"),
+            };
+            assert!(matches!(error, Error::InvalidParameter(_)));
+            assert!(!format!("{error:?} {error}").contains("fixture-marker"));
+        }
+    }
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+#[cfg(all(
+    feature = "ldap-auth",
+    feature = "kerberos-auth",
+    feature = "radius-auth"
+))]
+#[tokio::test]
+async fn auth_mapping_encoding_preserves_wire_lists_and_empty_clear() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    let server = thread::spawn(move || {
+        for (path, body) in [
+            (
+                "ldap/users/alice",
+                r#"{"policies":"reader,writer","groups":"team-a,team-b"}"#,
+            ),
+            ("ldap/groups/team", r#"{"policies":"reader,writer"}"#),
+            ("kerberos/groups/team", r#"{"policies":"reader,writer"}"#),
+            ("radius/users/alice", r#"{"policies":"reader,writer"}"#),
+            ("ldap/users/alice", r#"{"policies":""}"#),
+            ("ldap/groups/team", r#"{"policies":""}"#),
+            ("kerberos/groups/team", r#"{"policies":""}"#),
+            ("radius/users/alice", r#"{"policies":""}"#),
+        ] {
+            let (mut stream, _) = listener
+                .accept()
+                .unwrap_or_else(|_| panic!("accept failed"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with(&format!("POST /v1/auth/{path} HTTP/1.1")));
+            assert!(request.ends_with(body));
+            stream
+                .write_all(b"HTTP/1.1 204 No Content\r\nconnection: close\r\n\r\n")
+                .unwrap_or_else(|_| panic!("write failed"));
+        }
+    });
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|_| panic!("config failed"));
+    let client = Client::from_config(config)
+        .unwrap_or_else(|_| panic!("client failed"))
+        .with_token(SecretString::from("mapping-test-token"));
+    let ldap = client
+        .ldap_auth_admin()
+        .unwrap_or_else(|_| panic!("LDAP admin failed"));
+    let kerberos = client
+        .kerberos_auth_admin()
+        .unwrap_or_else(|_| panic!("Kerberos admin failed"));
+    let radius = client
+        .radius_admin()
+        .unwrap_or_else(|_| panic!("RADIUS admin failed"));
+    for populated in [true, false] {
+        let policies = if populated {
+            vec!["reader".into(), "writer".into()]
+        } else {
+            vec![]
+        };
+        let mapping = openbao::auth::ldap::LdapAuthMappingRequest {
+            policies: policies.clone(),
+            groups: vec![],
+        };
+        let mut user = mapping.clone();
+        if populated {
+            user.groups = vec!["team-a".into(), "team-b".into()];
+        }
+        ldap.write_user("alice", &user)
+            .await
+            .unwrap_or_else(|_| panic!("LDAP user failed"));
+        ldap.write_group("team", &mapping)
+            .await
+            .unwrap_or_else(|_| panic!("LDAP group failed"));
+        kerberos
+            .write_group(
+                "team",
+                &openbao::auth::kerberos::KerberosGroupRequest {
+                    policies: policies.clone(),
+                },
+            )
+            .await
+            .unwrap_or_else(|_| panic!("Kerberos group failed"));
+        radius
+            .write_user(
+                "alice",
+                &openbao::auth::radius::RadiusUserRequest { policies },
+            )
+            .await
+            .unwrap_or_else(|_| panic!("RADIUS user failed"));
+    }
+    server.join().unwrap_or_else(|_| panic!("server failed"));
+}
+
+#[cfg(feature = "jwt-auth")]
+#[tokio::test]
+async fn oidc_auth_url_response_is_secret_backed_and_decode_errors_are_redacted() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let addr = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    let server = thread::spawn(move || {
+        for body in [
+            r#"{"data":{"auth_url":"https://issuer.example/?state=fixture-state\u0026nonce=fixture-nonce","user_code":"fixture-device-code","poll_interval":5}}"#,
+            r#"{"data":{"auth_url":"https://issuer.example/?state=fixture-state","user_code":"fixture-device-code","poll_interval":"fixture-secret-invalid-type"}}"#,
+            r#"{"data":{"auth_url":"https://issuer.example/?state=fixture-state","user_code":"fixture-device-code""#,
+        ] {
+            let (mut stream, _) = listener
+                .accept()
+                .unwrap_or_else(|_| panic!("accept failed"));
+            let request = read_http_request(&mut stream);
+            assert!(request.starts_with("POST /v1/auth/jwt/oidc/auth_url HTTP/1.1"));
+            write!(stream, "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{body}", body.len())
+                .unwrap_or_else(|_| panic!("write failed"));
+        }
+    });
+    let config = OpenBaoConfig::new(format!("http://{addr}"))
+        .and_then(allow_mock_http)
+        .unwrap_or_else(|_| panic!("config failed"));
+    let client = Client::from_config(config).unwrap_or_else(|_| panic!("client failed"));
+    let jwt = client.jwt().unwrap_or_else(|_| panic!("JWT handle failed"));
+    let request = openbao::auth::jwt::OidcAuthUrlRequest::device();
+    let response = jwt
+        .oidc_auth_url(&request)
+        .await
+        .unwrap_or_else(|_| panic!("OIDC response failed"));
+    fn require_secret(_: &SecretString) {}
+    require_secret(&response.auth_url);
+    assert!(
+        response
+            .auth_url
+            .expose_secret()
+            .contains("&nonce=fixture-nonce")
+    );
+    assert!(
+        response
+            .user_code
+            .as_ref()
+            .is_some_and(|code| code.expose_secret() == "fixture-device-code")
+    );
+    let debug = format!("{response:?} {:?}", response.clone());
+    assert!(!debug.contains("fixture-"));
+    for _ in 0..2 {
+        let error = match jwt.oidc_auth_url(&request).await {
+            Err(error) => error,
+            Ok(_) => panic!("malformed OIDC response accepted"),
+        };
+        assert!(!format!("{error:?} {error}").contains("fixture-"));
+    }
+    server.join().unwrap_or_else(|_| panic!("server failed"));
+}
+
 #[cfg(feature = "raft-stream")]
 struct TestSnapshotStream {
     chunks: VecDeque<core::result::Result<Bytes, std::io::Error>>,
@@ -1628,7 +1850,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
+                r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
             );
         });
         let policy = if acknowledged {
@@ -1650,7 +1872,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
                 report.status(),
                 OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
             );
-            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 7, 0)));
+            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 7, 1)));
         } else {
             assert!(matches!(result, Err(Error::UnknownOpenBaoVersion(_))));
         }
@@ -1660,7 +1882,10 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
 
 #[tokio::test]
 async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() {
-    for engine in ["ldap-secret", "ldap-auth", "kerberos", "radius"] {
+    for (engine, version) in ["ldap-secret", "ldap-auth", "kerberos", "radius"]
+        .into_iter()
+        .flat_map(|engine| [0, 1, 2].map(|patch| (engine, OpenBaoVersion::new(2, 7, patch))))
+    {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
         let addr = listener
             .local_addr()
@@ -1672,7 +1897,7 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"initialized":true,"sealed":false,"version":"2.7.0"}"#,
+                &format!(r#"{{"initialized":true,"sealed":false,"version":"{version}"}}"#),
             );
             listener
         });
@@ -1715,7 +1940,7 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
             .await
             .unwrap_or_else(|_| panic!("excluded operation reached transport"));
         assert!(
-            matches!(error, Some(Error::UnsupportedOpenBaoCapability { version, .. }) if version == OpenBaoVersion::new(2, 7, 0))
+            matches!(error, Some(Error::UnsupportedOpenBaoCapability { version: observed, .. }) if observed == version)
         );
         let listener = server.join().unwrap_or_else(|error| panic!("{error:?}"));
         listener
@@ -1749,7 +1974,7 @@ async fn control_group_operations_reject_active_and_unselected_profiles() {
             .and_then(allow_mock_http)
             .unwrap_or_else(|_| panic!("config rejected"));
         if let Some(version) = version {
-            if version == OpenBaoVersion::new(2, 7, 0) {
+            if version >= OpenBaoVersion::new(2, 7, 0) {
                 assert!(OpenBaoCompatibilityPolicy::assume(version).is_ok());
                 continue;
             }
@@ -1814,7 +2039,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
         );
         listener
     });
@@ -1838,7 +2063,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("operation reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 0)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 1)));
     let result = tokio::time::timeout(
         Duration::from_secs(2),
         client.sys().read_control_group_request(&accessor),
@@ -1846,7 +2071,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("review reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 0)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 1)));
     let policy = control_group_policy();
     let result = tokio::time::timeout(
         Duration::from_secs(2),
@@ -1857,7 +2082,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("policy reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 0)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 1)));
     let listener = server.join().unwrap_or_else(|_| panic!("server failed"));
     listener
         .set_nonblocking(true)
@@ -1902,7 +2127,7 @@ async fn external_key_administration_rejects_every_active_profile_before_transpo
     let config_patch = ExternalKeyConfigPatch::new(options(), ack());
     let key_patch = ExternalKeyKeyPatch::new(options(), ack());
     for version in openbao::openbao_profile_versions().iter().copied() {
-        if version == OpenBaoVersion::new(2, 7, 0) {
+        if version >= OpenBaoVersion::new(2, 7, 0) {
             assert!(OpenBaoCompatibilityPolicy::assume(version).is_ok());
             continue;
         }
@@ -2072,7 +2297,7 @@ async fn transit_27_rejects_every_active_and_unselected_profile_before_transport
             .and_then(allow_mock_http)
             .unwrap_or_else(|error| panic!("{error}"));
         if let Some(version) = selected {
-            if version == OpenBaoVersion::new(2, 7, 0) {
+            if version >= OpenBaoVersion::new(2, 7, 0) {
                 assert!(OpenBaoCompatibilityPolicy::assume(version).is_ok());
                 continue;
             }
@@ -2111,7 +2336,7 @@ async fn transit_27_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
         );
         listener
     });
@@ -2128,7 +2353,7 @@ async fn transit_27_cannot_use_a_newer_server_fallback() {
         .with_token(test_secret(&["fixture-", "client-token"]));
     tokio::time::timeout(
         Duration::from_secs(2),
-        assert_transit_27_rejected(&client, OpenBaoVersion::new(2, 7, 0)),
+        assert_transit_27_rejected(&client, OpenBaoVersion::new(2, 7, 1)),
     )
     .await
     .unwrap_or_else(|_| panic!("Transit 2.7 operation reached transport"));
@@ -2930,7 +3155,7 @@ async fn pki_27_generation_rejects_every_active_and_unselected_profile_before_tr
             .and_then(allow_mock_http)
             .unwrap_or_else(|error| panic!("{error}"));
         if let Some(version) = selected {
-            if version == OpenBaoVersion::new(2, 7, 0) {
+            if version >= OpenBaoVersion::new(2, 7, 0) {
                 assert!(OpenBaoCompatibilityPolicy::assume(version).is_ok());
                 continue;
             }
@@ -2972,7 +3197,7 @@ async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
         );
         listener
     });
@@ -2988,10 +3213,10 @@ async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
         .unwrap_or_else(|error| panic!("{error}"))
         .with_token(test_secret(&["fixture-", "client-token"]));
     tokio::time::timeout(Duration::from_secs(2), async {
-        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 7, 0)).await;
-        assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 7, 0)).await;
-        assert_pki_signing_options_rejected(&client, OpenBaoVersion::new(2, 7, 0)).await;
-        assert_pki_authority_options_rejected(&client, OpenBaoVersion::new(2, 7, 0)).await;
+        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 7, 1)).await;
+        assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 7, 1)).await;
+        assert_pki_signing_options_rejected(&client, OpenBaoVersion::new(2, 7, 1)).await;
+        assert_pki_authority_options_rejected(&client, OpenBaoVersion::new(2, 7, 1)).await;
     })
     .await
     .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));
@@ -3022,7 +3247,7 @@ async fn external_key_administration_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
         );
         listener
     });
@@ -5673,7 +5898,7 @@ async fn workflow_cas_rejects_unknown_27_patch_before_write() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.1"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
         );
         listener
     });
@@ -5695,7 +5920,7 @@ async fn workflow_cas_rejects_unknown_27_patch_before_write() {
     .await
     .unwrap_or_else(|_| panic!("CAS request reached transport"));
     assert!(
-        matches!(result, Err(Error::UnknownOpenBaoVersion(version)) if version == OpenBaoVersion::new(2, 7, 1))
+        matches!(result, Err(Error::UnknownOpenBaoVersion(version)) if version == OpenBaoVersion::new(2, 7, 2))
     );
     let listener = server
         .join()
@@ -11236,7 +11461,7 @@ async fn radius_admin_config_and_user_lifecycle_use_documented_paths() {
                     }
                     2 => {
                         assert!(request.starts_with("GET /v1/auth/radius/users/alice HTTP/1.1"));
-                        r#"{"data":{"policies":"dev,prod"}}"#
+                        r#"{"data":{"policies":["dev","prod"]}}"#
                     }
                     3 => {
                         assert!(request.starts_with(

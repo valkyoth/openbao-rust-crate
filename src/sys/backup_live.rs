@@ -20,16 +20,22 @@ fn checked<T, E>(result: core::result::Result<T, E>) -> T {
 #[tokio::test]
 #[ignore = "requires real PGP recovery backup, constrained TLS server and private stdin"]
 async fn public_rotation_backup_tls() {
-    verify_backup(false).await;
+    verify_backup(false, crate::OpenBaoVersion::new(2, 7, 0)).await;
 }
 
 #[tokio::test]
 #[ignore = "requires strict candidate build, real PGP recovery backup and private stdin"]
 async fn public_rotation_backup_strict_tls() {
-    verify_backup(true).await;
+    verify_backup(true, crate::OpenBaoVersion::new(2, 7, 0)).await;
 }
 
-async fn verify_backup(strict: bool) {
+#[tokio::test]
+#[ignore = "requires exact 2.7.1 candidate, real PGP recovery backup and private stdin"]
+async fn public_patch_rotation_backup_strict_tls() {
+    verify_backup(true, crate::OpenBaoVersion::new(2, 7, 1)).await;
+}
+
+async fn verify_backup(strict: bool, version: crate::OpenBaoVersion) {
     let fixture: Fixture = checked(serde_json::from_reader(std::io::stdin().lock().take(65536)));
     let address = &fixture.addresses[0];
     assert!(fixture.addresses.iter().all(|other| other == address));
@@ -43,9 +49,7 @@ async fn verify_backup(strict: bool) {
     )]));
     let config = checked(config.timeout(Duration::from_secs(5)));
     let config = if strict {
-        config.compatibility_policy(checked(crate::OpenBaoCompatibilityPolicy::exact(
-            crate::OpenBaoVersion::new(2, 7, 0),
-        )))
+        config.compatibility_policy(checked(crate::OpenBaoCompatibilityPolicy::exact(version)))
     } else {
         config
     };
@@ -53,13 +57,13 @@ async fn verify_backup(strict: bool) {
     let report = checked(client.compatibility_report().await);
     if strict {
         assert!(report.status() == OpenBaoCompatibilityStatus::Verified);
-        assert!(report.detected_version() == Some(crate::OpenBaoVersion::new(2, 7, 0)));
-        assert!(report.profile_version() == Some(crate::OpenBaoVersion::new(2, 7, 0)));
+        assert!(report.detected_version() == Some(version));
+        assert!(report.profile_version() == Some(version));
     } else {
         assert!(report.status() == OpenBaoCompatibilityStatus::Unverified);
     }
     let sys = client.sys();
-    assert!(checked(sys.health().await).version == "2.7.0");
+    assert!(checked(sys.health().await).version == version.to_string());
     let backup = checked(
         sys.operator_rotate_backup_grouped(OperatorRotateTarget::Recovery)
             .await,

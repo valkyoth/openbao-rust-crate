@@ -6,9 +6,9 @@ import argparse
 import openbao_2_7_consistency_sdk as fixture
 
 snapshots = fixture.server.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/consistency-sdk-tls.json"
-EXPECTED_SHA256 = "08ef991fd034a39aa55c06f0df592198afdbb017703b1c35283859e6cd508e04"
-TEST_BINARY_SHA256 = "929a4a034e211219fa45da17b7bca2367c2a7342993d016eb6643d29bd61bf35"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/consistency-sdk-tls-v4.json"
+EXPECTED_SHA256 = "d813ddf51b12a71d6b71c678f3a7245ecd8ce3ba85bd8c42b8c49a26e822ea52"
+TEST_BINARY_SHA256 = "d5b1bb8c584f4e361327546b8b4d684c85ea45a3dca16dd0fc01cf214398c8df"
 
 
 def validate_report(report):
@@ -38,7 +38,7 @@ def main():
     except (fixture.server.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
         print("SDK consistency evidence verification failed")
         return 1
-    print("Staged SDK TLS baseline evidence verified; controlled lag has a separate report; profile remains blocked")
+    print("SDK TLS baseline evidence verified; controlled lag has a separate report; no release-approval claim")
     return 0
 
 

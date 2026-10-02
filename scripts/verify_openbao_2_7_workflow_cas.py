@@ -6,8 +6,8 @@ import argparse
 import openbao_2_7_workflow_cas as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/workflow-cas-tls.json"
-EXPECTED_SHA256 = "e12e882c699c731db7a6399dc87684f226ffd1c710ab13f7afbcb3f60f4ecdb4"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/workflow-cas-tls-v2.json"
+EXPECTED_SHA256 = "9912198e115d166a39f09a5c566814b5dc3c2679c4c618faa8b40069fe843051"
 
 
 def validate_report(report):
@@ -38,7 +38,7 @@ def main():
     except (snapshots.SnapshotError, OSError, ValueError):
         print("Workflow CAS evidence verification failed")
         return 1
-    print("Workflow CAS server evidence verified; SDK blocks and profile promotion unchanged")
+    print("Workflow CAS server evidence verified; no SDK integration or release-approval claim")
     return 0
 
 

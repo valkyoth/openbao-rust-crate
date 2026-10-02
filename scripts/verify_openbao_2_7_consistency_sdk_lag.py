@@ -6,9 +6,9 @@ import argparse
 import openbao_2_7_consistency_sdk_lag as fixture
 
 snapshots = fixture.server.snapshots
-RESULT = fixture.server.ROOT / "compat/onboarding/2.7.0/consistency-sdk-lag-tls.json"
-EXPECTED_SHA256 = "a69b0247f2a20b4d72c814265888c7d8a114e79b03846ff92ba7cb33e628d0ae"
-TEST_BINARY_SHA256 = "929a4a034e211219fa45da17b7bca2367c2a7342993d016eb6643d29bd61bf35"
+RESULT = fixture.server.ROOT / "compat/onboarding/2.7.0/consistency-sdk-lag-tls-v4.json"
+EXPECTED_SHA256 = "73d6a24dd524d874130b2677d6b0e75a17529dc83bba4338ef82f3d41ad54d69"
+TEST_BINARY_SHA256 = "d5b1bb8c584f4e361327546b8b4d684c85ea45a3dca16dd0fc01cf214398c8df"
 
 
 def validate_report(report):
@@ -42,7 +42,7 @@ def main():
     except (fixture.server.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
         print("SDK lag evidence verification failed")
         return 1
-    print("Coordinated SDK lag evidence verified; public profile remains blocked")
+    print("Coordinated SDK lag evidence verified; no release-approval claim")
     return 0
 
 

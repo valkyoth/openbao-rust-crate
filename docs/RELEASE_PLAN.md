@@ -998,6 +998,36 @@ profiles through OpenBao 2.7.0 are enabled, with the documented external-plugin
 exclusions and security limitations. The ten checkpoints, retained evidence and
 acceptance criteria are in [OPENBAO_2_7_0_PLAN.md](OPENBAO_2_7_0_PLAN.md).
 
+### 2.2.1 - OpenBao 2.6.4 And 2.7.1 Compatibility
+
+Latest gate: mapping-encoder and OIDC secret-field pentest fixes have passing
+local regression checks and seven fresh source-bound SDK captures.
+The successful dependency-refresh results below predate those auth changes.
+The OIDC public field-type migration is documented explicitly. Post-fix local
+Rust tests, configured strict Clippy, MSRV, packaging, dependency checks and
+Kani pass. The full release-check rerun passed with the refreshed evidence;
+security retesting and exact-commit GitHub approval remain pending.
+
+Status: both exact patch profiles are implemented with separate signed-image,
+API and normal-build public SDK TLS evidence. Existing 2.7.0 regression
+evidence affected by the shared SDK changes has been refreshed without
+rewriting the historical captures. The primary compiler is Rust `1.99.0`,
+with Rust `1.90.0` retained as MSRV. Local release checks passed, including
+packaging, dependency audits and Kani, before the final dependency refresh.
+A refreshed registry index then identified yanked `yoke-derive 0.8.3`; all
+three lockfiles now use `0.8.4`. Fresh SDK captures with rebuilt binaries have
+passed and are retained for both patches and the affected 2.7.0 paths; older
+reports are preserved but cannot satisfy current-input gates. The complete
+local release-check script passed with the new reports, including Rust,
+packaging, dependency and Kani checks. Pentesting and GitHub CI
+approval remain required; this is not tagging
+or publication approval.
+
+The [2.6.4 review](OPENBAO_2_6_4_REVIEW.md) and
+[2.7.1 review](OPENBAO_2_7_1_REVIEW.md) define the independent evidence and
+coverage limits. Legacy engines remain available on 2.6.4, while the 2.7
+external-plugin exclusions and known control-group replay limitation remain.
+
 ### 2.1.8 - Transit Lifecycle Assurance
 
 Stop criteria:

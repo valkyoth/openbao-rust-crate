@@ -6,8 +6,8 @@ import argparse
 import openbao_2_7_raw_backup as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/raw-backup-tls.json"
-EXPECTED_SHA256 = "701d68f5cb45e746440c3fd547e73a11a0923adba4007b7ec6a13dbd79045009"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/raw-backup-tls-v2.json"
+EXPECTED_SHA256 = "20209db497358fee2d3dfc1e16fee531bbe068cd17a3dc793ef1bdcdeba326c3"
 
 
 def verify():
@@ -28,7 +28,7 @@ def main():
     except (fixture.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
         print("Raw backup evidence verification failed")
         return 1
-    print("Unseal backup server evidence verified; recovery and upgrade not claimed; profile remains blocked")
+    print("Unseal backup server evidence verified; no recovery, upgrade or release-approval claim")
     return 0
 
 

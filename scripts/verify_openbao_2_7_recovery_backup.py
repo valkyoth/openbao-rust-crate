@@ -6,8 +6,8 @@ import argparse
 import openbao_2_7_recovery_backup as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/recovery-backup-tls.json"
-EXPECTED_SHA256 = "129635bf28b46923f1ba9b1c22b8828386214135838ab22b124f76ce8ce752b1"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/recovery-backup-tls-v2.json"
+EXPECTED_SHA256 = "009e30657a265f00fe539bc5d156451082ee18829906d9c127be4baa7b61e42a"
 
 
 def verify():
@@ -28,7 +28,7 @@ def main():
     except (fixture.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
         print("Recovery backup evidence verification failed")
         return 1
-    print("Recovery backup server evidence verified; upgrade not claimed; profile remains blocked")
+    print("Recovery backup server evidence verified; no upgrade or release-approval claim")
     return 0
 
 

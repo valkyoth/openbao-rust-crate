@@ -1,5 +1,12 @@
 //! Authentication methods.
 
+#[cfg(any(
+    feature = "ldap-auth",
+    feature = "kerberos-auth",
+    feature = "radius-auth"
+))]
+mod mapping;
+
 #[cfg(feature = "approle")]
 pub mod approle;
 #[cfg(feature = "cert-auth")]

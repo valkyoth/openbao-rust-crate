@@ -4,6 +4,106 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+### 2.2.1 In Progress
+
+The entries below record the preparation sequence. Both patch profiles are now
+enabled with separate normal-build live evidence, including fresh captures
+after the final dependency update and the subsequent auth fixes below.
+Security retesting and GitHub approval remain required before tagging.
+
+- Retain seven freshly validated SDK reports for the auth fixes: normal-build
+  TLS on 2.6.4/2.7.1 and the affected 2.7.0 consistency/backup paths. Preserve
+  older artifacts and reject pre-fix source inputs even when their original
+  artifact and executable identities are allowed.
+
+- Reject delimiter injection and bound LDAP/Kerberos/RADIUS mapping encoding
+  before allocating the wire string: at most 4096 entries and 1 MiB including
+  separators, with no empty/blank, comma-containing or ASCII-control names.
+  Empty lists still clear mappings.
+- Store OIDC authorization URLs and optional device codes in `SecretString`
+  with redacted `Debug`. This security correction changes public field types;
+  callers must explicitly expose them only for browser/user transfer. See the
+  migration guide. Dependency-owned parser/HTTP/TLS copies remain outside the
+  sanitization guarantee.
+- Bind packaged security-model links to the current SDK release tag and add
+  release-check regressions for stale, missing and incorrect links.
+
+- Retain seven new SDK reports after rebuilding with `yoke-derive 0.8.4`:
+  normal-build coverage on 2.6.4 and 2.7.1, and 2.7.0 consistency baseline,
+  controlled lag and all three backup modes. Preserve pre-update artifacts
+  and reject their lockfile inputs even when their original binary/report
+  digests are allowed. Only the exact README status correction is separately
+  reviewed; no executable input drift is accepted.
+
+- Replace yanked `yoke-derive 0.8.3` with non-yanked `0.8.4` in all three
+  maintained lockfiles. Preserve pre-update reports, require rebuilt SDK
+  binaries and fresh live evidence, and do not waive dependency input checks.
+
+- Refresh twelve affected OpenBao 2.7.0 server and public SDK reports against
+  the current SDK sources. Retain them under new filenames, preserve original
+  captures, and test that historical source inputs cannot satisfy current
+  release checks. The known control-group replay failure remains recorded.
+- Retain separate, source-current normal-build public SDK TLS evidence for
+  OpenBao `2.6.4` and `2.7.1`, without generated candidate overrides. Require
+  both reports in the release checks and reject candidate substitution,
+  changed executable sources, scope changes and altered executable identities.
+  Retain the original README and separately pin its post-capture status/link
+  correction; permit no other input drift or unreviewed documentation revision.
+- Update the SHA-pinned `taiki-e/install-action` to `2.87.22`.
+- Wire the exact combined 2.6.4/2.7.1 registry into normal builds after both
+  refreshed candidate SDK runs passed. Preserve all historical operation cells,
+  logical routes and plugin exclusions; keep unknown versions rejected and the
+  default unverified baseline unchanged. Final normal-build live evidence is
+  retained separately; release approval remains pending.
+- Extend workflow CAS and latest-plugin selection guards to exact verified
+  `2.7.1` as well as `2.7.0`, without permitting `2.6.4`, assumed, range or
+  unknown profiles. Generated routing remains independently gated. Add public
+  SDK workflow CAS TLS assertions and retain their passing signed-image run,
+  together with refreshed public backup and controlled-lag SDK coverage.
+- Stage the combined 2.6.4/2.7.1 compatibility inventory without enabling normal
+  routing. Compare all 19,796 operation/version cells and logical routes with
+  their independently reviewed branches, preserving historical contracts and
+  the different legacy-plugin availability on the two server lines.
+- Refresh eleven source-bound 2.7.1 server regression, backup and upgrade
+  reports after the guard update. Preserve the original captures, pin new
+  artifacts separately, and reject stale provenance or altered scope in tests.
+  The runtime OpenAPI is unchanged; the control-group replay failure remains
+  explicitly recorded rather than relabelled as success.
+- Correct RADIUS user-policy response decoding: accept the server's string array
+  while preserving the public comma-separated `String` and legacy string input.
+  Bound policy count and combined size, reject ambiguous array entries, and
+  exercise the real response shape in the HTTP mock.
+- Bump the SDK and local test/fuzz manifests to `2.2.1`.
+- Move the primary development and CI toolchain to Rust `1.99.0`, retaining
+  Rust `1.90.0` as MSRV and leaving the Kani toolchain unchanged.
+- Investigate OpenBao `2.7.1` security fixes and exact-version compatibility.
+  Retain exact-version API, server regressions, backup and three-node
+  controlled-lag evidence. Profile promotion and final-source public SDK
+  verification remain pending; existing profiles are unchanged.
+- Add OpenBao `2.6.4` to the same release scope with independently pinned source
+  documentation and signed image evidence. Retain the passing separate TLS/API
+  capture including the legacy 2.6 built-ins, and verify exact runtime contract
+  equality with 2.6.3 apart from the reported version. Stage a candidate without
+  applying the 2.7 plugin exclusions to 2.6.4; normal profile promotion remains
+  pending.
+- Bind consistency contexts to the exact reviewed server patch and reject
+  version changes before authenticated dispatch. Add strict-candidate live
+  SDK checks for backup decoding and consistency, including cancellation,
+  timeout and independent-cluster rejection; the passing
+  report is retained without promoting normal 2.7.1 routing. Earlier SDK
+  evidence remains explicitly historical, with its original hashes preserved.
+- Build a separate strict 2.6.4 SDK candidate with public TLS checks for patched
+  AppRole login, Transit, KV, wrapping and legacy engine administration. Retain
+  its passing live run at the captured source state, including corrected RADIUS decoding,
+  with an independently pinned verifier and tamper tests. The shared
+  test/renderer and patch-guard updates require refreshing the 2.6.4 SDK report
+  before release; the 2.7.1 refresh is retained and no original report hashes
+  are changed.
+- Retain signed-image recovery-backup upgrade evidence for a `2.7.0` to `2.7.1`
+  restart using the same disposable Raft storage and seal key. Verify preserved
+  encrypted backup representations, access denial and cleanup without claiming
+  general upgrade, unseal-backup upgrade or PGP decryption coverage.
+
 ## 2.2.0 - 2026-09-29
 
 The development entries below record the onboarding sequence. Final-source live

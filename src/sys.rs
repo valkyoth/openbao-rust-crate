@@ -3257,7 +3257,7 @@ pub struct MountConfig {
     )]
     pub allowed_response_headers: Option<Vec<String>>,
     /// Plugin version. The dynamic `latest` selector requires an exact verified
-    /// OpenBao 2.7.0 profile after routing promotion. It selects an installed
+    /// OpenBao 2.7.0 or 2.7.1 profile after routing promotion. It selects an installed
     /// plugin dynamically, not an independently verified plugin artifact.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plugin_version: Option<String>,
@@ -3726,7 +3726,7 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
 ///
 /// Workflow definitions can embed request templates and literal values, so
 /// `Debug` always redacts the definition. CAS-selected writes require an exact
-/// verified OpenBao 2.7.0 profile after its routing promotion. Older, assumed,
+/// verified OpenBao 2.7.0 or 2.7.1 profile after its routing promotion. Older, assumed,
 /// rolling-range and unknown-newer fallback profiles remain blocked. The SDK
 /// never retries workflow writes.
 pub struct WorkflowWriteRequest {
@@ -6334,7 +6334,7 @@ impl Sys<'_, Authenticated> {
 
     /// Creates or updates one workflow without automatic retry.
     ///
-    /// CAS requires the exact verified OpenBao 2.7.0 profile (automatic strict
+    /// CAS requires an exact verified OpenBao 2.7.0 or 2.7.1 profile (automatic strict
     /// detection or exact selection), and still passes normal routing promotion
     /// checks. Older, assumed, rolling-range and unknown-newer fallback profiles
     /// are rejected before the workflow request is sent. No prefix-listing block
@@ -10253,7 +10253,10 @@ fn validate_workflow_definition(workflow: &str) -> Result<()> {
 
 fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> Result<()> {
     use crate::compatibility::{OpenBaoCompatibilityPolicyKind, OpenBaoCompatibilityStatus};
-    let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
+    let reviewed = [
+        crate::OpenBaoVersion::new(2, 7, 0),
+        crate::OpenBaoVersion::new(2, 7, 1),
+    ];
     // Routing independently requires promotion; a verified version alone never
     // bypasses the generated endpoint registry.
     if report.status() != OpenBaoCompatibilityStatus::Verified
@@ -10264,11 +10267,13 @@ fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> R
                     | OpenBaoCompatibilityPolicyKind::AutomaticStrict
             )
         )
-        || report.profile_version() != Some(reviewed)
-        || report.detected_version() != Some(reviewed)
+        || !report
+            .profile_version()
+            .is_some_and(|version| reviewed.contains(&version))
+        || report.detected_version() != report.profile_version()
     {
         return Err(Error::InvalidParameter(
-            "workflow CAS requires an exact verified OpenBao 2.7.0 profile".into(),
+            "workflow CAS requires an exact verified OpenBao 2.7.0 or 2.7.1 profile".into(),
         ));
     }
     Ok(())
@@ -10276,7 +10281,10 @@ fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> R
 
 fn validate_latest_plugin_profile(report: crate::OpenBaoCompatibilityReport) -> Result<()> {
     use crate::compatibility::{OpenBaoCompatibilityPolicyKind, OpenBaoCompatibilityStatus};
-    let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
+    let reviewed = [
+        crate::OpenBaoVersion::new(2, 7, 0),
+        crate::OpenBaoVersion::new(2, 7, 1),
+    ];
     if report.status() != OpenBaoCompatibilityStatus::Verified
         || !matches!(
             report.policy(),
@@ -10285,11 +10293,14 @@ fn validate_latest_plugin_profile(report: crate::OpenBaoCompatibilityReport) -> 
                     | OpenBaoCompatibilityPolicyKind::AutomaticStrict
             )
         )
-        || report.profile_version() != Some(reviewed)
-        || report.detected_version() != Some(reviewed)
+        || !report
+            .profile_version()
+            .is_some_and(|version| reviewed.contains(&version))
+        || report.detected_version() != report.profile_version()
     {
         return Err(Error::InvalidParameter(
-            "latest plugin selection requires an exact verified OpenBao 2.7.0 profile".into(),
+            "latest plugin selection requires an exact verified OpenBao 2.7.0 or 2.7.1 profile"
+                .into(),
         ));
     }
     Ok(())
@@ -11354,96 +11365,56 @@ mod tests {
 
     #[test]
     fn latest_plugin_selection_requires_exact_verified_profile() {
-        use crate::compatibility::{
-            OpenBaoCompatibilityPolicyKind as Policy, OpenBaoCompatibilityReport as Report,
-        };
-        let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
-        for version in crate::compatibility::openbao_profile_versions() {
-            assert!(super::validate_latest_plugin_profile(Report::assumed(*version)).is_err());
-            if *version == reviewed {
-                continue;
-            }
-            assert!(
-                super::validate_latest_plugin_profile(Report::verified(
-                    Policy::Exact,
-                    *version,
-                    None
-                ))
-                .is_err()
-            );
-        }
-        for policy in [Policy::Exact, Policy::AutomaticStrict] {
-            assert!(
-                super::validate_latest_plugin_profile(Report::verified(policy, reviewed, None))
-                    .is_ok()
-            );
-        }
-        for report in [
-            Report::unverified(),
-            Report::assumed(reviewed),
-            Report::verified(Policy::Range, reviewed, None),
-            Report::verified(Policy::Exact, crate::OpenBaoVersion::new(2, 7, 1), None),
-            Report::acknowledged_unknown_newer(reviewed, crate::OpenBaoVersion::new(2, 6, 3)),
-            Report::acknowledged_unknown_newer(crate::OpenBaoVersion::new(2, 8, 0), reviewed),
-        ] {
-            assert!(super::validate_latest_plugin_profile(report).is_err());
-        }
+        assert_reviewed_patch_profiles(super::validate_latest_plugin_profile);
     }
 
     #[test]
     fn workflow_cas_requires_exact_verified_reviewed_profile() {
+        assert_reviewed_patch_profiles(super::validate_workflow_cas_profile);
+    }
+
+    fn assert_reviewed_patch_profiles(
+        validate: fn(crate::OpenBaoCompatibilityReport) -> crate::Result<()>,
+    ) {
+        use crate::OpenBaoVersion as Version;
         use crate::compatibility::{
             OpenBaoCompatibilityPolicyKind as Policy, OpenBaoCompatibilityReport as Report,
         };
-        let reviewed = crate::OpenBaoVersion::new(2, 7, 0);
+        let reviewed = [Version::new(2, 7, 0), Version::new(2, 7, 1)];
         for version in crate::compatibility::openbao_profile_versions() {
-            assert!(super::validate_workflow_cas_profile(Report::assumed(*version)).is_err());
-            if *version == reviewed {
-                continue;
+            assert!(validate(Report::assumed(*version)).is_err());
+            assert!(validate(Report::verified(Policy::Range, *version, None)).is_err());
+            assert!(
+                validate(Report::verified(Policy::Exact, *version, None)).is_ok()
+                    == reviewed.contains(version)
+            );
+        }
+        for version in reviewed {
+            for policy in [Policy::Exact, Policy::AutomaticStrict] {
+                assert!(validate(Report::verified(policy, version, None)).is_ok());
             }
-            assert!(
-                super::validate_workflow_cas_profile(Report::verified(
-                    Policy::Exact,
-                    *version,
-                    None
-                ))
-                .is_err()
-            );
+            for report in [
+                Report::assumed(version),
+                Report::verified(Policy::Range, version, None),
+                Report::acknowledged_unknown_newer(version, Version::new(2, 6, 3)),
+                Report::acknowledged_unknown_newer(Version::new(2, 7, 2), version),
+                Report::acknowledged_unknown_newer(Version::new(2, 8, 0), version),
+            ] {
+                assert!(validate(report).is_err());
+            }
         }
-        for policy in [Policy::Exact, Policy::AutomaticStrict] {
-            assert!(
-                super::validate_workflow_cas_profile(Report::verified(policy, reviewed, None))
-                    .is_ok()
-            );
+        assert!(validate(Report::unverified()).is_err());
+        // Also cover staged patches that are not in the normal registry yet.
+        for version in [
+            Version::new(2, 6, 4),
+            Version::new(2, 6, 5),
+            Version::new(2, 7, 2),
+            Version::new(2, 8, 0),
+        ] {
+            for policy in [Policy::Exact, Policy::AutomaticStrict, Policy::Range] {
+                assert!(validate(Report::verified(policy, version, None)).is_err());
+            }
         }
-        assert!(super::validate_workflow_cas_profile(Report::assumed(reviewed)).is_err());
-        assert!(
-            super::validate_workflow_cas_profile(Report::verified(Policy::Range, reviewed, None))
-                .is_err()
-        );
-        assert!(super::validate_workflow_cas_profile(Report::unverified()).is_err());
-        assert!(
-            super::validate_workflow_cas_profile(Report::acknowledged_unknown_newer(
-                reviewed,
-                crate::OpenBaoVersion::new(2, 6, 3)
-            ))
-            .is_err()
-        );
-        assert!(
-            super::validate_workflow_cas_profile(Report::acknowledged_unknown_newer(
-                crate::OpenBaoVersion::new(2, 8, 0),
-                reviewed
-            ))
-            .is_err()
-        );
-        assert!(
-            super::validate_workflow_cas_profile(Report::verified(
-                Policy::Exact,
-                crate::OpenBaoVersion::new(2, 7, 1),
-                None
-            ))
-            .is_err()
-        );
     }
 
     #[test]

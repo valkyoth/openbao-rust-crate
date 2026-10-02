@@ -1079,16 +1079,32 @@ impl OidcAuthUrlRequest {
 }
 
 /// Authorization URL returned by OpenBao for an OIDC login flow.
-#[derive(Clone, Debug, Deserialize)]
+///
+/// URL correlation parameters and device codes are secret-backed and redacted.
+/// Use `ExposeSecret` only when handing the URL to a trusted browser or displaying
+/// the code to the intended user. Serde/HTTP/TLS scratch copies remain outside
+/// the retained fields' sanitization guarantee.
+#[derive(Clone, Deserialize)]
 pub struct OidcAuthUrlResponse {
     /// Authorization URL that the user should visit in a browser.
-    pub auth_url: String,
+    pub auth_url: SecretString,
     /// Device-flow user code, when OpenBao returns one.
     #[serde(default)]
-    pub user_code: Option<String>,
+    pub user_code: Option<SecretString>,
     /// Poll interval in seconds for direct or device callback modes.
     #[serde(default)]
     pub poll_interval: Option<u64>,
+}
+
+impl fmt::Debug for OidcAuthUrlResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OidcAuthUrlResponse")
+            .field("auth_url", &"<redacted>")
+            .field("has_user_code", &self.user_code.is_some())
+            .field("poll_interval", &self.poll_interval)
+            .finish()
+    }
 }
 
 /// Request for completing a browser OIDC callback.
@@ -2095,6 +2111,52 @@ mod tests {
     #![allow(clippy::panic)]
 
     use std::collections::BTreeMap;
+
+    #[test]
+    fn oidc_authorization_response_retains_secrets_and_redacts_clones() {
+        let response: super::OidcAuthUrlResponse = serde_json::from_str(
+            r#"{"auth_url":"https://issuer.example/authorize?state=fixture-state\u0026nonce=fixture-nonce","user_code":"fixture-device-code","poll_interval":5}"#,
+        ).unwrap_or_else(|_| panic!("valid OIDC response rejected"));
+        fn require_secret(_: &SecretString) {}
+        require_secret(&response.auth_url);
+        require_secret(
+            response
+                .user_code
+                .as_ref()
+                .unwrap_or_else(|| panic!("missing code")),
+        );
+        assert!(response.auth_url.expose_secret().contains("&nonce="));
+        let cloned = response.clone();
+        drop(response);
+        assert!(
+            cloned
+                .user_code
+                .as_ref()
+                .is_some_and(|value| value.expose_secret() == "fixture-device-code")
+        );
+        let debug = format!("{cloned:?} {cloned:#?}");
+        for marker in [
+            "issuer.example",
+            "fixture-state",
+            "fixture-nonce",
+            "fixture-device-code",
+        ] {
+            assert!(
+                !debug.contains(marker),
+                "OIDC Debug exposed sensitive fields"
+            );
+        }
+        assert!(debug.contains("<redacted>"));
+        for json in [
+            r#"{"auth_url":"https://issuer.example/"}"#,
+            r#"{"auth_url":"https://issuer.example/","user_code":null}"#,
+        ] {
+            let response: super::OidcAuthUrlResponse = serde_json::from_str(json)
+                .unwrap_or_else(|_| panic!("optional OIDC fields rejected"));
+            assert!(response.user_code.is_none());
+            assert!(response.poll_interval.is_none());
+        }
+    }
 
     use secrecy::{ExposeSecret, SecretString};
 

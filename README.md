@@ -37,11 +37,22 @@ OpenBao-to-backend boundaries.
 [API documentation](https://docs.rs/openbao) | [Source](https://github.com/valkyoth/openbao-rust-crate) | [Security](https://github.com/valkyoth/openbao-rust-crate/security) | [Releases](https://github.com/valkyoth/openbao-rust-crate/releases)
 
 `2.2.0` adds the reviewed OpenBao `2.7.0` profile while preserving 25 historical
-profiles from `2.0.0` through `2.6.3`. Rust `1.98.1` is the primary checked
-toolchain and Rust `1.90.0` is the MSRV.
+profiles from `2.0.0` through `2.6.3`. The unreleased `2.2.1` maintenance
+release adds exact `2.6.4` and `2.7.1` profiles in the development build.
+Candidate and normal-build public SDK TLS tests passed for both. Fresh normal-build
+SDK evidence covers the auth hardening; security retesting and GitHub approval
+remain required before release. `2.6.4` retains its legacy built-in engines;
+the existing external-plugin exclusions remain on the `2.7` line.
 
-See the [2.2.0 release notes](release-notes/RELEASE_NOTES_2.2.0.md) for migration
-changes, tested support and explicit limitations. The
+| Rust version | Support policy |
+| --- | --- |
+| `1.99.0` | Primary toolchain for development and CI. |
+| `1.90.0` | Minimum supported Rust version; separately checked in CI. |
+| `1.91.0` through `1.98.x` | Within the supported range; not individually tested on every commit. |
+
+See the [2.2.1 release notes](release-notes/RELEASE_NOTES_2.2.1.md) for tested
+support, release status, the OIDC secret-field migration and explicit limitations, and the
+[2.2.0 release notes](release-notes/RELEASE_NOTES_2.2.0.md) for migration changes. The
 [onboarding history](docs/OPENBAO_2_7_0_PLAN.md) records the implementation and review checkpoints.
 
 Clients without a compatibility policy retain the
@@ -53,7 +64,7 @@ and RADIUS remain excluded on 2.7, while older profiles retain those engines.
 
 ```toml
 [dependencies]
-openbao = "2.2.0"
+openbao = "2.2.1"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```

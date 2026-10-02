@@ -411,7 +411,8 @@ impl fmt::Debug for KerberosLdapConfig {
 /// Kerberos LDAP group policy mapping request.
 #[derive(Clone, Debug, Default)]
 pub struct KerberosGroupRequest {
-    /// Policies mapped to this LDAP group.
+    /// Policies mapped to this LDAP group. Entries must be nonempty, without
+    /// commas or ASCII controls; at most 4096 entries and 1 MiB joined.
     pub policies: Vec<String>,
 }
 
@@ -734,7 +735,7 @@ impl KerberosAuthAdmin<'_> {
     pub async fn write_group(&self, name: &str, group: &KerberosGroupRequest) -> Result<Empty> {
         let name = validate_kerberos_group_name(name)?;
         let payload = KerberosGroupPayload {
-            policies: group.policies.join(","),
+            policies: super::mapping::encode_values(&group.policies, "Kerberos policies")?,
         };
         self.client
             .request_auth_json_internal(

@@ -27,10 +27,56 @@ echo "checks: staged OpenBao 2.7.0 source inventory"
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_source_inventory.py --verify
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_source_inventory.py --self-test
 
+echo "checks: OpenBao 2.6.4 patch source, image and capture regressions"
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_6_4.py --verify-source
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_6_4.py --verify-image
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_6_4.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_6_4.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_6_4.py
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_2_6_4_candidate.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_6_4_candidate.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_6_4_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_6_4_sdk.py --historical
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_6_4_sdk.py
+
+echo "checks: OpenBao 2.7.1 patch source and capture regressions"
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_1.py --verify-source
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1_regressions.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1_regressions.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1_regressions.py
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_2_7_1_candidate.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1_candidate.py
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_patch_registry.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_patch_registry.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1_sdk.py --historical
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1_image.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1_image.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1_backups.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1_backups.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1_backups.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1_consistency.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1_consistency.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1_consistency.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1_sdk_advanced.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1_sdk_advanced.py --historical
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1_sdk_advanced.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_patch_normal_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_patch_normal_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_patch_normal_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1_backup_upgrade.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1_backup_upgrade.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1_backup_upgrade.py
+
 echo "checks: staged OpenBao 2.7.0 API evidence"
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --verify
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --self-test
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_evidence.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_evidence_refresh.py
 
 echo "checks: staged OpenBao 2.7 external-plugin availability and local fixture"
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_plugins.py

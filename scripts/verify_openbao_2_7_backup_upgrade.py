@@ -6,8 +6,8 @@ import argparse
 import openbao_2_7_backup_upgrade as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/backup-upgrade-tls.json"
-EXPECTED_SHA256 = "9e546a79dba5b1e2ae4ffa1bfc4741f66fbe28ea466f3749c9414b5985363b8b"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/backup-upgrade-tls-v2.json"
+EXPECTED_SHA256 = "2647380fb1328cae99705dd2cc3ab5e474d5e7a0a71b96c2ea58d950fc7e61df"
 
 
 def verify():
@@ -29,7 +29,7 @@ def main():
             OSError, ValueError):
         print("Backup upgrade evidence verification failed")
         return 1
-    print("Recovery backup single-node Raft upgrade evidence verified; profile remains blocked")
+    print("Recovery backup single-node Raft upgrade evidence verified; no general upgrade or release-approval claim")
     return 0
 
 

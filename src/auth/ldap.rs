@@ -376,9 +376,10 @@ impl fmt::Debug for LdapAuthConfig {
 /// LDAP auth local user or group policy mapping.
 #[derive(Clone, Debug, Default)]
 pub struct LdapAuthMappingRequest {
-    /// Policies mapped to this LDAP user or group.
+    /// Policies mapped to this LDAP user or group. Entries must be nonempty,
+    /// without commas or ASCII controls; at most 4096 entries and 1 MiB joined.
     pub policies: Vec<String>,
-    /// LDAP groups additionally mapped to this LDAP user.
+    /// LDAP groups additionally mapped to this LDAP user, with the same bounds.
     pub groups: Vec<String>,
 }
 
@@ -692,8 +693,8 @@ impl LdapAuthAdmin<'_> {
     ) -> Result<Empty> {
         let name = validate_ldap_path_name(name)?;
         let payload = LdapAuthMappingPayload {
-            policies: mapping.policies.join(","),
-            groups: mapping.groups.join(","),
+            policies: super::mapping::encode_values(&mapping.policies, "LDAP policies")?,
+            groups: super::mapping::encode_values(&mapping.groups, "LDAP groups")?,
         };
         self.client
             .request_auth_json_internal(

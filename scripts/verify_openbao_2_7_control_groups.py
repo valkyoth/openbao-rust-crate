@@ -8,8 +8,8 @@ import openbao_2_7_control_groups as fixture
 import openbao_api_snapshots as snapshots
 
 ROOT = Path(__file__).resolve().parents[1]
-RESULT = ROOT / "compat/onboarding/2.7.0/control-group-tls.json"
-EXPECTED_SHA256 = "9c574f074bdf0fbe2305987259163454ed31bb53b02a7bd73cd26f9b23c78f65"
+RESULT = ROOT / "compat/onboarding/2.7.0/control-group-tls-v2.json"
+EXPECTED_SHA256 = "544477e4f47b50855b98c278290cbcd990f7419427455a7a8287607fa1482cc4"
 
 
 def verify():
@@ -30,7 +30,7 @@ def main():
     except (fixture.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
         print("Control-group evidence verification failed")
         return 1
-    print("Control-group compatibility evidence verified; known server replay failure remains; SDK profile not promoted")
+    print("Control-group compatibility evidence verified; known server replay failure remains; no release-approval claim")
     return 0
 
 

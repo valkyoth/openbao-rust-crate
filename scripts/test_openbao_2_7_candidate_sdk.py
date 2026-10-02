@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import check_openbao_2_7_candidate_sdk as subject
+import generate_openbao_patch_registry as combined
 
 
 class CandidateSdkTests(unittest.TestCase):
@@ -55,7 +56,7 @@ class CandidateSdkTests(unittest.TestCase):
     def setUpClass(cls):
         cls.candidate = subject.candidate.verify()
 
-    def test_disposable_build_matches_promoted_routing_without_source_mutation(self):
+    def test_historical_candidate_build_does_not_mutate_normal_patch_routing(self):
         registry = subject.registry
         normal = registry.rust_output(self.candidate)
         promoted = registry.rust_output(self.candidate, verification_candidate=True)
@@ -68,10 +69,12 @@ class CandidateSdkTests(unittest.TestCase):
             self.assertEqual((destination / "Cargo.toml").read_bytes(), b"manifest")
             self.assertEqual((destination / "src/generated/openbao_capabilities.rs").read_bytes(), promoted)
         self.assertEqual(registry.read_regular_file(registry.RUST_PATH, registry.MAX_OUTPUT_BYTES), original)
-        self.assertEqual(original, normal)
+        self.assertEqual(original, registry.rust_output(combined.verify(), promoted_patches=True))
+        self.assertNotEqual(original, normal)
 
     def test_verification_inventory_is_exact(self):
-        for versions in ([], list(subject.registry.EXPECTED_VERSIONS), [*self.candidate["versions"], "2.7.1"]):
+        for versions in ([], list(subject.registry.EXPECTED_VERSIONS),
+                         [*self.candidate["versions"], "2.7.2"], [*self.candidate["versions"], "2.7.0"]):
             with self.assertRaises(subject.registry.RegistryError):
                 subject.registry.rust_output(dict(self.candidate, versions=versions), verification_candidate=True)
 

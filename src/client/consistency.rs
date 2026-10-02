@@ -2,12 +2,19 @@ use super::*;
 use crate::compatibility::OpenBaoCompatibilityStatus;
 use crate::consistency::{ConsistencyIndex, ConsistencyPolicy};
 
-const REVIEWED_VERSION: OpenBaoVersion = OpenBaoVersion::new(2, 7, 0);
+const REVIEWED_VERSIONS: &[OpenBaoVersion] =
+    &[OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)];
 
 #[cfg(test)]
 mod live;
 
-fn require_consistency_profile(report: OpenBaoCompatibilityReport) -> Result<()> {
+#[cfg(all(test, feature = "raw-api", feature = "raw-api-acknowledged"))]
+mod patch_live;
+
+fn require_consistency_profile(report: OpenBaoCompatibilityReport) -> Result<OpenBaoVersion> {
+    let reviewed = report
+        .profile_version()
+        .filter(|version| REVIEWED_VERSIONS.contains(version) && is_routable_profile(*version));
     // An assumed or newer-server fallback profile cannot establish this contract.
     if report.status() != OpenBaoCompatibilityStatus::Verified
         || !matches!(
@@ -17,15 +24,16 @@ fn require_consistency_profile(report: OpenBaoCompatibilityReport) -> Result<()>
                     | crate::compatibility::OpenBaoCompatibilityPolicyKind::AutomaticStrict
             )
         )
-        || report.profile_version() != Some(REVIEWED_VERSION)
-        || report.detected_version() != Some(REVIEWED_VERSION)
-        || !is_routable_profile(REVIEWED_VERSION)
+        || reviewed.is_none()
+        || report.detected_version() != reviewed
     {
         return Err(Error::InvalidParameter(
             "consistency requires a verified, promoted and reviewed server profile".into(),
         ));
     }
-    Ok(())
+    reviewed.ok_or_else(|| {
+        Error::InvalidParameter("consistency requires a reviewed server profile".into())
+    })
 }
 
 #[derive(Deserialize)]
@@ -39,23 +47,27 @@ struct ClusterHealth {
 impl Client<Authenticated> {
     /// Creates an independent consistency context for this immutable client.
     ///
-    /// Requires a verified, promoted consistency profile. OpenBao 2.7 remains
-    /// blocked until onboarding promotion. An unauthenticated TLS health request
+    /// Requires a verified, promoted consistency profile. Unpromoted patches remain
+    /// blocked. An unauthenticated TLS health request
     /// discovers the cluster identity; each operation rechecks it. Assumed and
     /// unknown-newer fallback and rolling-range policies are not accepted. Creating another context
     /// intentionally does not permit reuse of this context's captured indices.
     #[cfg(feature = "consistency")]
     pub async fn consistency(&self) -> Result<ConsistencyContext<'_>> {
-        require_consistency_profile(self.ensure_compatibility().await?)?;
+        let version = require_consistency_profile(self.ensure_compatibility().await?)?;
         Ok(ConsistencyContext {
             client: self,
-            cluster: discover_cluster(self).await?,
+            cluster: discover_cluster(self, version).await?,
+            version,
             identity: Arc::new(()),
         })
     }
 }
 
-async fn discover_cluster(client: &Client<Authenticated>) -> Result<SecretString> {
+async fn discover_cluster(
+    client: &Client<Authenticated>,
+    version: OpenBaoVersion,
+) -> Result<SecretString> {
     let url = client.url_for_path("sys/health")?;
     client.require_encrypted_transport_for_sensitive_request(&url)?;
     let response = client
@@ -78,7 +90,7 @@ async fn discover_cluster(client: &Client<Authenticated>) -> Result<SecretString
     let cluster = health.cluster_id.expose_secret();
     if !health.initialized
         || health.sealed
-        || health.version.parse::<OpenBaoVersion>().ok() != Some(REVIEWED_VERSION)
+        || health.version.parse::<OpenBaoVersion>().ok() != Some(version)
         || cluster.is_empty()
         || cluster.len() > 256
         || !cluster.bytes().all(|byte| (0x21..=0x7e).contains(&byte))
@@ -104,6 +116,7 @@ async fn discover_cluster(client: &Client<Authenticated>) -> Result<SecretString
 pub struct ConsistencyContext<'a> {
     client: &'a Client<Authenticated>,
     cluster: SecretString,
+    version: OpenBaoVersion,
     identity: Arc<()>,
 }
 
@@ -147,7 +160,12 @@ impl ConsistencyContext<'_> {
         B: Serialize + ?Sized,
     {
         ensure_public_raw_api_enabled()?;
-        require_consistency_profile(self.client.ensure_compatibility().await?)?;
+        let version = require_consistency_profile(self.client.ensure_compatibility().await?)?;
+        if version != self.version {
+            return Err(Error::OpenBaoCompatibilityProbe(
+                "consistency profile changed",
+            ));
+        }
         self.execute(method, path, body, after, policy).await
     }
 
@@ -179,7 +197,7 @@ impl ConsistencyContext<'_> {
         let url = self.client.url_for_path(path)?;
         self.client
             .require_encrypted_transport_for_sensitive_request(&url)?;
-        let cluster = discover_cluster(self.client).await?;
+        let cluster = discover_cluster(self.client, self.version).await?;
         if cluster.expose_secret() != self.cluster.expose_secret() {
             return Err(Error::OpenBaoCompatibilityProbe(
                 "consistency cluster changed",
@@ -285,6 +303,8 @@ mod tests {
     use crate::compatibility::OpenBaoCompatibilityPolicyKind;
     use crate::consistency::ConsistencyFallback;
 
+    const REVIEWED_VERSION: OpenBaoVersion = OpenBaoVersion::new(2, 7, 0);
+
     fn client() -> Client<Authenticated> {
         Client::new("https://localhost")
             .and_then(|client| client.try_with_token(SecretString::from("synthetic-test-token")))
@@ -295,6 +315,7 @@ mod tests {
         ConsistencyContext {
             client,
             cluster: SecretString::from("test-cluster"),
+            version: REVIEWED_VERSION,
             identity: Arc::new(()),
         }
     }
@@ -331,7 +352,7 @@ mod tests {
             );
             assert_eq!(
                 require_consistency_profile(report).is_ok(),
-                *version == REVIEWED_VERSION
+                REVIEWED_VERSIONS.contains(version) && is_routable_profile(*version)
             );
             assert!(
                 require_consistency_profile(OpenBaoCompatibilityReport::assumed(*version)).is_err()
@@ -353,6 +374,28 @@ mod tests {
             ))
             .is_ok()
         );
+        for version in [OpenBaoVersion::new(2, 7, 1), OpenBaoVersion::new(2, 7, 2)] {
+            for policy in [
+                OpenBaoCompatibilityPolicyKind::Exact,
+                OpenBaoCompatibilityPolicyKind::AutomaticStrict,
+            ] {
+                let accepted = require_consistency_profile(OpenBaoCompatibilityReport::verified(
+                    policy, version, None,
+                ));
+                assert_eq!(
+                    accepted.is_ok(),
+                    REVIEWED_VERSIONS.contains(&version) && is_routable_profile(version)
+                );
+            }
+            assert!(
+                require_consistency_profile(OpenBaoCompatibilityReport::verified(
+                    OpenBaoCompatibilityPolicyKind::Range,
+                    version,
+                    None,
+                ))
+                .is_err()
+            );
+        }
     }
 
     #[tokio::test]
@@ -401,12 +444,14 @@ mod tests {
         let foreign = ConsistencyContext {
             client: &client,
             cluster: SecretString::from("test-cluster"),
+            version: context.version,
             identity: Arc::new(()),
         };
         assert!(foreign.validate_index(Some(&after)).is_err());
         let changed = ConsistencyContext {
             client: &client,
             cluster: SecretString::from("other-cluster"),
+            version: context.version,
             identity: Arc::clone(&context.identity),
         };
         assert!(changed.validate_index(Some(&after)).is_err());
@@ -722,6 +767,52 @@ mod tests {
                     task.await.unwrap_or_else(|_| panic!("server failed")).len(),
                     1
                 );
+            }
+        }
+
+        #[tokio::test]
+        async fn patch_context_pins_its_version_across_operations() {
+            for (selected, switched) in [(0, 1), (1, 0)] {
+                let health = HEALTH.replace("2.7.0", &format!("2.7.{selected}"));
+                let changed = HEALTH.replace("2.7.0", &format!("2.7.{switched}"));
+                let (client, task) = server(vec![
+                    (200, String::new(), health),
+                    (200, String::new(), "{}".into()),
+                    (200, String::new(), changed),
+                ])
+                .await;
+                let mut context = context(&client);
+                context.version = OpenBaoVersion::new(2, 7, selected);
+                assert!(
+                    context
+                        .execute::<serde_json::Value, ()>(
+                            Method::POST,
+                            "secret/data/test",
+                            None,
+                            None,
+                            ConsistencyPolicy::Fail,
+                        )
+                        .await
+                        .is_ok()
+                );
+                assert!(matches!(
+                    context
+                        .execute::<serde_json::Value, ()>(
+                            Method::POST,
+                            "secret/data/test",
+                            None,
+                            None,
+                            ConsistencyPolicy::Fail,
+                        )
+                        .await,
+                    Err(Error::OpenBaoCompatibilityProbe(
+                        "invalid consistency cluster identity or state"
+                    ))
+                ));
+                let requests = task.await.unwrap_or_else(|_| panic!("server failed"));
+                assert_eq!(requests.len(), 3);
+                assert!(requests[2].starts_with("GET /v1/sys/health"));
+                assert!(!requests[2].to_ascii_lowercase().contains("x-vault-token"));
             }
         }
 

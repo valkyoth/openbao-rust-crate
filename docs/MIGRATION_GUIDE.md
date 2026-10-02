@@ -1,5 +1,27 @@
 # Migration Guide
 
+## From `openbao` 2.2.0 To 2.2.1
+
+`OidcAuthUrlResponse::auth_url` changes from `String` to `SecretString`, and
+`user_code` changes from `Option<String>` to `Option<SecretString>`. This is an
+intentional source-breaking security correction in the maintenance release:
+ordinary formatting must not reveal OIDC correlation values or device codes.
+Import `openbao::ExposeSecret` and borrow `response.auth_url.expose_secret()`
+only when handing it to the browser. For device codes, explicitly access
+`response.user_code.as_ref().map(|code| code.expose_secret())` only for the
+intended user display. Do not log either value or create unnecessary owned
+copies. `Debug` is redacted; clones retain secret-backed storage. Serde scratch
+and HTTP/TLS buffers remain outside the complete sanitization guarantee.
+
+LDAP policy/group, Kerberos policy and RADIUS policy writes now reject empty
+or whitespace-only names, embedded commas and ASCII controls. Each list is
+limited to 4096 entries and 1 MiB of UTF-8 including comma separators, checked
+before wire-string allocation. Pass each policy/group as a separate item;
+do not pre-join values. Empty lists remain valid for clearing a mapping.
+
+Exact OpenBao 2.6.4 and 2.7.1 profiles are added without changing the unselected
+client's unverified 2.6.3 baseline or the 2.7 legacy-plugin exclusions.
+
 ## Request Inspection Hardening In 2.2.0
 
 The unstable `Sys::internal_request_inspection` no longer returns `JsonValue`.

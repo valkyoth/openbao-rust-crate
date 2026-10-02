@@ -31,6 +31,54 @@ struct CapturingSubscriber {
 
 struct CapturingVisitor<'a>(&'a Mutex<String>);
 
+#[cfg(feature = "jwt-auth")]
+#[tokio::test(flavor = "current_thread")]
+async fn oidc_authorization_tracing_redacts_url_and_device_code() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+    let address = listener
+        .local_addr()
+        .unwrap_or_else(|_| panic!("address failed"));
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener
+            .accept()
+            .unwrap_or_else(|_| panic!("accept failed"));
+        let _ = read_http_request_with_chunk_limit(&mut stream, 64);
+        let body = r#"{"data":{"auth_url":"https://example.invalid/?state=oidc-trace-state","user_code":"oidc-trace-code","poll_interval":5}}"#;
+        write!(stream, "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\nconnection: close\r\ncontent-length: {}\r\n\r\n{body}", body.len())
+            .unwrap_or_else(|_| panic!("response failed"));
+    });
+    let output = Arc::new(Mutex::new(String::new()));
+    let _guard = tracing::subscriber::set_default(CapturingSubscriber {
+        output: output.clone(),
+        next_span: Arc::new(AtomicU64::new(0)),
+    });
+    tracing::callsite::rebuild_interest_cache();
+    let config = OpenBaoConfig::new(format!("http://{address}"))
+        .and_then(OpenBaoConfig::allow_sensitive_local_http_for_tests)
+        .unwrap_or_else(|_| panic!("config failed"));
+    let client = Client::from_config(config).unwrap_or_else(|_| panic!("client failed"));
+    let response = client
+        .jwt()
+        .unwrap_or_else(|_| panic!("JWT mount failed"))
+        .oidc_auth_url(&openbao::auth::jwt::OidcAuthUrlRequest::device())
+        .await
+        .unwrap_or_else(|_| panic!("OIDC request failed"));
+    tracing::debug!(?response, "OIDC response redaction regression");
+    server.join().unwrap_or_else(|_| panic!("server failed"));
+    let captured = output.lock().unwrap_or_else(|error| error.into_inner());
+    assert!(captured.contains("openbao.request"));
+    assert!(captured.contains("OidcAuthUrlResponse"));
+    assert!(captured.contains("<redacted>"));
+    assert!(
+        !captured.contains("oidc-trace-state"),
+        "tracing exposed OIDC state"
+    );
+    assert!(
+        !captured.contains("oidc-trace-code"),
+        "tracing exposed OIDC code"
+    );
+}
+
 impl tracing::field::Visit for CapturingVisitor<'_> {
     fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn core::fmt::Debug) {
         let mut output = self.0.lock().unwrap_or_else(|error| error.into_inner());

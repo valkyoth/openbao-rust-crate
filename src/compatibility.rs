@@ -1073,7 +1073,7 @@ mod tests {
     #[test]
     fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
         let strict = OpenBaoCompatibilityPolicy::automatic_strict();
-        let unknown = OpenBaoVersion::new(2, 7, 1);
+        let unknown = OpenBaoVersion::new(2, 7, 2);
         assert_eq!(
             strict.evaluate_detected(unknown),
             Err(OpenBaoCompatibilityFailure::UnknownVersion(unknown))
@@ -1091,7 +1091,7 @@ mod tests {
         assert_eq!(acknowledged.detected_version(), Some(unknown));
         assert_eq!(
             acknowledged.profile_version(),
-            Some(OpenBaoVersion::new(2, 7, 0))
+            Some(OpenBaoVersion::new(2, 7, 1))
         );
         Ok(())
     }
@@ -1244,17 +1244,19 @@ mod tests {
         let versions = openbao_profile_versions();
 
         assert_eq!(operations.len(), 707);
-        assert_eq!(versions.len(), 26);
+        assert_eq!(versions.len(), 28);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
         assert_eq!(versions[21], OpenBaoVersion::new(2, 6, 0));
         assert_eq!(versions[22], OpenBaoVersion::new(2, 6, 1));
         assert_eq!(versions[23], OpenBaoVersion::new(2, 6, 2));
         assert_eq!(versions[24], OpenBaoVersion::new(2, 6, 3));
-        assert_eq!(versions[25], OpenBaoVersion::new(2, 7, 0));
+        assert_eq!(versions[25], OpenBaoVersion::new(2, 6, 4));
+        assert_eq!(versions[26], OpenBaoVersion::new(2, 7, 0));
+        assert_eq!(versions[27], OpenBaoVersion::new(2, 7, 1));
         assert_eq!(
             latest_routable_profile(),
-            Some(OpenBaoVersion::new(2, 7, 0))
+            Some(OpenBaoVersion::new(2, 7, 1))
         );
         assert!(is_routable_profile(OpenBaoVersion::new(2, 5, 5)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 0)));
@@ -1262,6 +1264,10 @@ mod tests {
         assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 2)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 3)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 7, 0)));
+        assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 4)));
+        assert!(is_routable_profile(OpenBaoVersion::new(2, 7, 1)));
+        assert!(!is_routable_profile(OpenBaoVersion::new(2, 6, 5)));
+        assert!(!is_routable_profile(OpenBaoVersion::new(2, 7, 2)));
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 6, 0)).is_some());
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 4, 2)).is_none());
 
@@ -1386,15 +1392,20 @@ mod tests {
 
         for endpoint in endpoints {
             let variants = endpoint.variants();
-            assert_eq!(variants.len(), 2);
+            assert_eq!(variants.len(), 3);
             assert_eq!(variants[0].minimum(), OpenBaoVersion::new(2, 0, 0));
             assert_eq!(variants[0].maximum(), OpenBaoVersion::new(2, 5, 5));
             assert_eq!(variants[1].minimum(), OpenBaoVersion::new(2, 6, 0));
             assert_eq!(variants[1].maximum(), OpenBaoVersion::new(2, 7, 0));
+            assert_eq!(variants[2].minimum(), OpenBaoVersion::new(2, 7, 1));
+            assert_eq!(variants[2].maximum(), OpenBaoVersion::new(2, 7, 1));
+            assert_eq!(variants[1].operation_id(), variants[2].operation_id());
             assert_ne!(variants[0].operation_id(), variants[1].operation_id());
             for (variant, version) in [
                 (variants[0], OpenBaoVersion::new(2, 5, 5)),
                 (variants[1], OpenBaoVersion::new(2, 6, 0)),
+                (variants[1], OpenBaoVersion::new(2, 6, 4)),
+                (variants[2], OpenBaoVersion::new(2, 7, 1)),
             ] {
                 let operation = openbao_operation(variant.operation_id())
                     .unwrap_or_else(|| panic!("missing root-generation operation"));
@@ -1420,7 +1431,12 @@ mod tests {
                 .find(|operation| operation.path_template() == path)
                 .unwrap_or_else(|| panic!("missing historical externalized engine route"));
             for version in super::openbao_profile_versions() {
-                if *version == OpenBaoVersion::new(2, 7, 0) {
+                if *version >= OpenBaoVersion::new(2, 7, 0) {
+                    assert!(super::requires_unverified_external_plugin(path, *version));
+                    assert_eq!(
+                        operation.availability(*version),
+                        Some(OpenBaoCapabilityAvailability::SecurityBlocked)
+                    );
                     continue;
                 }
                 assert!(!super::requires_unverified_external_plugin(path, *version));

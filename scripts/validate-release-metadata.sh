@@ -128,11 +128,11 @@ check_file .github/workflows/ci.yml
 check_file .github/workflows/openbao-compatibility.yml
 
 check_grep 'name = "openbao"' Cargo.toml
-check_grep 'version = "2.2.0"' Cargo.toml
+check_grep 'version = "2.2.1"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep '"/tests/package_smoke.rs"' Cargo.toml
-check_grep 'channel = "1.98.1"' rust-toolchain.toml
+check_grep 'channel = "1.99.0"' rust-toolchain.toml
 check_grep 'rustup toolchain install 1.90.0' scripts/ci_install_rust.sh
 check_grep 'cargo +1.90.0 check --locked --all-targets --all-features' scripts/checks.sh
 check_grep 'generate_openbao_contract_matrix.py --verify' scripts/checks.sh
@@ -149,16 +149,16 @@ check_grep 'workflow_dispatch:' .github/workflows/openbao-compatibility.yml
 check_grep 'persist-credentials: false' .github/workflows/openbao-compatibility.yml
 check_grep 'openbao_ci_matrix.py aggregate' .github/workflows/openbao-compatibility.yml
 check_grep 'scripts/release_2_0_gate.sh' release-notes/RELEASE_NOTES_2.0.0.md
-check_grep 'version = "=2.2.0"' fuzz/Cargo.toml
-check_grep 'version = "=2.2.0"' tests/fixtures/reqwest-native-unification/Cargo.toml
+check_grep 'version = "=2.2.1"' fuzz/Cargo.toml
+check_grep 'version = "=2.2.1"' tests/fixtures/reqwest-native-unification/Cargo.toml
 check_file docs/OPENBAO_2_7_0_PLAN.md
 check_file docs/OPENBAO_2_7_0_REVIEW.md
 check_file docs/OPENBAO_2_7_0_PLUGIN_REVIEW.md
 check_file compat/onboarding/2.7.0/plugin-availability.json
 check_file deploy/podman/profile.json
 check_file compat/onboarding/2.7.0/api-evidence.lock.json
-check_file release-notes/RELEASE_NOTES_2.2.0.md
-check_grep 'Version: 2.2.0' release-notes/RELEASE_NOTES_2.2.0.md
+check_file release-notes/RELEASE_NOTES_2.2.1.md
+check_grep 'Version: 2.2.1' release-notes/RELEASE_NOTES_2.2.1.md
 check_grep 'openbao_2_7_source_inventory.py --verify' scripts/checks.sh
 check_grep 'openbao_2_7_source_inventory.py --self-test' scripts/checks.sh
 check_grep 'openbao_2_7_api.py --verify' scripts/checks.sh
@@ -348,5 +348,8 @@ if git grep -n -E -- "$private_key_pattern" -- ':!scripts/validate-release-metad
   git grep -n -E -- "$private_key_pattern" -- ':!scripts/validate-release-metadata.sh' >&2
   exit 1
 fi
+
+/usr/bin/python3 -E -s -S -B scripts/check_security_documentation.py
+/usr/bin/python3 -E -s -S -B scripts/test_security_documentation.py
 
 echo "release metadata ok"

@@ -4637,6 +4637,10 @@ mod tests {
                 OpenBaoVersion::new(2, 7, 0),
                 "/sys/internal/inspect/request",
             ),
+            (
+                OpenBaoVersion::new(2, 7, 1),
+                "/sys/internal/inspect/request",
+            ),
         ] {
             let resolved = resolve_openbao_endpoint_for_profile(endpoint, version)
                 .unwrap_or_else(|error| panic!("{error}"));
@@ -4644,7 +4648,7 @@ mod tests {
             assert_eq!(resolved.operation().path_template(), path);
         }
         for version in crate::compatibility::openbao_profile_versions() {
-            if *version == OpenBaoVersion::new(2, 5, 5) || *version == OpenBaoVersion::new(2, 7, 0)
+            if *version == OpenBaoVersion::new(2, 5, 5) || *version >= OpenBaoVersion::new(2, 7, 0)
             {
                 continue;
             }

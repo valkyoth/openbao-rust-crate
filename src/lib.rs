@@ -210,6 +210,29 @@ pub mod compatibility;
 pub mod consistency;
 pub mod duration;
 mod error;
+#[cfg(all(
+    test,
+    feature = "sys",
+    feature = "approle",
+    feature = "transit",
+    feature = "transit-bytes",
+    feature = "kv1",
+    feature = "kv2",
+    feature = "token",
+    feature = "ldap-auth",
+    feature = "kerberos-auth",
+    feature = "radius-auth",
+    feature = "ldap"
+))]
+mod patch_264_live;
+#[cfg(all(
+    test,
+    feature = "sys",
+    feature = "approle",
+    feature = "transit",
+    feature = "transit-bytes"
+))]
+mod patch_271_live;
 mod path;
 pub mod plugin;
 pub mod policy;

@@ -6,8 +6,8 @@ import argparse
 import openbao_2_7_mfa_totp as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/mfa-totp-tls.json"
-EXPECTED_SHA256 = "006b5ed1ac04b30772f0623b13fdbe0a67f29c3bae28c0f9f0aa2d3990285a05"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/mfa-totp-tls-v2.json"
+EXPECTED_SHA256 = "7dbf7c30131905327b91bb42962d87a99ed508a00114acb567c29294bc28ac3b"
 
 
 def verify():
@@ -28,7 +28,7 @@ def main():
     except (fixture.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
         print("MFA enrollment evidence verification failed")
         return 1
-    print("MFA enrollment server evidence verified; erasure not claimed; public profile remains blocked")
+    print("MFA enrollment server evidence verified; no erasure, SDK integration or release-approval claim")
     return 0
 
 

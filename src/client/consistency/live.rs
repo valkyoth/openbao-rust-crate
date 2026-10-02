@@ -12,7 +12,7 @@ struct Fixture {
     token: SecretString,
 }
 
-fn checked<T, E>(result: core::result::Result<T, E>) -> T {
+pub(super) fn checked<T, E>(result: core::result::Result<T, E>) -> T {
     #[allow(clippy::panic)]
     result.unwrap_or_else(|_| panic!("staged consistency TLS assertion failed"))
 }
@@ -35,12 +35,13 @@ fn client(fixture: &Fixture, address: &str) -> Client<Authenticated> {
 async fn context(client: &Client<Authenticated>) -> ConsistencyContext<'_> {
     ConsistencyContext {
         client,
-        cluster: checked(discover_cluster(client).await),
+        cluster: checked(discover_cluster(client, OpenBaoVersion::new(2, 7, 0)).await),
+        version: OpenBaoVersion::new(2, 7, 0),
         identity: Arc::new(()),
     }
 }
 
-fn future_index(context: &ConsistencyContext<'_>) -> ScopedConsistencyIndex {
+pub(super) fn future_index(context: &ConsistencyContext<'_>) -> ScopedConsistencyIndex {
     let value = json!({"cluster": context.cluster.expose_secret(), "value": u64::MAX.to_string()});
     let encoded =
         checked(base64_ng::STANDARD.encode_secret(checked(serde_json::to_vec(&value)).as_slice()));
@@ -92,6 +93,7 @@ async fn staged_consistency_tls() {
         let other = ConsistencyContext {
             client: &client,
             cluster: context.cluster.clone(),
+            version: context.version,
             identity: Arc::new(()),
         };
         assert!(matches!(
@@ -163,7 +165,7 @@ async fn staged_consistency_tls() {
     }
 }
 
-fn line(limit: usize) -> SecretVec {
+pub(super) fn line(limit: usize) -> SecretVec {
     let mut writer = BoundedSecretWriter::new(limit);
     let mut input = std::io::stdin().lock();
     loop {
@@ -176,11 +178,11 @@ fn line(limit: usize) -> SecretVec {
     }
 }
 
-fn command(expected: &str) {
+pub(super) fn command(expected: &str) {
     assert!(line(64).with_secret(|bytes| bytes == expected.as_bytes()));
 }
 
-fn event(name: &str) {
+pub(super) fn event(name: &str) {
     let mut output = std::io::stdout().lock();
     checked(writeln!(output, "CONSISTENCY:{name}"));
     checked(output.flush());
