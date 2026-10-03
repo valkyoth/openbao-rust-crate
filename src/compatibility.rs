@@ -740,14 +740,7 @@ impl OpenBaoOperation {
 // cannot establish a separately installed plugin's identity or contract.
 pub(crate) fn requires_unverified_external_plugin(path: &str, version: OpenBaoVersion) -> bool {
     version >= OpenBaoVersion::new(2, 7, 0)
-        && ["/auth/ldap", "/auth/kerberos", "/auth/radius", "/ldap"]
-            .iter()
-            .any(|prefix| {
-                path == *prefix
-                    || path
-                        .strip_prefix(prefix)
-                        .is_some_and(|suffix| suffix.starts_with('/'))
-            })
+        && crate::plugin::ExternalPluginKind::for_path(path).is_some()
 }
 
 pub(crate) fn select_capability_range(

@@ -353,6 +353,7 @@ pub struct OpenBaoConfig {
     crl_pem_bundles: Vec<Vec<u8>>,
     client_identity: Option<Identity>,
     compatibility_policy: Option<OpenBaoCompatibilityPolicy>,
+    external_plugins: Vec<crate::plugin::ExternalPluginSelection>,
     #[cfg(feature = "sensitive-http-test-only")]
     allow_sensitive_local_http_for_tests: bool,
 }
@@ -384,6 +385,7 @@ impl OpenBaoConfig {
             crl_pem_bundles: Vec::new(),
             client_identity: None,
             compatibility_policy: None,
+            external_plugins: Vec::new(),
             #[cfg(feature = "sensitive-http-test-only")]
             allow_sensitive_local_http_for_tests: false,
         })
@@ -566,6 +568,32 @@ impl OpenBaoConfig {
     pub fn compatibility_policy(mut self, policy: OpenBaoCompatibilityPolicy) -> Self {
         self.compatibility_policy = Some(policy);
         self
+    }
+
+    /// Records an exact expected external-plugin deployment in this namespace.
+    ///
+    /// This does not prove installation or promote a plugin contract. Missing
+    /// contracts still fail before typed transport. At most 32 distinct mounts
+    /// may be selected; duplicate auth mounts and duplicate secret mounts fail.
+    pub fn external_plugin(
+        mut self,
+        selection: crate::plugin::ExternalPluginSelection,
+    ) -> Result<Self> {
+        if self.external_plugins.len() >= 32
+            || self
+                .external_plugins
+                .iter()
+                .any(|existing| existing.same_mount(&selection))
+        {
+            return Err(Error::InvalidParameter(
+                "external plugin mount selection is duplicate or exceeds its limit".into(),
+            ));
+        }
+        self.external_plugins
+            .try_reserve(1)
+            .map_err(|_| Error::Internal("external plugin selection allocation failed"))?;
+        self.external_plugins.push(selection);
+        Ok(self)
     }
 
     /// Sets the minimum TLS protocol version.
@@ -790,6 +818,7 @@ impl fmt::Debug for OpenBaoConfig {
             .field("root_certificate_mode", &self.root_certificate_mode)
             .field("crl_bundle_count", &self.crl_pem_bundles.len())
             .field("has_client_identity", &self.client_identity.is_some())
+            .field("external_plugin_count", &self.external_plugins.len())
             .field(
                 "compatibility_policy",
                 &self
@@ -1679,6 +1708,7 @@ impl<State> Client<State> {
         requested_method: &Method,
         registry_path: &str,
         query: &[(K, Q)],
+        plugin_mount: Option<&str>,
     ) -> Result<ResolvedOpenBaoEndpoint>
     where
         Q: AsRef<str>,
@@ -1738,22 +1768,38 @@ impl<State> Client<State> {
         // An acknowledged newer server must not regain removed built-ins by
         // selecting an older fallback profile. No probe means no server claim.
         let server_version = report.detected_version().unwrap_or(version);
-        if crate::compatibility::requires_unverified_external_plugin(
-            operation.path_template(),
-            server_version,
-        ) {
+        let plugin_selection =
+            crate::plugin::ExternalPluginKind::for_path(operation.path_template())
+                .zip(plugin_mount)
+                .and_then(|(kind, mount)| {
+                    self.config
+                        .external_plugins
+                        .iter()
+                        .find(|selection| selection.matches_mount_scope(kind, mount))
+                });
+        let requires_plugin = plugin_selection.is_some()
+            || crate::compatibility::requires_unverified_external_plugin(
+                operation.path_template(),
+                server_version,
+            );
+        let plugin_contract =
+            plugin_selection.is_some_and(|selection| selection.supports(report, operation));
+        if requires_plugin && !plugin_contract {
             return Err(Error::UnsupportedOpenBaoCapability {
                 endpoint: operation.id(),
                 version: server_version,
             });
         }
-        if !matches!(
-            operation.availability(version),
-            Some(OpenBaoCapabilityAvailability::DocumentedRoute)
-        ) || !matches!(
-            operation.disposition(),
-            OpenBaoOperationDisposition::Typed | OpenBaoOperationDisposition::TypedGated
-        ) {
+        if (!plugin_contract
+            && !matches!(
+                operation.availability(version),
+                Some(OpenBaoCapabilityAvailability::DocumentedRoute)
+            ))
+            || !matches!(
+                operation.disposition(),
+                OpenBaoOperationDisposition::Typed | OpenBaoOperationDisposition::TypedGated
+            )
+        {
             return Err(Error::UnsupportedOpenBaoCapability {
                 endpoint: operation.id(),
                 version,
@@ -1776,6 +1822,15 @@ impl<State> Client<State> {
         Q: AsRef<str>,
         K: AsRef<str>,
     {
+        let plugin_mount = match &binding {
+            RegisteredRouteBinding::AuthMount { actual_mount, .. }
+            | RegisteredRouteBinding::SecretMount { actual_mount, .. } => Some(*actual_mount),
+            RegisteredRouteBinding::Exact { path, .. } => {
+                crate::plugin::ExternalPluginKind::for_path(path)
+                    .map(|kind| kind.documented_mount())
+            }
+            RegisteredRouteBinding::IdentityMount { .. } => None,
+        };
         let (scope_prefix, registry_path, wire_path) = match binding {
             RegisteredRouteBinding::Exact { scope_prefix, path } => {
                 validate_endpoint_path(path)?;
@@ -1811,6 +1866,7 @@ impl<State> Client<State> {
                 requested_method,
                 &registry_path,
                 query,
+                plugin_mount,
             )
             .await?;
         Ok(RegisteredOpenBaoRoute {

@@ -1882,9 +1882,10 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
 
 #[tokio::test]
 async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() {
-    for (engine, version) in ["ldap-secret", "ldap-auth", "kerberos", "radius"]
+    for (engine, version, selected) in ["ldap-secret", "ldap-auth", "kerberos", "radius"]
         .into_iter()
         .flat_map(|engine| [0, 1, 2].map(|patch| (engine, OpenBaoVersion::new(2, 7, patch))))
+        .flat_map(|(engine, version)| [false, true].map(|selected| (engine, version, selected)))
     {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
         let addr = listener
@@ -1911,6 +1912,29 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
                 )
             })
             .unwrap_or_else(|error| panic!("{error}"));
+        let config = if selected {
+            use openbao::plugin::{ExternalPluginKind as Kind, ExternalPluginSelection};
+            let (kind, mount) = match engine {
+                "ldap-secret" => (Kind::LdapSecrets, "ldap"),
+                "ldap-auth" => (Kind::LdapAuth, "ldap"),
+                "kerberos" => (Kind::KerberosAuth, "kerberos"),
+                "radius" => (Kind::RadiusAuth, "radius"),
+                _ => panic!("unknown test engine"),
+            };
+            let item = ExternalPluginSelection::new(
+                kind,
+                version.min(OpenBaoVersion::new(2, 7, 1)),
+                mount,
+                "v0.1.0",
+                kind.binary_sha256(),
+            )
+            .unwrap_or_else(|_| panic!("selection failed"));
+            config
+                .external_plugin(item)
+                .unwrap_or_else(|_| panic!("config failed"))
+        } else {
+            config
+        };
         let client = Client::from_config(config).unwrap_or_else(|error| panic!("{error}"));
         let operation = async {
             match engine {
@@ -1949,6 +1973,62 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
         assert!(
             matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
         );
+    }
+}
+
+#[tokio::test]
+async fn declared_external_plugin_cannot_use_assumed_builtin_profile_or_custom_mount() {
+    use openbao::plugin::{ExternalPluginKind as Kind, ExternalPluginSelection};
+    for version in [OpenBaoVersion::new(2, 6, 4), OpenBaoVersion::new(2, 7, 0)] {
+        for mount in ["ldap", "custom/ldap"] {
+            let listener =
+                TcpListener::bind("127.0.0.1:0").unwrap_or_else(|_| panic!("bind failed"));
+            listener
+                .set_nonblocking(true)
+                .unwrap_or_else(|_| panic!("nonblocking failed"));
+            let address = listener
+                .local_addr()
+                .unwrap_or_else(|_| panic!("address failed"));
+            let item = ExternalPluginSelection::new(
+                Kind::LdapAuth,
+                OpenBaoVersion::new(2, 7, 0),
+                mount,
+                "v0.1.0",
+                Kind::LdapAuth.binary_sha256(),
+            )
+            .unwrap_or_else(|_| panic!("selection failed"));
+            let policy = OpenBaoCompatibilityPolicy::assume(version)
+                .unwrap_or_else(|_| panic!("policy failed"));
+            let config = OpenBaoConfig::new(format!("http://{address}"))
+                .and_then(allow_mock_http)
+                .map(|config| config.compatibility_policy(policy))
+                .and_then(|config| config.external_plugin(item))
+                .unwrap_or_else(|_| panic!("config failed"));
+            let client = Client::from_config(config).unwrap_or_else(|_| panic!("client failed"));
+            let result = client
+                .ldap_auth_at(mount)
+                .unwrap_or_else(|_| panic!("mount failed"))
+                .login("alice", test_secret(&["test-", "password"]))
+                .await;
+            assert!(matches!(
+                result,
+                Err(Error::UnsupportedOpenBaoCapability { .. })
+            ));
+            // A declared LDAP auth mount must not be treated as a built-in
+            // Kerberos mount merely because an older profile was assumed.
+            let result = client
+                .kerberos_auth_at(mount)
+                .unwrap_or_else(|_| panic!("mount failed"))
+                .login(test_secret(&["test-", "spnego"]))
+                .await;
+            assert!(matches!(
+                result,
+                Err(Error::UnsupportedOpenBaoCapability { .. })
+            ));
+            assert!(
+                matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+            );
+        }
     }
 }
 

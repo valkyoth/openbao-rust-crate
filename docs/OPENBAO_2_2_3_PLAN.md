@@ -11,9 +11,11 @@ unchanged.
    releases, archive/signature/checksum/SBOM digests, extracted binary digests,
    source tag commit and the published release signing key. Retain bounded,
    artifact-only evidence and trust-boundary regression tests.
-2. Plugin-aware compatibility: pending. Explicitly select verified plugin
-   contracts independently of the server profile. Preserve older built-ins
-   and reject absent, unknown or mismatched plugins before typed transport.
+2. Plugin-aware compatibility foundation: implemented with closed contracts.
+   Select exact artifact/server identities per mount independently of the
+   built-in server profile; reject unknown identities and duplicate mounts.
+   Preserve older built-ins. All plugin contracts remain closed until their
+   positive/negative SDK fixtures pass in checkpoints 3-5.
 3. LDAP auth and secrets: pending. Real directory services, successful and
    rejected authentication, mappings, generated credentials, rotation,
    revocation and cleanup on both 2.7.0 and 2.7.1.
@@ -74,3 +76,33 @@ a reproducible build, server/plugin protocol compatibility or full functional
 SDK coverage. Local host, Python, GPG and TLS trust remain prerequisites. Future
 privileged fixtures must independently protect tool paths and install the exact
 verified binary without a hash-to-execution race.
+
+## Compatibility Foundation
+
+`plugin::ExternalPluginSelection` records an expected v0.1.0 Linux amd64
+artifact, exact 2.7.0 or 2.7.1 target and canonical mount. Construction rejects
+unreviewed versions, digests, platforms and server targets. The generated Rust
+binary digest constants are checked against the immutable artifact lock.
+`OpenBaoConfig::external_plugin` accepts at most 32 selections, rejects duplicate
+mounts within auth/secret scope and redacts mount names in diagnostics. Cloned
+clients retain the same namespace-bound configuration.
+
+This selection is a caller deployment assertion, not remote attestation. A
+server health response does not prove which plugin is installed. Checkpoints
+3-5 must establish installation checks and the trust boundary for login clients
+that cannot query privileged catalog APIs. No release claim may silently treat
+an assertion as server-verified binary identity.
+
+The typed route resolver binds actual mounts separately from documented mount
+names. Its plugin branch requires the selected engine and mount, matching
+detected and routing server versions, verified compatibility status and an
+explicit per-operation reviewed contract. The contract table is deliberately
+empty at this checkpoint. There is no fallback to old built-in route evidence,
+wildcard approval, or permission gained from merely selecting a plugin. Assumed,
+unverified and unknown-newer clients cannot satisfy this branch. Existing feature
+acknowledgements and typed dispositions remain enforced.
+
+The production-source edits invalidate affected current-input SDK evidence.
+Historical captures remain unchanged; fresh SDK/CI evidence will be collected
+after implementation stabilizes, before checkpoint 6 release approval. A stale
+capture must fail validation, not be repinned or exempted to keep CI green.

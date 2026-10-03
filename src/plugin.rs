@@ -1,5 +1,9 @@
 //! Safe building blocks for typed custom OpenBao plugin wrappers.
 
+mod artifacts;
+mod compatibility;
+pub use compatibility::{ExternalPluginKind, ExternalPluginSelection};
+
 use crate::{
     Authenticated, Client, Result,
     path::{validate_endpoint_path, validate_mount_path},
