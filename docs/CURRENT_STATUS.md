@@ -27,8 +27,10 @@ removed and previous executions are not relabelled.
 The historical 25-release CI matrix is preserved. Supplemental live CI checks
 exercise eight public SDK core operations over verified TLS on `2.6.4`, `2.7.0`
 and `2.7.1`. A coverage guard checks the union against all supported profiles.
-All three supplemental profiles passed locally; their source-bound reports
-are retained under `compat/ci/2.2.2/` with pinned validators and mutation tests.
+All three supplemental profiles passed locally; their final source-bound `-v3`
+reports are retained under `compat/ci/2.2.2/` with pinned validators and mutation
+tests. The final fixture also passed all three profiles on GitHub's Ubuntu 26.04
+runner, which supports the strict isolation required by these jobs.
 These jobs are not substitutes for advanced or multi-node fixture evidence.
 See the [2.2.2 release notes](../release-notes/RELEASE_NOTES_2.2.2.md) for
 the separate final evidence and CI release gates.
