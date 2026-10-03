@@ -1887,6 +1887,13 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
         .flat_map(|engine| [0, 1, 2].map(|patch| (engine, OpenBaoVersion::new(2, 7, patch))))
         .flat_map(|(engine, version)| [false, true].map(|selected| (engine, version, selected)))
     {
+        if selected
+            && matches!(engine, "ldap-secret" | "ldap-auth")
+            && version <= OpenBaoVersion::new(2, 7, 1)
+        {
+            // Exact reviewed LDAP pairs are covered by positive transport tests.
+            continue;
+        }
         let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
         let addr = listener
             .local_addr()
@@ -1973,6 +1980,74 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
         assert!(
             matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
         );
+    }
+}
+
+#[tokio::test]
+async fn reviewed_external_ldap_exact_pairs_use_the_selected_custom_mount() {
+    use openbao::plugin::{ExternalPluginKind, ExternalPluginSelection};
+    for version in [OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            for step in 0..2 {
+                let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+                let request = read_http_request(&mut stream);
+                if step == 0 {
+                    assert!(request.starts_with("GET /v1/sys/health "));
+                    assert!(!request.contains("fixture-client-token"));
+                    write_json_response(
+                        &mut stream,
+                        "200 OK",
+                        &format!(r#"{{"initialized":true,"sealed":false,"version":"{version}"}}"#),
+                    );
+                } else {
+                    assert!(request.starts_with("GET /v1/custom/ldap/config "));
+                    assert!(request.contains("x-vault-token: fixture-client-token"));
+                    write_json_response(
+                        &mut stream,
+                        "200 OK",
+                        r#"{"data":{"binddn":"cn=manager","schema":"openldap","url":"ldaps://directory.example.com:636"}}"#,
+                    );
+                }
+            }
+        });
+        let kind = ExternalPluginKind::LdapSecrets;
+        let selection = ExternalPluginSelection::new(
+            kind,
+            version,
+            "custom/ldap",
+            "v0.1.0",
+            kind.binary_sha256(),
+        )
+        .unwrap_or_else(|_| panic!("selection failed"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .map(|config| {
+                config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict())
+            })
+            .and_then(|config| config.external_plugin(selection))
+            .unwrap_or_else(|_| panic!("configuration failed"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|_| panic!("client failed"))
+            .with_token(test_secret(&["fixture-client-", "token"]));
+        let config = tokio::time::timeout(Duration::from_secs(2), async {
+            client
+                .ldap_at("custom/ldap")
+                .unwrap_or_else(|_| panic!("mount failed"))
+                .read_config()
+                .await
+        })
+        .await
+        .unwrap_or_else(|_| panic!("transport timed out"))
+        .unwrap_or_else(|_| panic!("reviewed operation failed"));
+        assert_eq!(config.schema.as_deref(), Some("openldap"));
+        assert!(config.bindpass.expose_secret().is_empty());
+        server
+            .join()
+            .unwrap_or_else(|_| panic!("mock server failed"));
     }
 }
 
@@ -10448,9 +10523,7 @@ async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
                 }
                 1 => {
                     assert!(request.starts_with("GET /v1/ldap/config HTTP/1.1"));
-                    format!(
-                        r#"{{"data":{{"binddn":"cn=openbao,ou=Users,dc=example,dc=com","bindpass":"{bindpass}","url":"ldaps://ldap.example.com:636","schema":"openldap","connection_timeout":30,"request_timeout":"90s"}}}}"#
-                    )
+                    r#"{"data":{"binddn":"cn=openbao,ou=Users,dc=example,dc=com","url":"ldaps://ldap.example.com:636","schema":"openldap","connection_timeout":30,"request_timeout":"90s"}}"#.to_owned()
                 }
                 2 => {
                     assert!(request.starts_with("POST /v1/ldap/rotate-root HTTP/1.1"));
@@ -10468,7 +10541,7 @@ async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
                         .to_owned()
                 }
                 5 => {
-                    assert!(request.starts_with("GET /v1/ldap/static-role HTTP/1.1"));
+                    assert!(request.starts_with("GET /v1/ldap/static-role?list=true HTTP/1.1"));
                     r#"{"data":{"keys":["app"]}}"#.to_owned()
                 }
                 6 => {
@@ -10518,7 +10591,7 @@ async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
                 }
                 14 => {
                     assert!(request.starts_with("GET /v1/ldap/library/accounts/status HTTP/1.1"));
-                    r#"{"data":{"service_account_names":{"svc-a@example.com":{"checked_out":false},"svc-b@example.com":{"checked_out":true,"borrower_entity_id":"entity-id-1"}}}}"#
+                    r#"{"data":{"svc-a@example.com":{"available":true},"svc-b@example.com":{"available":false,"borrower_entity_id":"entity-id-1"}}}"#
                         .to_owned()
                 }
                 15 => {
@@ -10581,6 +10654,11 @@ async fn ldap_config_roles_credentials_and_library_use_documented_paths() {
         .await
         .unwrap_or_else(|error| panic!("{error}"));
     assert_eq!(config.schema.as_deref(), Some("openldap"));
+    assert!(config.bindpass.expose_secret().is_empty());
+    assert!(matches!(
+        ldap.write_config(&config).await,
+        Err(Error::InvalidParameter(_))
+    ));
     ldap.rotate_root()
         .await
         .unwrap_or_else(|error| panic!("{error}"));

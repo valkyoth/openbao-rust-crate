@@ -159,13 +159,19 @@ impl ExternalPluginSelection {
     }
 }
 
-// Empty until positive/negative public-SDK evidence promotes each exact pair.
 // Never substitute the old built-in registry or a whole route-family wildcard.
 fn reviewed_operations(
-    _kind: ExternalPluginKind,
-    _server: OpenBaoVersion,
+    kind: ExternalPluginKind,
+    server: OpenBaoVersion,
 ) -> &'static [&'static str] {
-    &[]
+    if ![OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)].contains(&server) {
+        return &[];
+    }
+    match kind {
+        ExternalPluginKind::LdapAuth => super::ldap_contracts::AUTH,
+        ExternalPluginKind::LdapSecrets => super::ldap_contracts::SECRETS,
+        ExternalPluginKind::KerberosAuth | ExternalPluginKind::RadiusAuth => &[],
+    }
 }
 
 impl fmt::Debug for ExternalPluginSelection {
@@ -338,7 +344,7 @@ mod tests {
     }
 
     #[test]
-    fn artifact_selection_never_promotes_contracts() {
+    fn only_reviewed_ldap_operations_are_promoted_for_verified_exact_servers() {
         for kind in KINDS {
             for server in [OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)] {
                 let selected = selection(kind, server);
@@ -350,7 +356,8 @@ mod tests {
                     server,
                 );
                 for operation in crate::compatibility::openbao_operations() {
-                    assert!(!selected.supports(verified, *operation));
+                    let approved = reviewed_operations(kind, server).contains(&operation.id());
+                    assert_eq!(selected.supports(verified, *operation), approved);
                     assert!(
                         !selected.supports(OpenBaoCompatibilityReport::assumed(server), *operation)
                     );
@@ -359,6 +366,15 @@ mod tests {
                     );
                     assert!(!selected.supports(unknown, *operation));
                 }
+            }
+        }
+        assert_eq!(
+            super::super::ldap_contracts::AUTH.len() + super::super::ldap_contracts::SECRETS.len(),
+            33
+        );
+        for kind in KINDS {
+            for version in [OpenBaoVersion::new(2, 6, 4), OpenBaoVersion::new(2, 7, 2)] {
+                assert!(reviewed_operations(kind, version).is_empty());
             }
         }
     }

@@ -30,7 +30,9 @@ pub struct Ldap<'a> {
 pub struct LdapConfig {
     /// Distinguished name used by OpenBao to manage LDAP entries.
     pub binddn: String,
-    /// Password used with `binddn`.
+    /// Password used with `binddn`. Configuration reads omit this secret and
+    /// decode it as empty; supply an explicit password before writing.
+    #[serde(default = "empty_bind_password")]
     pub bindpass: SecretString,
     /// LDAP server URL or comma-separated URL list.
     ///
@@ -117,6 +119,11 @@ impl LdapConfig {
     }
 
     fn validate(&self) -> Result<()> {
+        if self.bindpass.expose_secret().is_empty() {
+            return Err(Error::InvalidParameter(
+                "LDAP configuration writes require an explicit bind password".into(),
+            ));
+        }
         #[cfg(not(feature = "insecure-ldap-tls-acknowledged"))]
         if self.insecure_tls == Some(true) {
             return Err(crate::Error::InvalidParameter(
@@ -137,6 +144,10 @@ impl LdapConfig {
         }
         Ok(())
     }
+}
+
+fn empty_bind_password() -> SecretString {
+    SecretString::from("")
 }
 
 impl fmt::Debug for LdapConfig {
@@ -436,31 +447,57 @@ impl LdapLibrarySet {
 }
 
 /// LDAP library status response.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default)]
 pub struct LdapLibraryStatus {
     /// Service account statuses.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_bounded_library_account_map_or_default"
-    )]
     pub service_account_names: BTreeMap<String, LdapLibraryAccountStatus>,
 }
 
+impl<'de> Deserialize<'de> for LdapLibraryStatus {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserialize_bounded_library_account_map(deserializer).map(|service_account_names| Self {
+            service_account_names,
+        })
+    }
+}
+
 /// Status for one LDAP library service account.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default)]
 pub struct LdapLibraryAccountStatus {
     /// Service account name.
-    #[serde(default)]
     pub service_account_name: String,
     /// Whether the service account is checked out.
-    #[serde(default)]
     pub checked_out: bool,
     /// Current borrower client token, when returned.
-    #[serde(default)]
     pub borrower_client_token: Option<SecretString>,
     /// Current borrower entity ID, when returned.
-    #[serde(default)]
     pub borrower_entity_id: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for LdapLibraryAccountStatus {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Account {
+            available: bool,
+            #[serde(default)]
+            borrower_client_token: Option<SecretString>,
+            #[serde(default)]
+            borrower_entity_id: Option<String>,
+        }
+        let account = Account::deserialize(deserializer)?;
+        Ok(Self {
+            service_account_name: String::new(),
+            checked_out: !account.available,
+            borrower_client_token: account.borrower_client_token,
+            borrower_entity_id: account.borrower_entity_id,
+        })
+    }
 }
 
 /// LDAP library checkout request.
@@ -801,16 +838,22 @@ impl Ldap<'_> {
     }
 
     async fn list_at(&self, tail: &[&str]) -> Result<LdapList> {
-        let method = if tail == ["static-role"] {
+        let static_roles = tail == ["static-role"];
+        let method = if static_roles {
             Method::GET
         } else {
             Method::from_bytes(b"LIST").map_err(|error| Error::InvalidHeader(error.to_string()))?
+        };
+        let query = if static_roles {
+            vec![("list", "true".to_owned())]
+        } else {
+            Vec::new()
         };
         let envelope: ResponseEnvelope<LdapList> = self
             .request_query(
                 method,
                 &self.path(tail)?,
-                &[],
+                &query,
                 Option::<&Empty>::None,
                 &[StatusCode::OK],
             )
@@ -1057,22 +1100,6 @@ impl<'de> Visitor<'de> for OptionalStringOrU64Visitor {
     }
 }
 
-fn deserialize_bounded_library_account_map_or_default<'de, D>(
-    deserializer: D,
-) -> core::result::Result<BTreeMap<String, LdapLibraryAccountStatus>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Option::<BoundedLibraryAccountMap>::deserialize(deserializer)
-        .map(|value| value.map(|value| value.0).unwrap_or_default())
-}
-
-#[derive(Deserialize)]
-struct BoundedLibraryAccountMap(
-    #[serde(deserialize_with = "deserialize_bounded_library_account_map")]
-    BTreeMap<String, LdapLibraryAccountStatus>,
-);
-
 fn deserialize_bounded_library_account_map<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<String, LdapLibraryAccountStatus>, D::Error>
@@ -1098,23 +1125,20 @@ impl<'de, const MAX: usize> Visitor<'de> for BoundedLibraryAccountMapVisitor<MAX
         A: serde::de::MapAccess<'de>,
     {
         let mut values = BTreeMap::new();
-        while values.len() < MAX {
-            let Some((key, value)) = map.next_entry::<String, LdapLibraryAccountStatus>()? else {
-                return Ok(values);
-            };
-            if values.insert(key, value).is_some() {
+        while let Some(key) = map.next_key::<String>()? {
+            if values.len() == MAX {
+                return Err(serde::de::Error::custom(
+                    "OpenBao LDAP library account map exceeds item limit",
+                ));
+            }
+            if values.contains_key(&key) {
                 return Err(serde::de::Error::custom(
                     "OpenBao response map contains a duplicate key",
                 ));
             }
-        }
-        if map
-            .next_entry::<serde::de::IgnoredAny, serde::de::IgnoredAny>()?
-            .is_some()
-        {
-            return Err(serde::de::Error::custom(
-                "OpenBao LDAP library account map exceeds item limit",
-            ));
+            let mut value = map.next_value::<LdapLibraryAccountStatus>()?;
+            value.service_account_name = key.clone();
+            values.insert(key, value);
         }
         Ok(values)
     }
@@ -1133,6 +1157,40 @@ mod tests {
         LdapCheckOut, LdapConfig, LdapDynamicCredentials, LdapLibrarySet, LdapLibraryStatus,
         LdapList, LdapStaticCredentials,
     };
+
+    #[test]
+    fn ldap_passwordless_config_reads_require_password_before_write() {
+        let config: LdapConfig = serde_json::from_str(
+            r#"{"binddn":"cn=manager,dc=fixture,dc=invalid","url":"ldaps://ldap.example.com:636","schema":"openldap","connection_timeout":30}"#,
+        )
+        .unwrap_or_else(|_| panic!("LDAP fixture config decoding failed"));
+        assert!(config.bindpass.expose_secret().is_empty());
+        assert_eq!(config.schema.as_deref(), Some("openldap"));
+        assert_eq!(config.connection_timeout.as_deref(), Some("30"));
+        assert!(config.validate().is_err());
+        let mut config = config;
+        config.bindpass = SecretString::from("disposable-bind-password");
+        assert!(config.validate().is_ok());
+        let encoded = serde_json::to_string(&config)
+            .unwrap_or_else(|_| panic!("LDAP fixture config encoding failed"));
+        assert!(encoded.contains(r#""bindpass":"disposable-bind-password""#));
+        assert!(!format!("{config:?}").contains("disposable-bind-password"));
+    }
+
+    #[test]
+    fn ldap_config_rejects_malformed_passwords_and_preserves_explicit_secrets() {
+        for password in ["null", "false", "123", "[]", "{}"] {
+            let value = format!(r#"{{"binddn":"cn=manager","bindpass":{password}}}"#);
+            assert!(serde_json::from_str::<LdapConfig>(&value).is_err());
+        }
+        assert!(serde_json::from_str::<LdapConfig>(r#"{"schema":"openldap"}"#).is_err());
+        let config: LdapConfig = serde_json::from_str(
+            r#"{"binddn":"cn=manager","bindpass":"retained-fixture-password","url":"ldaps://ldap.example.com:636"}"#,
+        )
+        .unwrap_or_else(|_| panic!("LDAP fixture config decoding failed"));
+        assert_eq!(config.bindpass.expose_secret(), "retained-fixture-password");
+        assert!(config.validate().is_ok());
+    }
 
     #[test]
     fn ldap_paths_are_validated() {
@@ -1155,6 +1213,54 @@ mod tests {
     }
 
     #[test]
+    fn ldap_library_status_uses_direct_map_and_required_availability() {
+        let status: LdapLibraryStatus = serde_json::from_str(
+            r#"{"free":{"available":true},"busy":{"available":false,"borrower_client_token":"disposable-borrower","borrower_entity_id":"entity"}}"#,
+        ).unwrap_or_else(|_| panic!("library status fixture decoding failed"));
+        assert!(!status.service_account_names["free"].checked_out);
+        assert!(status.service_account_names["busy"].checked_out);
+        assert_eq!(
+            status.service_account_names["busy"].service_account_name,
+            "busy"
+        );
+        assert_eq!(
+            status.service_account_names["busy"]
+                .borrower_client_token
+                .as_ref()
+                .map(ExposeSecret::expose_secret),
+            Some("disposable-borrower")
+        );
+        assert!(!format!("{status:?}").contains("disposable-borrower"));
+        for value in [
+            r#"{"account":{}}"#,
+            r#"{"account":{"available":null}}"#,
+            r#"{"account":{"available":"true"}}"#,
+            r#"{"service_account_names":{"account":{"available":true}}}"#,
+            r#"{"account":{"available":true},"accoun\u0074":{"available":false}}"#,
+        ] {
+            assert!(serde_json::from_str::<LdapLibraryStatus>(value).is_err());
+        }
+    }
+
+    #[test]
+    fn ldap_library_map_rejects_overflow_before_decoding_its_value() {
+        let mut json = "{".to_owned();
+        for index in 0..crate::response::MAX_RESPONSE_STRINGS {
+            if index > 0 {
+                json.push(',');
+            }
+            json.push_str(&format!(r#""account-{index}":{{"available":true}}"#));
+        }
+        let maximum = format!("{json}}}");
+        assert!(serde_json::from_str::<LdapLibraryStatus>(&maximum).is_ok());
+        json.push_str(r#", "overflow":null}"#);
+        let error = serde_json::from_str::<LdapLibraryStatus>(&json)
+            .err()
+            .unwrap_or_else(|| panic!("overflow accepted"));
+        assert!(error.to_string().contains("exceeds item limit"));
+    }
+
+    #[test]
     fn ldap_lists_are_bounded() {
         let mut keys = Vec::new();
         for index in 0..=crate::response::MAX_RESPONSE_STRINGS {
@@ -1168,11 +1274,11 @@ mod tests {
             accounts.push((
                 format!("account-{index}"),
                 serde_json::json!({
-                    "checked_out": false
+                    "available": true
                 }),
             ));
         }
-        let value = serde_json::json!({ "service_account_names": accounts.into_iter().collect::<serde_json::Map<_, _>>() });
+        let value = serde_json::Value::Object(accounts.into_iter().collect());
         assert!(serde_json::from_value::<LdapLibraryStatus>(value).is_err());
     }
 

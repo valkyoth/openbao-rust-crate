@@ -1,0 +1,40 @@
+// Exact LDAP v0.1.0 operations verified against OpenBao 2.7.0 and 2.7.1.
+
+pub(super) const AUTH: &[&str] = &[
+    "openbao.delete.auth.ldap.groups.name.b950122721b5ebc7",
+    "openbao.delete.auth.ldap.users.username.9c70ff08aa396e53",
+    "openbao.get.auth.ldap.config.811840bd137c6235",
+    "openbao.get.auth.ldap.groups.name.7f1eeb5b0127592d",
+    "openbao.get.auth.ldap.users.username.d1685a846a236f11",
+    "openbao.list.auth.ldap.groups.9a02185a1de217e9",
+    "openbao.list.auth.ldap.users.c9811a9743a6d433",
+    "openbao.post.auth.ldap.config.47513ec572cc61ae",
+    "openbao.post.auth.ldap.groups.name.6dfccb47849561ea",
+    "openbao.post.auth.ldap.login.username.f98effef801d364e",
+    "openbao.post.auth.ldap.users.username.32b8480ab9dc3473",
+];
+
+pub(super) const SECRETS: &[&str] = &[
+    "openbao.delete.ldap.library.set.name.b93f2cc7bd993d6c",
+    "openbao.get.ldap.library.set.name.ac0b1f32711a1b17",
+    "openbao.get.ldap.library.set.name.status.7ad9c35d9646b86c",
+    "openbao.list.ldap.library.98e0afea05f266ad",
+    "openbao.post.ldap.library.manage.set.name.check.in.31d9758041b60487",
+    "openbao.post.ldap.library.set.name.b42bbb4ad1f4da44",
+    "openbao.post.ldap.library.set.name.check.in.060342e4eeb9c95d",
+    "openbao.post.ldap.library.set.name.check.out.8336f9c1d2da5f75",
+    "openbao.delete.ldap.config.ecee1bad1781c163",
+    "openbao.delete.ldap.role.role.name.62b78b0e2b96da27",
+    "openbao.delete.ldap.static.role.role.name.cb104610a05417a6",
+    "openbao.get.ldap.config.2bbeeb0df9593a92",
+    "openbao.get.ldap.creds.role.name.5da4ac8dcf228fae",
+    "openbao.get.ldap.role.role.name.55c21b25fd8400cc",
+    "openbao.get.ldap.static.cred.role.name.a69cdc5eca90bb18",
+    "openbao.get.ldap.static.role.7b331d6e6718beed",
+    "openbao.get.ldap.static.role.role.name.973bea91096ad800",
+    "openbao.post.ldap.config.5878fff52f427697",
+    "openbao.post.ldap.role.role.name.c0c49e3483cfce41",
+    "openbao.post.ldap.rotate.role.role.name.f6a539a049514645",
+    "openbao.post.ldap.rotate.root.9c563cec09292028",
+    "openbao.post.ldap.static.role.role.name.00febb1527662b40",
+];

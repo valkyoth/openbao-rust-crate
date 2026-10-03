@@ -2,6 +2,7 @@
 
 mod artifacts;
 mod compatibility;
+mod ldap_contracts;
 pub use compatibility::{ExternalPluginKind, ExternalPluginSelection};
 
 use crate::{

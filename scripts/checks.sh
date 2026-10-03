@@ -90,6 +90,12 @@ echo "checks: staged OpenBao 2.7 external-plugin availability and local fixture"
 /usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_plugin_artifacts.py
 /usr/bin/python3 -E -s -S -B scripts/check_openbao_plugin_registry.py
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_plugin_registry.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_ldap_plugins.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_ldap_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_ldap_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_ldap_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_ldap_plugins.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_ldap_plugins.py
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_plugins.py
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_plugins.py --verify-tls
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_plugins.py

@@ -16,7 +16,14 @@ unchanged.
    built-in server profile; reject unknown identities and duplicate mounts.
    Preserve older built-ins. All plugin contracts remain closed until their
    positive/negative SDK fixtures pass in checkpoints 3-5.
-3. LDAP auth and secrets: pending. Real directory services, successful and
+3. LDAP auth and secrets: completed. The isolated, digest-pinned directory
+   server fixture and offline trust-boundary regressions are implemented;
+   live server and 33-operation public-SDK candidate checks passed on both
+   releases. Candidate reports and mounted schemas are retained as historical evidence.
+   Server evidence is refreshed; 33 exact LDAP contracts are enabled in source.
+   Normal-build live verification passed on both releases; independently anchored
+   reports validate against the current production source and fixture inputs. See
+   [the LDAP review](OPENBAO_2_2_3_LDAP_REVIEW.md). Real directory services, successful and
    rejected authentication, mappings, generated credentials, rotation,
    revocation and cleanup on both 2.7.0 and 2.7.1.
 4. Kerberos: pending. Real KDC authentication, mapping and rejection tests on
