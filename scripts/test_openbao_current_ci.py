@@ -142,15 +142,17 @@ class CurrentCiTests(unittest.TestCase):
 
     def test_startup_error_is_bounded_classified_and_never_accepted(self):
         with patch.object(ci.tls.evidence_tools, "protected_path", return_value=Path("/usr/bin/sh")), \
-             patch.object(ci.harness, "run_bounded", return_value=b"a" * 64 + b"\n") as start:
+             patch.object(ci.harness, "run_bounded", return_value=b"a" * 64 + b"\n\nopenbao-ci-exit=0\n") as start:
             ci.start_server(["/usr/bin/podman", "run", "argument with spaces"], {"PATH": "/usr/bin:/bin"})
             arguments, options = start.call_args
-            self.assertEqual(arguments[0], ["/usr/bin/sh", "-c", 'exec "$@" 2>&1', "ci-start",
+            self.assertEqual(arguments[0], ["/usr/bin/sh", "-c",
+                                           '"$@" 2>&1; status=$?; printf "\\nopenbao-ci-exit=%s\\n" "$status"; exit "$status"', "ci-start",
                                            "/usr/bin/podman", "run", "argument with spaces"])
             self.assertEqual(options["maximum"], 16384)
             self.assertEqual(options["timeout"], 120)
             for output in (b"permission denied: sensitive-marker", b"crun cgroup rlimit sensitive-marker",
-                           b"unexpected sensitive-marker", b"a" * 64 + b"\nwarning"):
+                           b"unexpected sensitive-marker", b"a" * 64 + b"\nwarning",
+                           b"a" * 64 + b"\n\nopenbao-ci-exit=125\n"):
                 diagnostic = io.StringIO()
                 start.return_value = output
                 with redirect_stderr(diagnostic), self.assertRaises(ci.harness.HarnessError):
@@ -158,6 +160,13 @@ class CurrentCiTests(unittest.TestCase):
                 self.assertIn("startup diagnostic=", diagnostic.getvalue())
                 self.assertNotIn("sensitive-marker", diagnostic.getvalue())
                 self.assertNotIn("warning", diagnostic.getvalue())
+
+    def test_startup_capture_preserves_arguments_and_exit_status(self):
+        with patch.object(ci.tls.evidence_tools, "protected_path", return_value=Path("/usr/bin/sh")):
+            ci.start_server(["/usr/bin/printf", "%s\\n", "a" * 64], {"PATH": "/usr/bin:/bin"})
+            with redirect_stderr(io.StringIO()), self.assertRaises(ci.harness.HarnessError):
+                ci.start_server(["/usr/bin/sh", "-c", 'printf "%s\\n" "$1"; exit 125',
+                                 "fixture", "a" * 64], {"PATH": "/usr/bin:/bin"})
 
 
 if __name__ == "__main__":

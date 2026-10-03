@@ -154,11 +154,12 @@ def run_sdk(binary, uid, gid, address, ca, token, version):
 
 def start_server(command, environment):
     shell = str(tls.evidence_tools.protected_path(Path("/usr/bin/sh")))
-    output = harness.run_bounded([shell, "-c", 'exec "$@" 2>&1', "ci-start", *command],
+    capture = '"$@" 2>&1; status=$?; printf "\\nopenbao-ci-exit=%s\\n" "$status"; exit "$status"'
+    output = harness.run_bounded([shell, "-c", capture, "ci-start", *command],
                                  maximum=16384, timeout=120, environment=environment,
                                  accepted_codes=(0, 125, 126, 127))
     # A failed start is never accepted merely because its exit code was captured.
-    require_output = re.fullmatch(rb"[0-9a-f]{64}\n?", output) is not None
+    require_output = re.fullmatch(rb"[0-9a-f]{64}\n?\nopenbao-ci-exit=0\n", output) is not None
     if not require_output:
         lowered = output.lower()
         classifications = {
