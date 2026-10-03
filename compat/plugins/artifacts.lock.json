@@ -1,0 +1,124 @@
+{
+  "schema": "openbao-plugin-artifacts/v1",
+  "platform": "linux_amd64_v1",
+  "signing_primary_fingerprint": "66D15FDD87287219C8E15478D200CD702853E6D0",
+  "source_commit": "6951cf4b452e918e5b27b9aab0cbbf494d0d613c",
+  "plugins": [
+    {
+      "id": "auth-ldap",
+      "version": "v0.1.0",
+      "tag": "auth-ldap-v0.1.0",
+      "published_at": "2026-10-02T15:56:15Z",
+      "binary_sha256": "18fa83d993c629a969cfa234d48e451921004c36ac8dc6a9fcc37d9e256d8818",
+      "assets": [
+        {
+          "name": "checksums-auth-ldap.txt",
+          "size": 4631,
+          "sha256": "faa51a5d93966c624a8f06fe267a17c3042d03d0bf0a33b3e01800dc85382817"
+        },
+        {
+          "name": "openbao-plugin-auth-ldap_linux_amd64_v1.tar.gz",
+          "size": 6758482,
+          "sha256": "fc30352d88abcc26e005cae7b599c958081f2a5195d524dc14f25d6a2442300f"
+        },
+        {
+          "name": "openbao-plugin-auth-ldap_linux_amd64_v1.tar.gz.sig",
+          "size": 566,
+          "sha256": "d9fe75216539bdcddf1b5a634b8b03bf9f0ad414e0a94160c5443e173da3a79c"
+        },
+        {
+          "name": "openbao-plugin-auth-ldap_linux_amd64_v1.tar.gz.spdx.sbom.json",
+          "size": 61126,
+          "sha256": "4c97dbffe7a90e37811a1f33eb679b6634243737278bb59f6d68c49653e18704"
+        }
+      ]
+    },
+    {
+      "id": "auth-kerberos",
+      "version": "v0.1.0",
+      "tag": "auth-kerberos-v0.1.0",
+      "published_at": "2026-10-02T15:57:39Z",
+      "binary_sha256": "57ac030fea755adf791600eb2b30aa410d2e848ab7ec7bb54cc515cdce4b89ae",
+      "assets": [
+        {
+          "name": "checksums-auth-kerberos.txt",
+          "size": 4799,
+          "sha256": "6cd4c1e0644363b6fa3d71ccfde8d2b46048197d354f645604cb7dcbfa68f8c9"
+        },
+        {
+          "name": "openbao-plugin-auth-kerberos_linux_amd64_v1.tar.gz",
+          "size": 6938509,
+          "sha256": "1972f00dbfa9bba005beb1286c1ff8902457cd9ce3f21f10fa3acdb15be9ae11"
+        },
+        {
+          "name": "openbao-plugin-auth-kerberos_linux_amd64_v1.tar.gz.sig",
+          "size": 566,
+          "sha256": "c77c17310182188d33fcf6c80f8eb0507096aae4957440317b7b20848481bab3"
+        },
+        {
+          "name": "openbao-plugin-auth-kerberos_linux_amd64_v1.tar.gz.spdx.sbom.json",
+          "size": 66138,
+          "sha256": "28b1f2638c7893e3a86fb6938931452e842d32b5672d48e662a9447957b2eb70"
+        }
+      ]
+    },
+    {
+      "id": "auth-radius",
+      "version": "v0.1.0",
+      "tag": "auth-radius-v0.1.0",
+      "published_at": "2026-10-02T15:58:23Z",
+      "binary_sha256": "771be7e9ee028d87bdc79412eb66fe330ca1e54e21a50ebe59584e6b8a5aa69b",
+      "assets": [
+        {
+          "name": "checksums-auth-radius.txt",
+          "size": 4715,
+          "sha256": "3a155abb967cf15b26d34bbef54392b5434230db4f3326942e4de3e2245f4cd2"
+        },
+        {
+          "name": "openbao-plugin-auth-radius_linux_amd64_v1.tar.gz",
+          "size": 6569954,
+          "sha256": "c5a0c67b5d7d0740fdf9a6e4acdb5365c600e924d9255d038a0b24bccfe891f1"
+        },
+        {
+          "name": "openbao-plugin-auth-radius_linux_amd64_v1.tar.gz.sig",
+          "size": 566,
+          "sha256": "e3ceecb7534a76cf674117cae2cbbab75d29b2a45bd76c5a9480e7522468ea9f"
+        },
+        {
+          "name": "openbao-plugin-auth-radius_linux_amd64_v1.tar.gz.spdx.sbom.json",
+          "size": 54180,
+          "sha256": "a2d789ac6c997abf8d8b7085356f056d6cacd1454b75648110e7c34b98c750fe"
+        }
+      ]
+    },
+    {
+      "id": "secrets-ldap",
+      "version": "v0.1.0",
+      "tag": "secrets-ldap-v0.1.0",
+      "published_at": "2026-10-02T15:59:02Z",
+      "binary_sha256": "47292935509894d8b4feb0fc9b6429455da87181a8fc53999eb986128ab8d73a",
+      "assets": [
+        {
+          "name": "checksums-secrets-ldap.txt",
+          "size": 4757,
+          "sha256": "d2cdbe86b6b4b0855d3f56ba9c8bcb8e2dfab81e86bb94c473dedf9f92e220bf"
+        },
+        {
+          "name": "openbao-plugin-secrets-ldap_linux_amd64_v1.tar.gz",
+          "size": 6857425,
+          "sha256": "a8da1f8f1323426fcb991d04022941ce3cd20ab65e7bbcf5b76921095c2c54a8"
+        },
+        {
+          "name": "openbao-plugin-secrets-ldap_linux_amd64_v1.tar.gz.sig",
+          "size": 566,
+          "sha256": "f67213c464d76ae304910d87fa64f8c8fb3a876de36884db211f98e96e3d7f44"
+        },
+        {
+          "name": "openbao-plugin-secrets-ldap_linux_amd64_v1.tar.gz.spdx.sbom.json",
+          "size": 61650,
+          "sha256": "b077919bcadffce239d73320adfa2cba3f293c41c7d0bd17bb7d26f24d81c704"
+        }
+      ]
+    }
+  ]
+}

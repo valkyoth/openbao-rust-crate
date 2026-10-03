@@ -12,11 +12,17 @@ The official catalog now contains non-prerelease `v0.1.0` releases for
 [RADIUS auth](https://github.com/openbao/openbao-plugins/releases/tag/auth-radius-v0.1.0)
 and [LDAP secrets](https://github.com/openbao/openbao-plugins/releases/tag/secrets-ldap-v0.1.0),
 all published on 2026-10-02. Each has Linux amd64 binaries, checksums,
-signature files and an SPDX SBOM. Their presence is an artifact-review
+signature files and an SBOM (CycloneDX despite its SPDX filename). Their presence is an artifact-review
 candidate, not a verification result: signatures/provenance, extracted binary
 digests, catalog registration and positive/negative SDK tests still need review.
 SDK 2.2.2 remains documentation/CI-only and preserves the 2.7 exclusions.
 The immutable September observation below remains historical evidence.
+
+SDK 2.2.3 checkpoint 1 now retains a separate signed-artifact review in
+`compat/plugins/artifact-review-v1.json`. Archive and binary identities are
+verified; source-to-binary provenance, plugin contracts and functional SDK tests
+are not. The [2.2.3 plan](OPENBAO_2_2_3_PLAN.md) describes the remaining gates.
+The existing external-plugin exclusions remain in force.
 
 ## Approved Release Scope
 
