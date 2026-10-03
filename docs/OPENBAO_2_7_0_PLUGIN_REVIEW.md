@@ -4,6 +4,20 @@ Checkpoint 03, observed 2026-09-27. This is not SDK 2.7 support, plugin
 verification, or a successful skipped integration test. The live staged TLS
 fixture passed; checkpoint 03 is complete under the approved exclusions below.
 
+## Availability Update: 2026-10-03
+
+The official catalog now contains non-prerelease `v0.1.0` releases for
+[LDAP auth](https://github.com/openbao/openbao-plugins/releases/tag/auth-ldap-v0.1.0),
+[Kerberos auth](https://github.com/openbao/openbao-plugins/releases/tag/auth-kerberos-v0.1.0),
+[RADIUS auth](https://github.com/openbao/openbao-plugins/releases/tag/auth-radius-v0.1.0)
+and [LDAP secrets](https://github.com/openbao/openbao-plugins/releases/tag/secrets-ldap-v0.1.0),
+all published on 2026-10-02. Each has Linux amd64 binaries, checksums,
+signature files and an SPDX SBOM. Their presence is an artifact-review
+candidate, not a verification result: signatures/provenance, extracted binary
+digests, catalog registration and positive/negative SDK tests still need review.
+SDK 2.2.2 remains documentation/CI-only and preserves the 2.7 exclusions.
+The immutable September observation below remains historical evidence.
+
 ## Approved Release Scope
 
 The maintainer approved built-in-only 2.7 support for 2.2.0. LDAP auth/secrets,
@@ -16,7 +30,7 @@ acknowledgement selects an older fallback profile. An explicitly assumed older
 profile or unverified client makes no server probe: callers remain responsible
 for the server-version assertion in those modes.
 
-Verified external-plugin support is targeted for 2.2.1 when artifacts are
+Verified external-plugin support is deferred until suitable artifacts are
 available, not promised by this release. It requires independent artifact,
 provenance and contract review and positive/negative integration tests. The
 `--require-verified` command remains a failing plugin-support gate, but is not

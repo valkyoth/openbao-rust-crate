@@ -4,12 +4,28 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
-### 2.2.1 In Progress
+## 2.2.2
+
+- Correct the crates.io README and current documentation to describe released
+  OpenBao 2.6.4/2.7.0/2.7.1 support, rather than a future 2.2.1 build.
+- Update installation and release-bound security links to 2.2.2.
+- Add automated live TLS/public-SDK CI coverage for the three profiles missing
+  from the historical matrix, plus a supported-profile coverage guard.
+- Retain passing local reports for all three supplemental CI profiles, with
+  pinned validators and regressions rejecting changed inputs or scope.
+- Add release-documentation regressions to reject stale current-release text.
+- SDK implementation, feature defaults, dependencies and Rust requirements
+  are unchanged from 2.2.1. Seven fresh SDK reports cover the new metadata and
+  corrected README, with exact input matching and no documentation exception.
+
+## 2.2.1 - 2026-10-03
 
 The entries below record the preparation sequence. Both patch profiles are now
 enabled with separate normal-build live evidence, including fresh captures
 after the final dependency update and the subsequent auth fixes below.
-Security retesting and GitHub approval remain required before tagging.
+The final security retest was clean, GitHub checks passed on `68a4b12`, and
+the signed `v2.2.1` tag records that approval. Pending statements below describe
+historical checkpoints, not the published release scope.
 
 - Retain seven freshly validated SDK reports for the auth fixes: normal-build
   TLS on 2.6.4/2.7.1 and the affected 2.7.0 consistency/backup paths. Preserve

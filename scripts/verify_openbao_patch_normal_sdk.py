@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -EsSB
-"""Require normal-build SDK evidence, with one pinned post-capture README correction."""
+"""Require exact current normal-build SDK evidence, including the packaged README."""
 
 import argparse
 from pathlib import Path
@@ -12,18 +12,15 @@ base, harness = legacy.base, legacy.harness
 FIXTURES = {"2.6.4": legacy, "2.7.1": modern}
 # Report and sealed executable identities, independently retained for each patch.
 PINS = {
-    "2.6.4": ("bd5d855ff99869fcaecfced5872efd0ee3830b0aa0be0f9259ddded6603e3fb7",
-              "5738f7805803d14e59c1e29ad2cc69df90de84ece20ad86c47b865340a62388f"),
-    "2.7.1": ("a1a3ff1a5730485a3b30deb4187961e6567de75dfc22278dd6661a8cf398a2f7",
-              "d5b1bb8c584f4e361327546b8b4d684c85ea45a3dca16dd0fc01cf214398c8df"),
+    "2.6.4": ("59b647af5595aca10a47cc66de0da0f862f3606645d2e22800c54f94f2f6392d",
+              "0e0beba64e4ac541b3e47b6be7f1ffc4664809c8e6574a0142c089096f65d94b"),
+    "2.7.1": ("6ca71d55892fc2cb4b09632b10bd00f30c435dc62a7d9ecb2747ed6a4ee9b362",
+              "34c5a76ed1e50f2a6062f9205f5cfb091cc182b0b093254e385fa35dd8e8cc8a"),
 }
-CAPTURED_README_SHA256 = "89b30c6b2421d8a5c6689b16837df1739f8006a3c2be3c99c7f9a1c182d84444"
-REVIEWED_README_SHA256 = "f4decde17a056f779de87dd222a0c904c84a8ebcf2ff3f701257b77d0141aa76"
-CAPTURED_README = legacy.patch.ROOT / "compat/onboarding/2.7.1/sdk-capture-readme-v3.md"
 
 
 def output(version):
-    return legacy.patch.ROOT / "compat/onboarding" / version / "sdk-normal-tls-v3.json"
+    return legacy.patch.ROOT / "compat/onboarding" / version / "sdk-normal-tls-v4.json"
 
 
 def expected(version, binary_digest):
@@ -48,16 +45,6 @@ def validate(version, data):
     legacy.patch.require(base.sha256(data) == report_digest)
     report = base.parse_json(data, 128 * 1024)
     required = expected(version, binary_digest)
-    captured_inputs = report.get("inputs")
-    legacy.patch.require(isinstance(captured_inputs, dict))
-    captured_readme = captured_inputs.get("README.md")
-    if required["inputs"].get("README.md") != captured_readme:
-        # Only the reviewed status/link correction is allowed. No executable
-        # input changes, generic Markdown exclusion or rewritten report hashes.
-        legacy.patch.require(captured_readme == CAPTURED_README_SHA256
-                             and required["inputs"].get("README.md") == REVIEWED_README_SHA256
-                             and base.sha256(base.read_regular_file(CAPTURED_README, 128 * 1024)) == CAPTURED_README_SHA256)
-        required["inputs"]["README.md"] = CAPTURED_README_SHA256
     legacy.patch.require(data == base.canonical_json(report)
                          and data == base.canonical_json(required))
     return report
@@ -85,7 +72,7 @@ def main():
             OSError, ValueError, KeyError, TypeError):
         print("Final normal-build SDK evidence missing or invalid; release gate blocked")
         return 1
-    print("Normal-build SDK TLS evidence verified; executable inputs current, exact README-only correction separately reviewed; release approval remains separate")
+    print("Normal-build SDK TLS evidence verified; every input including README matches exactly; release approval remains separate")
     return 0
 
 

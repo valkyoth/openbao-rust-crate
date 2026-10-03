@@ -1,0 +1,70 @@
+#!/usr/bin/python3 -EsSB
+"""Fail-closed current-profile CI evidence and scope regressions."""
+
+import unittest
+from unittest.mock import patch
+
+import verify_openbao_current_ci as evidence
+
+
+class CurrentCiEvidenceTests(unittest.TestCase):
+    def test_all_three_retained_reports(self):
+        self.assertEqual(set(evidence.PINS), set(evidence.fixture.VERSIONS))
+        for version in evidence.PINS:
+            self.assertEqual(evidence.verify(version)["version"], version)
+
+    def test_every_input_must_be_present_and_current(self):
+        for version in evidence.PINS:
+            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}.json", 128 * 1024)
+            inputs = evidence.fixture.input_hashes()
+            for name in inputs:
+                for omit in (False, True):
+                    changed = dict(inputs)
+                    if omit:
+                        del changed[name]
+                    else:
+                        changed[name] = "0" * 64
+                    with self.subTest(version=version, input=name, omit=omit), \
+                         patch.object(evidence.fixture, "input_hashes", return_value=changed), \
+                         self.assertRaises(evidence.fixture.harness.HarnessError):
+                        evidence.validate(version, data)
+
+    def test_repinned_reports_cannot_change_scope_identity_or_success(self):
+        for version in evidence.PINS:
+            report = evidence.verify(version)
+            mutations = {"version": "2.7.2", "outcome": "failed", "inputs": {},
+                         "image_linux_amd64_digest": "sha256:" + "0" * 64,
+                         "test_binary_sha256": "0" * 64, "tls": "TLSv1.2",
+                         "executable_storage": "mutable-path", "cleanup": "failed",
+                         "build_provenance": "attested", "scope": "all-endpoints", "attestation": {}}
+            for name, value in mutations.items():
+                changed = evidence.fixture.base.canonical_json({**report, name: value})
+                with self.subTest(version=version, field=name), \
+                     patch.object(evidence, "PINS", {version: evidence.fixture.base.sha256(changed)}), \
+                     self.assertRaises(evidence.fixture.harness.HarnessError):
+                    evidence.validate(version, changed)
+            for attestation in ({**report["attestation"], "executed": []},
+                                {**report["attestation"], "skipped": []}):
+                changed = evidence.fixture.base.canonical_json({**report, "attestation": attestation})
+                with patch.object(evidence, "PINS", {version: evidence.fixture.base.sha256(changed)}), \
+                     self.assertRaises(evidence.fixture.harness.HarnessError):
+                    evidence.validate(version, changed)
+
+    def test_unknown_swapped_altered_or_noncanonical_data_is_rejected(self):
+        for version in evidence.PINS:
+            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}.json", 128 * 1024)
+            with self.assertRaises(evidence.fixture.harness.HarnessError):
+                evidence.validate("2.7.2", data)
+            for other in set(evidence.PINS) - {version}:
+                with self.assertRaises(evidence.fixture.harness.HarnessError):
+                    evidence.validate(other, data)
+            with self.assertRaises(evidence.fixture.harness.HarnessError):
+                evidence.validate(version, data + b" ")
+            changed = data + b" "
+            with patch.object(evidence, "PINS", {version: evidence.fixture.base.sha256(changed)}), \
+                 self.assertRaises(evidence.fixture.harness.HarnessError):
+                evidence.validate(version, changed)
+
+
+if __name__ == "__main__":
+    unittest.main()

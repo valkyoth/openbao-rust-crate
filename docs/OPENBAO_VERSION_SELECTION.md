@@ -3,7 +3,7 @@
 OpenBao documents its HTTP API below `/v1`, but that prefix is not a
 backwards-compatibility guarantee. The SDK therefore selects an immutable
 exact-release profile before a typed request is serialized. Active profiles
-in the `2.2.1` development build cover 28 reviewed releases from `2.0.0`
+in SDK `2.2.2` cover 28 reviewed releases from `2.0.0`
 through `2.7.1`, including the separate maintenance patch `2.6.4`. Exact,
 assumed, range, strict-detection, and acknowledged-newer policies may select
 these reviewed patches; generated route dispatch never probes or falls back to an older

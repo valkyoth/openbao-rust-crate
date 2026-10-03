@@ -1,5 +1,11 @@
 # Migration Guide
 
+## From `openbao` 2.2.1 To 2.2.2
+
+No SDK API, behavior, dependency, feature or Rust requirement changes.
+This release corrects published documentation and extends CI coverage.
+The 2.2.1 security migration below still applies when upgrading from 2.2.0.
+
 ## From `openbao` 2.2.0 To 2.2.1
 
 `OidcAuthUrlResponse::auth_url` changes from `String` to `SecretString`, and

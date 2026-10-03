@@ -11,6 +11,10 @@ echo "checks: release metadata"
 test -f docs/PANIC_POLICY.md
 grep -q 'No production exception is currently approved' docs/PANIC_POLICY.md
 scripts/validate-release-metadata.sh
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_current_ci.py
+/usr/bin/python3 -E -s -S -B scripts/openbao_current_ci.py --check-coverage
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_current_ci.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_current_ci.py
 
 echo "checks: Rust 1.90.0 MSRV"
 cargo +1.90.0 check --locked --all-targets --all-features

@@ -1,0 +1,80 @@
+name: OpenBao Current Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ["v*"]
+  schedule:
+    - cron: "47 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  current:
+    name: OpenBao ${{ matrix.version }} public SDK TLS
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        version: ["2.6.4", "2.7.0", "2.7.1"]
+    steps:
+      - name: Checkout repository
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install protected system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman openssl pkg-config libssl-dev
+      - name: Install protected Cosign
+        # sigstore/cosign-installer v4.1.0
+        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22
+        with:
+          install-dir: /usr/bin
+          use-sudo: true
+      - name: Install primary Rust toolchain
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup default 1.99.0
+      - name: Check supported-profile CI coverage
+        run: /usr/bin/python3 -E -s -S -B scripts/openbao_current_ci.py --check-coverage
+      - name: Build unprivileged public SDK test
+        id: build
+        run: /usr/bin/python3 -E -s -S -B scripts/openbao_current_ci.py --build
+      - name: Run signed-image TLS and public SDK core checks
+        env:
+          OPENBAO_VERSION: ${{ matrix.version }}
+          OPENBAO_TEST_BINARY: ${{ steps.build.outputs.test_binary }}
+        run: |
+          mkdir -p ci-artifacts
+          sudo /usr/bin/python3 -E -s -S -B scripts/openbao_current_ci.py \
+            --version "$OPENBAO_VERSION" --test-binary "$OPENBAO_TEST_BINARY" \
+            > ci-artifacts/current-result.json
+      - name: Upload sanitized passing result
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: openbao-current-${{ matrix.version }}
+          path: ci-artifacts/current-result.json
+          if-no-files-found: error
+          retention-days: 14
+          include-hidden-files: false
+
+  aggregate:
+    name: Current-profile results
+    needs: current
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every current-profile job to succeed
+        env:
+          OPENBAO_CURRENT_RESULT: ${{ needs.current.result }}
+        run: test "$OPENBAO_CURRENT_RESULT" = success

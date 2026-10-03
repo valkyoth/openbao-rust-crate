@@ -2,6 +2,7 @@
 """Keep original 2.7.0 captures immutable and reject them as current evidence."""
 
 import importlib
+import copy
 import unittest
 from unittest.mock import patch
 
@@ -35,6 +36,13 @@ PRE_AUTH_DIGESTS = {
     "backup_sdk": "fec010fc8c88f4dc2d32d2fb8010f7f36954db534536c934bd6ff637ae90d513",
     "backup_sdk_strict": "e75ba74bdee5f49d1b85e2afc1ead177235987171500bbd304038ca40b99fbe0",
     "backup_sdk_candidate": "b89a7f70e18cf2d3b73042131e9e21b0c422741ea0c140e1fc82610db13be0e9",
+}
+RELEASE_2_2_1_DIGESTS = {
+    "consistency_sdk": "d813ddf51b12a71d6b71c678f3a7245ecd8ce3ba85bd8c42b8c49a26e822ea52",
+    "consistency_sdk_lag": "73d6a24dd524d874130b2677d6b0e75a17529dc83bba4338ef82f3d41ad54d69",
+    "backup_sdk": "95fca65880013bbddbac04d453d75be8ebd95538877e2843387ab71121084e08",
+    "backup_sdk_strict": "2c8bfffc4299e71a0d3cf5fb6df6e432d38c1c04ff65b362d8861e244c86ca26",
+    "backup_sdk_candidate": "111b56d85ba429ec0958e36cb18d5de73f8b014a693d0093dad84fee039b582c",
 }
 
 
@@ -96,7 +104,9 @@ class RefreshTests(unittest.TestCase):
                 data = base.read_regular_file(previous, 65536)
                 self.assertEqual(base.sha256(data), digest)
                 old = base.parse_json(data, 65536)
-                self.assertEqual(old["inputs"]["Cargo.lock"], current["inputs"]["Cargo.lock"])
+                released = verifier.RESULT.with_name(verifier.RESULT.name.split("-tls-v")[0] + "-tls-v4.json")
+                released_report = base.parse_json(base.read_regular_file(released, 65536), 65536)
+                self.assertEqual(old["inputs"]["Cargo.lock"], released_report["inputs"]["Cargo.lock"])
                 self.assertNotIn("src/auth/mapping.rs", old["inputs"])
                 self.assertIn("src/auth/mapping.rs", current["inputs"])
                 for auth in ("jwt", "kerberos", "ldap", "mod", "radius"):
@@ -105,6 +115,38 @@ class RefreshTests(unittest.TestCase):
                 with patch.object(verifier, "RESULT", previous), \
                      patch.object(verifier, "EXPECTED_SHA256", digest), \
                      patch.object(verifier, "TEST_BINARY_SHA256", old["test_binary_sha256"]), \
+                     self.assertRaises((base.SnapshotError, harness.HarnessError)):
+                    verifier.verify()
+
+    def test_2_2_1_sdk_captures_preserved_and_old_metadata_rejected_individually(self):
+        for name, digest in RELEASE_2_2_1_DIGESTS.items():
+            verifier = importlib.import_module("verify_openbao_2_7_" + name)
+            current = verifier.verify()
+            previous = verifier.RESULT.with_name(verifier.RESULT.name.split("-tls-v")[0] + "-tls-v4.json")
+            data = base.read_regular_file(previous, 65536)
+            self.assertEqual(base.sha256(data), digest)
+            old = base.parse_json(data, 65536)
+            changed = {key for key in old["inputs"] if old["inputs"][key] != current["inputs"].get(key)}
+            expected = {"Cargo.toml", "Cargo.lock"}
+            if "README.md" in current["inputs"]:
+                expected.add("README.md")
+            self.assertEqual(set(old["inputs"]), set(current["inputs"]))
+            self.assertEqual(changed, expected)
+            with patch.object(verifier, "RESULT", previous), \
+                 patch.object(verifier, "EXPECTED_SHA256", digest), \
+                 patch.object(verifier, "TEST_BINARY_SHA256", old["test_binary_sha256"]), \
+                 self.assertRaises((base.SnapshotError, harness.HarnessError)):
+                verifier.verify()
+            for key in changed:
+                mutated = copy.deepcopy(current)
+                mutated["inputs"][key] = old["inputs"][key]
+                altered = base.canonical_json(mutated)
+                original_read = base.read_regular_file
+                def read_report(path, maximum):
+                    return altered if path == verifier.RESULT else original_read(path, maximum)
+                with self.subTest(name=name, input=key), \
+                     patch.object(verifier, "EXPECTED_SHA256", base.sha256(altered)), \
+                     patch.object(base, "read_regular_file", side_effect=read_report), \
                      self.assertRaises((base.SnapshotError, harness.HarnessError)):
                     verifier.verify()
 

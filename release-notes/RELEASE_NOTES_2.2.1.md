@@ -1,7 +1,7 @@
 # OpenBao Rust SDK 2.2.1
 
 Version: 2.2.1
-Status: Auth pentest fixes, fresh live SDK evidence and full local release checks complete; security retest and GitHub approval pending. Not approved for tagging or publication.
+Status: Released as signed tag v2.2.1 on commit 68a4b12278c791e6718fdc132823e1f1a0959d60 after clean security retesting and green GitHub checks. Preparation notes below retain their historical context.
 
 ## Auth Security Corrections
 

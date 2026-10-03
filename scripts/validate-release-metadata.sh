@@ -128,7 +128,7 @@ check_file .github/workflows/ci.yml
 check_file .github/workflows/openbao-compatibility.yml
 
 check_grep 'name = "openbao"' Cargo.toml
-check_grep 'version = "2.2.1"' Cargo.toml
+check_grep 'version = "2.2.2"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep '"/tests/package_smoke.rs"' Cargo.toml
@@ -149,8 +149,8 @@ check_grep 'workflow_dispatch:' .github/workflows/openbao-compatibility.yml
 check_grep 'persist-credentials: false' .github/workflows/openbao-compatibility.yml
 check_grep 'openbao_ci_matrix.py aggregate' .github/workflows/openbao-compatibility.yml
 check_grep 'scripts/release_2_0_gate.sh' release-notes/RELEASE_NOTES_2.0.0.md
-check_grep 'version = "=2.2.1"' fuzz/Cargo.toml
-check_grep 'version = "=2.2.1"' tests/fixtures/reqwest-native-unification/Cargo.toml
+check_grep 'version = "=2.2.2"' fuzz/Cargo.toml
+check_grep 'version = "=2.2.2"' tests/fixtures/reqwest-native-unification/Cargo.toml
 check_file docs/OPENBAO_2_7_0_PLAN.md
 check_file docs/OPENBAO_2_7_0_REVIEW.md
 check_file docs/OPENBAO_2_7_0_PLUGIN_REVIEW.md
@@ -159,6 +159,10 @@ check_file deploy/podman/profile.json
 check_file compat/onboarding/2.7.0/api-evidence.lock.json
 check_file release-notes/RELEASE_NOTES_2.2.1.md
 check_grep 'Version: 2.2.1' release-notes/RELEASE_NOTES_2.2.1.md
+check_file release-notes/RELEASE_NOTES_2.2.2.md
+check_grep 'Version: 2.2.2' release-notes/RELEASE_NOTES_2.2.2.md
+/usr/bin/python3 -E -s -S -B scripts/check_release_documentation.py
+/usr/bin/python3 -E -s -S -B scripts/test_release_documentation.py
 check_grep 'openbao_2_7_source_inventory.py --verify' scripts/checks.sh
 check_grep 'openbao_2_7_source_inventory.py --self-test' scripts/checks.sh
 check_grep 'openbao_2_7_api.py --verify' scripts/checks.sh

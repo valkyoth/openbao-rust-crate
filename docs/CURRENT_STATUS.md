@@ -8,34 +8,30 @@ the [README](../README.md). For endpoint-level classifications, see
 
 ## Release Snapshot
 
-The latest pentest fixes mapping delimiter injection/unbounded joining and
-OIDC response storage/diagnostics. OIDC response fields require an explicit
-`SecretString` caller migration. Seven fresh reports now bind the auth changes:
-patch normal-build `sdk-normal-tls-v3.json` and five 2.7.0 SDK `-tls-v4.json`
-captures. Pre-fix captures remain intact but cannot satisfy current-input gates.
-Post-fix local Rust, configured strict Clippy, MSRV, package, dependency and
-Kani checks now pass (657 all-feature tests and 5 doctests). The complete
-release-check rerun also passed with the new reports and isolated-Python
-metadata check. Security retesting and GitHub approval remain outstanding.
+SDK `2.2.2` is documentation and CI maintenance only; its SDK implementation,
+dependencies and feature defaults are unchanged from the released `2.2.1`.
+The generated Rust inventory contains 707 operation identities across 28 exact
+profiles (19,796 cells), including independently reviewed
+[OpenBao 2.6.4](OPENBAO_2_6_4_REVIEW.md), `2.7.0` and
+[OpenBao 2.7.1](OPENBAO_2_7_1_REVIEW.md).
 
-The unreleased `2.2.1` development build adds independently reviewed
-[OpenBao 2.6.4](OPENBAO_2_6_4_REVIEW.md) and
-[OpenBao 2.7.1](OPENBAO_2_7_1_REVIEW.md) profiles. Its generated Rust inventory
-contains 707 operation identities across 28 profiles (19,796 cells). Both
-patches have passing, separately retained normal-build public SDK TLS evidence.
-The affected 2.7.0 server and SDK regressions have also been recaptured against
-the current sources, without overwriting the original evidence. After replacing
-yanked `yoke-derive 0.8.3` with `0.8.4` in all three lockfiles, rebuilt binaries
-passed fresh SDK runs on 2.6.4, 2.7.1 and the affected 2.7.0 paths. Seven new
-reports are retained; pre-update SDK reports cannot satisfy current-input gates.
-Server-only evidence is unchanged. The exact post-capture README status
-correction is separately pinned, not represented as an input to those runs.
-Pentesting and GitHub approval remain required before tagging.
+The signed `v2.2.1` tag records the clean final pentest and green GitHub checks
+on `68a4b12`. That release passed 657 all-feature Rust tests, 5 doctests,
+configured Clippy, MSRV, package, dependency and Kani checks. Its seven final
+SDK captures cover the mapping and OIDC security corrections. Those original
+reports remain immutable. Seven fresh 2.2.2 SDK captures now bind the changed
+package metadata and README: patch normal-build `-v4` and 2.7.0 SDK `-v5`
+reports. Every captured input must match exactly; the old README exception is
+removed and previous executions are not relabelled.
 
-The complete local release-check script passed after retaining the fresh SDK
-reports, including Rust tests, Clippy, MSRV, packaging, Kani and all three
-dependency policy checks. Separate fresh-index audits passed with warnings
-denied. Pentest and exact-commit GitHub approval are still outstanding.
+The historical 25-release CI matrix is preserved. Supplemental live CI checks
+exercise eight public SDK core operations over verified TLS on `2.6.4`, `2.7.0`
+and `2.7.1`. A coverage guard checks the union against all supported profiles.
+All three supplemental profiles passed locally; their source-bound reports
+are retained under `compat/ci/2.2.2/` with pinned validators and mutation tests.
+These jobs are not substitutes for advanced or multi-node fixture evidence.
+See the [2.2.2 release notes](../release-notes/RELEASE_NOTES_2.2.2.md) for
+the separate final evidence and CI release gates.
 
 The primary compiler is Rust `1.99.0`; the MSRV remains `1.90.0`. The unselected
 client still uses the unverified `2.6.3` baseline. Legacy LDAP, Kerberos and

@@ -22,7 +22,9 @@ class EvidenceTests(unittest.TestCase):
             old = evidence.base.parse_json(data, 128 * 1024)
             current = evidence.base.read_regular_file(evidence.output(version), 128 * 1024)
             report = evidence.base.parse_json(current, 128 * 1024)
-            self.assertEqual(old["inputs"]["Cargo.lock"], report["inputs"]["Cargo.lock"])
+            released = evidence.base.parse_json(evidence.base.read_regular_file(
+                evidence.output(version).with_name("sdk-normal-tls-v3.json"), 128 * 1024), 128 * 1024)
+            self.assertEqual(old["inputs"]["Cargo.lock"], released["inputs"]["Cargo.lock"])
             with self.subTest(version=version), \
                  patch.object(fixture.normal_sdk, "verify", return_value=fixture.normal_sdk.verify()):
                 with patch.object(evidence, "PINS", {version: (digest, old["test_binary_sha256"])}), \
@@ -67,7 +69,7 @@ class EvidenceTests(unittest.TestCase):
                      self.assertRaises(evidence.harness.HarnessError):
                     evidence.validate(version, altered)
 
-    def test_readme_correction_is_exact_and_every_other_input_still_matches(self):
+    def test_every_input_including_readme_matches_exactly(self):
         for version, fixture in evidence.FIXTURES.items():
             with self.subTest(version=version):
                 data = evidence.base.read_regular_file(evidence.output(version), 128 * 1024)
@@ -75,9 +77,7 @@ class EvidenceTests(unittest.TestCase):
                 current = fixture.input_hashes(normal=True)
                 changed = {name for name in set(current) | set(report["inputs"])
                            if current.get(name) != report["inputs"].get(name)}
-                self.assertEqual(changed, {"README.md"})
-                self.assertEqual(report["inputs"]["README.md"], evidence.CAPTURED_README_SHA256)
-                self.assertEqual(current["README.md"], evidence.REVIEWED_README_SHA256)
+                self.assertEqual(changed, set())
                 with patch.object(fixture.normal_sdk, "verify", return_value=fixture.normal_sdk.verify()):
                     for name in current:
                         for omit in (False, True):
@@ -90,9 +90,31 @@ class EvidenceTests(unittest.TestCase):
                                  patch.object(fixture, "input_hashes", return_value=altered), \
                                  self.assertRaises(evidence.harness.HarnessError):
                                 evidence.validate(version, data)
-                    with patch.object(evidence, "CAPTURED_README", evidence.legacy.patch.ROOT / "README.md"), \
+
+    def test_2_2_1_captures_are_preserved_and_each_old_metadata_input_is_rejected(self):
+        pins = {"2.6.4": "bd5d855ff99869fcaecfced5872efd0ee3830b0aa0be0f9259ddded6603e3fb7",
+                "2.7.1": "a1a3ff1a5730485a3b30deb4187961e6567de75dfc22278dd6661a8cf398a2f7"}
+        for version, digest in pins.items():
+            fixture = evidence.FIXTURES[version]
+            data = evidence.base.read_regular_file(evidence.output(version).with_name("sdk-normal-tls-v3.json"), 128 * 1024)
+            self.assertEqual(evidence.base.sha256(data), digest)
+            old = evidence.base.parse_json(data, 128 * 1024)
+            report = evidence.base.parse_json(evidence.base.read_regular_file(evidence.output(version), 128 * 1024), 128 * 1024)
+            changed = {key for key in old["inputs"] if old["inputs"][key] != report["inputs"].get(key)}
+            self.assertEqual(set(old["inputs"]), set(report["inputs"]))
+            self.assertEqual(changed, {"Cargo.toml", "Cargo.lock", "README.md"})
+            with patch.object(fixture.normal_sdk, "verify", return_value=fixture.normal_sdk.verify()):
+                with patch.object(evidence, "PINS", {version: (digest, old["test_binary_sha256"])}), \
+                     self.assertRaises(evidence.harness.HarnessError):
+                    evidence.validate(version, data)
+                for key in changed:
+                    mutated = copy.deepcopy(report)
+                    mutated["inputs"][key] = old["inputs"][key]
+                    altered = evidence.base.canonical_json(mutated)
+                    with self.subTest(version=version, input=key), \
+                         patch.object(evidence, "PINS", {version: (evidence.base.sha256(altered), report["test_binary_sha256"])}), \
                          self.assertRaises(evidence.harness.HarnessError):
-                        evidence.validate(version, data)
+                        evidence.validate(version, altered)
 
     def test_both_retained_reports_are_current_normal_builds(self):
         for version in evidence.FIXTURES:

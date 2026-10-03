@@ -3,8 +3,10 @@
 This directory contains immutable inputs for the OpenBao multi-version
 compatibility model. Artifact and API-evidence verification do not by
 themselves certify live behavior or server security. Version-locked behavior
-tests, capability profiles, and security support decisions land in later
-checkpoints.
+tests, capability profiles, and security support decisions are separate gates.
+The SDK now supports 28 exact profiles. The original 25-release inventory is
+preserved; reviewed 2.6.4/2.7.0/2.7.1 evidence lives under `onboarding/` and is
+incorporated into the generated runtime registry.
 
 Application-facing selection guidance, including exact policies, rolling
 ranges, mixed clusters, assumed mode, and future-release onboarding, is in
@@ -13,7 +15,7 @@ ranges, mixed clusters, assumed mode, and future-release onboarding, is in
 ## Release Lock
 
 `releases.lock.json` records the 25 published OpenBao releases from `2.0.0`
-through `2.6.3` selected for the active compatibility range. Each record contains:
+through `2.6.3` in the historical compatibility range. Each record contains:
 
 - the exact official Git tag ref object and peeled source commit;
 - the published, non-draft, non-prerelease GitHub Release timestamp;
@@ -39,7 +41,7 @@ pre-promotion evidence for its source release, image, signature topology,
 tagged documentation, runtime OpenAPI, adjacent diff, rendered observation,
 and reviewed discrepancies. That evidence was promoted into the then-current
 22-profile locks, capability registry, contracts, and live matrix. The active
-inventory now contains 25 profiles.
+historical lock contains 25 profiles; the active runtime inventory contains 28.
 
 OpenBao 2.7.0 is staged separately in `onboarding/2.7.0/`. Its first checkpoint
 contains only a hash-locked tagged-source file inventory. Checkpoint 02 adds
@@ -346,10 +348,27 @@ policy-downgrade, injection, and determinism checks:
 
 ## Compatibility CI Matrix
 
+`.github/workflows/openbao-current-compatibility.yml` supplements the historical
+matrix with live public-SDK core checks on `2.6.4`, `2.7.0` and `2.7.1`. It runs
+on main pushes, pull requests, tags, a daily schedule and manual dispatch.
+`scripts/openbao_current_ci.py --check-coverage` rejects missing, duplicate or
+unexpected profiles across the two inventories and validates the generated
+runtime registry. Each job verifies the signed image and exact server version,
+TLS 1.3 and rejection cases, container limits and isolation, and eight public
+SDK operations. The executable is sealed and hashed before unprivileged
+execution; credentials use anonymous descriptors. Cleanup failure fails the job.
+Only a sanitized passing result is uploaded. This is core-flow coverage, not
+full endpoint, advanced cryptographic or multi-node coverage.
+
+Require `OpenBao Current Compatibility / Current-profile results` as well as
+the historical aggregate status in branch protection. GitHub branch protection
+settings must be configured by a repository administrator; workflow changes
+alone do not enable those required statuses.
+
 `.github/workflows/openbao-compatibility.yml` obtains every matrix value from
 the validated release inventory through `scripts/openbao_ci_matrix.py`. Pull
 requests run `2.0.0` plus the latest patch in each OpenBao minor line. Scheduled
-nightly runs, manual pre-release gates, and version-tag runs cover all 25 exact
+nightly runs, manual pre-release gates, and version-tag runs cover all 25 historical
 releases.
 
 Compatibility jobs do not use a shared Cargo cache or repository secrets. They
