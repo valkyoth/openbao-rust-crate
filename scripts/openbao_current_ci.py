@@ -152,6 +152,29 @@ def run_sdk(binary, uid, gid, address, ca, token, version):
         require(sanitized)
 
 
+def start_server(command, environment):
+    shell = str(tls.evidence_tools.protected_path(Path("/usr/bin/sh")))
+    output = harness.run_bounded([shell, "-c", 'exec "$@" 2>&1', "ci-start", *command],
+                                 maximum=16384, timeout=120, environment=environment,
+                                 accepted_codes=(0, 125, 126, 127))
+    # A failed start is never accepted merely because its exit code was captured.
+    require_output = re.fullmatch(rb"[0-9a-f]{64}\n?", output) is not None
+    if not require_output:
+        lowered = output.lower()
+        classifications = {
+            "permission-denied": (b"permission denied", b"operation not permitted"),
+            "cgroup": (b"cgroup",), "selinux": (b"selinux", b"relabel"),
+            "mount": (b"mount",), "network": (b"netavark", b"iptables", b"isolate"),
+            "resource-limit": (b"ulimit", b"rlimit", b"memory-swap"),
+            "runtime": (b"crun", b"runc", b"conmon"),
+        }
+        matched = [name for name, markers in classifications.items()
+                   if any(marker in lowered for marker in markers)]
+        print("Current-profile CI: startup diagnostic=" + (",".join(matched) or "unclassified"),
+              file=sys.stderr, flush=True)
+    require(require_output)
+
+
 def run(version, binary):
     require(os.geteuid() == 0 and version in RELEASES)
     uid, gid = int(os.environ.get("SUDO_UID", "0")), int(os.environ.get("SUDO_GID", "0"))
@@ -184,8 +207,7 @@ def run(version, binary):
         harness.run_bounded(tls.network_command(podman, network, owner), timeout=60, environment=environment)
         resources.append(("container", container))
         print("Current-profile CI: starting constrained server", file=sys.stderr, flush=True)
-        harness.run_bounded(tls.container_command(podman, image, container, network, owner, config, certs),
-                            timeout=120, environment=environment)
+        start_server(tls.container_command(podman, image, container, network, owner, config, certs), environment)
         print("Current-profile CI: checking resource limits", file=sys.stderr, flush=True)
         limits = harness.run_bounded([podman, "inspect", "--format", "{{json .HostConfig}}", container],
                                      maximum=65536, timeout=30, environment=environment)
