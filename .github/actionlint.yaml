@@ -1,0 +1,5 @@
+# GitHub-hosted label published after actionlint 1.7.12's built-in catalog.
+# The configuration key also allows explicitly approved hosted labels.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
