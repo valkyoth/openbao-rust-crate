@@ -13,6 +13,10 @@ All notable changes to this project are documented here.
   from the historical matrix, plus a supported-profile coverage guard.
 - Retain passing local reports for all three supplemental CI profiles, with
   pinned validators and regressions rejecting changed inputs or scope.
+- Enroll the supplemental workflow in action-pin and release-metadata gates,
+  update the Cosign installer to v4.1.2, and test rejection of missing, stale,
+  unpinned or incorrectly labelled actions and missing workflow controls.
+  Fresh `-v2` CI reports bind the updated workflow; original reports are preserved.
 - Add release-documentation regressions to reject stale current-release text.
 - SDK implementation, feature defaults, dependencies and Rust requirements
   are unchanged from 2.2.1. Seven fresh SDK reports cover the new metadata and

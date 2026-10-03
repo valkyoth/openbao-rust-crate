@@ -34,8 +34,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y podman openssl pkg-config libssl-dev
       - name: Install protected Cosign
-        # sigstore/cosign-installer v4.1.0
-        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22
+        # sigstore/cosign-installer v4.1.2
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
         with:
           install-dir: /usr/bin
           use-sudo: true

@@ -172,31 +172,42 @@ def run(version, binary):
         root = Path(tempfile.mkdtemp(prefix="openbao-current-ci-", dir="/tmp"))
         environment = {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8", "HOME": str(root),
                        "XDG_CONFIG_HOME": str(root), "XDG_CACHE_HOME": str(root)}
+        print("Current-profile CI: preparing TLS certificates", file=sys.stderr, flush=True)
         openssl = str(tls.evidence_tools.protected_path(Path("/usr/bin/openssl")))
         certs, ca = harness.generate_tls(root, openssl, environment)
         config = harness.write_server_config(root, version)
+        print("Current-profile CI: preparing pinned image", file=sys.stderr, flush=True)
         image = harness.inspect_image(podman, release.RELEASE, environment)
         network, container = "openbao-ci-net-" + owner, "openbao-ci-" + owner
         resources.append(("network", network))
+        print("Current-profile CI: creating isolated network", file=sys.stderr, flush=True)
         harness.run_bounded(tls.network_command(podman, network, owner), timeout=60, environment=environment)
         resources.append(("container", container))
+        print("Current-profile CI: starting constrained server", file=sys.stderr, flush=True)
         harness.run_bounded(tls.container_command(podman, image, container, network, owner, config, certs),
                             timeout=120, environment=environment)
+        print("Current-profile CI: checking resource limits", file=sys.stderr, flush=True)
         limits = harness.run_bounded([podman, "inspect", "--format", "{{json .HostConfig}}", container],
                                      maximum=65536, timeout=30, environment=environment)
         base.validate_container_resource_config(base.parse_json(limits, 65536))
+        print("Current-profile CI: checking network isolation", file=sys.stderr, flush=True)
         tls.verify_network(podman, network, container, environment)
+        print("Current-profile CI: checking loopback publication", file=sys.stderr, flush=True)
         port = harness.parse_port(harness.run_bounded([podman, "port", container, "8200/tcp"],
                                   maximum=1024, timeout=30, environment=environment))
         address = f"https://127.0.0.1:{port}"
+        print("Current-profile CI: waiting for exact-version TLS health", file=sys.stderr, flush=True)
         harness.wait_for_exact_version(address, ca, version)
+        print("Current-profile CI: checking TLS rejection cases", file=sys.stderr, flush=True)
         tls.probe_tls(port, ca)
+        print("Current-profile CI: initializing disposable server", file=sys.stderr, flush=True)
         token = harness.initialize_and_unseal(address, ca)
         print("Current-profile CI: public SDK core operations", file=sys.stderr, flush=True)
         attestation = run_sdk(descriptor, uid, gid, address, ca, token, version)
         token = ""
     finally:
         os.close(descriptor)
+        print("Current-profile CI: cleaning owned resources", file=sys.stderr, flush=True)
         failed = False
         for kind, name in reversed(resources):
             try:

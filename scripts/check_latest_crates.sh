@@ -220,3 +220,6 @@ check_github_action_pin taiki-e/install-action https://github.com/taiki-e/instal
 check_github_action_pin actions/checkout https://github.com/actions/checkout.git 7 .github/workflows/openbao-compatibility.yml
 check_github_action_pin actions/upload-artifact https://github.com/actions/upload-artifact.git 7 .github/workflows/openbao-compatibility.yml
 check_github_action_pin actions/download-artifact https://github.com/actions/download-artifact.git 8 .github/workflows/openbao-compatibility.yml
+check_github_action_pin actions/checkout https://github.com/actions/checkout.git 7 .github/workflows/openbao-current-compatibility.yml
+check_github_action_pin sigstore/cosign-installer https://github.com/sigstore/cosign-installer.git 4 .github/workflows/openbao-current-compatibility.yml
+check_github_action_pin actions/upload-artifact https://github.com/actions/upload-artifact.git 7 .github/workflows/openbao-current-compatibility.yml

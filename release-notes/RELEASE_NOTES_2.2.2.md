@@ -26,6 +26,9 @@ capture is relabelled as a 2.2.2 execution. The supplemental CI runner passed
 locally on all three profiles; the sanitized, source-bound reports are retained
 under `compat/ci/2.2.2/`, with independently pinned validators and mutation
 regressions. Green GitHub checks on the final commit remain a release gate.
+The current reports use `-v2.json`, capturing the Cosign installer v4.1.2
+workflow after its enrollment in action-pin and release-metadata validation.
+Original reports remain immutable and cannot satisfy current-input checks.
 
 Legacy LDAP auth/secrets, Kerberos and RADIUS remain supported on 2.6.4 and
 excluded on 2.7 until external plugins are independently verified. The known

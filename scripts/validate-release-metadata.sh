@@ -126,6 +126,10 @@ check_file scripts/openbao_core_matrix.py
 check_file scripts/openbao_ci_matrix.py
 check_file .github/workflows/ci.yml
 check_file .github/workflows/openbao-compatibility.yml
+check_file .github/workflows/openbao-current-compatibility.yml
+check_grep 'permissions:' .github/workflows/openbao-current-compatibility.yml
+check_grep 'contents: read' .github/workflows/openbao-current-compatibility.yml
+check_grep 'persist-credentials: false' .github/workflows/openbao-current-compatibility.yml
 
 check_grep 'name = "openbao"' Cargo.toml
 check_grep 'version = "2.2.2"' Cargo.toml

@@ -3,7 +3,9 @@
 
 import fcntl
 import hashlib
+import io
 import os
+from contextlib import redirect_stderr
 from pathlib import Path
 import tempfile
 import unittest
@@ -116,6 +118,27 @@ class CurrentCiTests(unittest.TestCase):
              patch.object(ci, "freeze_binary") as freeze, self.assertRaises(ci.harness.HarnessError):
             ci.run("2.7.2", Path("/not-used"))
         freeze.assert_not_called()
+
+    def test_setup_failure_reports_safe_stage_not_exception_contents(self):
+        diagnostic = io.StringIO()
+        descriptor = os.memfd_create("openbao-ci-diagnostic-test", os.MFD_CLOEXEC)
+        with patch.object(ci.os, "geteuid", return_value=0), \
+             patch.dict(ci.os.environ, {"SUDO_UID": str(os.getuid()), "SUDO_GID": str(os.getgid())}), \
+             patch.object(ci, "input_hashes", return_value={}), \
+             patch.object(ci, "freeze_binary", return_value=(descriptor, "0" * 64)), \
+             patch.object(ci.tls.evidence_tools, "protected_path", side_effect=lambda path: path), \
+             patch.object(ci.modern, "verify_signature"), \
+             patch.object(ci.harness, "generate_tls", side_effect=ci.harness.HarnessError("sensitive-marker")), \
+             patch.object(ci.sys, "argv", ["fixture", "--version", "2.7.1", "--test-binary", "/not-used"]), \
+             redirect_stderr(diagnostic):
+            self.assertEqual(ci.main(), 1)
+        self.assertIn("Current-profile CI: preparing TLS certificates", diagnostic.getvalue())
+        self.assertIn("Current-profile CI: cleaning owned resources", diagnostic.getvalue())
+        self.assertIn("no compatibility success recorded", diagnostic.getvalue())
+        self.assertNotIn("sensitive-marker", diagnostic.getvalue())
+        self.assertNotIn("preparing pinned image", diagnostic.getvalue())
+        with self.assertRaises(OSError):
+            os.fstat(descriptor)
 
 
 if __name__ == "__main__":
