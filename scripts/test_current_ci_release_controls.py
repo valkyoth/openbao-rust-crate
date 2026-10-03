@@ -45,7 +45,8 @@ def metadata_gate():
     expected = {f"check_file {WORKFLOW}",
                 f"check_grep 'permissions:' {WORKFLOW}",
                 f"check_grep 'contents: read' {WORKFLOW}",
-                f"check_grep 'persist-credentials: false' {WORKFLOW}"}
+                f"check_grep 'persist-credentials: false' {WORKFLOW}",
+                f"check_grep 'runs-on: ubuntu-26.04' {WORKFLOW}"}
     if len(calls) != len(expected) or set(calls) != expected:
         raise AssertionError("current-profile workflow metadata must be enrolled")
     return functions + "\n" + "\n".join(calls)
@@ -90,11 +91,13 @@ class CurrentCiReleaseControlsTests(unittest.TestCase):
     def test_metadata_rejects_missing_workflow_and_controls(self):
         gate = metadata_gate()
         self.assertNotEqual(run_gate(gate, None).returncode, 0)
-        for control in ("permissions:", "contents: read", "persist-credentials: false"):
+        for control in ("permissions:", "contents: read", "persist-credentials: false",
+                        "runs-on: ubuntu-26.04"):
             with self.subTest(control=control):
                 self.assertNotEqual(run_gate(gate, self.workflow.replace(control, "omitted")).returncode, 0)
         for old, new in (("contents: read", "contents: write"),
-                         ("persist-credentials: false", "persist-credentials: true")):
+                         ("persist-credentials: false", "persist-credentials: true"),
+                         ("runs-on: ubuntu-26.04", "runs-on: ubuntu-24.04")):
             with self.subTest(control=new):
                 self.assertNotEqual(run_gate(gate, self.workflow.replace(old, new)).returncode, 0)
 
