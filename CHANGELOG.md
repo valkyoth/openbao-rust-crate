@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.2.3
+
+- Update Tokio from 1.53.1 to 1.53.2 and refresh source-bound SDK evidence.
+
+- Add explicit artifact- and mount-specific support for official v0.1.0 Linux
+  amd64 LDAP auth/secrets, Kerberos and RADIUS plugins on OpenBao 2.7.0/2.7.1.
+- Approve 33 LDAP, nine Kerberos and six RADIUS operation contracts using real
+  backend server and public-SDK fixtures; untested operations remain closed.
+- Preserve 28 core profiles, historical built-ins, feature defaults and the
+  RADIUS protocol acknowledgement. Plugin selection is a deployment assertion,
+  not remote artifact attestation.
+- Add signed plugin artifact verification, bounded sealed-executable fixture
+  runners, retained evidence validation and explicit backend trust disclosures.
+
 ## 2.2.2
 
 - Correct the crates.io README and current documentation to describe released

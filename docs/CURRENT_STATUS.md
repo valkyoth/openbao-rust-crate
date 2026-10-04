@@ -8,37 +8,34 @@ the [README](../README.md). For endpoint-level classifications, see
 
 ## Release Snapshot
 
-SDK `2.2.2` is documentation and CI maintenance only; its SDK implementation,
-dependencies and feature defaults are unchanged from the released `2.2.1`.
+SDK `2.2.3` adds explicitly selected official v0.1.0 LDAP auth/secrets,
+Kerberos and RADIUS plugins on exact OpenBao 2.7.0 and 2.7.1. Feature defaults
+are unchanged from `2.2.2`; Tokio is updated to 1.53.2.
 The generated Rust inventory contains 707 operation identities across 28 exact
 profiles (19,796 cells), including independently reviewed
 [OpenBao 2.6.4](OPENBAO_2_6_4_REVIEW.md), `2.7.0` and
 [OpenBao 2.7.1](OPENBAO_2_7_1_REVIEW.md).
 
-The signed `v2.2.1` tag records the clean final pentest and green GitHub checks
-on `68a4b12`. That release passed 657 all-feature Rust tests, 5 doctests,
-configured Clippy, MSRV, package, dependency and Kani checks. Its seven final
-SDK captures cover the mapping and OIDC security corrections. Those original
-reports remain immutable. Seven fresh 2.2.2 SDK captures now bind the changed
-package metadata and README: patch normal-build `-v4` and 2.7.0 SDK `-v5`
-reports. Every captured input must match exactly; the old README exception is
-removed and previous executions are not relabelled.
+Plugin contracts cover 48 distinct operations across eight plugin/server
+combinations. They require a verified server profile and an explicit mount and
+artifact selection, which is an administrator assertion rather than remote
+attestation. See [external plugin selection](OPENBAO_EXTERNAL_PLUGINS.md).
+Current-source validators require exact input hashes; earlier release and
+checkpoint captures remain historical and are not relabelled.
 
 The historical 25-release CI matrix is preserved. Supplemental live CI checks
 exercise eight public SDK core operations over verified TLS on `2.6.4`, `2.7.0`
 and `2.7.1`. A coverage guard checks the union against all supported profiles.
-All three supplemental profiles passed locally; their final source-bound `-v3`
-reports are retained under `compat/ci/2.2.2/` with pinned validators and mutation
-tests. The final fixture also passed all three profiles on GitHub's Ubuntu 26.04
-runner, which supports the strict isolation required by these jobs.
-These jobs are not substitutes for advanced or multi-node fixture evidence.
-See the [2.2.2 release notes](../release-notes/RELEASE_NOTES_2.2.2.md) for
-the separate final evidence and CI release gates.
+Historical 2.2.2 CI reports remain under `compat/ci/2.2.2/`. These jobs are not
+substitutes for advanced, multi-node or external-plugin fixture evidence.
+See the [2.2.3 release notes](../release-notes/RELEASE_NOTES_2.2.3.md) for
+the separate evidence and CI release gates.
 
 The primary compiler is Rust `1.99.0`; the MSRV remains `1.90.0`. The unselected
 client still uses the unverified `2.6.3` baseline. Legacy LDAP, Kerberos and
-RADIUS engines remain available on `2.6.4` and excluded on both reviewed 2.7
-profiles. The known upstream control-group replay failure persists on `2.7.1`.
+RADIUS engines remain built-in on `2.6.4`; on both reviewed 2.7 profiles they
+require the external-plugin selections described above. The known upstream
+control-group replay failure persists on `2.7.1`.
 
 ### Published 2.2.0 Baseline
 

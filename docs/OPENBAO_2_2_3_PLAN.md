@@ -1,9 +1,9 @@
 # SDK 2.2.3 External Plugin Support Plan
 
-Development target: 2.2.3. The package remains at the published 2.2.2 version
-until the final release checkpoint. No external-plugin route is promoted by
-checkpoint 1. Existing 28 exact server profiles and historical evidence remain
-unchanged.
+Development target and package version: 2.2.3. Checkpoints 3-5 enabled the
+reviewed external-plugin contracts. Existing 28 exact server profiles and
+historical evidence remain unchanged. Checkpoint 6 refreshes source-bound
+evidence for the final package; earlier checkpoint results are historical.
 
 ## Checkpoints
 
@@ -11,11 +11,11 @@ unchanged.
    releases, archive/signature/checksum/SBOM digests, extracted binary digests,
    source tag commit and the published release signing key. Retain bounded,
    artifact-only evidence and trust-boundary regression tests.
-2. Plugin-aware compatibility foundation: implemented with closed contracts.
+2. Plugin-aware compatibility foundation: completed with initially closed contracts.
    Select exact artifact/server identities per mount independently of the
    built-in server profile; reject unknown identities and duplicate mounts.
-   Preserve older built-ins. All plugin contracts remain closed until their
-   positive/negative SDK fixtures pass in checkpoints 3-5.
+   Preserve older built-ins. Contracts were enabled only after their
+   positive/negative SDK fixtures passed in checkpoints 3-5.
 3. LDAP auth and secrets: completed. The isolated, digest-pinned directory
    server fixture and offline trust-boundary regressions are implemented;
    live server and 33-operation public-SDK candidate checks passed on both
@@ -43,8 +43,37 @@ unchanged.
    acceptance passed on both releases with retained current-input evidence.
    The explicit protocol-risk
    gate is unchanged. See [the RADIUS review](OPENBAO_2_2_3_RADIUS_REVIEW.md).
-6. Release integration: pending. Eight plugin/server combinations, CI, refreshed
+6. Release integration: completed locally. Eight plugin/server combinations, CI, refreshed
    SDK evidence, full regressions, documentation and package bump to 2.2.3.
+
+### Final Integration Gates
+
+- Package, lockfile references, README, migration guidance and release-bound
+  security links now target 2.2.3. Feature defaults are unchanged. The latest
+  dependency gate requires Tokio 1.53.2; the maintainer approved that update
+  and another SDK evidence refresh after the first final captures.
+- CI runs all three plugin families' fixture and evidence regressions. The
+  aggregate release gate requires all eight exact plugin/server combinations
+  and 48 distinct operations with current normal-build SDK evidence.
+- Formatting, release metadata, all-feature Rust tests and doctests, strict
+  all-feature Clippy, MSRV 1.90 and the main dependency policy check pass locally.
+- All six plugin SDK captures have been refreshed after the Tokio update and
+  validate against current inputs. Earlier captures remain immutable under
+  `sdk-normal-checkpoint` and `sdk-normal-pre-tokio`. Both LDAP server runs have
+  been refreshed; all plugin server reports validate. Three current-profile CI
+  captures are refreshed under `compat/ci/2.2.3/*-v2.json`. Core SDK captures
+  are refreshed as patch normal-build revision 6 and 2.7.0 SDK revision 7.
+- All seven existing 2.7.0 server-only gates still validate and do not require
+  live reruns. The CI install-action pin is updated to v2.87.24.
+- Evidence retention and mutation tests and all local release checks pass.
+  The full-range pentest and GitHub approval remain outstanding. No release
+  tag is created.
+- Local verification includes 669 all-feature Rust tests, 21 intentionally
+  ignored live/performance tests, 5 doctests, 101 evidence-validator tests,
+  configured Clippy/MSRV/minimal-feature checks, fuzz compilation, packaged
+  smoke tests and examples, and Kani. The package is 520,632 bytes compressed.
+  All three dependency policy checks and fresh RustSec scans pass (1,290
+  advisories; 198 main, 173 native-TLS fixture and 165 fuzz dependencies).
 
 ## Artifact Checkpoint
 
@@ -109,20 +138,20 @@ clients retain the same namespace-bound configuration.
 
 This selection is a caller deployment assertion, not remote attestation. A
 server health response does not prove which plugin is installed. Checkpoints
-3-5 must establish installation checks and the trust boundary for login clients
+3-5 establish installation checks and the trust boundary for login clients
 that cannot query privileged catalog APIs. No release claim may silently treat
 an assertion as server-verified binary identity.
 
 The typed route resolver binds actual mounts separately from documented mount
 names. Its plugin branch requires the selected engine and mount, matching
 detected and routing server versions, verified compatibility status and an
-explicit per-operation reviewed contract. The contract table is deliberately
-empty at this checkpoint. There is no fallback to old built-in route evidence,
+explicit per-operation reviewed contract. The table was empty in checkpoint 2;
+checkpoints 3-5 enabled 48 reviewed operations. There is no fallback to old built-in route evidence,
 wildcard approval, or permission gained from merely selecting a plugin. Assumed,
 unverified and unknown-newer clients cannot satisfy this branch. Existing feature
 acknowledgements and typed dispositions remain enforced.
 
 The production-source edits invalidate affected current-input SDK evidence.
-Historical captures remain unchanged; fresh SDK/CI evidence will be collected
-after implementation stabilizes, before checkpoint 6 release approval. A stale
+Historical captures remain unchanged; fresh SDK/CI evidence is retained for
+the final Tokio-updated 2.2.3 inputs during checkpoint 6. A stale
 capture must fail validation, not be repinned or exempted to keep CI green.

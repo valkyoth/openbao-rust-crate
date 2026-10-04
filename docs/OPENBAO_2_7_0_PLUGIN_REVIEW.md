@@ -1,5 +1,16 @@
 # OpenBao 2.7 Plugin And Fixture Checkpoint
 
+## SDK 2.2.3 Update
+
+The September checkpoint and October availability observations below are
+historical. SDK 2.2.3 now provides separately selected, exact artifact/mount
+contracts for the four reviewed v0.1.0 plugins on OpenBao 2.7.0 and 2.7.1.
+The built-in profile exclusions still apply without that selection. See
+[external plugin selection](OPENBAO_EXTERNAL_PLUGINS.md) and the
+[2.2.3 plan](OPENBAO_2_2_3_PLAN.md) for evidence and final release gates.
+
+## Historical Checkpoint
+
 Checkpoint 03, observed 2026-09-27. This is not SDK 2.7 support, plugin
 verification, or a successful skipped integration test. The live staged TLS
 fixture passed; checkpoint 03 is complete under the approved exclusions below.

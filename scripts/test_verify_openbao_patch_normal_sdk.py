@@ -100,16 +100,19 @@ class EvidenceTests(unittest.TestCase):
             self.assertEqual(evidence.base.sha256(data), digest)
             old = evidence.base.parse_json(data, 128 * 1024)
             report = evidence.base.parse_json(evidence.base.read_regular_file(evidence.output(version), 128 * 1024), 128 * 1024)
-            changed = {key for key in old["inputs"] if old["inputs"][key] != report["inputs"].get(key)}
-            self.assertEqual(set(old["inputs"]), set(report["inputs"]))
-            self.assertEqual(changed, {"Cargo.toml", "Cargo.lock", "README.md"})
+            changed = {key for key in set(old["inputs"]) | set(report["inputs"])
+                       if old["inputs"].get(key) != report["inputs"].get(key)}
+            self.assertTrue({"Cargo.toml", "Cargo.lock", "README.md"} <= changed)
             with patch.object(fixture.normal_sdk, "verify", return_value=fixture.normal_sdk.verify()):
                 with patch.object(evidence, "PINS", {version: (digest, old["test_binary_sha256"])}), \
                      self.assertRaises(evidence.harness.HarnessError):
                     evidence.validate(version, data)
                 for key in changed:
                     mutated = copy.deepcopy(report)
-                    mutated["inputs"][key] = old["inputs"][key]
+                    if key in old["inputs"]:
+                        mutated["inputs"][key] = old["inputs"][key]
+                    else:
+                        mutated["inputs"].pop(key, None)
                     altered = evidence.base.canonical_json(mutated)
                     with self.subTest(version=version, input=key), \
                          patch.object(evidence, "PINS", {version: (evidence.base.sha256(altered), report["test_binary_sha256"])}), \

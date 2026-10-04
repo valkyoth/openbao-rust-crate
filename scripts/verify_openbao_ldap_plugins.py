@@ -8,8 +8,8 @@ import openbao_ldap_plugins as fixture
 base = fixture.base
 ROOT = fixture.ROOT / "compat/plugins/ldap"
 ANCHORS = {
-    "2.7.0": "1d2ca7f8942ac02b4c7fa41d406139446bf3b6a034d90a3ef66d33022152f28f",
-    "2.7.1": "7316f7f37644db3ccb5853544017071ce3e37ca6f877d17c2745b9e8eb2489cc",
+    "2.7.0": "c9d8b5329dedc8dc6a9612f581f64412ca112a524ff7ffdaa73c36ea058f6b7c",
+    "2.7.1": "5f3e70c1ce7f5342478d696a7c4b62c65befa7b9223f90fc1226e165978e1b20",
 }
 
 

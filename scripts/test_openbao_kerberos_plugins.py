@@ -65,6 +65,16 @@ class KerberosTests(unittest.TestCase):
         self.assertIn("source=repository,target=/fixture-packages,ro", value)
         self.assertNotIn("--allow-untrusted", value)
         self.assertNotIn("curl", value)
+        self.assertIn('ENTRYPOINT ["/usr/bin/python3.12", "-E", "-s", "-S", "-B", "/fixture/kdc.py"]', value)
+
+    def test_container_helper_uses_explicit_isolated_python(self):
+        environment = {"PATH": "/usr/bin:/bin"}
+        with patch.object(fixture.harness, "run_bounded", return_value=b"result") as run:
+            self.assertEqual(fixture.helper("/usr/bin/podman", "owned-kdc", environment, "ticket"), b"result")
+        run.assert_called_once_with(
+            ["/usr/bin/podman", "exec", "--user", "65532:0", "owned-kdc",
+             "/usr/bin/python3.12", "-E", "-s", "-S", "-B", "/fixture/kdc.py", "ticket"],
+            maximum=48 * 1024, timeout=25, environment=environment)
 
     def test_kdc_has_no_host_network_or_published_ports(self):
         args = fixture.kdc_command("podman", "image", "name", "owned-server", "owner", Path("/private"))

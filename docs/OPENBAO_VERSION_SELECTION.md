@@ -3,7 +3,7 @@
 OpenBao documents its HTTP API below `/v1`, but that prefix is not a
 backwards-compatibility guarantee. The SDK therefore selects an immutable
 exact-release profile before a typed request is serialized. Active profiles
-in SDK `2.2.2` cover 28 reviewed releases from `2.0.0`
+in SDK `2.2.3` cover 28 reviewed releases from `2.0.0`
 through `2.7.1`, including the separate maintenance patch `2.6.4`. Exact,
 assumed, range, strict-detection, and acknowledged-newer policies may select
 these reviewed patches; generated route dispatch never probes or falls back to an older
@@ -146,9 +146,13 @@ Assumed 2.7 selection enables those controls but does not verify the server.
 Workflow CAS and consistency require stricter verified policies; an assumed
 profile or rolling range does not satisfy those requirements.
 
-LDAP auth/secrets, Kerberos and RADIUS are excluded on 2.7 pending separately
-verified external plugins. Their historical profiles remain available. Selecting
-an older profile is not a workaround for a removed engine on a 2.7 server.
+LDAP auth/secrets, Kerberos and RADIUS are not built into the reviewed 2.7
+images. SDK 2.2.3 supports the separately reviewed official v0.1.0 Linux amd64
+plugins through explicit `ExternalPluginSelection` for the exact server and
+mount. Assumed, unverified and unknown-newer policies cannot enable these
+plugin contracts. See [external plugin selection](OPENBAO_EXTERNAL_PLUGINS.md).
+Historical built-in profiles remain available; selecting an older profile is
+not a workaround for a removed engine on a 2.7 server.
 
 The historical matrix covers 25 releases through 2.6.3. The separately retained
 [2.7.0 evidence and reviews](OPENBAO_2_7_0_PLAN.md),

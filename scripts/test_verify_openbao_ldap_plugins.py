@@ -26,6 +26,21 @@ class EvidenceTests(unittest.TestCase):
         for version in evidence.ANCHORS:
             self.assertIs(evidence.verify(version)["routable"], False)
 
+    def test_checkpoint_reports_are_preserved_but_not_current(self):
+        anchors = {
+            "2.7.0": "1d2ca7f8942ac02b4c7fa41d406139446bf3b6a034d90a3ef66d33022152f28f",
+            "2.7.1": "7316f7f37644db3ccb5853544017071ce3e37ca6f877d17c2745b9e8eb2489cc",
+        }
+        for version, digest in anchors.items():
+            root = evidence.ROOT / version / "server-checkpoint"
+            raw = evidence.base.read_regular_file(root / "report.json", 65536)
+            self.assertEqual(evidence.base.sha256(raw), digest)
+            report = evidence.base.parse_json(raw, 65536)
+            schema = evidence.base.read_regular_file(root / "runtime-openapi.json", 2 * 1024 * 1024)
+            evidence.validate_report(report, version, report["inputs"], schema)
+            with self.assertRaises(evidence.base.SnapshotError):
+                evidence.validate_report(report, version, self.inputs, schema)
+
     def test_scope_and_artifact_mutations_fail_closed(self):
         for key, value in (("scope", "sdk-integration"), ("outcome", "failed"),
                            ("routable", 0), ("routable", True), ("cleanup", "failed"),

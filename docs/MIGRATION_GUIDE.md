@@ -1,5 +1,15 @@
 # Migration Guide
 
+## From `openbao` 2.2.2 To 2.2.3
+
+Existing built-in server profiles and feature defaults are unchanged. To use
+the official v0.1.0 LDAP auth/secrets, Kerberos or RADIUS plugins on 2.7.0/2.7.1,
+configure an exact verified server policy and an `ExternalPluginSelection`
+for each mount. Use the corresponding `_at` helper for custom mounts. Artifact
+selection is the caller's deployment assertion, not server attestation.
+See [external plugin selection](OPENBAO_EXTERNAL_PLUGINS.md) for supported
+operation counts, trust limits and the unchanged RADIUS acknowledgement gate.
+
 ## From `openbao` 2.2.1 To 2.2.2
 
 No SDK API, behavior, dependency, feature or Rust requirement changes.

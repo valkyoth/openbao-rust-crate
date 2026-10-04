@@ -126,12 +126,12 @@ class RefreshTests(unittest.TestCase):
             data = base.read_regular_file(previous, 65536)
             self.assertEqual(base.sha256(data), digest)
             old = base.parse_json(data, 65536)
-            changed = {key for key in old["inputs"] if old["inputs"][key] != current["inputs"].get(key)}
+            changed = {key for key in set(old["inputs"]) | set(current["inputs"])
+                       if old["inputs"].get(key) != current["inputs"].get(key)}
             expected = {"Cargo.toml", "Cargo.lock"}
             if "README.md" in current["inputs"]:
                 expected.add("README.md")
-            self.assertEqual(set(old["inputs"]), set(current["inputs"]))
-            self.assertEqual(changed, expected)
+            self.assertTrue(expected <= changed)
             with patch.object(verifier, "RESULT", previous), \
                  patch.object(verifier, "EXPECTED_SHA256", digest), \
                  patch.object(verifier, "TEST_BINARY_SHA256", old["test_binary_sha256"]), \
@@ -139,7 +139,10 @@ class RefreshTests(unittest.TestCase):
                 verifier.verify()
             for key in changed:
                 mutated = copy.deepcopy(current)
-                mutated["inputs"][key] = old["inputs"][key]
+                if key in old["inputs"]:
+                    mutated["inputs"][key] = old["inputs"][key]
+                else:
+                    mutated["inputs"].pop(key, None)
                 altered = base.canonical_json(mutated)
                 original_read = base.read_regular_file
                 def read_report(path, maximum):

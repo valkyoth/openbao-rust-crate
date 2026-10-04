@@ -68,9 +68,9 @@ class EvidenceTests(unittest.TestCase):
                     self.assertIn("/usr/bin/python3 -E -s -S -B ", line, str(path))
         for path in (root / "scripts").glob("*.py"):
             first = path.read_text().splitlines()[0]
-            if path.name == "openbao_test_harness.py":
-                # Historical live evidence hashes these exact bytes. Its old
-                # shebang must not remain an executable verification entry point.
+            if path.name in {"openbao_test_harness.py", "kerberos_kdc_helper.py"}:
+                # Neither is a host entry point. The container-only KDC helper
+                # is explicitly invoked with isolated flags, tested separately.
                 self.assertEqual(path.stat().st_mode & 0o111, 0)
                 continue
             if first.startswith("#!"):
