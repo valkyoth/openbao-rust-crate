@@ -26,8 +26,14 @@ unchanged.
    [the LDAP review](OPENBAO_2_2_3_LDAP_REVIEW.md). Real directory services, successful and
    rejected authentication, mappings, generated credentials, rotation,
    revocation and cleanup on both 2.7.0 and 2.7.1.
-4. Kerberos: pending. Real KDC authentication, mapping and rejection tests on
-   both server releases.
+4. Kerberos: completed. A signed Wolfi base, retained signed repository index
+   and 31 hash-pinned packages build a disposable MIT KDC offline. Local ticket
+   generation and invalid-keytab rejection pass. Server and nine-operation
+   candidate SDK fixtures passed on both releases, and their reports and mounted
+   schemas are retained with independent anchors. Nine exact contracts are now
+   enabled in source; normal-build live acceptance passed on both releases.
+   Retained normal-build reports validate against current SDK and fixture inputs. See
+   [the Kerberos review](OPENBAO_2_2_3_KERBEROS_REVIEW.md).
 5. RADIUS: pending. Real authentication, policy mapping and rejection tests on
    both server releases; retain the existing explicit protocol-risk gate.
 6. Release integration: pending. Eight plugin/server combinations, CI, refreshed

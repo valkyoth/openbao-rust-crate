@@ -210,6 +210,8 @@ pub mod compatibility;
 pub mod consistency;
 pub mod duration;
 mod error;
+#[cfg(all(test, feature = "sys", feature = "kerberos-auth"))]
+mod kerberos_plugin_live;
 #[cfg(all(test, feature = "sys", feature = "ldap-auth", feature = "ldap"))]
 mod ldap_plugin_live;
 #[cfg(all(

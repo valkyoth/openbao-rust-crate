@@ -170,7 +170,18 @@ fn reviewed_operations(
     match kind {
         ExternalPluginKind::LdapAuth => super::ldap_contracts::AUTH,
         ExternalPluginKind::LdapSecrets => super::ldap_contracts::SECRETS,
-        ExternalPluginKind::KerberosAuth | ExternalPluginKind::RadiusAuth => &[],
+        ExternalPluginKind::KerberosAuth => &[
+            "openbao.delete.auth.kerberos.groups.name.531b18e6c0502640",
+            "openbao.get.auth.kerberos.config.a8df007535cf11c8",
+            "openbao.get.auth.kerberos.config.ldap.70521a241b0f202f",
+            "openbao.get.auth.kerberos.groups.name.954ae92b9ea6a64f",
+            "openbao.list.auth.kerberos.groups.fad52108a9209f19",
+            "openbao.post.auth.kerberos.config.e23ef3bccd4f8768",
+            "openbao.post.auth.kerberos.config.ldap.09ea51fb665e0383",
+            "openbao.post.auth.kerberos.groups.name.9a59741aa62e99af",
+            "openbao.post.auth.kerberos.login.a1f715e91255582a",
+        ],
+        ExternalPluginKind::RadiusAuth => &[],
     }
 }
 
@@ -344,7 +355,7 @@ mod tests {
     }
 
     #[test]
-    fn only_reviewed_ldap_operations_are_promoted_for_verified_exact_servers() {
+    fn only_reviewed_operations_are_promoted_for_verified_exact_servers() {
         for kind in KINDS {
             for server in [OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)] {
                 let selected = selection(kind, server);
@@ -371,6 +382,14 @@ mod tests {
         assert_eq!(
             super::super::ldap_contracts::AUTH.len() + super::super::ldap_contracts::SECRETS.len(),
             33
+        );
+        assert_eq!(
+            reviewed_operations(
+                ExternalPluginKind::KerberosAuth,
+                OpenBaoVersion::new(2, 7, 0)
+            )
+            .len(),
+            9
         );
         for kind in KINDS {
             for version in [OpenBaoVersion::new(2, 6, 4), OpenBaoVersion::new(2, 7, 2)] {

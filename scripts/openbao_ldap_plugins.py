@@ -47,14 +47,16 @@ def progress(message):
     print("LDAP plugin fixture: " + message, file=sys.stderr, flush=True)
 
 
-def install_plugins(root):
+def install_plugins(root, plugin_ids=PLUGINS):
+    require(isinstance(plugin_ids, tuple) and len(set(plugin_ids)) == len(plugin_ids)
+            and set(plugin_ids) <= {"auth-ldap", "secrets-ldap", "auth-kerberos", "auth-radius"})
     for tool in ("gpg", "gpgv"):
         tls.evidence_tools.protected_path(Path("/usr/bin") / tool)
     destination = root / "plugins"
     destination.mkdir(mode=0o750)
     result = {}
     for plugin in artifacts.lock()["plugins"]:
-        if plugin["id"] not in PLUGINS:
+        if plugin["id"] not in plugin_ids:
             continue
         downloads = {asset["name"]: artifacts.download(
             artifacts.ASSET_BASE + plugin["tag"] + "/" + asset["name"],
@@ -66,7 +68,7 @@ def install_plugins(root):
         require(base.sha256(base.read_regular_file(destination / command, artifacts.MAX_BINARY))
                 == plugin["binary_sha256"])
         result[plugin["id"]] = plugin["binary_sha256"]
-    require(set(result) == set(PLUGINS))
+    require(set(result) == set(plugin_ids))
     return destination, result
 
 
@@ -382,8 +384,11 @@ def input_hashes():
     return {name: base.sha256(base.read_regular_file(ROOT / name, 2 * 1024 * 1024)) for name in names}
 
 
-def run(version, acknowledge_unsigned, *, sdk_exercise=None):
+def run(version, acknowledge_unsigned, *, sdk_exercise=None, extra_plugins=(), extra_exercise=None):
     require(os.geteuid() == 0 and version in VERSIONS and acknowledge_unsigned is True)
+    require(isinstance(extra_plugins, tuple) and set(extra_plugins) <= {"auth-kerberos", "auth-radius"}
+            and (extra_exercise is None) == (not extra_plugins)
+            and not (extra_exercise is not None and sdk_exercise is not None))
     inputs = input_hashes()
     root = Path(tempfile.mkdtemp(prefix="openbao-ldap-plugins-", dir="/tmp"))
     owner = secrets.token_hex(16)
@@ -401,7 +406,7 @@ def run(version, acknowledge_unsigned, *, sdk_exercise=None):
             release.verify_signature()
         observation = directory.verify(environment, acknowledge_unsigned)
         progress("verifying signed plugin archives")
-        plugins, digests = install_plugins(root)
+        plugins, digests = install_plugins(root, PLUGINS + extra_plugins)
         certs, ca = harness.generate_tls(root, str(tls.evidence_tools.protected_path(Path("/usr/bin/openssl"))), environment)
         # Separate the shared public server key/cert from the CA private key.
         public_tls = root / "server-tls"
@@ -453,7 +458,10 @@ def run(version, acknowledge_unsigned, *, sdk_exercise=None):
         token = harness.initialize_and_unseal(address, ca)
         progress("registering and checking actual mounted plugin identities")
         register(address, ca, token, digests)
-        if sdk_exercise is None:
+        if extra_exercise is not None:
+            extra_exercise(address, ca, token, root, ldap_port, passwords,
+                           podman, server, owner, environment)
+        elif sdk_exercise is None:
             server_checks(address, ca, token, root, ldap_port, passwords)
         else:
             sdk_exercise(address, ca, token, root, ldap_port, passwords)
@@ -480,9 +488,9 @@ def run(version, acknowledge_unsigned, *, sdk_exercise=None):
     require(inputs == input_hashes())
     return {"schema": "openbao-ldap-plugin-server/v1", "server_version": version,
             "outcome": "passed", "scope": ("server-fixture-only-not-public-sdk-integration"
-                if sdk_exercise is None else "public-sdk-candidate-only"),
+                if sdk_exercise is None and extra_exercise is None else "public-sdk-candidate-only"),
             "routable": False, "plugins": digests, "directory": observation,
-            "checks": list(CHECKS) if sdk_exercise is None else [], "inputs": inputs, "cleanup": "passed",
+            "checks": list(CHECKS) if sdk_exercise is None and extra_exercise is None else [], "inputs": inputs, "cleanup": "passed",
             "runtime_openapi_sha256": base.sha256(schema_bytes)}, schema_bytes
 
 
