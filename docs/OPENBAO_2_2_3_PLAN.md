@@ -34,8 +34,15 @@ unchanged.
    enabled in source; normal-build live acceptance passed on both releases.
    Retained normal-build reports validate against current SDK and fixture inputs. See
    [the Kerberos review](OPENBAO_2_2_3_KERBEROS_REVIEW.md).
-5. RADIUS: pending. Real authentication, policy mapping and rejection tests on
-   both server releases; retain the existing explicit protocol-risk gate.
+5. RADIUS: completed. A user-approved digest-pinned official FreeRADIUS image
+   passes constrained local positive/negative PAP checks. Server and six-operation
+   candidate SDK fixtures are implemented. Live server checks passed on both
+   releases and current-input reports/schemas are retained with independent
+   anchors. Candidate SDK checks passed on both releases; reports and schemas
+   are retained. Six exact contracts are enabled in source; normal-build SDK
+   acceptance passed on both releases with retained current-input evidence.
+   The explicit protocol-risk
+   gate is unchanged. See [the RADIUS review](OPENBAO_2_2_3_RADIUS_REVIEW.md).
 6. Release integration: pending. Eight plugin/server combinations, CI, refreshed
    SDK evidence, full regressions, documentation and package bump to 2.2.3.
 

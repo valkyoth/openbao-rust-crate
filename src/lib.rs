@@ -242,6 +242,13 @@ pub mod plugin;
 pub mod policy;
 #[cfg(feature = "transit")]
 pub mod posture;
+#[cfg(all(
+    test,
+    feature = "sys",
+    feature = "radius-auth",
+    feature = "radius-auth-acknowledged"
+))]
+mod radius_plugin_live;
 mod request_compatibility;
 mod response;
 #[cfg(feature = "time")]

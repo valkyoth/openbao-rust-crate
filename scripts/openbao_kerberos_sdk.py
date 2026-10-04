@@ -38,12 +38,12 @@ def candidate_source(source):
     old = "        ExternalPluginKind::KerberosAuth | ExternalPluginKind::RadiusAuth => &[],"
     new = "        ExternalPluginKind::KerberosAuth => &[\n" + "".join(
         "            " + json.dumps(operation) + ",\n" for operation in OPERATIONS)
-    new += "        ],\n        ExternalPluginKind::RadiusAuth => &[],"
+    new += "        ],"
     if source.count(old) == 0:
         require(source.count(new) == 1)
         return source
     require(source.count(old) == 1 and source.count(new) == 0)
-    return source.replace(old, new)
+    return source.replace(old, new + "\n        ExternalPluginKind::RadiusAuth => &[],")
 
 
 def input_hashes():

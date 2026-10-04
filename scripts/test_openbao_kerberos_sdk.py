@@ -15,7 +15,7 @@ class CandidateTests(unittest.TestCase):
     def test_only_nine_kerberos_routes_are_opened_in_disposable_source(self):
         source = (sdk.fixture.ldap.ROOT / "src/plugin/compatibility.rs").read_text()
         result = sdk.candidate_source(source)
-        self.assertIn("ExternalPluginKind::RadiusAuth => &[],", result)
+        self.assertEqual(result, source)
         self.assertEqual(len(sdk.OPERATIONS), 9)
         self.assertEqual(len(set(sdk.OPERATIONS)), 9)
         for operation in sdk.OPERATIONS:

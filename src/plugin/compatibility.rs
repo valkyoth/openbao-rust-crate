@@ -181,7 +181,14 @@ fn reviewed_operations(
             "openbao.post.auth.kerberos.groups.name.9a59741aa62e99af",
             "openbao.post.auth.kerberos.login.a1f715e91255582a",
         ],
-        ExternalPluginKind::RadiusAuth => &[],
+        ExternalPluginKind::RadiusAuth => &[
+            "openbao.delete.auth.radius.users.username.5bf54869a30eb190",
+            "openbao.get.auth.radius.users.username.8ebc6cbe7282bb10",
+            "openbao.list.auth.radius.users.93ed6d488978f259",
+            "openbao.post.auth.radius.config.0243019420859d7b",
+            "openbao.post.auth.radius.login.username.385de898f4d8b839",
+            "openbao.post.auth.radius.users.username.b61e40a07dc19c14",
+        ],
     }
 }
 
@@ -391,6 +398,11 @@ mod tests {
             .len(),
             9
         );
+        for version in [OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)] {
+            let operations = reviewed_operations(ExternalPluginKind::RadiusAuth, version);
+            assert_eq!(operations.len(), 6);
+            assert!(!operations.contains(&"openbao.post.auth.radius.login.ea2f3680af864d92"));
+        }
         for kind in KINDS {
             for version in [OpenBaoVersion::new(2, 6, 4), OpenBaoVersion::new(2, 7, 2)] {
                 assert!(reviewed_operations(kind, version).is_empty());

@@ -1888,7 +1888,7 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
         .flat_map(|(engine, version)| [false, true].map(|selected| (engine, version, selected)))
     {
         if selected
-            && matches!(engine, "ldap-secret" | "ldap-auth" | "kerberos")
+            && matches!(engine, "ldap-secret" | "ldap-auth" | "kerberos" | "radius")
             && version <= OpenBaoVersion::new(2, 7, 1)
         {
             // Exact reviewed pairs are covered by positive transport tests and live SDK fixtures.
@@ -2113,6 +2113,73 @@ async fn reviewed_external_kerberos_exact_pairs_use_the_selected_custom_mount() 
         .unwrap_or_else(|_| panic!("reviewed operation failed"));
         assert_eq!(response.service_account, "HTTP/localhost");
         assert!(response.keytab.is_none());
+        server
+            .join()
+            .unwrap_or_else(|_| panic!("mock server failed"));
+    }
+}
+
+#[tokio::test]
+async fn reviewed_external_radius_exact_pairs_use_the_selected_custom_mount() {
+    use openbao::plugin::{ExternalPluginKind, ExternalPluginSelection};
+    for version in [OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|error| panic!("{error}"));
+        let address = listener
+            .local_addr()
+            .unwrap_or_else(|error| panic!("{error}"));
+        let server = thread::spawn(move || {
+            for step in 0..2 {
+                let (mut stream, _) = listener.accept().unwrap_or_else(|error| panic!("{error}"));
+                let request = read_http_request(&mut stream);
+                if step == 0 {
+                    assert!(request.starts_with("GET /v1/sys/health "));
+                    assert!(!request.contains("fixture-client-token"));
+                    write_json_response(
+                        &mut stream,
+                        "200 OK",
+                        &format!(r#"{{"initialized":true,"sealed":false,"version":"{version}"}}"#),
+                    );
+                } else {
+                    assert!(request.starts_with("GET /v1/auth/custom/radius/users/alice "));
+                    assert!(request.contains("x-vault-token: fixture-client-token"));
+                    write_json_response(
+                        &mut stream,
+                        "200 OK",
+                        r#"{"data":{"policies":["fixture-policy"]}}"#,
+                    );
+                }
+            }
+        });
+        let kind = ExternalPluginKind::RadiusAuth;
+        let selection = ExternalPluginSelection::new(
+            kind,
+            version,
+            "custom/radius",
+            "v0.1.0",
+            kind.binary_sha256(),
+        )
+        .unwrap_or_else(|_| panic!("selection failed"));
+        let config = OpenBaoConfig::new(format!("http://{address}"))
+            .and_then(allow_mock_http)
+            .map(|config| {
+                config.compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict())
+            })
+            .and_then(|config| config.external_plugin(selection))
+            .unwrap_or_else(|_| panic!("configuration failed"));
+        let client = Client::from_config(config)
+            .unwrap_or_else(|_| panic!("client failed"))
+            .with_token(test_secret(&["fixture-client-", "token"]));
+        let response = tokio::time::timeout(Duration::from_secs(2), async {
+            client
+                .radius_admin_at("custom/radius")
+                .unwrap_or_else(|_| panic!("mount failed"))
+                .read_user("alice")
+                .await
+        })
+        .await
+        .unwrap_or_else(|_| panic!("transport timed out"))
+        .unwrap_or_else(|_| panic!("reviewed operation failed"));
+        assert_eq!(response.policies, "fixture-policy");
         server
             .join()
             .unwrap_or_else(|_| panic!("mock server failed"));
