@@ -8,6 +8,30 @@ the [README](../README.md). For endpoint-level classifications, see
 
 ## Release Snapshot
 
+### Local Tooling Update (2026-10-16)
+
+The unpublished development tree uses Rust 1.99.1, refreshed GitHub Actions
+pins and updated dependency lockfiles, including Tokio 1.53.3. The package
+version and MSRV are unchanged. The release snapshot below describes published
+2.2.3, not fresh live verification of these dependency updates.
+
+Retained SDK and current-profile CI captures remain unchanged. Their input
+hashes no longer match this tree; current-source evidence gates must remain
+blocked until fresh privileged fixtures are captured and reviewed. No tag,
+push or release is part of this local tooling checkpoint.
+
+Local verification passed: 669 all-feature Rust tests and five doctests,
+default tests, formatting, default/all/minimal-feature Clippy, Rust 1.90 MSRV,
+fuzz compilation, native-TLS unification, docs, packaging and packaged smoke
+tests/examples, the ML-DSA validation budget, Kani, SBOM generation, and
+dependency policy/RustSec checks for all three lockfiles. The toolchain-pin
+and workflow-control tests also passed. Python discovery ran 523 tests with
+two failures and 34 errors, all in stale retained-evidence validation.
+`scripts/checks.sh` stops at the current-profile evidence gate; this is not
+a completed release-validation run.
+
+### Published 2.2.3
+
 SDK `2.2.3` adds explicitly selected official v0.1.0 LDAP auth/secrets,
 Kerberos and RADIUS plugins on exact OpenBao 2.7.0 and 2.7.1. Feature defaults
 are unchanged from `2.2.2`; Tokio is updated to 1.53.2.
@@ -31,7 +55,7 @@ substitutes for advanced, multi-node or external-plugin fixture evidence.
 See the [2.2.3 release notes](../release-notes/RELEASE_NOTES_2.2.3.md) for
 the separate evidence and CI release gates.
 
-The primary compiler is Rust `1.99.0`; the MSRV remains `1.90.0`. The unselected
+Published `2.2.3` used Rust `1.99.0`; the MSRV remains `1.90.0`. The unselected
 client still uses the unverified `2.6.3` baseline. Legacy LDAP, Kerberos and
 RADIUS engines remain built-in on `2.6.4`; on both reviewed 2.7 profiles they
 require the external-plugin selections described above. The known upstream

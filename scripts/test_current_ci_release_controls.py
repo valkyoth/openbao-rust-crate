@@ -5,6 +5,7 @@ from pathlib import Path
 import shlex
 import subprocess
 import tempfile
+import tomllib
 import unittest
 
 
@@ -13,7 +14,7 @@ WORKFLOW = ".github/workflows/openbao-current-compatibility.yml"
 ACTIONS = {
     "actions/checkout": ("7", "v7.0.1", "3d3c42e5aac5ba805825da76410c181273ba90b1"),
     "sigstore/cosign-installer": ("4", "v4.1.2", "6f9f17788090df1f26f669e9d70d6ae9567deba6"),
-    "actions/upload-artifact": ("7", "v7.0.1", "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"),
+    "actions/upload-artifact": ("7", "v7.0.2", "cf430e030ddbb5b0abf93d22962f4752f3646cd9"),
 }
 
 
@@ -63,6 +64,24 @@ def run_gate(gate, workflow):
 
 
 class CurrentCiReleaseControlsTests(unittest.TestCase):
+    def test_primary_toolchain_pins_agree(self):
+        toolchain = tomllib.loads((ROOT / "rust-toolchain.toml").read_text())
+        version = toolchain["toolchain"]["channel"]
+        self.assertEqual(version, "1.99.1")
+        for path in ("scripts/ci_install_rust.sh",
+                     ".github/workflows/openbao-compatibility.yml",
+                     WORKFLOW):
+            text = (ROOT / path).read_text()
+            primary = [line.strip() for line in text.splitlines()
+                       if line.strip().startswith(("rustup toolchain install ", "rustup default "))
+                       and "1.90.0" not in line]
+            self.assertEqual(len(primary), 2, path)
+            self.assertTrue(primary[0].startswith(f"rustup toolchain install {version} "), path)
+            self.assertEqual(primary[1], f"rustup default {version}", path)
+        self.assertIn(f'channel = "{version}"',
+                      (ROOT / "scripts/validate-release-metadata.sh").read_text())
+        self.assertIn(f"| `{version}` | Primary toolchain", (ROOT / "README.md").read_text())
+
     def setUp(self):
         self.workflow = (ROOT / WORKFLOW).read_text()
 

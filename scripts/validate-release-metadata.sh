@@ -137,7 +137,7 @@ check_grep 'version = "2.2.3"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep '"/tests/package_smoke.rs"' Cargo.toml
-check_grep 'channel = "1.99.0"' rust-toolchain.toml
+check_grep 'channel = "1.99.1"' rust-toolchain.toml
 check_grep 'rustup toolchain install 1.90.0' scripts/ci_install_rust.sh
 check_grep 'cargo +1.90.0 check --locked --all-targets --all-features' scripts/checks.sh
 check_grep 'generate_openbao_contract_matrix.py --verify' scripts/checks.sh

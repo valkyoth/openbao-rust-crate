@@ -45,7 +45,7 @@ control-group replay limitation is not fixed by this SDK release.
 
 | Rust version | Support policy |
 | --- | --- |
-| `1.99.0` | Primary toolchain for development and CI. |
+| `1.99.1` | Primary toolchain for development and CI. |
 | `1.90.0` | Minimum supported Rust version; separately checked in CI. |
 | `1.91.0` through `1.98.x` | Within the supported range; not individually tested on every commit. |
 

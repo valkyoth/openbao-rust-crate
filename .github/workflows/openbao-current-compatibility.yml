@@ -41,8 +41,8 @@ jobs:
           use-sudo: true
       - name: Install primary Rust toolchain
         run: |
-          rustup toolchain install 1.99.0 --profile minimal
-          rustup default 1.99.0
+          rustup toolchain install 1.99.1 --profile minimal
+          rustup default 1.99.1
       - name: Check supported-profile CI coverage
         run: /usr/bin/python3 -E -s -S -B scripts/openbao_current_ci.py --check-coverage
       - name: Build unprivileged public SDK test
@@ -58,8 +58,8 @@ jobs:
             --version "$OPENBAO_VERSION" --test-binary "$OPENBAO_TEST_BINARY" \
             > ci-artifacts/current-result.json
       - name: Upload sanitized passing result
-        # actions/upload-artifact v7.0.1
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        # actions/upload-artifact v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: openbao-current-${{ matrix.version }}
           path: ci-artifacts/current-result.json
