@@ -15,10 +15,10 @@ pins and updated dependency lockfiles, including Tokio 1.53.3. The package
 version and MSRV are unchanged. The release snapshot below describes published
 2.2.3, not fresh live verification of these dependency updates.
 
-Retained SDK and current-profile CI captures remain unchanged. Their input
-hashes no longer match this tree; current-source evidence gates must remain
-blocked until fresh privileged fixtures are captured and reviewed. No tag,
-push or release is part of this local tooling checkpoint.
+The original SDK and current-profile CI captures remain unchanged as historical
+evidence. Their input hashes do not match the updated tree. Fresh captures for
+the tooling update are retained separately as described below; no tag or
+release is part of this tooling checkpoint.
 
 Local verification passed: 669 all-feature Rust tests and five doctests,
 default tests, formatting, default/all/minimal-feature Clippy, Rust 1.90 MSRV,
@@ -26,14 +26,40 @@ fuzz compilation, native-TLS unification, docs, packaging and packaged smoke
 tests/examples, the ML-DSA validation budget, Kani, SBOM generation, and
 dependency policy/RustSec checks for all three lockfiles. The toolchain-pin
 and workflow-control tests also passed. Python discovery ran 523 tests with
-two failures and 34 errors, all in stale retained-evidence validation.
-`scripts/checks.sh` stops at the current-profile evidence gate; this is not
-a completed release-validation run.
+two failures and 34 errors, all in stale retained-evidence validation, before
+the refresh below. That initial `scripts/checks.sh` run stopped at the
+current-profile evidence gate and was not completed release validation.
 
 The 2026-10-17 CI follow-up updates the historical compatibility controller's
 reviewed workflow hash for the Rust/action pin changes. Its self-test and
 workflow mutation regressions pass. This fixes matrix planning, not the
-separate stale SDK/current-profile evidence gate; no version bump is needed.
+separate SDK/current-profile evidence gate; no version bump is needed.
+
+### Live Evidence Refresh (2026-10-17)
+
+All 15 privileged fixture invocations passed against the Rust 1.99.1 builds,
+producing 16 reports plus six mounted-plugin API schemas. Before retention,
+the reports were checked against the current source-input hashes and actual
+local executable SHA-256 digests, with exact scope and success requirements.
+
+- Current-profile CI on 2.6.4, 2.7.0 and 2.7.1: `compat/ci/2.2.3/*-v3.json`.
+- Normal SDK on 2.6.4 and advanced SDK on 2.7.1: `sdk-normal-tls-v7.json`.
+- 2.7.0 consistency baseline/lag and ordinary, strict and candidate backup
+  SDK captures: `*-tls-v8.json`.
+- LDAP, Kerberos and RADIUS on 2.7.0 and 2.7.1: each plugin's `sdk-normal-v2/`.
+
+Previous captures are immutable and tested to reject reuse against current
+inputs even if their report and binary pins are restored. Server-only evidence
+was not relabelled or rerun. The unsigned directory/RADIUS backend acknowledgements,
+local trusted-builder boundary, and known upstream replay limitation remain.
+GitHub approval and any release remain separate from these local captures.
+
+Post-refresh verification passed: the complete `scripts/checks.sh` run,
+all 534 Python tests, and SBOM generation. This includes the restored
+current-source evidence gates, 669 all-feature Rust tests, five doctests,
+MSRV, Clippy, packaging, all configured Kani proofs, and fresh RustSec scans
+of all three lockfiles against 1,334 advisories. The CI installer action is
+pinned to reviewed `taiki-e/install-action` v2.87.29 for the latest-tool gate.
 
 ### Published 2.2.3
 

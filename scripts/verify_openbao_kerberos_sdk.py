@@ -15,10 +15,10 @@ CANDIDATE_ANCHORS = {
 }
 CANDIDATE_BINARY = "9dd4ef188598161e9e87e51ed9e07c75b3c25eccbeeba7a94a402a07f717d0a9"
 NORMAL_ANCHORS = {
-    "2.7.0": "182fe7bcaf3860db456d17c041c7e2336d8e1138943b39002031b3759bf91b4c",
-    "2.7.1": "89d89153ff9bb8dc4105eff03be28896bb354ff0c6cabdf6fdffe9429fdb3f31",
+    "2.7.0": "0dc9a0bcfcb65e889499d57118003f9e8af4d6d3f7079ec1ea9a43ffef91c191",
+    "2.7.1": "2e40cfc1c631166f8e027736b33ad9d92925e3c02e680ff362d4cdc8843c5884",
 }
-NORMAL_BINARY = "ba0230ac2d71dd7eb1f5dcea21bacf440271d0d57decb4866fe9d59084a74f06"
+NORMAL_BINARY = "8f877816da675497f7819cf26420a646aae6d75da4fcc5ef13038c1e189da024"
 
 
 def validate_operations(schema):
@@ -66,7 +66,7 @@ def validate_report(report, version, inputs, schema, *, candidate=False):
 def verify(version, *, candidate=False):
     anchors = CANDIDATE_ANCHORS if candidate else NORMAL_ANCHORS
     require(version in anchors)
-    root = server.ROOT / version / ("sdk-candidate" if candidate else "sdk-normal")
+    root = server.ROOT / version / ("sdk-candidate" if candidate else "sdk-normal-v2")
     raw = base.read_regular_file(root / "report.json", 64 * 1024)
     require(base.sha256(raw) == anchors[version])
     report = base.parse_json(raw, 64 * 1024)

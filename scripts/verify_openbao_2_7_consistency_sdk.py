@@ -6,9 +6,9 @@ import argparse
 import openbao_2_7_consistency_sdk as fixture
 
 snapshots = fixture.server.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/consistency-sdk-tls-v7.json"
-EXPECTED_SHA256 = "bc65c91e25500dd437516dab0159e4e046c19b20181f97d8e306d94870d6d837"
-TEST_BINARY_SHA256 = "62217d302532da260d611e5f0e521db7ad11680bd36089740f49f246163fa1cd"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/consistency-sdk-tls-v8.json"
+EXPECTED_SHA256 = "8df6b78c25dee77d73e3cfe0aa4029b4b1bf167a5408c157c1e119a077c25ab5"
+TEST_BINARY_SHA256 = "9ce991f37ec875234d72f40388b0acb7a79670e91e7749d7351e405c0ca0ae52"
 
 
 def validate_report(report):

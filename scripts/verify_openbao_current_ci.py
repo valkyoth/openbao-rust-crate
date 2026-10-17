@@ -4,11 +4,11 @@
 import openbao_current_ci as fixture
 
 ROOT = fixture.ROOT / "compat/ci/2.2.3"
-BINARY_SHA256 = "d6d2b6f7d00e3f31db94545ecb23768bfff8818bcc9cf67835437e91cbc82c9a"
+BINARY_SHA256 = "da8127e07d2700ee0666aba01a8bfaf4f22598e52cc2bf44d0dad336a482cdc0"
 PINS = {
-    "2.6.4": "444298ae06bd5efaa295f27f1c69f8758c3068b425b33e33a51315260070c9a9",
-    "2.7.0": "de40e0163c9fa6375d4fb8fbd1e642d74a86f0aa74d4d7dffde8ce72f2254a06",
-    "2.7.1": "5ca2da380615b81af0e7802db5862e0557aefa28fa088ad08801be93f9da22f8",
+    "2.6.4": "cf967597cb639092606efdf20fdd014cef8fc06592cd4a6001160f9c5bc84839",
+    "2.7.0": "0b27ed8863d65b4611ffb429f55973e8ffb72f42e2d1e076772d1dbc4bf5868c",
+    "2.7.1": "5fdb9e99907f3c80cf64de1460f5b64d3ce87f6e486ec5e93694cb99933d323f",
 }
 
 
@@ -32,7 +32,7 @@ def validate(version, data):
 
 
 def verify(version):
-    return validate(version, fixture.base.read_regular_file(ROOT / f"{version}-v2.json", 128 * 1024))
+    return validate(version, fixture.base.read_regular_file(ROOT / f"{version}-v3.json", 128 * 1024))
 
 
 def main():

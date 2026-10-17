@@ -16,6 +16,7 @@ scripts/validate-release-metadata.sh
 /usr/bin/python3 -E -s -S -B scripts/openbao_current_ci.py --check-coverage
 /usr/bin/python3 -E -s -S -B scripts/verify_openbao_current_ci.py
 /usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_current_ci.py
+/usr/bin/python3 -E -s -S -B scripts/test_tooling_evidence_refresh.py
 
 echo "checks: Rust 1.90.0 MSRV"
 cargo +1.90.0 check --locked --all-targets --all-features

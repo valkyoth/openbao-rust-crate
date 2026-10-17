@@ -11,6 +11,15 @@ import check_openbao_plugin_release as gate
 class ReleaseTests(unittest.TestCase):
     def test_checkpoint_captures_remain_immutable_and_are_not_current_evidence(self):
         anchors = (
+            (gate.ldap, "BINARY", "sdk-normal", (
+                "88560e12315ab92c08a796b1b27706b349e137a57760d80a3407c4fc970233b3",
+                "0e4016c77fbff90ec2124f5392b14c387bc646257c272980fb2f4eceb71da4b1")),
+            (gate.kerberos, "NORMAL_BINARY", "sdk-normal", (
+                "182fe7bcaf3860db456d17c041c7e2336d8e1138943b39002031b3759bf91b4c",
+                "89d89153ff9bb8dc4105eff03be28896bb354ff0c6cabdf6fdffe9429fdb3f31")),
+            (gate.radius, "NORMAL_BINARY", "sdk-normal", (
+                "da16c01a11a082722a016452f7cdde3e82ce5ffb7ebb898455e75e37ac9c6586",
+                "19e897bcedaa1169a9dddc61ba5d8c61e9715632d879ec4c4e5b4ebb3eb900e1")),
             (gate.ldap, "BINARY", "sdk-normal-checkpoint", (
                 "2a3fe998637604afa40bf2f6d59a99987e035aec453b936ac9edbf512b997d03",
                 "c686b35e411007db7f98cb2517b8478b346734bdf293b23a6b36e0000803df63")),
