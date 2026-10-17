@@ -61,6 +61,28 @@ MSRV, Clippy, packaging, all configured Kani proofs, and fresh RustSec scans
 of all three lockfiles against 1,334 advisories. The CI installer action is
 pinned to reviewed `taiki-e/install-action` v2.87.29 for the latest-tool gate.
 
+### Yanked Dependency Follow-up (2026-10-17)
+
+GitHub's dependency-policy gate rejected the upstream-yanked `inout 0.2.3`.
+The main lockfile now selects non-yanked `inout 0.2.4`; the other lockfiles,
+package version, and production Rust are unchanged. The policy was not relaxed.
+
+All 15 privileged fixture invocations passed again with this lockfile.
+The 16 validated reports and six plugin schemas are retained separately:
+
+- Current-profile CI: `compat/ci/2.2.3/*-v4.json`.
+- Normal patch SDK: `sdk-normal-tls-v8.json` on 2.6.4 and 2.7.1.
+- 2.7.0 consistency and backup SDK captures: `*-tls-v9.json`.
+- LDAP, Kerberos and RADIUS: `sdk-normal-v3/` on both 2.7.0 and 2.7.1.
+
+The preceding refresh remains historical. Current validators require the new
+lockfile hash, even when an old report's digest and executable pins are restored.
+GitHub approval and any release remain separate.
+
+Post-refresh verification passed: the complete `scripts/checks.sh` run and
+all 535 Python tests. This includes formatting, MSRV, Clippy, Rust tests and
+doctests, packaging, dependency policy, fresh RustSec audits, and Kani proofs.
+
 ### Published 2.2.3
 
 SDK `2.2.3` adds explicitly selected official v0.1.0 LDAP auth/secrets,

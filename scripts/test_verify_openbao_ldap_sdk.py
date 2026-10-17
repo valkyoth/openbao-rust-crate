@@ -10,7 +10,7 @@ import verify_openbao_ldap_sdk as evidence
 
 class EvidenceTests(unittest.TestCase):
     def setUp(self):
-        root = evidence.server.ROOT / "2.7.0/sdk-normal-v2"
+        root = evidence.server.ROOT / "2.7.0/sdk-normal-v3"
         self.report = evidence.base.parse_json((root / "report.json").read_bytes(), 65536)
         self.schema = (root / "runtime-openapi.json").read_bytes()
         self.inputs = evidence.sdk.input_hashes()

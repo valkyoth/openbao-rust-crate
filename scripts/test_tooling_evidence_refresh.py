@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -EsSB
-"""Pre-Rust-1.99.1 reports remain immutable but cannot satisfy current inputs."""
+"""Historical reports cannot satisfy current tooling and dependency inputs."""
 
 import importlib
 import unittest
@@ -10,6 +10,22 @@ import verify_openbao_patch_normal_sdk as sdk
 
 
 class ToolingRefreshTests(unittest.TestCase):
+    def test_pre_inout_ci_reports_rejected_even_with_restored_pins(self):
+        for version in ci.PINS:
+            with self.subTest(version=version):
+                raw = ci.fixture.base.read_regular_file(ci.ROOT / f"{version}-v3.json", 131072)
+                report = ci.fixture.base.parse_json(raw, 131072)
+                current = ci.verify(version)
+                self.assertEqual(
+                    {name for name in set(report["inputs"]) | set(current["inputs"])
+                     if report["inputs"].get(name) != current["inputs"].get(name)},
+                    {"Cargo.lock"},
+                )
+                with patch.object(ci, "PINS", {version: ci.fixture.base.sha256(raw)}), \
+                     patch.object(ci, "BINARY_SHA256", report["test_binary_sha256"]), \
+                     self.assertRaises(ci.fixture.harness.HarnessError):
+                    ci.validate(version, raw)
+
     def test_previous_ci_reports_cannot_be_repinned_as_current(self):
         pins = {
             "2.6.4": "444298ae06bd5efaa295f27f1c69f8758c3068b425b33e33a51315260070c9a9",
@@ -50,7 +66,7 @@ class ToolingRefreshTests(unittest.TestCase):
         }
         for name, digest in pins.items():
             module = importlib.import_module("verify_openbao_2_7_" + name)
-            previous = module.RESULT.with_name(module.RESULT.name.replace("-v8.json", "-v7.json"))
+            previous = module.RESULT.with_name(module.RESULT.name.replace("-v9.json", "-v7.json"))
             with self.subTest(name=name):
                 raw = sdk.base.read_regular_file(previous, 131072)
                 self.assertEqual(sdk.base.sha256(raw), digest)

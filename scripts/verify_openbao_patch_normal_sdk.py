@@ -12,15 +12,15 @@ base, harness = legacy.base, legacy.harness
 FIXTURES = {"2.6.4": legacy, "2.7.1": modern}
 # Report and sealed executable identities, independently retained for each patch.
 PINS = {
-    "2.6.4": ("17c3d02590ef787372ea9d0b6ae34fb3ba994b78e7dede713b76727d1f38c95f",
-              "df72dcc6a7688856805a19fa04144cbff9560feefcf7c893987dba624a2b6aea"),
-    "2.7.1": ("6fb0316d5c1e854f9f07bc192f9b9b2c1c9dfd18b2bc9cb34c5425dfc5383369",
-              "9ce991f37ec875234d72f40388b0acb7a79670e91e7749d7351e405c0ca0ae52"),
+    "2.6.4": ("83e611a5d0d801dee219868f911d792e10851fbd4653b3360466f06bb9cbac38",
+              "566a647ad759b5af5622488e9932b7f68659b6d07d66ffbe2da3a6913c8bb808"),
+    "2.7.1": ("9b17b00bd344691765e5ae079b9a3f4f4edc99964457ac46bf70841e393c32a0",
+              "984b6f1bf60da53ed3753e791530cb3cd4bb38bef58c3524757416cf81d6e6c7"),
 }
 
 
 def output(version):
-    return legacy.patch.ROOT / "compat/onboarding" / version / "sdk-normal-tls-v7.json"
+    return legacy.patch.ROOT / "compat/onboarding" / version / "sdk-normal-tls-v8.json"
 
 
 def expected(version, binary_digest):

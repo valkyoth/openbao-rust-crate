@@ -24,7 +24,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_normal_evidence_rejects_every_omitted_or_mutated_input(self):
         report = sdk.verify("2.7.0")
-        schema = (self.root / "sdk-normal-v2/runtime-openapi.json").read_bytes()
+        schema = (self.root / "sdk-normal-v3/runtime-openapi.json").read_bytes()
         for path in report["inputs"]:
             inputs = dict(report["inputs"])
             inputs[path] = "0" * 64
@@ -36,7 +36,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_normal_evidence_rejects_identity_scope_and_schema_drift(self):
         report = sdk.verify("2.7.0")
-        schema = (self.root / "sdk-normal-v2/runtime-openapi.json").read_bytes()
+        schema = (self.root / "sdk-normal-v3/runtime-openapi.json").read_bytes()
         for key, value in (("binary_sha256", "0" * 64), ("checks", []), ("execution", {}),
                            ("scope", "public-sdk-candidate-only"), ("plugins", {}),
                            ("cleanup", "failed"), ("routable", True), ("extra", True)):

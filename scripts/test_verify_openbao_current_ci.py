@@ -36,7 +36,7 @@ class CurrentCiEvidenceTests(unittest.TestCase):
 
     def test_every_input_must_be_present_and_current(self):
         for version in evidence.PINS:
-            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}-v3.json", 128 * 1024)
+            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}-v4.json", 128 * 1024)
             inputs = evidence.fixture.input_hashes()
             for name in inputs:
                 for omit in (False, True):
@@ -73,7 +73,7 @@ class CurrentCiEvidenceTests(unittest.TestCase):
 
     def test_unknown_swapped_altered_or_noncanonical_data_is_rejected(self):
         for version in evidence.PINS:
-            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}-v3.json", 128 * 1024)
+            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}-v4.json", 128 * 1024)
             with self.assertRaises(evidence.fixture.harness.HarnessError):
                 evidence.validate("2.7.2", data)
             for other in set(evidence.PINS) - {version}:
