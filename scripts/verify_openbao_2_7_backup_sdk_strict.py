@@ -5,9 +5,9 @@ import argparse
 
 import openbao_2_7_backup_sdk as fixture
 
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/backup-sdk-strict-tls-v9.json"
-EXPECTED_SHA256 = "54faa83f345cf9bbee51adafc8165eb441dc392cfdf12bc7e881f4c65ee9c128"
-TEST_BINARY_SHA256 = "984b6f1bf60da53ed3753e791530cb3cd4bb38bef58c3524757416cf81d6e6c7"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/backup-sdk-strict-tls-v10.json"
+EXPECTED_SHA256 = "705c8dea1b9bbb5ba80d9e5ff9f27e66758a49797d116a56580951ae23ded7be"
+TEST_BINARY_SHA256 = "4666c528dae8f070ba2ab847b4f8d7c72b2ce4c14c8e2e3a476ad3f9950c48bd"
 
 
 def verify():

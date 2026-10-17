@@ -1,6 +1,6 @@
 # External Plugin Selection
 
-SDK 2.2.3 supports these official v0.1.0 Linux amd64 artifacts on exact OpenBao
+SDK 2.2.4 supports these official v0.1.0 Linux amd64 artifacts on exact OpenBao
 2.7.0 and 2.7.1. Built-in compatibility remains separate from plugin selection.
 
 | Plugin | Feature | Reviewed operations |

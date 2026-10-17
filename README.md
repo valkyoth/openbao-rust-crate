@@ -36,7 +36,11 @@ OpenBao-to-backend boundaries.
 
 [API documentation](https://docs.rs/openbao) | [Source](https://github.com/valkyoth/openbao-rust-crate) | [Security](https://github.com/valkyoth/openbao-rust-crate/security) | [Releases](https://github.com/valkyoth/openbao-rust-crate/releases)
 
-`2.2.3` adds explicit, mount-specific support for the official v0.1.0 Linux
+`2.2.4` updates the primary Rust toolchain to `1.99.1`, refreshes dependencies
+and CI tooling, and replaces the yanked `inout 0.2.3` with `0.2.4`. Public APIs,
+feature defaults, and compatibility coverage are unchanged.
+
+Since `2.2.3`, explicit, mount-specific support covers the official v0.1.0 Linux
 amd64 LDAP auth/secrets, Kerberos and RADIUS plugins on OpenBao `2.7.0` and
 `2.7.1`. Its 28 exact server profiles remain unchanged; `2.6.4` retains the
 legacy built-in engines. External plugins require a verified exact server and
@@ -49,8 +53,8 @@ control-group replay limitation is not fixed by this SDK release.
 | `1.90.0` | Minimum supported Rust version; separately checked in CI. |
 | `1.91.0` through `1.98.x` | Within the supported range; not individually tested on every commit. |
 
-See the [2.2.3 release notes](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.3/release-notes/RELEASE_NOTES_2.2.3.md)
-for plugin support and trust boundaries, the [2.2.1 release notes](release-notes/RELEASE_NOTES_2.2.1.md)
+See the [2.2.4 release notes](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.4/release-notes/RELEASE_NOTES_2.2.4.md)
+for maintenance changes and trust boundaries, the [2.2.1 release notes](release-notes/RELEASE_NOTES_2.2.1.md)
 for the OIDC secret-field migration and explicit limitations, and the
 [2.2.0 release notes](release-notes/RELEASE_NOTES_2.2.0.md) for migration changes. The
 [onboarding history](docs/OPENBAO_2_7_0_PLAN.md) records the implementation and review checkpoints.
@@ -59,7 +63,7 @@ Clients without a compatibility policy retain the
 unverified 2.6.3 API contract. Select an explicit profile (preferably exact or
 automatic strict verification) to use 2.7 controls. LDAP auth/secrets, Kerberos
 and RADIUS on 2.7 additionally require `ExternalPluginSelection`; see the
-[plugin selection guide](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.3/docs/OPENBAO_EXTERNAL_PLUGINS.md).
+[plugin selection guide](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.4/docs/OPENBAO_EXTERNAL_PLUGINS.md).
 Selection asserts the deployment's installed artifact; it is not remote
 attestation. RADIUS still requires `radius-auth-acknowledged` and audited
 transport protection.
@@ -68,7 +72,7 @@ transport protection.
 
 ```toml
 [dependencies]
-openbao = "2.2.3"
+openbao = "2.2.4"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```

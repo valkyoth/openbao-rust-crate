@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.2.4
+
+- Update the primary Rust toolchain to 1.99.1; retain the Rust 1.90 MSRV.
+- Refresh dependency lockfiles, including Tokio 1.53.3, sanitization and
+  sanitization-secrecy 2.1.1, base64-ng 2.1.0 and serde_json 1.0.154.
+- Replace the upstream-yanked inout 0.2.3 with non-yanked 0.2.4.
+- Refresh pinned CI actions and the reviewed compatibility workflow hash.
+- Preserve public APIs, feature defaults, 28 exact server profiles and the
+  reviewed external-plugin operations. Existing trust limitations still apply.
+
 ## 2.2.3
 
 - Update Tokio from 1.53.1 to 1.53.2 and refresh source-bound SDK evidence.

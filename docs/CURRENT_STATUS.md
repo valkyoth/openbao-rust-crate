@@ -8,6 +8,39 @@ the [README](../README.md). For endpoint-level classifications, see
 
 ## Release Snapshot
 
+### SDK 2.2.4
+
+SDK `2.2.4` is a tooling and dependency maintenance release using Rust 1.99.1
+with an unchanged Rust 1.90 MSRV. It includes Tokio 1.53.3 and non-yanked
+`inout 0.2.4`. Public APIs, feature defaults, 28 exact server profiles and
+reviewed external-plugin operations are unchanged. See the
+[2.2.4 release notes](../release-notes/RELEASE_NOTES_2.2.4.md).
+
+All 15 privileged fixture invocations passed against the 2.2.4 inputs and
+rebuilt executables. Retained evidence comprises 16 reports and six plugin
+API schemas, verified against current source-input hashes, local executable
+digests, exact operation scope and success requirements:
+
+- Current-profile CI: `compat/ci/2.2.4/{2.6.4,2.7.0,2.7.1}.json`.
+- Normal patch SDK: `sdk-normal-tls-v9.json` on 2.6.4 and 2.7.1.
+- 2.7.0 consistency and backup SDK captures: `*-tls-v10.json`.
+- LDAP, Kerberos and RADIUS: `sdk-normal-v4/` on both 2.7.0 and 2.7.1.
+
+Older reports remain immutable and cannot satisfy the current-input gates.
+Server-only evidence was not relabelled. Unsigned directory/RADIUS fixture
+acknowledgements, trusted local-builder boundaries and the upstream
+control-group replay limitation remain unchanged. GitHub approval and
+publication are separate from these local fixture results.
+
+Final local validation passed: the complete `scripts/checks.sh` run and all
+536 Python tests, including previous-release evidence rejection. Checks cover
+669 all-feature Rust tests and five doctests, default-feature tests, Clippy,
+MSRV, native-TLS unification, fuzz compilation, ML-DSA validation budgets,
+documentation, packaging, dependency policy, fresh audits and Kani proofs.
+
+The following checkpoint results describe the preceding 2.2.3 development
+tree. They are historical evidence, not captures bound to the 2.2.4 package.
+
 ### Local Tooling Update (2026-10-16)
 
 The unpublished development tree uses Rust 1.99.1, refreshed GitHub Actions

@@ -8,14 +8,37 @@ from unittest.mock import patch
 import verify_openbao_current_ci as ci
 import verify_openbao_patch_normal_sdk as sdk
 
+HISTORICAL_CI = ci.fixture.ROOT / "compat/ci/2.2.3"
+
 
 class ToolingRefreshTests(unittest.TestCase):
+    def test_previous_release_ci_reports_cannot_be_repinned_as_current(self):
+        pins = {
+            "2.6.4": "5e247a39e4bba3735740c5f7f8540eaeaeb76c7fe00b51ad5d15b92c39725daa",
+            "2.7.0": "7d2acf79092d2b0408182684121995a0be6e5f06977ff2529c19aff2d0a29e1a",
+            "2.7.1": "24fd7f902b692248c4b0d75b4e63ac9b83564b498f47ee01c4c9a6f7397a6424",
+        }
+        for version, digest in pins.items():
+            with self.subTest(version=version):
+                raw = ci.fixture.base.read_regular_file(HISTORICAL_CI / f"{version}-v4.json", 131072)
+                self.assertEqual(ci.fixture.base.sha256(raw), digest)
+                report = ci.fixture.base.parse_json(raw, 131072)
+                current = ci.verify(version)
+                changed = {name for name in report["inputs"]
+                           if report["inputs"][name] != current["inputs"].get(name)}
+                self.assertTrue({"Cargo.toml", "Cargo.lock", "README.md"} <= changed)
+                with patch.object(ci, "PINS", pins), \
+                     patch.object(ci, "BINARY_SHA256", report["test_binary_sha256"]), \
+                     self.assertRaises(ci.fixture.harness.HarnessError):
+                    ci.validate(version, raw)
+
     def test_pre_inout_ci_reports_rejected_even_with_restored_pins(self):
         for version in ci.PINS:
             with self.subTest(version=version):
-                raw = ci.fixture.base.read_regular_file(ci.ROOT / f"{version}-v3.json", 131072)
+                raw = ci.fixture.base.read_regular_file(HISTORICAL_CI / f"{version}-v3.json", 131072)
                 report = ci.fixture.base.parse_json(raw, 131072)
-                current = ci.verify(version)
+                current = ci.fixture.base.parse_json(ci.fixture.base.read_regular_file(
+                    HISTORICAL_CI / f"{version}-v4.json", 131072), 131072)
                 self.assertEqual(
                     {name for name in set(report["inputs"]) | set(current["inputs"])
                      if report["inputs"].get(name) != current["inputs"].get(name)},
@@ -34,7 +57,7 @@ class ToolingRefreshTests(unittest.TestCase):
         }
         for version, digest in pins.items():
             with self.subTest(version=version):
-                raw = ci.fixture.base.read_regular_file(ci.ROOT / f"{version}-v2.json", 131072)
+                raw = ci.fixture.base.read_regular_file(HISTORICAL_CI / f"{version}-v2.json", 131072)
                 self.assertEqual(ci.fixture.base.sha256(raw), digest)
                 report = ci.fixture.base.parse_json(raw, 131072)
                 with patch.object(ci, "PINS", pins), \
@@ -66,7 +89,7 @@ class ToolingRefreshTests(unittest.TestCase):
         }
         for name, digest in pins.items():
             module = importlib.import_module("verify_openbao_2_7_" + name)
-            previous = module.RESULT.with_name(module.RESULT.name.replace("-v9.json", "-v7.json"))
+            previous = module.RESULT.with_name(module.RESULT.name.replace("-v10.json", "-v7.json"))
             with self.subTest(name=name):
                 raw = sdk.base.read_regular_file(previous, 131072)
                 self.assertEqual(sdk.base.sha256(raw), digest)

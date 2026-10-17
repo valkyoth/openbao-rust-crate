@@ -1,5 +1,12 @@
 # Migration Guide
 
+## From `openbao` 2.2.3 To 2.2.4
+
+No API or configuration migration is required. This maintenance release updates
+the primary toolchain to Rust 1.99.1, dependencies and CI tooling; the MSRV
+remains Rust 1.90.0. Compatibility profiles, external-plugin selections and
+feature defaults are unchanged. Existing security limitations still apply.
+
 ## From `openbao` 2.2.2 To 2.2.3
 
 Existing built-in server profiles and feature defaults are unchanged. To use

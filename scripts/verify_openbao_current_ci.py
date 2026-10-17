@@ -1,14 +1,14 @@
 #!/usr/bin/python3 -EsSB
-"""Verify immutable local validation of the supplemental 2.2.3 CI runner."""
+"""Verify immutable local validation of the supplemental 2.2.4 CI runner."""
 
 import openbao_current_ci as fixture
 
-ROOT = fixture.ROOT / "compat/ci/2.2.3"
-BINARY_SHA256 = "da8127e07d2700ee0666aba01a8bfaf4f22598e52cc2bf44d0dad336a482cdc0"
+ROOT = fixture.ROOT / "compat/ci/2.2.4"
+BINARY_SHA256 = "e6862dbd6c3ba1cae32c00839fc1149a24a923ecd83fa3c54a90d8c48b7aefee"
 PINS = {
-    "2.6.4": "5e247a39e4bba3735740c5f7f8540eaeaeb76c7fe00b51ad5d15b92c39725daa",
-    "2.7.0": "7d2acf79092d2b0408182684121995a0be6e5f06977ff2529c19aff2d0a29e1a",
-    "2.7.1": "24fd7f902b692248c4b0d75b4e63ac9b83564b498f47ee01c4c9a6f7397a6424",
+    "2.6.4": "0f41d2d66239aeb96765281527ba3bbdbd674ee83a52315ca5559319d5605941",
+    "2.7.0": "4c5a7ee9aa75b1251d834881d523fd8ddb56e561783f7012c748e6563030cf2d",
+    "2.7.1": "9ddf7a50e32cc8c30498041aa98f1da1e01f9c1252940dc607509f258f52e8cd",
 }
 
 
@@ -32,7 +32,7 @@ def validate(version, data):
 
 
 def verify(version):
-    return validate(version, fixture.base.read_regular_file(ROOT / f"{version}-v4.json", 128 * 1024))
+    return validate(version, fixture.base.read_regular_file(ROOT / f"{version}.json", 128 * 1024))
 
 
 def main():

@@ -23,7 +23,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_normal_sdk_requires_every_current_source_input(self):
         report = sdk.verify("2.7.0")
-        schema = (evidence.ROOT / "2.7.0/sdk-normal-v3/runtime-openapi.json").read_bytes()
+        schema = (evidence.ROOT / "2.7.0/sdk-normal-v4/runtime-openapi.json").read_bytes()
         for path in report["inputs"]:
             inputs = dict(report["inputs"])
             inputs[path] = "0" * 64
@@ -35,7 +35,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_normal_sdk_identity_scope_schema_and_anchor_are_exact(self):
         report = sdk.verify("2.7.0")
-        schema = (evidence.ROOT / "2.7.0/sdk-normal-v3/runtime-openapi.json").read_bytes()
+        schema = (evidence.ROOT / "2.7.0/sdk-normal-v4/runtime-openapi.json").read_bytes()
         for field, value in (("checks", []), ("execution", {}), ("binary_sha256", "0" * 64),
                              ("scope", "public-sdk-candidate-only"), ("cleanup", "failed"),
                              ("plugins", {}), ("routable", True), ("extra", True)):

@@ -15,12 +15,13 @@ class CurrentCiEvidenceTests(unittest.TestCase):
             "2.7.1": "28d560e19188da968f8af0e832496e0082e521cf13d1bb5ec0e92b3f19724c47",
         }
         for version, digest in pins.items():
-            raw = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}.json", 128 * 1024)
+            historical = evidence.fixture.ROOT / "compat/ci/2.2.3"
+            raw = evidence.fixture.base.read_regular_file(historical / f"{version}.json", 128 * 1024)
             self.assertEqual(evidence.fixture.base.sha256(raw), digest)
             old = evidence.fixture.base.parse_json(raw, 128 * 1024)
             # Compare the two historical Tokio captures, not later tooling refreshes.
             current = evidence.fixture.base.parse_json(evidence.fixture.base.read_regular_file(
-                evidence.ROOT / f"{version}-v2.json", 128 * 1024), 128 * 1024)
+                historical / f"{version}-v2.json", 128 * 1024), 128 * 1024)
             self.assertEqual({key for key in old["inputs"]
                               if old["inputs"][key] != current["inputs"].get(key)},
                              {"Cargo.toml", "Cargo.lock"})
@@ -36,7 +37,7 @@ class CurrentCiEvidenceTests(unittest.TestCase):
 
     def test_every_input_must_be_present_and_current(self):
         for version in evidence.PINS:
-            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}-v4.json", 128 * 1024)
+            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}.json", 128 * 1024)
             inputs = evidence.fixture.input_hashes()
             for name in inputs:
                 for omit in (False, True):
@@ -73,7 +74,7 @@ class CurrentCiEvidenceTests(unittest.TestCase):
 
     def test_unknown_swapped_altered_or_noncanonical_data_is_rejected(self):
         for version in evidence.PINS:
-            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}-v4.json", 128 * 1024)
+            data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}.json", 128 * 1024)
             with self.assertRaises(evidence.fixture.harness.HarnessError):
                 evidence.validate("2.7.2", data)
             for other in set(evidence.PINS) - {version}:
