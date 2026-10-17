@@ -30,6 +30,11 @@ two failures and 34 errors, all in stale retained-evidence validation.
 `scripts/checks.sh` stops at the current-profile evidence gate; this is not
 a completed release-validation run.
 
+The 2026-10-17 CI follow-up updates the historical compatibility controller's
+reviewed workflow hash for the Rust/action pin changes. Its self-test and
+workflow mutation regressions pass. This fixes matrix planning, not the
+separate stale SDK/current-profile evidence gate; no version bump is needed.
+
 ### Published 2.2.3
 
 SDK `2.2.3` adds explicitly selected official v0.1.0 LDAP auth/secrets,

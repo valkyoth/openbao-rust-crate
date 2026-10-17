@@ -7,6 +7,9 @@ import subprocess
 import tempfile
 import tomllib
 import unittest
+from unittest.mock import patch
+
+import openbao_ci_matrix as historical
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +67,24 @@ def run_gate(gate, workflow):
 
 
 class CurrentCiReleaseControlsTests(unittest.TestCase):
+    def test_historical_workflow_review_pin_and_mutation_rejection(self):
+        historical.validate_workflow()
+        original = historical.WORKFLOW_PATH.read_bytes()
+        mutations = (
+            original.replace(b"1.99.1", b"1.99.0"),
+            original.replace(b"contents: read", b"contents: write"),
+            original.replace(b"persist-credentials: false", b"persist-credentials: true"),
+            original.replace(b"actions/upload-artifact@", b"actions/upload-artifact@unreviewed-"),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workflow = Path(directory) / "workflow.yml"
+            for modified in mutations:
+                self.assertNotEqual(modified, original)
+                workflow.write_bytes(modified)
+                with patch.object(historical, "WORKFLOW_PATH", workflow):
+                    with self.assertRaises(historical.CiMatrixError):
+                        historical.validate_workflow()
+
     def test_primary_toolchain_pins_agree(self):
         toolchain = tomllib.loads((ROOT / "rust-toolchain.toml").read_text())
         version = toolchain["toolchain"]["channel"]
