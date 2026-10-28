@@ -9,11 +9,11 @@ import verify_openbao_ldap_plugins as server
 
 base = sdk.fixture.base
 ANCHORS = {
-    "2.7.0": "966b7feb442ec25d90abb67dff2714c642ddbfecbe4cf3f4970181f005cd8c49",
-    "2.7.1": "fcc536cff40a17a04e8e601471a8400abfae7e9cae73b7b88e65dcd8a8f00774",
-    "2.7.2": "9d337e5f76122b0e18460e76efbaf575840fef5ea22290e4701b97f61d136816",
+    "2.7.0": "db57f1a4c3f4641db10dadccc16e9f5658f6c9556108705d1237ca7d38304417",
+    "2.7.1": "648561a64b996a6076b9d6c31e69f0d39d8c5860b4ed16679f61e841436a8d95",
+    "2.7.2": "84ac956f9fa26309894ecafe6268bd9778de6911fc47bcf277859fdb9c2b8542",
 }
-BINARY = "f147bce6864a6c799c83ffd05eba4b32183b67ff65dfc431f80cfeb9c58e0df5"
+BINARY = "a6e72c2d3a8ba2aaf97791c7a6d5c3e86f45ed623abfaf9b6eb9d2950ede4c5b"
 
 
 def validate_operations(schema):
@@ -69,7 +69,7 @@ def validate_report(report, version, inputs, schema):
 
 def verify(version):
     server.require(version in ANCHORS)
-    root = server.ROOT / version / "sdk-normal-v7"
+    root = server.ROOT / version / "sdk-normal-v8"
     raw = base.read_regular_file(root / "report.json", 64 * 1024)
     server.require(base.sha256(raw) == ANCHORS[version])
     report = base.parse_json(raw, 64 * 1024)

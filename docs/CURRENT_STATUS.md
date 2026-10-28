@@ -16,6 +16,18 @@ is LDAP auth `v0.2.0`, LDAP secrets `v0.1.1`, Kerberos auth `v0.1.0` and RADIUS
 auth `v0.2.0` on exact OpenBao `2.7.0`, `2.7.1` and `2.7.2`. Artifact identity,
 server behavior and public-SDK execution remain separate evidence layers.
 
+The latest retained 2.7.0 SDK reports are `*-tls-v12.json`; refreshed server
+reports use `*-tls-v3.json`. Released `v10` SDK and `v2` server reports retain
+their exact v2.2.4 bytes. CI checks all 88 released 2.7.0 evidence files against
+an independently pinned manifest derived from v2.2.4 commit
+`606c60ee282f5fb6c82e8106c02dde731069bbfd`. New captures must use new paths;
+current-report pin updates do not authorize rewriting released evidence.
+The post-correction refresh retains 35 source-validated evidence files: five
+CI reports under `compat/ci/2.2.5/v3/`, normal/candidate 2.6.5 and 2.7.2 SDK
+reports at `*-tls-v4.json`, the 2.7.1 advanced candidate at `*-tls-v6.json`,
+the 2.7.0 SDK reports above, and nine plugin reports plus their schemas under
+`sdk-normal-v8/`. GitHub approval and publication remain separate.
+
 The primary toolchain remains Rust 1.99.1 and the MSRV remains Rust 1.90.0.
 The OpenBao 2.7.2 control-group check confirms that the documented upstream
 single-use enforcement limitation remains; the SDK does not claim to repair a
@@ -35,6 +47,7 @@ with an unchanged Rust 1.90 MSRV. It includes Tokio 1.53.3 and non-yanked
 reviewed external-plugin operations are unchanged. See the
 [2.2.4 release notes](../release-notes/RELEASE_NOTES_2.2.4.md).
 
+The following is the historical 2.2.4 checkpoint, not current 2.2.5 evidence.
 All 15 privileged fixture invocations passed against the 2.2.4 inputs and
 rebuilt executables. Retained evidence comprises 16 reports and six plugin
 API schemas, verified against current source-input hashes, local executable

@@ -6,7 +6,7 @@ import argparse
 import openbao_2_7_system_behavior as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/system-behavior-tls-v2.json"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/system-behavior-tls-v3.json"
 EXPECTED_SHA256 = "583cecaff8984097749675be4b1754b9216f60d9a1bf68f29dcf155891b164b7"
 
 

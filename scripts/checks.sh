@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
+echo "checks: immutable released evidence"
+/usr/bin/python3 -E -s -S -B scripts/check_released_evidence.py
+/usr/bin/python3 -E -s -S -B scripts/test_released_evidence.py
+
 echo "checks: latest versions"
 scripts/check_latest_crates.sh
 

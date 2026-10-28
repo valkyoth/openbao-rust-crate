@@ -6,7 +6,7 @@ import argparse
 import openbao_2_7_raw_backup as fixture
 
 snapshots = fixture.snapshots
-RESULT = fixture.ROOT / "compat/onboarding/2.7.0/raw-backup-tls-v2.json"
+RESULT = fixture.ROOT / "compat/onboarding/2.7.0/raw-backup-tls-v3.json"
 EXPECTED_SHA256 = "3c3d3251088eddfe68f34fe5686f6635d6ddfaab73a9f2aa70267fca34290a57"
 
 

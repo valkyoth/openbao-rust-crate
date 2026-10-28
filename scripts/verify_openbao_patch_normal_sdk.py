@@ -12,15 +12,15 @@ base, harness = legacy.base, legacy.harness
 FIXTURES = {"2.6.5": legacy, "2.7.2": modern}
 # Report and sealed executable identities, independently retained for each patch.
 PINS = {
-    "2.6.5": ("d8d9c6e9861e61cf04b7b6f8dc0b25e7e9ae4755c82e1b74ae7a50236054405c",
-              "aba77c147ccd8b881ade125e75dc257f89fcd10d636521694a6d44377116c502"),
-    "2.7.2": ("9655ddd539b89705950235bc4ed6b5b190bc6191d5f55f9916a7acc32e443b2e",
-              "182f9f63233333c9f99098d6aa3170603bd39c00375eae93b05253cf2f9591dc"),
+    "2.6.5": ("6e6a539596c111b9ff4d5129f100f419eba4ebaf5d7e05100cd87c05cc03455e",
+              "982c24f70614c97f2609b0eb492a17a09960225ca2a78d796b68f7e8c1200880"),
+    "2.7.2": ("1b8e424047bcec331fd891defbf0539d056b43e5f8e97c645e22902b350565f2",
+              "ff2a02283d9caf85643a9edc22030ef2df67eaa590bfa766ebcfe2dba98d8726"),
 }
 
 
 def output(version):
-    name = "sdk-normal-tls-v3.json" if version == "2.6.5" else "sdk-advanced-normal-tls-v3.json"
+    name = "sdk-normal-tls-v4.json" if version == "2.6.5" else "sdk-advanced-normal-tls-v4.json"
     return legacy.patch.ROOT / "compat/onboarding" / version / name
 
 

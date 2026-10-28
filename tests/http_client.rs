@@ -6582,7 +6582,7 @@ async fn identity_template_overrides_reject_old_profiles_before_transport() {
                     version: rejected,
                 }) if rejected == version
             ),
-            "unexpected result for {version}: {result:?}"
+            "wildcard override was not rejected for unsupported profile {version}"
         );
     }
 }

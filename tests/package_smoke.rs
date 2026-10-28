@@ -6,6 +6,18 @@ use openbao::{
 };
 use std::time::Duration;
 
+#[cfg(all(feature = "ssh", feature = "identity-template-overrides-acknowledged"))]
+#[test]
+fn packaged_prelude_exposes_atomic_ssh_template_controls() {
+    use openbao::prelude::*;
+
+    let _: [SshIdentityTemplateOverrides; 3] = [
+        SshIdentityTemplateOverrides::acknowledge_commas(),
+        SshIdentityTemplateOverrides::acknowledge_wildcards(),
+        SshIdentityTemplateOverrides::acknowledge_both(),
+    ];
+}
+
 #[test]
 fn packaged_client_builds_with_an_exact_historical_profile() -> openbao::Result<()> {
     let target = OpenBaoVersion::new(2, 2, 0);

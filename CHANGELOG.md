@@ -14,6 +14,9 @@ All notable changes to this project are documented here.
   overrides; deprecate that method in favor of complete template readback.
 - Add an explicitly acknowledged atomic SSH role writer for both template
   controls and document replacement semantics and exact version support.
+- Export the combined SSH acknowledgement through the feature-gated prelude.
+- Restore released 2.7.0 evidence bytes, retain replacement captures at new
+  paths, and enforce the released baseline with a pinned manifest in CI.
 - Refresh official external plugin pins to LDAP auth 0.2.0, LDAP secrets 0.1.1,
   Kerberos auth 0.1.0 and RADIUS auth 0.2.0, tested on OpenBao 2.7.0-2.7.2.
 - Document the plugin compatibility table and batch plugin refreshes with

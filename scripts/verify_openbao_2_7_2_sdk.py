@@ -8,16 +8,16 @@ import openbao_2_7_2_sdk as fixture
 import verify_openbao_2_7_2 as initial
 
 PINS = {
-    "normal": ("1bbbbf7a8a52284c32604455762803df1f8996121384691c9c3f8a3543febb25",
-               "182f9f63233333c9f99098d6aa3170603bd39c00375eae93b05253cf2f9591dc"),
-    "candidate": ("c4aed37f0f2a519d1534cb8d026a32325fd119d2d5792f0d4a520154e444320c",
-                  "3930775b8174246e20ae1ad9567c47f2575a7b68becb7f2ba51e9332eae5b14d"),
+    "normal": ("0d4158b99a2def09f3bd1d93921f8fe530218e235daab6826bcd103043b1dd05",
+               "ff2a02283d9caf85643a9edc22030ef2df67eaa590bfa766ebcfe2dba98d8726"),
+    "candidate": ("d7cc5691652fd98e8caa0d5b298bfe3aa19a160ff92dfcb6a039828ab24544ca",
+                  "91dce38089177cc3851f230847953e312b532a844fce38661c08f190e9ffb5fe"),
 }
 
 
 def output(mode):
     fixture.patch.require(mode in PINS)
-    return initial.OUTPUT / ("sdk-normal-tls-v3.json" if mode == "normal" else "sdk-candidate-tls-v3.json")
+    return initial.OUTPUT / ("sdk-normal-tls-v4.json" if mode == "normal" else "sdk-candidate-tls-v4.json")
 
 
 def expected(mode, binary):

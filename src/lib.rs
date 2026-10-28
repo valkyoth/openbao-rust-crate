@@ -490,7 +490,8 @@ pub mod prelude {
     };
     #[cfg(all(feature = "ssh", feature = "identity-template-overrides-acknowledged"))]
     pub use crate::secrets::ssh::{
-        SshIdentityTemplateCommaOverride, SshIdentityTemplateWildcardOverride,
+        SshIdentityTemplateCommaOverride, SshIdentityTemplateOverrides,
+        SshIdentityTemplateWildcardOverride,
     };
     #[cfg(feature = "totp")]
     pub use crate::secrets::totp::{Totp, TotpKeyCreateRequest, TotpKeyInfo};

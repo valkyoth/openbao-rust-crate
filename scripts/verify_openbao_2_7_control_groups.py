@@ -8,7 +8,7 @@ import openbao_2_7_control_groups as fixture
 import openbao_api_snapshots as snapshots
 
 ROOT = Path(__file__).resolve().parents[1]
-RESULT = ROOT / "compat/onboarding/2.7.0/control-group-tls-v2.json"
+RESULT = ROOT / "compat/onboarding/2.7.0/control-group-tls-v3.json"
 EXPECTED_SHA256 = "3f94549a4e356c54a13a994dece42bfba19957e5c9a26ee14a9ed44f3e987686"
 
 
