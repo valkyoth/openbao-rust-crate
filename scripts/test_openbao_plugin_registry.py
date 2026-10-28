@@ -17,9 +17,12 @@ class RegistryTests(unittest.TestCase):
     def test_missing_mutated_duplicate_and_reordered_entries(self):
         good = subject.render()
         lines = good.splitlines(keepends=True)
-        for changed in (good.replace(b"18fa83", b"08fa83"), b"".join(lines[:-2]),
+        first_digest = subject.artifacts.lock()["plugins"][0]["binary_sha256"].encode()
+        mutated = bytes([ord("0") if first_digest[0] != ord("0") else ord("1")]) + first_digest[1:]
+        for changed in (good.replace(first_digest, mutated), b"".join(lines[:-2]),
                         good + b"".join(lines[-2:]),
                         b"".join(lines[:2] + lines[4:6] + lines[2:4] + lines[6:])):
+            self.assertNotEqual(changed, good)
             with tempfile.TemporaryDirectory() as directory:
                 path = Path(directory) / "artifacts.rs"
                 path.write_bytes(changed)

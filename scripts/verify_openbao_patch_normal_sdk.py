@@ -4,23 +4,24 @@
 import argparse
 from pathlib import Path
 
-import openbao_2_6_4_sdk as legacy
-import openbao_2_7_1_sdk_advanced as modern
-import verify_openbao_2_6_4_sdk as legacy_candidate
+import openbao_2_6_5_sdk as legacy
+import openbao_2_7_2_sdk_advanced as modern
+import verify_openbao_2_6_5_sdk as legacy_evidence
 
 base, harness = legacy.base, legacy.harness
-FIXTURES = {"2.6.4": legacy, "2.7.1": modern}
+FIXTURES = {"2.6.5": legacy, "2.7.2": modern}
 # Report and sealed executable identities, independently retained for each patch.
 PINS = {
-    "2.6.4": ("68eb8e6c2b46b47ab125c15915db6fce0d37eb3bd51b011beb074c8068c27ab0",
-              "5a06107ca97841051c763685670f9dd727ffceca937441c50ac366d4fbbac9dc"),
-    "2.7.1": ("a9a38df7b789a373143fa3af107c2443fe2c774595c98a0ed398e7d3520767c5",
-              "4666c528dae8f070ba2ab847b4f8d7c72b2ce4c14c8e2e3a476ad3f9950c48bd"),
+    "2.6.5": ("d8d9c6e9861e61cf04b7b6f8dc0b25e7e9ae4755c82e1b74ae7a50236054405c",
+              "aba77c147ccd8b881ade125e75dc257f89fcd10d636521694a6d44377116c502"),
+    "2.7.2": ("9655ddd539b89705950235bc4ed6b5b190bc6191d5f55f9916a7acc32e443b2e",
+              "182f9f63233333c9f99098d6aa3170603bd39c00375eae93b05253cf2f9591dc"),
 }
 
 
 def output(version):
-    return legacy.patch.ROOT / "compat/onboarding" / version / "sdk-normal-tls-v9.json"
+    name = "sdk-normal-tls-v3.json" if version == "2.6.5" else "sdk-advanced-normal-tls-v3.json"
+    return legacy.patch.ROOT / "compat/onboarding" / version / name
 
 
 def expected(version, binary_digest):
@@ -30,15 +31,16 @@ def expected(version, binary_digest):
               "test_binary_sha256": binary_digest, "features": fixture.FEATURES,
               "image_linux_amd64_digest": fixture.patch.AMD64,
               "image_index_digest": fixture.patch.INDEX, "outcome": "passed"}
-    if version == "2.6.4":
+    if version == "2.6.5":
         return {**common, "schema": "openbao-patch-sdk-tls/v1", "test": fixture.TEST,
-                "checks": legacy_candidate.CHECKS}
+                "checks": legacy_evidence.CHECKS}
     return {**common, "schema": "openbao-patch-sdk-advanced-tls/v1", "tests": fixture.TESTS,
             "checks": fixture.CHECKS, "backup_decryption_verified": False,
             "synthetic_indices": "test-only-never-observable-cancellation-and-timeout"}
 
 
 def validate(version, data):
+    legacy.patch.require(version in FIXTURES and version in PINS)
     pin = PINS[version]
     legacy.patch.require(pin is not None)
     report_digest, binary_digest = pin

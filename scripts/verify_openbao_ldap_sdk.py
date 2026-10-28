@@ -9,10 +9,11 @@ import verify_openbao_ldap_plugins as server
 
 base = sdk.fixture.base
 ANCHORS = {
-    "2.7.0": "214e17713413b7090d2dbf8e251bdcafbfa8007232280a5264d91d772c1ae103",
-    "2.7.1": "e77d133ed6a8244451dd94ced5c9085685762bc331507538c8a29deaf3154283",
+    "2.7.0": "966b7feb442ec25d90abb67dff2714c642ddbfecbe4cf3f4970181f005cd8c49",
+    "2.7.1": "fcc536cff40a17a04e8e601471a8400abfae7e9cae73b7b88e65dcd8a8f00774",
+    "2.7.2": "9d337e5f76122b0e18460e76efbaf575840fef5ea22290e4701b97f61d136816",
 }
-BINARY = "e4b0187201dec09507f5740bc801a51e271f8d1c8c2ac4a3d4e379d3d13667b0"
+BINARY = "f147bce6864a6c799c83ffd05eba4b32183b67ff65dfc431f80cfeb9c58e0df5"
 
 
 def validate_operations(schema):
@@ -68,7 +69,7 @@ def validate_report(report, version, inputs, schema):
 
 def verify(version):
     server.require(version in ANCHORS)
-    root = server.ROOT / version / "sdk-normal-v4"
+    root = server.ROOT / version / "sdk-normal-v7"
     raw = base.read_regular_file(root / "report.json", 64 * 1024)
     server.require(base.sha256(raw) == ANCHORS[version])
     report = base.parse_json(raw, 64 * 1024)
@@ -86,7 +87,7 @@ def main():
     except (base.SnapshotError, sdk.fixture.harness.HarnessError, OSError, ValueError, KeyError, TypeError):
         print("LDAP normal-build SDK evidence verification failed")
         return 1
-    print("LDAP normal-build SDK evidence verified for both exact servers, including library operations")
+    print("LDAP normal-build SDK evidence verified for all three exact servers, including library operations")
     return 0
 
 

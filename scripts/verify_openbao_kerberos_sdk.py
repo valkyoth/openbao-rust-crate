@@ -14,11 +14,17 @@ CANDIDATE_ANCHORS = {
     "2.7.1": "b307ab3c18bc1c03b70247301b0f33a40b889d9b0df244023ec406c5cbbfccb6",
 }
 CANDIDATE_BINARY = "9dd4ef188598161e9e87e51ed9e07c75b3c25eccbeeba7a94a402a07f717d0a9"
-NORMAL_ANCHORS = {
-    "2.7.0": "34ea600dfe712ae037240cb274efe345273c4caecf7babe58660593bcf5c2362",
-    "2.7.1": "eed46444f3b84b8c6765004d5d32ab364ccdf227e60fb1bcbb63da4306054289",
+CANDIDATE_PLUGINS = {
+    "auth-kerberos": "57ac030fea755adf791600eb2b30aa410d2e848ab7ec7bb54cc515cdce4b89ae",
+    "auth-ldap": "18fa83d993c629a969cfa234d48e451921004c36ac8dc6a9fcc37d9e256d8818",
+    "secrets-ldap": "47292935509894d8b4feb0fc9b6429455da87181a8fc53999eb986128ab8d73a",
 }
-NORMAL_BINARY = "ca80c574df7f46c8cfee4cde00b93c109b2234e7b79f93a7978d2641997337a4"
+NORMAL_ANCHORS = {
+    "2.7.0": "cd5669ba655310863f55fe4aa01ea0291d15dfa7ed020cc8e6f7e3526a858fba",
+    "2.7.1": "ac2b2ebe6e7dfa65f662907f7291d7de6f6dda5b8742ba2b79ff65d5d4cbd78a",
+    "2.7.2": "562125c1840b8d785e944a305b92b01b39e9788d5674f4c182bdad2f21ea3776",
+}
+NORMAL_BINARY = "a67cdb88846aeb944c802005b4d7baec7f498269705a022717d016aa9dceac90"
 
 
 def validate_operations(schema):
@@ -54,11 +60,22 @@ def validate_report(report, version, inputs, schema, *, candidate=False):
                 "execution": sdk.execution.EXECUTION_ASSURANCE}
     require(expected["binary_sha256"] is not None)
     require(all(report.get(key) == value for key, value in expected.items()))
+    if candidate:
+        require(report.get("plugins") == CANDIDATE_PLUGINS)
     converted = dict(report)
     del converted["binary_sha256"]
     del converted["execution"]
     converted.update(schema="openbao-kerberos-plugin-server/v1", checks=list(sdk.fixture.CHECKS),
                      scope="server-fixture-only-not-public-sdk-integration")
+    if candidate:
+        # The candidate reports are anchored history with the prior LDAP
+        # binaries. Their identities are checked above; substitute only while
+        # reusing the current strict structural and schema validator.
+        converted["plugins"] = {
+            row["id"]: row["binary_sha256"]
+            for row in sdk.fixture.ldap.artifacts.lock()["plugins"]
+            if row["id"] in (*sdk.fixture.ldap.PLUGINS, "auth-kerberos")
+        }
     server.validate_report(converted, version, inputs, schema)
     validate_operations(base.parse_json(schema, 2 * 1024 * 1024))
 
@@ -66,7 +83,7 @@ def validate_report(report, version, inputs, schema, *, candidate=False):
 def verify(version, *, candidate=False):
     anchors = CANDIDATE_ANCHORS if candidate else NORMAL_ANCHORS
     require(version in anchors)
-    root = server.ROOT / version / ("sdk-candidate" if candidate else "sdk-normal-v4")
+    root = server.ROOT / version / ("sdk-candidate" if candidate else "sdk-normal-v7")
     raw = base.read_regular_file(root / "report.json", 64 * 1024)
     require(base.sha256(raw) == anchors[version])
     report = base.parse_json(raw, 64 * 1024)
@@ -83,13 +100,14 @@ def main():
     parser.add_argument("--candidate-history", action="store_true")
     args = parser.parse_args()
     try:
-        for version in server.ANCHORS:
+        anchors = CANDIDATE_ANCHORS if args.candidate_history else NORMAL_ANCHORS
+        for version in anchors:
             verify(version, candidate=args.candidate_history)
     except (base.SnapshotError, sdk.fixture.harness.HarnessError, OSError, ValueError, KeyError, TypeError):
         print("Kerberos SDK evidence verification failed")
         return 1
     print("Kerberos candidate history verified; not normal-build acceptance" if args.candidate_history
-          else "Kerberos current normal-build SDK evidence verified for both exact servers")
+          else "Kerberos current normal-build SDK evidence verified for all exact servers")
     return 0
 
 

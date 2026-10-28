@@ -18,7 +18,7 @@ import openbao_api_snapshots as base
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCK = ROOT / "compat/plugins/artifacts.lock.json"
-LOCK_SHA256 = "a87e0e421823c87ae20de7349ea88f4e72e911f5e0e872db8ffcf8e45d428f69"
+LOCK_SHA256 = "ef0f88d0f3af1cc58d54f534e32caa2ea929799ef780e6ff09c9c625043c51df"
 KEY = ROOT / "compat/plugins/openbao-release-key.asc"
 KEY_SHA256 = "1862a196422947124282e026ea4e09d6f7c5d383b628d90c17906936e6e5a8e0"
 PRIMARY = "66D15FDD87287219C8E15478D200CD702853E6D0"
@@ -40,10 +40,15 @@ def lock():
     data = base.read_regular_file(LOCK, 32 * 1024)
     require(base.sha256(data) == LOCK_SHA256)
     document = base.parse_json(data, 32 * 1024)
-    require(document["schema"] == "openbao-plugin-artifacts/v1"
+    require(document["schema"] == "openbao-plugin-artifacts/v2"
             and document["platform"] == "linux_amd64_v1"
             and document["signing_primary_fingerprint"] == PRIMARY
             and tuple(p["id"] for p in document["plugins"]) == PLUGINS)
+    require(all(re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", p["version"])
+                and p["tag"] == p["id"] + "-" + p["version"]
+                and re.fullmatch(r"[0-9a-f]{40}", p["source_commit"])
+                and re.fullmatch(r"[0-9a-f]{64}", p["binary_sha256"])
+                for p in document["plugins"]))
     return document
 
 
@@ -185,6 +190,7 @@ def capture():
                       for a in plugin["assets"]}
             files = verify_plugin(plugin, assets)
             reports.append({"id": plugin["id"], "version": plugin["version"],
+                            "source_commit": plugin["source_commit"],
                             "binary_sha256": plugin["binary_sha256"],
                             "license_sha256": base.sha256(files["LICENSE"]),
                             "signature_verified": True})
@@ -192,8 +198,8 @@ def capture():
             for name, data in assets.items():
                 (output / name).write_bytes(data)
             print(f'Plugin artifact verified: {plugin["id"]} {plugin["version"]}', flush=True)
-        result = {"schema": "openbao-plugin-artifact-review/v1", "inputs": inputs,
-                  "platform": document["platform"], "source_commit": document["source_commit"],
+        result = {"schema": "openbao-plugin-artifact-review/v2", "inputs": inputs,
+                  "platform": document["platform"],
                   "signing_primary_fingerprint": PRIMARY, "plugins": reports,
                   "scope": "artifact-signature-and-identity-only", "routable": False,
                   "contracts_verified": False, "source_to_binary_provenance_verified": False}

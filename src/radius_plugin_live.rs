@@ -50,6 +50,7 @@ async fn public_radius_tls() {
     let version = match fixture.version.as_str() {
         "2.7.0" => OpenBaoVersion::new(2, 7, 0),
         "2.7.1" => OpenBaoVersion::new(2, 7, 1),
+        "2.7.2" => OpenBaoVersion::new(2, 7, 2),
         _ => checked(Err::<OpenBaoVersion, _>(())),
     };
     let url = checked(reqwest::Url::parse(&fixture.address));
@@ -73,7 +74,7 @@ async fn public_radius_tls() {
         kind,
         version,
         MOUNT,
-        "v0.1.0",
+        kind.plugin_version(),
         kind.binary_sha256(),
     ))));
     let anonymous = checked(Client::from_config(config.clone()));

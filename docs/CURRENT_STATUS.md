@@ -8,6 +8,25 @@ the [README](../README.md). For endpoint-level classifications, see
 
 ## Release Snapshot
 
+### SDK 2.2.5
+
+SDK `2.2.5` adds exact OpenBao `2.6.5` and `2.7.2` profiles, bringing the
+immutable profile inventory to 30 releases. The official external-plugin set
+is LDAP auth `v0.2.0`, LDAP secrets `v0.1.1`, Kerberos auth `v0.1.0` and RADIUS
+auth `v0.2.0` on exact OpenBao `2.7.0`, `2.7.1` and `2.7.2`. Artifact identity,
+server behavior and public-SDK execution remain separate evidence layers.
+
+The primary toolchain remains Rust 1.99.1 and the MSRV remains Rust 1.90.0.
+The OpenBao 2.7.2 control-group check confirms that the documented upstream
+single-use enforcement limitation remains; the SDK does not claim to repair a
+server-side authorization guarantee.
+
+Plugin pins are refreshed with OpenBao compatibility releases rather than for
+every routine plugin-only patch. Material security fixes, artifact revocation
+or incompatible contract changes can trigger an earlier review. See the
+[exact plugin table](OPENBAO_EXTERNAL_PLUGINS.md) and the
+[2.2.5 release notes](../release-notes/RELEASE_NOTES_2.2.5.md).
+
 ### SDK 2.2.4
 
 SDK `2.2.4` is a tooling and dependency maintenance release using Rust 1.99.1

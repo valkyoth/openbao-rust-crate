@@ -10,7 +10,9 @@ import unittest
 from unittest.mock import patch
 
 import openbao_patch_normal_sdk as normal
+import openbao_2_6_5_sdk as patch_265
 import openbao_2_7_1_sdk_advanced as advanced
+import openbao_2_7_2_sdk as patch_272
 
 
 class NormalTests(unittest.TestCase):
@@ -48,7 +50,14 @@ class NormalTests(unittest.TestCase):
 
     def test_all_normal_provenance_inputs_are_bound(self):
         inputs = normal.input_hashes()
-        for runner in (advanced, __import__("openbao_2_6_4_sdk")):
+        for path in (
+            "scripts/generate_openbao_2_6_5_candidate.py",
+            "scripts/generate_openbao_2_7_2_candidate.py",
+            "compat/onboarding/2.6.5/candidate-capability-registry.json",
+            "compat/onboarding/2.7.2/candidate-capability-registry.json",
+        ):
+            self.assertIn(path, inputs)
+        for runner in (advanced, __import__("openbao_2_6_4_sdk"), patch_265, patch_272):
             hashes = runner.input_hashes(normal=True)
             for path, digest in inputs.items():
                 self.assertEqual(hashes[path], digest)

@@ -30,7 +30,7 @@ class CurrentCiEvidenceTests(unittest.TestCase):
                  self.assertRaises(evidence.fixture.harness.HarnessError):
                 evidence.validate(version, raw)
 
-    def test_all_three_retained_reports(self):
+    def test_all_five_retained_reports(self):
         self.assertEqual(set(evidence.PINS), set(evidence.fixture.VERSIONS))
         for version in evidence.PINS:
             self.assertEqual(evidence.verify(version)["version"], version)
@@ -54,7 +54,7 @@ class CurrentCiEvidenceTests(unittest.TestCase):
     def test_repinned_reports_cannot_change_scope_identity_or_success(self):
         for version in evidence.PINS:
             report = evidence.verify(version)
-            mutations = {"version": "2.7.2", "outcome": "failed", "inputs": {},
+            mutations = {"version": "9.9.9", "outcome": "failed", "inputs": {},
                          "image_linux_amd64_digest": "sha256:" + "0" * 64,
                          "test_binary_sha256": "0" * 64, "tls": "TLSv1.2",
                          "executable_storage": "mutable-path", "cleanup": "failed",
@@ -76,7 +76,7 @@ class CurrentCiEvidenceTests(unittest.TestCase):
         for version in evidence.PINS:
             data = evidence.fixture.base.read_regular_file(evidence.ROOT / f"{version}.json", 128 * 1024)
             with self.assertRaises(evidence.fixture.harness.HarnessError):
-                evidence.validate("2.7.2", data)
+                evidence.validate("9.9.9", data)
             for other in set(evidence.PINS) - {version}:
                 with self.assertRaises(evidence.fixture.harness.HarnessError):
                     evidence.validate(other, data)

@@ -217,12 +217,71 @@ impl SshIdentityTemplateCommaOverride {
     }
 }
 
+/// Explicit acknowledgment for permitting wildcards in SSH identity-template values.
+///
+/// OpenBao 2.6.5 and 2.7.2 reject wildcard characters rendered into templated
+/// SSH principals by default. This marker is constructible only with
+/// `identity-template-overrides-acknowledged`.
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SshIdentityTemplateWildcardOverride(());
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+impl SshIdentityTemplateWildcardOverride {
+    /// Acknowledges the principal-pattern expansion risk for trusted templates.
+    #[must_use]
+    pub const fn acknowledge() -> Self {
+        Self(())
+    }
+}
+
+/// Explicit replacement state for both SSH identity-template controls.
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[derive(Clone, Copy, Debug)]
+pub struct SshIdentityTemplateOverrides {
+    allow_commas: bool,
+    allow_wildcards: bool,
+}
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+impl SshIdentityTemplateOverrides {
+    /// Enables commas and disables wildcards.
+    #[must_use]
+    pub const fn acknowledge_commas() -> Self {
+        Self {
+            allow_commas: true,
+            allow_wildcards: false,
+        }
+    }
+
+    /// Enables wildcards and disables commas.
+    #[must_use]
+    pub const fn acknowledge_wildcards() -> Self {
+        Self {
+            allow_commas: false,
+            allow_wildcards: true,
+        }
+    }
+
+    /// Enables both controls for trusted, independently constrained metadata.
+    #[must_use]
+    pub const fn acknowledge_both() -> Self {
+        Self {
+            allow_commas: true,
+            allow_wildcards: true,
+        }
+    }
+}
+
 #[cfg(feature = "identity-template-overrides-acknowledged")]
 #[derive(Serialize)]
-struct SshRoleWithIdentityTemplateCommas<'a> {
+struct SshRoleWithIdentityTemplateOverrides<'a> {
     #[serde(flatten)]
     request: &'a SshRoleRequest,
-    allow_commas_in_identity_templates: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    allow_commas_in_identity_templates: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    allow_wildcards_in_identity_templates: Option<bool>,
 }
 
 impl SshRoleRequest {
@@ -377,7 +436,12 @@ pub struct SshRoleInfo {
 }
 
 /// SSH role readback including fields introduced by OpenBao 2.6.
+///
+/// Deserialization fails if the wildcard override is enabled rather than
+/// silently discarding security state. Use [`SshRoleTemplateDetails`] for
+/// complete audit/readback, including roles with wildcard overrides enabled.
 #[derive(Clone, Debug, Default, Deserialize)]
+#[serde(try_from = "SshRoleTemplateDetails")]
 pub struct SshRoleDetails {
     /// Role fields available across supported OpenBao releases.
     #[serde(flatten)]
@@ -385,6 +449,34 @@ pub struct SshRoleDetails {
     /// Whether rendered identity templates may contain `,`.
     #[serde(default)]
     pub allow_commas_in_identity_templates: bool,
+}
+
+/// SSH role readback including all reviewed identity-template safety state.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct SshRoleTemplateDetails {
+    /// Role fields available across supported OpenBao releases.
+    #[serde(flatten)]
+    pub role: SshRoleInfo,
+    /// Whether rendered identity templates may contain `,`.
+    #[serde(default)]
+    pub allow_commas_in_identity_templates: bool,
+    /// Whether rendered identity templates may contain wildcard characters.
+    #[serde(default)]
+    pub allow_wildcards_in_identity_templates: bool,
+}
+
+impl TryFrom<SshRoleTemplateDetails> for SshRoleDetails {
+    type Error = &'static str;
+
+    fn try_from(value: SshRoleTemplateDetails) -> std::result::Result<Self, Self::Error> {
+        if value.allow_wildcards_in_identity_templates {
+            return Err("SSH wildcard override requires complete template readback");
+        }
+        Ok(Self {
+            role: value.role,
+            allow_commas_in_identity_templates: value.allow_commas_in_identity_templates,
+        })
+    }
 }
 
 /// SSH OTP credential request.
@@ -961,6 +1053,8 @@ impl Ssh<'_> {
     /// domains by default. Use this only when identity metadata is trusted and
     /// constrained. Ordinary [`SshRoleRequest`] serialization cannot emit the
     /// override.
+    /// This replaces role configuration and disables any wildcard override.
+    /// Use [`Self::write_role_with_identity_template_overrides`] to enable both.
     #[cfg(feature = "identity-template-overrides-acknowledged")]
     pub async fn write_role_with_identity_template_commas(
         &self,
@@ -985,15 +1079,99 @@ impl Ssh<'_> {
                 ),
             ])
             .await?;
-        let payload = SshRoleWithIdentityTemplateCommas {
+        let payload = SshRoleWithIdentityTemplateOverrides {
             request,
-            allow_commas_in_identity_templates: true,
+            allow_commas_in_identity_templates: Some(true),
+            allow_wildcards_in_identity_templates: None,
         };
         self.request(Method::POST, &self.path(&["roles", name])?, Some(&payload))
             .await
     }
 
-    /// Reads an SSH role.
+    /// Creates or updates an SSH role while allowing wildcards from identity templates.
+    ///
+    /// This override is available only on OpenBao 2.6.5 and 2.7.2 or newer.
+    /// Use it only when identity metadata is trusted and constrained. Ordinary
+    /// [`SshRoleRequest`] serialization cannot emit the override.
+    /// This replaces role configuration and disables any comma override.
+    /// Use [`Self::write_role_with_identity_template_overrides`] to enable both.
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    pub async fn write_role_with_identity_template_wildcards(
+        &self,
+        name: &str,
+        request: &SshRoleRequest,
+        _acknowledgment: SshIdentityTemplateWildcardOverride,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ALLOW_EMPTY_PRINCIPALS,
+                    request.allow_empty_principals.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ISSUER_REF,
+                    request.issuer_ref.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ALLOW_TEMPLATE_WILDCARDS,
+                    true,
+                ),
+            ])
+            .await?;
+        let payload = SshRoleWithIdentityTemplateOverrides {
+            request,
+            allow_commas_in_identity_templates: None,
+            allow_wildcards_in_identity_templates: Some(true),
+        };
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(&payload))
+            .await
+    }
+
+    /// Replaces an SSH role with explicit state for both template controls.
+    ///
+    /// Requires an exact reviewed profile supporting the wildcard field, even
+    /// when it is set to false. This is one POST, not a read/modify/write or
+    /// PATCH: callers must provide all role settings they intend to retain.
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    pub async fn write_role_with_identity_template_overrides(
+        &self,
+        name: &str,
+        request: &SshRoleRequest,
+        overrides: SshIdentityTemplateOverrides,
+    ) -> Result<Empty> {
+        request.validate()?;
+        self.client
+            .validate_versioned_request_fields(&[
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ALLOW_EMPTY_PRINCIPALS,
+                    request.allow_empty_principals.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ISSUER_REF,
+                    request.issuer_ref.is_some(),
+                ),
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ALLOW_TEMPLATE_COMMAS,
+                    true,
+                ),
+                (
+                    &crate::request_compatibility::fields::SSH_ROLE_ALLOW_TEMPLATE_WILDCARDS,
+                    true,
+                ),
+            ])
+            .await?;
+        let payload = SshRoleWithIdentityTemplateOverrides {
+            request,
+            allow_commas_in_identity_templates: Some(overrides.allow_commas),
+            allow_wildcards_in_identity_templates: Some(overrides.allow_wildcards),
+        };
+        self.request(Method::POST, &self.path(&["roles", name])?, Some(&payload))
+            .await
+    }
+
+    /// Reads an SSH role without template security state; use the complete
+    /// [`Self::read_role_template_details`] method for security auditing.
     pub async fn read_role(&self, name: &str) -> Result<SshRoleInfo> {
         let envelope: ResponseEnvelope<SshRoleInfo> = self
             .request(
@@ -1006,8 +1184,27 @@ impl Ssh<'_> {
     }
 
     /// Reads an SSH role with OpenBao 2.6 identity-template override state.
+    ///
+    /// Fails decoding if wildcard overrides are enabled. For complete security
+    /// state, including enabled wildcard overrides, use [`Self::read_role_template_details`].
+    #[deprecated(
+        since = "2.2.5",
+        note = "Use read_role_template_details for complete SSH template security state"
+    )]
     pub async fn read_role_details(&self, name: &str) -> Result<SshRoleDetails> {
         let envelope: ResponseEnvelope<SshRoleDetails> = self
+            .request(
+                Method::GET,
+                &self.path(&["roles", name])?,
+                Option::<&Empty>::None,
+            )
+            .await?;
+        Ok(envelope.data)
+    }
+
+    /// Reads an SSH role with all reviewed identity-template safety state.
+    pub async fn read_role_template_details(&self, name: &str) -> Result<SshRoleTemplateDetails> {
+        let envelope: ResponseEnvelope<SshRoleTemplateDetails> = self
             .request(
                 Method::GET,
                 &self.path(&["roles", name])?,
@@ -1687,6 +1884,61 @@ mod tests {
         let ordinary = serde_json::to_value(SshRoleRequest::ca("{{identity.entity.name}}"))
             .unwrap_or_else(|error| panic!("{error}"));
         assert!(ordinary.get("allow_commas_in_identity_templates").is_none());
+        assert!(
+            ordinary
+                .get("allow_wildcards_in_identity_templates")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn ssh_template_wildcard_override_decodes_as_readback_state() {
+        let details: super::SshRoleTemplateDetails = serde_json::from_str(
+            r#"{"allowed_users":"{{identity.entity.name}}","allow_wildcards_in_identity_templates":true}"#,
+        )
+        .unwrap_or_else(|error| panic!("{error}"));
+        assert!(details.allow_wildcards_in_identity_templates);
+    }
+
+    #[test]
+    fn legacy_ssh_details_reject_hidden_or_malformed_wildcard_state() {
+        for json in [
+            r#"{"allow_wildcards_in_identity_templates":true}"#,
+            r#"{"allow_wildcards_in_identity_templates":null}"#,
+            r#"{"allow_wildcards_in_identity_templates":"false"}"#,
+            r#"{"allow_wildcards_in_identity_templates":false,"allow_wildcards_in_identity_templates":true}"#,
+        ] {
+            assert!(serde_json::from_str::<super::SshRoleDetails>(json).is_err());
+        }
+        for json in [
+            r#"{"allow_commas_in_identity_templates":true}"#,
+            r#"{"allow_commas_in_identity_templates":true,"allow_wildcards_in_identity_templates":false}"#,
+        ] {
+            let details = serde_json::from_str::<super::SshRoleDetails>(json)
+                .unwrap_or_else(|error| panic!("{error}"));
+            assert!(details.allow_commas_in_identity_templates);
+        }
+    }
+
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    #[test]
+    fn atomic_ssh_overrides_serialize_both_explicit_controls() {
+        use super::SshIdentityTemplateOverrides as Overrides;
+        let request = SshRoleRequest::ca("service");
+        for (overrides, commas, wildcards) in [
+            (Overrides::acknowledge_commas(), true, false),
+            (Overrides::acknowledge_wildcards(), false, true),
+            (Overrides::acknowledge_both(), true, true),
+        ] {
+            let value = serde_json::to_value(super::SshRoleWithIdentityTemplateOverrides {
+                request: &request,
+                allow_commas_in_identity_templates: Some(overrides.allow_commas),
+                allow_wildcards_in_identity_templates: Some(overrides.allow_wildcards),
+            })
+            .unwrap_or_else(|error| panic!("{error}"));
+            assert_eq!(value["allow_commas_in_identity_templates"], commas);
+            assert_eq!(value["allow_wildcards_in_identity_templates"], wildcards);
+        }
     }
 
     #[cfg(feature = "identity-template-overrides-acknowledged")]
@@ -1694,11 +1946,28 @@ mod tests {
     fn acknowledged_ssh_template_comma_override_serializes_true() {
         let request = SshRoleRequest::ca("{{identity.entity.name}}");
         let _acknowledgment = super::SshIdentityTemplateCommaOverride::acknowledge();
-        let payload = super::SshRoleWithIdentityTemplateCommas {
+        let payload = super::SshRoleWithIdentityTemplateOverrides {
             request: &request,
-            allow_commas_in_identity_templates: true,
+            allow_commas_in_identity_templates: Some(true),
+            allow_wildcards_in_identity_templates: None,
         };
         let value = serde_json::to_value(payload).unwrap_or_else(|error| panic!("{error}"));
         assert_eq!(value["allow_commas_in_identity_templates"], true);
+        assert!(value.get("allow_wildcards_in_identity_templates").is_none());
+    }
+
+    #[cfg(feature = "identity-template-overrides-acknowledged")]
+    #[test]
+    fn acknowledged_ssh_template_wildcard_override_serializes_true() {
+        let request = SshRoleRequest::ca("{{identity.entity.name}}");
+        let _acknowledgment = super::SshIdentityTemplateWildcardOverride::acknowledge();
+        let payload = super::SshRoleWithIdentityTemplateOverrides {
+            request: &request,
+            allow_commas_in_identity_templates: None,
+            allow_wildcards_in_identity_templates: Some(true),
+        };
+        let value = serde_json::to_value(payload).unwrap_or_else(|error| panic!("{error}"));
+        assert_eq!(value["allow_wildcards_in_identity_templates"], true);
+        assert!(value.get("allow_commas_in_identity_templates").is_none());
     }
 }

@@ -1,4 +1,4 @@
-// Exact LDAP v0.1.0 operations verified against OpenBao 2.7.0 and 2.7.1.
+// Exact LDAP plugin operations verified against reviewed OpenBao releases.
 
 pub(super) const AUTH: &[&str] = &[
     "openbao.delete.auth.ldap.groups.name.b950122721b5ebc7",

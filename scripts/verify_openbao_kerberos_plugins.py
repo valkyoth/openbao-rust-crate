@@ -10,8 +10,9 @@ base = fixture.base
 require = ldap.require
 ROOT = fixture.ldap.ROOT / "compat/plugins/kerberos"
 ANCHORS = {
-    "2.7.0": "e35f271530914f38674c17f8594159642b7c0de028ee9f10ffc6bc4cc9f20320",
-    "2.7.1": "224bf8870aba157f12977d9f556c5f6f68edb2e7afa07146fd15ab58594fdeea",
+    "2.7.0": "7009194db7c36e03866d343c6755dde576cd9492b26897d0db017bef5ad5247b",
+    "2.7.1": "f36b4a7a5965f007a8060218e6d00672aaf7fea6ece4e13804cf3dadac45d181",
+    "2.7.2": "2b4540f6b1937251c81b4b0ec1e84c39356408b51949fcae5fa88f76a0c83902",
 }
 
 

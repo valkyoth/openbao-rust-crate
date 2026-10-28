@@ -15,10 +15,10 @@ import openbao_current_ci as ci
 
 
 class CurrentCiTests(unittest.TestCase):
-    def test_real_input_collection_covers_both_patch_fixtures_and_sdk(self):
+    def test_real_input_collection_covers_all_patch_fixtures_and_sdk(self):
         inputs = ci.input_hashes()
         self.assertGreater(len(inputs), 20)
-        for fixture in (ci.legacy, ci.modern):
+        for fixture in (ci.legacy, ci.legacy_latest, ci.modern, ci.modern_latest):
             for path, digest in fixture.input_hashes().items():
                 self.assertEqual(inputs[path], digest)
         for path in ("Cargo.toml", "Cargo.lock", "README.md", "src/lib.rs",
@@ -38,7 +38,7 @@ class CurrentCiTests(unittest.TestCase):
         ci.coverage(["2.6.3"], ["2.6.3", *ci.VERSIONS])
         for historical, supported, supplemental in (
             (["2.6.3"], ["2.6.3", "2.6.4"], ci.VERSIONS),
-            (["2.6.3"], ["2.6.3", *ci.VERSIONS, "2.7.2"], ci.VERSIONS),
+            (["2.6.3"], ["2.6.3", *ci.VERSIONS, "2.7.3"], ci.VERSIONS),
             (["2.6.3", "2.6.4"], ["2.6.3", *ci.VERSIONS], ci.VERSIONS),
             (["2.6.3"], ["2.6.3", *ci.VERSIONS], ["2.6.4", "2.7.0"]),
             (["2.6.3", "2.6.3"], ["2.6.3", *ci.VERSIONS], ci.VERSIONS),
@@ -116,7 +116,7 @@ class CurrentCiTests(unittest.TestCase):
     def test_unknown_version_fails_before_starting_resources(self):
         with patch.object(ci.os, "geteuid", return_value=0), \
              patch.object(ci, "freeze_binary") as freeze, self.assertRaises(ci.harness.HarnessError):
-            ci.run("2.7.2", Path("/not-used"))
+            ci.run("2.7.3", Path("/not-used"))
         freeze.assert_not_called()
 
     def test_setup_failure_reports_safe_stage_not_exception_contents(self):

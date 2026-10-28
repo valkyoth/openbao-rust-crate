@@ -1,5 +1,13 @@
 # Migration Guide
 
+## From `openbao` 2.2.4 To 2.2.5
+
+Exact OpenBao 2.6.5 and 2.7.2 profiles are added. External plugin selections
+must use the kind-specific versions and binary digests listed in
+[External Plugin Selection](OPENBAO_EXTERNAL_PLUGINS.md); LDAP auth, LDAP
+secrets and RADIUS pins changed, while Kerberos remains at v0.1.0. Plugin
+selection continues to require an exact verified server profile.
+
 ## From `openbao` 2.2.3 To 2.2.4
 
 No API or configuration migration is required. This maintenance release updates

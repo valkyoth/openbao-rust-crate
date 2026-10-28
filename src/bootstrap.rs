@@ -713,7 +713,7 @@ impl AdminBootstrap {
     ///
     /// This converges role configuration only. SSH CA key setup remains an
     /// operator ceremony outside this bootstrap helper. If
-    /// `allow_commas_in_identity_templates` is already enabled,
+    /// an SSH identity-template delimiter override is already enabled,
     /// [`Self::run`] fails before writing so a partial desired role cannot
     /// reset unmanaged SSH restrictions.
     #[cfg(feature = "ssh")]
@@ -1037,7 +1037,7 @@ impl AdminBootstrap {
                     request,
                 } => {
                     let ssh = client.ssh(mount)?;
-                    let status = match ssh.read_role_details(name).await {
+                    let status = match ssh.read_role_template_details(name).await {
                         Ok(existing) if ssh_role_matches_desired(&existing, request) => {
                             BootstrapPreviewStatus::Unchanged
                         }
@@ -1427,10 +1427,10 @@ impl AdminBootstrap {
                     request,
                 } => {
                     let ssh = client.ssh(mount)?;
-                    let status = match ssh.read_role_details(name).await {
+                    let status = match ssh.read_role_template_details(name).await {
                         Ok(existing) if ssh_role_has_unsafe_template_override(&existing) => {
                             return Err(Error::UnsafeBootstrapConfiguration(
-                                "SSH role has allow_commas_in_identity_templates enabled; disable it with a state-preserving operation before bootstrap",
+                                "SSH role has an identity-template override enabled; disable it with a state-preserving operation before bootstrap",
                             ));
                         }
                         Ok(existing) if ssh_role_matches_desired(&existing, request) => {
@@ -1438,7 +1438,7 @@ impl AdminBootstrap {
                         }
                         Ok(_) => {
                             ssh.write_role(name, request).await?;
-                            let verification = ssh.read_role_details(name).await?;
+                            let verification = ssh.read_role_template_details(name).await?;
                             if !ssh_role_matches_desired(&verification, request) {
                                 return Err(bootstrap_contention_error());
                             }
@@ -1446,7 +1446,7 @@ impl AdminBootstrap {
                         }
                         Err(error) if error.is_not_found() => {
                             ssh.write_role(name, request).await?;
-                            let verification = ssh.read_role_details(name).await?;
+                            let verification = ssh.read_role_template_details(name).await?;
                             if !ssh_role_matches_desired(&verification, request) {
                                 return Err(bootstrap_contention_error());
                             }
@@ -1972,13 +1972,15 @@ fn database_static_role_matches_desired(
 }
 
 #[cfg(feature = "ssh")]
-fn ssh_role_has_unsafe_template_override(existing: &crate::secrets::ssh::SshRoleDetails) -> bool {
-    existing.allow_commas_in_identity_templates
+fn ssh_role_has_unsafe_template_override(
+    existing: &crate::secrets::ssh::SshRoleTemplateDetails,
+) -> bool {
+    existing.allow_commas_in_identity_templates || existing.allow_wildcards_in_identity_templates
 }
 
 #[cfg(feature = "ssh")]
 fn ssh_role_matches_desired(
-    existing: &crate::secrets::ssh::SshRoleDetails,
+    existing: &crate::secrets::ssh::SshRoleTemplateDetails,
     desired: &SshRoleRequest,
 ) -> bool {
     !ssh_role_has_unsafe_template_override(existing)
@@ -2471,7 +2473,7 @@ mod tests {
     #[test]
     #[cfg(feature = "ssh")]
     fn ssh_role_convergence_compares_desired_fields_only() {
-        let existing = crate::secrets::ssh::SshRoleDetails {
+        let existing = crate::secrets::ssh::SshRoleTemplateDetails {
             role: SshRoleInfo {
                 default_user: Some("alice".to_owned()),
                 cidr_list: Some("127.0.0.1/32".to_owned()),
@@ -2484,12 +2486,19 @@ mod tests {
                 ..SshRoleInfo::default()
             },
             allow_commas_in_identity_templates: false,
+            allow_wildcards_in_identity_templates: false,
         };
         let desired = SshRoleRequest::otp("alice", "127.0.0.1/32");
         assert!(super::ssh_role_matches_desired(&existing, &desired));
 
-        let unsafe_existing = crate::secrets::ssh::SshRoleDetails {
+        let unsafe_existing = crate::secrets::ssh::SshRoleTemplateDetails {
             allow_commas_in_identity_templates: true,
+            ..existing.clone()
+        };
+        assert!(!super::ssh_role_matches_desired(&unsafe_existing, &desired));
+
+        let unsafe_existing = crate::secrets::ssh::SshRoleTemplateDetails {
+            allow_wildcards_in_identity_templates: true,
             ..existing.clone()
         };
         assert!(!super::ssh_role_matches_desired(&unsafe_existing, &desired));

@@ -483,11 +483,14 @@ pub mod prelude {
     pub use crate::secrets::rabbitmq::{
         RabbitMq, RabbitMqConnectionConfig, RabbitMqCredentials, RabbitMqRole,
     };
-    #[cfg(all(feature = "ssh", feature = "identity-template-overrides-acknowledged"))]
-    pub use crate::secrets::ssh::SshIdentityTemplateCommaOverride;
     #[cfg(feature = "ssh")]
     pub use crate::secrets::ssh::{
         Ssh, SshPublic, SshPublicKey, SshRoleDetails, SshRoleInfo, SshRoleRequest,
+        SshRoleTemplateDetails,
+    };
+    #[cfg(all(feature = "ssh", feature = "identity-template-overrides-acknowledged"))]
+    pub use crate::secrets::ssh::{
+        SshIdentityTemplateCommaOverride, SshIdentityTemplateWildcardOverride,
     };
     #[cfg(feature = "totp")]
     pub use crate::secrets::totp::{Totp, TotpKeyCreateRequest, TotpKeyInfo};

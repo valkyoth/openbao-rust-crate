@@ -10,16 +10,16 @@ import verify_openbao_2_7_1 as initial
 
 patch, base = runner.patch, runner.base
 OUTPUT = initial.OUTPUT
-OPENAPI_SHA256 = "5197838a955d3a7ea188c93595f44aa38999cd04a01ec1e04de1335feb1d025d"
+OPENAPI_SHA256 = "7e7e778beb427a7be13576076f0a68ae1d4db19fc4bc0819df8fb0f8956d90dc"
 REPORTS = {
-    "api": "7ac766d59ac242599068502f3083bf6f14f8c646ffbec34ccbc2bfd0d3337322",
-    "external-keys": "c0dd42ed899ec9f048176f63e59dc74e53b17953c3588d7ff459b59d10344ea4",
-    "transit": "f46a4c322f889857c839eb36d75bf05b3464778e1f6affdb30fbaee6bf9ec42a",
-    "pki": "0d576b27b122f544040ff3dc7ca0bbae6fa616b8d49c92cde4c88a422f542597",
-    "workflow-cas": "ede51309d36c144b83c8c075fd2d6697c9fc67b9dd9db21797e0921e5180b9aa",
-    "control-groups": "731e1732814d78ffa4db0a4ce62e232bd0ea48a5eb2028a94b3d76f49f10d656",
-    "system": "71fc6c71fdc4666d17787476196d8062b293164ef9a0af32fa1925b4a555366e",
-    "mfa-totp": "4229d401c5b6df968669ac1579358a70c838c80f036e12c835da379a30a2fb42",
+    "api": "2584a5833089a5b1d99b75eb94f402f8a9253572e3efb12a29514faca08cec55",
+    "external-keys": "6b7e420082add2f612178e660e751de2814404b9e15174b5144e1774a083ac4f",
+    "transit": "d9995a9cbb0e869d98539ecb7656056f7610660d19e2eb4ea9b5fe7568e10e5a",
+    "pki": "eeb1b4dcb157ef9d629e9dea1add18062ed061864c70e1eaec9dbf9fe05c47ee",
+    "workflow-cas": "06bc49b04cfa991f73b027906f5cde8ff5980527165eade1c4d05b9ba09874ec",
+    "control-groups": "5731d362fa9a907aad5c304a6ddba0935a4cf0e0b98f5b3d478429a605674d8d",
+    "system": "7378657bfc58b3658a2831068263f078b03d90f21aeac22b3024fa7f8632c587",
+    "mfa-totp": "f60afaad5b747fadd5a04635277b932f49d761317964199e3e9fbc79a5929558",
 }
 MODULES = {"external-keys": runner.external, "transit": runner.transit, "pki": runner.pki,
            "workflow-cas": runner.workflow, "control-groups": runner.control,
@@ -50,6 +50,16 @@ def compare_api(before, after):
             get["parameters"] = expected
             get["operationId"] = operation.format("list")
             ref["$ref"] = "#/components/schemas/" + schema.format("List")
+        path = "/{kv_v2_mount_path}/detailed-metadata/{path}"
+        get = doc["paths"][path]["get"]
+        patch.require(get["operationId"] in {
+            "kv-list-detailed-metadata-path", "kv-scan-detailed-metadata-path"})
+        expected = [{"in": "query", "name": kind, "required": True,
+                     "schema": {"enum": ["true"], "type": "string"}}
+                    for kind in ("list", "scan")]
+        patch.require(sorted(get["parameters"], key=lambda item: item["name"]) == expected)
+        get["operationId"] = "kv-list-detailed-metadata-path"
+        get["parameters"] = expected
     patch.require(left == right)
 
 

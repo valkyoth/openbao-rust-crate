@@ -64,7 +64,7 @@ OPERATIONS = (
 def verify_contract_source(source):
     auth = [value for value in OPERATIONS if ".auth.ldap." in value]
     secrets = [value for value in OPERATIONS if ".auth.ldap." not in value]
-    expected = "// Exact LDAP v0.1.0 operations verified against OpenBao 2.7.0 and 2.7.1.\n\n"
+    expected = "// Exact LDAP plugin operations verified against reviewed OpenBao releases.\n\n"
     expected += "\n".join("pub(super) const " + name + ": &[&str] = &[\n" +
         "".join("    " + json.dumps(value) + ",\n" for value in values) + "];\n"
         for name, values in (("AUTH", auth), ("SECRETS", secrets)))

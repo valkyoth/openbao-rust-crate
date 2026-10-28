@@ -18,14 +18,17 @@ import sys
 import tempfile
 
 import openbao_2_6_4 as legacy
+import openbao_2_6_5 as legacy_latest
 import openbao_2_7_1 as modern
+import openbao_2_7_2 as modern_latest
 import openbao_2_7_api as initial
 import openbao_2_7_tls as tls
 
 base, harness = tls.base, tls.harness
 ROOT = modern.ROOT
-VERSIONS = ("2.6.4", "2.7.0", "2.7.1")
-RELEASES = {"2.6.4": legacy, "2.7.0": initial, "2.7.1": modern}
+VERSIONS = ("2.6.4", "2.6.5", "2.7.0", "2.7.1", "2.7.2")
+RELEASES = {"2.6.4": legacy, "2.6.5": legacy_latest, "2.7.0": initial,
+            "2.7.1": modern, "2.7.2": modern_latest}
 FEATURES = "kv1,kv2,sys,token,rustls-tls"
 TEST = "real_openbao_default_feature_flow"
 OPERATIONS = harness.CORE_OPERATION_IDS[:8]
@@ -55,7 +58,7 @@ def check_coverage():
     workflow = (ROOT / ".github/workflows/openbao-current-compatibility.yml").read_text()
     matrices = re.findall(r"^        version: (\[[^\n]+\])$", workflow, re.M)
     require(len(matrices) == 1 and json.loads(matrices[0]) == list(VERSIONS))
-    print("All 28 supported profiles covered by historical and supplemental CI")
+    print("All 30 supported profiles covered by historical and supplemental CI")
 
 
 def build():
@@ -256,8 +259,16 @@ def input_hashes():
              "scripts/openbao_current_ci.py", ".github/workflows/openbao-current-compatibility.yml",
              "tests/openbao_integration.rs"]
     paths.extend(str(path.relative_to(ROOT)) for path in sorted((ROOT / "src").rglob("*.rs")))
-    local = {path: base.sha256(base.read_regular_file(ROOT / path, 2 * 1024 * 1024)) for path in paths}
-    return {**legacy.input_hashes(), **modern.input_hashes(), **local}
+    groups = [fixture.input_hashes()
+              for fixture in (legacy, legacy_latest, modern, modern_latest)]
+    groups.append({path: base.sha256(base.read_regular_file(ROOT / path, 2 * 1024 * 1024))
+                   for path in paths})
+    merged = {}
+    for group in groups:
+        for path, digest in group.items():
+            require(path not in merged or merged[path] == digest)
+            merged[path] = digest
+    return merged
 
 
 def main():

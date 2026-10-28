@@ -16,16 +16,16 @@ class RegistryTests(unittest.TestCase):
         cls.value = combined.combine(cls.legacy, cls.modern)
 
     def test_every_operation_cell_preserves_its_own_line(self):
-        self.assertEqual(len(self.value["versions"]), 28)
+        self.assertEqual(len(self.value["versions"]), 30)
         self.assertEqual(self.value["versions"], sorted(set(self.value["versions"]),
                                                      key=combined.registry.version_tuple))
         for target, legacy, modern in zip(self.value["operations"], self.legacy["operations"],
                                           self.modern["operations"], strict=True):
             for version in self.value["versions"]:
-                source = modern if version == "2.7.1" else legacy
+                source = modern if version in ("2.7.1", "2.7.2") else legacy
                 self.assertEqual(combined.legacy.selected(target["ranges"], version),
                                  combined.legacy.selected(source["ranges"], version))
-        self.assertEqual(len(self.value["operations"]) * len(self.value["versions"]), 19796)
+        self.assertEqual(len(self.value["operations"]) * len(self.value["versions"]), 21210)
 
     def test_legacy_engines_remain_available_only_on_the_older_line(self):
         for route in ("/auth/ldap/config", "/auth/kerberos/config", "/auth/radius/config", "/ldap/config"):
@@ -39,7 +39,7 @@ class RegistryTests(unittest.TestCase):
         for target, legacy, modern in zip(self.value["logical_endpoints"], self.legacy["logical_endpoints"],
                                           self.modern["logical_endpoints"], strict=True):
             for version in self.value["versions"]:
-                source = modern if version == "2.7.1" else legacy
+                source = modern if version in ("2.7.1", "2.7.2") else legacy
                 self.assertEqual(combined.legacy.selected(target["variants"], version, optional=True),
                                  combined.legacy.selected(source["variants"], version, optional=True))
         inspection = next(e for e in self.value["logical_endpoints"] if e["id"] == "sys.internal-request-inspection")
@@ -49,17 +49,19 @@ class RegistryTests(unittest.TestCase):
     def test_no_promotion_or_future_version_is_implied(self):
         self.assertIs(self.value["routable"], False)
         self.assertEqual(self.value["scope"], "candidate-contracts-not-public-dispatch")
-        self.assertEqual(self.value["routable_versions"], [*combined.registry.EXPECTED_VERSIONS, "2.7.0"])
-        for version in ("2.6.4", "2.7.1"):
+        self.assertEqual(self.value["routable_versions"],
+                         [*combined.registry.EXPECTED_VERSIONS, "2.6.4", "2.7.0", "2.7.1"])
+        for version in ("2.6.5", "2.7.2"):
             self.assertNotIn(version, self.value["routable_versions"])
-        for version in ("2.6.5", "2.7.2", "2.8.0"):
+        for version in ("2.7.3", "2.8.0"):
             self.assertNotIn(version, self.value["versions"])
 
     def test_normal_promotion_requires_exact_combined_registry(self):
         marker = "GENERATED_ROUTABLE_PROFILE_VERSIONS: &[OpenBaoVersion] = &["
         ordinary = combined.registry.rust_output(self.value).decode().split(marker)[1].split("];")[0]
         promoted = combined.registry.rust_output(self.value, promoted_patches=True).decode().split(marker)[1].split("];")[0]
-        for version in ("OpenBaoVersion::new(2, 6, 4)", "OpenBaoVersion::new(2, 7, 1)"):
+        for version in ("OpenBaoVersion::new(2, 6, 4)", "OpenBaoVersion::new(2, 6, 5)",
+                        "OpenBaoVersion::new(2, 7, 1)", "OpenBaoVersion::new(2, 7, 2)"):
             self.assertNotIn(version, ordinary)
             self.assertIn(version, promoted)
         altered = copy.deepcopy(self.value)

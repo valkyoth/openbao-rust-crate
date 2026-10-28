@@ -2,8 +2,11 @@ use super::*;
 use crate::compatibility::OpenBaoCompatibilityStatus;
 use crate::consistency::{ConsistencyIndex, ConsistencyPolicy};
 
-const REVIEWED_VERSIONS: &[OpenBaoVersion] =
-    &[OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)];
+const REVIEWED_VERSIONS: &[OpenBaoVersion] = &[
+    OpenBaoVersion::new(2, 7, 0),
+    OpenBaoVersion::new(2, 7, 1),
+    OpenBaoVersion::new(2, 7, 2),
+];
 
 #[cfg(test)]
 mod live;
@@ -374,7 +377,11 @@ mod tests {
             ))
             .is_ok()
         );
-        for version in [OpenBaoVersion::new(2, 7, 1), OpenBaoVersion::new(2, 7, 2)] {
+        for version in [
+            OpenBaoVersion::new(2, 7, 1),
+            OpenBaoVersion::new(2, 7, 2),
+            OpenBaoVersion::new(2, 7, 3),
+        ] {
             for policy in [
                 OpenBaoCompatibilityPolicyKind::Exact,
                 OpenBaoCompatibilityPolicyKind::AutomaticStrict,

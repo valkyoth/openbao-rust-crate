@@ -9,7 +9,7 @@ import verify_openbao_2_7_1_regressions as evidence
 
 registry = previous.registry
 OUTPUT = evidence.OUTPUT / "candidate-capability-registry-v2.json"
-EXPECTED_SHA256 = "876182f813520e1a51c8bcf3b0a8910c133a0c88f3f9ab7608a691a30e05ffb6"
+EXPECTED_SHA256 = "b8c0482e464dc92b84ef530b1c535c6eba25b88f406b349cfd84141bd901dee8"
 
 
 def build():

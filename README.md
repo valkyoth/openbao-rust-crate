@@ -36,16 +36,25 @@ OpenBao-to-backend boundaries.
 
 [API documentation](https://docs.rs/openbao) | [Source](https://github.com/valkyoth/openbao-rust-crate) | [Security](https://github.com/valkyoth/openbao-rust-crate/security) | [Releases](https://github.com/valkyoth/openbao-rust-crate/releases)
 
-`2.2.4` updates the primary Rust toolchain to `1.99.1`, refreshes dependencies
-and CI tooling, and replaces the yanked `inout 0.2.3` with `0.2.4`. Public APIs,
-feature defaults, and compatibility coverage are unchanged.
+`2.2.5` adds exact OpenBao `2.6.5` and `2.7.2` profiles and refreshes the
+reviewed official external-plugin set. It retains Rust `1.99.1` as the primary
+toolchain and Rust `1.90.0` as the MSRV. The known upstream control-group
+single-use enforcement limitation remains present in OpenBao `2.7.2`; use the
+operational restrictions in the security documentation for affected workflows.
 
-Since `2.2.3`, explicit, mount-specific support covers the official v0.1.0 Linux
-amd64 LDAP auth/secrets, Kerberos and RADIUS plugins on OpenBao `2.7.0` and
-`2.7.1`. Its 28 exact server profiles remain unchanged; `2.6.4` retains the
-legacy built-in engines. External plugins require a verified exact server and
-an explicit artifact/mount selection, not just a server profile. The upstream
-control-group replay limitation is not fixed by this SDK release.
+| Plugin | Reviewed version | Linux amd64 v1 binary SHA-256 | Tested OpenBao |
+| --- | --- | --- | --- |
+| LDAP authentication | `v0.2.0` | `b323b200b2dec50199f36de7dc95a661ce6662da3d53905973c0d7700b4185bb` | `2.7.0`, `2.7.1`, `2.7.2` |
+| LDAP secrets | `v0.1.1` | `4b24d4deec624d76bd8f950dfaf6f59822de14cfb9bd344e2e7c4c492cc77789` | `2.7.0`, `2.7.1`, `2.7.2` |
+| Kerberos authentication | `v0.1.0` | `57ac030fea755adf791600eb2b30aa410d2e848ab7ec7bb54cc515cdce4b89ae` | `2.7.0`, `2.7.1`, `2.7.2` |
+| RADIUS authentication | `v0.2.0` | `ae2ac43287ed297a9536456b0cbb79c8749a82ffe74a54e3fe886d3285443f07` | `2.7.0`, `2.7.1`, `2.7.2` |
+
+Plugin pins are normally refreshed and retested when an OpenBao compatibility
+release is prepared. A routine plugin-only patch does not by itself trigger an
+SDK release; a relevant security fix or compatibility break may trigger an
+earlier review. Only the exact versions and server pairs in this table are
+supported. External plugins require a verified exact server and explicit
+artifact/mount selection, not merely a server profile.
 
 | Rust version | Support policy |
 | --- | --- |
@@ -53,7 +62,7 @@ control-group replay limitation is not fixed by this SDK release.
 | `1.90.0` | Minimum supported Rust version; separately checked in CI. |
 | `1.91.0` through `1.98.x` | Within the supported range; not individually tested on every commit. |
 
-See the [2.2.4 release notes](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.4/release-notes/RELEASE_NOTES_2.2.4.md)
+See the [2.2.5 release notes](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.5/release-notes/RELEASE_NOTES_2.2.5.md)
 for maintenance changes and trust boundaries, the [2.2.1 release notes](release-notes/RELEASE_NOTES_2.2.1.md)
 for the OIDC secret-field migration and explicit limitations, and the
 [2.2.0 release notes](release-notes/RELEASE_NOTES_2.2.0.md) for migration changes. The
@@ -63,7 +72,7 @@ Clients without a compatibility policy retain the
 unverified 2.6.3 API contract. Select an explicit profile (preferably exact or
 automatic strict verification) to use 2.7 controls. LDAP auth/secrets, Kerberos
 and RADIUS on 2.7 additionally require `ExternalPluginSelection`; see the
-[plugin selection guide](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.4/docs/OPENBAO_EXTERNAL_PLUGINS.md).
+[plugin selection guide](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.5/docs/OPENBAO_EXTERNAL_PLUGINS.md).
 Selection asserts the deployment's installed artifact; it is not remote
 attestation. RADIUS still requires `radius-auth-acknowledged` and audited
 transport protection.
@@ -72,7 +81,7 @@ transport protection.
 
 ```toml
 [dependencies]
-openbao = "2.2.4"
+openbao = "2.2.5"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```

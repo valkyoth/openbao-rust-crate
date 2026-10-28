@@ -3257,8 +3257,8 @@ pub struct MountConfig {
     )]
     pub allowed_response_headers: Option<Vec<String>>,
     /// Plugin version. The dynamic `latest` selector requires an exact verified
-    /// OpenBao 2.7.0 or 2.7.1 profile after routing promotion. It selects an installed
-    /// plugin dynamically, not an independently verified plugin artifact.
+    /// OpenBao 2.7.0 through 2.7.2 profile after routing promotion. It selects an
+    /// installed plugin dynamically, not an independently verified plugin artifact.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plugin_version: Option<String>,
     /// Token type used by auth mounts.
@@ -3726,7 +3726,7 @@ impl<T> fmt::Debug for WrappedResponse<'_, T> {
 ///
 /// Workflow definitions can embed request templates and literal values, so
 /// `Debug` always redacts the definition. CAS-selected writes require an exact
-/// verified OpenBao 2.7.0 or 2.7.1 profile after its routing promotion. Older, assumed,
+/// verified OpenBao 2.7.0 through 2.7.2 profile after its routing promotion. Older, assumed,
 /// rolling-range and unknown-newer fallback profiles remain blocked. The SDK
 /// never retries workflow writes.
 pub struct WorkflowWriteRequest {
@@ -6334,7 +6334,7 @@ impl Sys<'_, Authenticated> {
 
     /// Creates or updates one workflow without automatic retry.
     ///
-    /// CAS requires an exact verified OpenBao 2.7.0 or 2.7.1 profile (automatic strict
+    /// CAS requires an exact verified OpenBao 2.7.0 through 2.7.2 profile (automatic strict
     /// detection or exact selection), and still passes normal routing promotion
     /// checks. Older, assumed, rolling-range and unknown-newer fallback profiles
     /// are rejected before the workflow request is sent. No prefix-listing block
@@ -10256,6 +10256,7 @@ fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> R
     let reviewed = [
         crate::OpenBaoVersion::new(2, 7, 0),
         crate::OpenBaoVersion::new(2, 7, 1),
+        crate::OpenBaoVersion::new(2, 7, 2),
     ];
     // Routing independently requires promotion; a verified version alone never
     // bypasses the generated endpoint registry.
@@ -10273,7 +10274,7 @@ fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> R
         || report.detected_version() != report.profile_version()
     {
         return Err(Error::InvalidParameter(
-            "workflow CAS requires an exact verified OpenBao 2.7.0 or 2.7.1 profile".into(),
+            "workflow CAS requires an exact verified reviewed OpenBao 2.7 profile".into(),
         ));
     }
     Ok(())
@@ -10284,6 +10285,7 @@ fn validate_latest_plugin_profile(report: crate::OpenBaoCompatibilityReport) -> 
     let reviewed = [
         crate::OpenBaoVersion::new(2, 7, 0),
         crate::OpenBaoVersion::new(2, 7, 1),
+        crate::OpenBaoVersion::new(2, 7, 2),
     ];
     if report.status() != OpenBaoCompatibilityStatus::Verified
         || !matches!(
@@ -10299,7 +10301,7 @@ fn validate_latest_plugin_profile(report: crate::OpenBaoCompatibilityReport) -> 
         || report.detected_version() != report.profile_version()
     {
         return Err(Error::InvalidParameter(
-            "latest plugin selection requires an exact verified OpenBao 2.7.0 or 2.7.1 profile"
+            "latest plugin selection requires an exact verified reviewed OpenBao 2.7 profile"
                 .into(),
         ));
     }
@@ -11380,7 +11382,11 @@ mod tests {
         use crate::compatibility::{
             OpenBaoCompatibilityPolicyKind as Policy, OpenBaoCompatibilityReport as Report,
         };
-        let reviewed = [Version::new(2, 7, 0), Version::new(2, 7, 1)];
+        let reviewed = [
+            Version::new(2, 7, 0),
+            Version::new(2, 7, 1),
+            Version::new(2, 7, 2),
+        ];
         for version in crate::compatibility::openbao_profile_versions() {
             assert!(validate(Report::assumed(*version)).is_err());
             assert!(validate(Report::verified(Policy::Range, *version, None)).is_err());
@@ -11408,7 +11414,6 @@ mod tests {
         for version in [
             Version::new(2, 6, 4),
             Version::new(2, 6, 5),
-            Version::new(2, 7, 2),
             Version::new(2, 8, 0),
         ] {
             for policy in [Policy::Exact, Policy::AutomaticStrict, Policy::Range] {

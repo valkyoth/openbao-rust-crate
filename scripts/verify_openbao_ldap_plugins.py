@@ -8,8 +8,9 @@ import openbao_ldap_plugins as fixture
 base = fixture.base
 ROOT = fixture.ROOT / "compat/plugins/ldap"
 ANCHORS = {
-    "2.7.0": "c9d8b5329dedc8dc6a9612f581f64412ca112a524ff7ffdaa73c36ea058f6b7c",
-    "2.7.1": "5f3e70c1ce7f5342478d696a7c4b62c65befa7b9223f90fc1226e165978e1b20",
+    "2.7.0": "9b39c3782b3dbc5181e8fff043b1a095a562d5a2b2a66b34b1a58723b293ee25",
+    "2.7.1": "6828e2f39cb039255359368426e957d416dd204effecf1181aae619cabfe057f",
+    "2.7.2": "c1a115ab94395391a7acb4760c8178c956896118aa5d6c187a51423efb9eab1f",
 }
 
 
@@ -69,7 +70,7 @@ def main():
             KeyError, TypeError):
         print("LDAP server evidence verification failed")
         return 1
-    print("LDAP server evidence verified for 2.7.0 and 2.7.1; public SDK evidence remains a separate gate")
+    print("LDAP server evidence verified for 2.7.0, 2.7.1 and 2.7.2; public SDK evidence remains a separate gate")
     return 0
 
 

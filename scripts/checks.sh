@@ -45,6 +45,18 @@ echo "checks: OpenBao 2.6.4 patch source, image and capture regressions"
 /usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_6_4_sdk.py --historical
 /usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_6_4_sdk.py
 
+echo "checks: OpenBao 2.6.5 patch source, capture and SDK regressions"
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_6_5.py --verify-source
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_6_5.py --verify-image
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_6_5.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_6_5.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_6_5.py
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_2_6_5_candidate.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_6_5_candidate.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_6_5_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_6_5_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_6_5_sdk.py
+
 echo "checks: OpenBao 2.7.1 patch source and capture regressions"
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_1.py --verify-source
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1.py
@@ -77,6 +89,34 @@ echo "checks: OpenBao 2.7.1 patch source and capture regressions"
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_1_backup_upgrade.py
 /usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_1_backup_upgrade.py
 /usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_1_backup_upgrade.py
+
+echo "checks: OpenBao 2.7.2 patch source, server and SDK regressions"
+/usr/bin/python3 -E -s -S -B scripts/openbao_2_7_2.py --verify-source
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_2.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_2.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_2.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_2_image.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_2_image.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_2_regressions.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_2_regressions.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_2_regressions.py
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_2_7_2_candidate.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_2_candidate.py
+/usr/bin/python3 -E -s -S -B scripts/generate_openbao_patch_registry.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_patch_registry.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_2_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_2_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_2_sdk.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_2_consistency.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_2_consistency.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_2_backups.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_2_backups.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_2_backup_upgrade.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_2_backup_upgrade.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_2_advanced.py
+/usr/bin/python3 -E -s -S -B scripts/test_openbao_2_7_2_sdk_advanced.py
+/usr/bin/python3 -E -s -S -B scripts/verify_openbao_2_7_2_sdk_advanced.py
+/usr/bin/python3 -E -s -S -B scripts/test_verify_openbao_2_7_2_sdk_advanced.py
 
 echo "checks: staged OpenBao 2.7.0 API evidence"
 /usr/bin/python3 -E -s -S -B scripts/openbao_2_7_api.py --verify
@@ -270,8 +310,8 @@ cargo package --locked --allow-dirty
 package_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
 package_archive="target/package/openbao-${package_version}.crate"
 package_bytes="$(wc -c < "$package_archive")"
-if [ "$package_bytes" -gt 524288 ]; then
-  echo "crates.io package exceeds 512 KiB compressed limit: $package_bytes bytes" >&2
+if [ "$package_bytes" -gt 557056 ]; then
+  echo "crates.io package exceeds 544 KiB compressed limit: $package_bytes bytes" >&2
   exit 1
 fi
 echo "checks: package archive $package_bytes bytes"

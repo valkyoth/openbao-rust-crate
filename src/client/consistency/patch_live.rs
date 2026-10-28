@@ -13,7 +13,12 @@ struct Fixture {
     token: SecretString,
 }
 
-fn client(fixture: &Fixture, address: &str) -> Client<Authenticated> {
+#[allow(clippy::print_stdout)]
+fn diagnostic(message: std::fmt::Arguments<'_>) {
+    println!("{message}");
+}
+
+fn client(fixture: &Fixture, address: &str, version: OpenBaoVersion) -> Client<Authenticated> {
     let url = checked(Url::parse(address));
     assert!(url.scheme() == "https" && url.host_str() == Some("127.0.0.1"));
     assert!(url.username().is_empty() && url.password().is_none());
@@ -24,27 +29,64 @@ fn client(fixture: &Fixture, address: &str) -> Client<Authenticated> {
             fixture.ca_pem.as_bytes(),
         ))]),
     );
-    let config = checked(config.timeout(Duration::from_secs(15))).compatibility_policy(checked(
-        crate::OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 7, 1)),
-    ));
+    let config = checked(config.timeout(Duration::from_secs(15)))
+        .compatibility_policy(checked(crate::OpenBaoCompatibilityPolicy::exact(version)));
     checked(checked(Client::from_config(config)).try_with_token(fixture.token.clone()))
 }
 
-async fn context(client: &Client<Authenticated>) -> ConsistencyContext<'_> {
+async fn context(
+    client: &Client<Authenticated>,
+    version: OpenBaoVersion,
+    stage: Option<usize>,
+) -> ConsistencyContext<'_> {
     let report = checked(client.compatibility_report().await);
     assert!(report.status() == OpenBaoCompatibilityStatus::Verified);
-    assert!(report.detected_version() == Some(OpenBaoVersion::new(2, 7, 1)));
-    assert!(report.profile_version() == Some(OpenBaoVersion::new(2, 7, 1)));
-    checked(client.consistency().await)
+    assert!(report.detected_version() == Some(version));
+    assert!(report.profile_version() == Some(version));
+    if let Some(number) = stage {
+        diagnostic(format_args!("consistency-272-stage:node-{number}-profile"));
+    }
+    let consistency = client.consistency().await;
+    if let (Some(number), Err(error)) = (stage, &consistency) {
+        let kind = match error {
+            Error::OpenBaoCompatibilityProbe("consistency health unavailable") => "health-status",
+            Error::OpenBaoCompatibilityProbe("invalid consistency health response") => {
+                "health-schema"
+            }
+            Error::OpenBaoCompatibilityProbe("invalid consistency cluster identity or state") => {
+                "health-state"
+            }
+            Error::InvalidParameter(_) | Error::UnsupportedOpenBaoVersion(_) => "profile",
+            Error::Transport(_) => "transport",
+            _ => "other",
+        };
+        diagnostic(format_args!("consistency-272-error:node-{number}-{kind}"));
+    }
+    let result = checked(consistency);
+    if let Some(number) = stage {
+        diagnostic(format_args!("consistency-272-stage:node-{number}-context"));
+    }
+    result
 }
 
 #[tokio::test]
 #[ignore = "requires exact patch candidate, three Raft nodes, TLS and private stdin"]
 async fn public_consistency_tls() {
+    verify_consistency_tls(OpenBaoVersion::new(2, 7, 1)).await;
+}
+
+#[tokio::test]
+#[ignore = "requires exact 2.7.2 candidate, three Raft nodes, TLS and private stdin"]
+async fn public_patch_272_consistency_tls() {
+    verify_consistency_tls(OpenBaoVersion::new(2, 7, 2)).await;
+}
+
+async fn verify_consistency_tls(version: OpenBaoVersion) {
     let fixture: Fixture = checked(serde_json::from_reader(std::io::stdin().lock().take(65536)));
     for (number, address) in fixture.addresses.iter().enumerate() {
-        let client = client(&fixture, address);
-        let ctx = context(&client).await;
+        diagnostic(format_args!("consistency-272-stage:node-{number}-start"));
+        let client = client(&fixture, address, version);
+        let ctx = context(&client, version, Some(number)).await;
         let path = format!("fixture-kv/data/sdk-{number}");
         let write: ConsistencyResponse<Value> = checked(
             ctx.request_json(
@@ -57,6 +99,7 @@ async fn public_consistency_tls() {
             .await,
         );
         assert!(write.response["data"]["version"] == 1);
+        diagnostic(format_args!("consistency-272-stage:node-{number}-write"));
         let index = checked(write.index.ok_or(()));
         let read: ConsistencyResponse<Value> = checked(
             ctx.request_json::<_, ()>(
@@ -69,7 +112,8 @@ async fn public_consistency_tls() {
             .await,
         );
         assert!(read.response["data"]["data"]["marker"] == "sdk-initial");
-        let other = context(&client).await;
+        diagnostic(format_args!("consistency-272-stage:node-{number}-read"));
+        let other = context(&client, version, None).await;
         assert!(matches!(
             other
                 .request_json::<Value, ()>(
@@ -82,6 +126,7 @@ async fn public_consistency_tls() {
                 .await,
             Err(Error::InvalidParameter(_))
         ));
+        diagnostic(format_args!("consistency-272-stage:node-{number}-scope"));
         if number > 0 {
             // Synthetic metadata is fixture-only; public callers cannot create
             // arbitrary scoped indices. Requests still use the public method.
@@ -100,13 +145,25 @@ async fn public_consistency_tls() {
                     ..
                 })
             ));
+            diagnostic(format_args!("consistency-272-stage:node-{number}-future"));
         }
     }
+    diagnostic(format_args!("consistency-272-stage:complete"));
 }
 
 #[tokio::test]
 #[ignore = "requires coordinated exact-patch candidate, controlled lag and TLS relay"]
 async fn public_consistency_lag_tls() {
+    verify_consistency_lag_tls(OpenBaoVersion::new(2, 7, 1)).await;
+}
+
+#[tokio::test]
+#[ignore = "requires coordinated exact 2.7.2 candidate, controlled lag and TLS relay"]
+async fn public_patch_272_consistency_lag_tls() {
+    verify_consistency_lag_tls(OpenBaoVersion::new(2, 7, 2)).await;
+}
+
+async fn verify_consistency_lag_tls(version: OpenBaoVersion) {
     let fixture: Fixture = checked(line(65536).with_secret(|bytes| serde_json::from_slice(bytes)));
     assert!(
         fixture
@@ -114,8 +171,8 @@ async fn public_consistency_lag_tls() {
             .iter()
             .all(|address| address == &fixture.addresses[0])
     );
-    let base = client(&fixture, &fixture.addresses[0]);
-    let ctx = context(&base).await;
+    let base = client(&fixture, &fixture.addresses[0], version);
+    let ctx = context(&base, version, None).await;
     let path = "fixture-kv/data/sdk-lag";
     let first = json!({"data": {"marker": "initial"}, "options": {"cas": 0}});
     let write: ConsistencyResponse<Value> = checked(
@@ -145,7 +202,7 @@ async fn public_consistency_lag_tls() {
     command("scope");
     let config = checked(base.config.clone().namespace("fixture-peer"));
     let peer = checked(checked(Client::from_config(config)).try_with_token(fixture.token.clone()));
-    let other = context(&peer).await;
+    let other = context(&peer, version, None).await;
     assert!(matches!(
         other
             .request_json::<Value, ()>(
@@ -213,7 +270,7 @@ async fn public_consistency_lag_tls() {
     }
     let config = checked(base.config.clone().timeout(Duration::from_millis(300)));
     let short = checked(checked(Client::from_config(config)).try_with_token(fixture.token.clone()));
-    let short_ctx = context(&short).await;
+    let short_ctx = context(&short, version, None).await;
     let future = future_index(&short_ctx);
     assert!(matches!(
         short_ctx

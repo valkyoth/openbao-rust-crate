@@ -8,7 +8,7 @@ import openbao_2_7_1_backup_upgrade as fixture
 import verify_openbao_2_7_1 as initial
 
 OUTPUT = initial.OUTPUT / "recovery-backup-upgrade-tls-v2.json"
-EXPECTED_SHA256 = "5a4464efe9e23157a9760b26ddeaf71bb350c787c9e1dc6d66d442052826a0a6"
+EXPECTED_SHA256 = "6df46b56a32d099b9c3e0c64be8fb0f4077d15ad7201d2876f80c0e870c39abc"
 
 
 def validate(data):

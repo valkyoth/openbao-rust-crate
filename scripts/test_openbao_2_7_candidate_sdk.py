@@ -60,7 +60,7 @@ class CandidateSdkTests(unittest.TestCase):
         registry = subject.registry
         normal = registry.rust_output(self.candidate)
         promoted = registry.rust_output(self.candidate, verification_candidate=True)
-        self.assertEqual(promoted, normal)
+        self.assertNotEqual(promoted, normal)
         original = registry.read_regular_file(registry.RUST_PATH, registry.MAX_OUTPUT_BYTES)
         with tempfile.TemporaryDirectory() as temporary:
             destination = Path(temporary)

@@ -29,7 +29,17 @@ fn mount(kind: &str) -> MountEnableRequest {
 #[tokio::test]
 #[ignore = "requires a constrained exact 2.6.4 TLS server and a candidate registry build"]
 async fn public_patch_tls() {
-    let client = crate::patch_271_live::run_patch(OpenBaoVersion::new(2, 6, 4)).await;
+    public_patch(OpenBaoVersion::new(2, 6, 4)).await;
+}
+
+#[tokio::test]
+#[ignore = "requires a constrained exact 2.6.5 TLS server and a candidate registry build"]
+async fn public_patch_265_tls() {
+    public_patch(OpenBaoVersion::new(2, 6, 5)).await;
+}
+
+async fn public_patch(version: OpenBaoVersion) {
+    let client = crate::patch_271_live::run_patch(version).await;
     stage!("token");
     assert!(
         checked(client.token().lookup_self().await)

@@ -3,8 +3,8 @@
 OpenBao documents its HTTP API below `/v1`, but that prefix is not a
 backwards-compatibility guarantee. The SDK therefore selects an immutable
 exact-release profile before a typed request is serialized. Active profiles
-in SDK `2.2.4` cover 28 reviewed releases from `2.0.0`
-through `2.7.1`, including the separate maintenance patch `2.6.4`. Exact,
+in SDK `2.2.5` cover 30 reviewed releases from `2.0.0`
+through `2.7.2`, including the separate maintenance patches `2.6.4` and `2.6.5`. Exact,
 assumed, range, strict-detection, and acknowledged-newer policies may select
 these reviewed patches; generated route dispatch never probes or falls back to an older
 profile after a server error.
@@ -139,16 +139,17 @@ but it is not a server-version check. Select a strict policy for production.
 
 ## OpenBao 2.7 Selection
 
-Select `exact(OpenBaoVersion::new(2, 7, 1))` or strict automatic detection to
-enable the reviewed 2.7.1 profile; exact 2.7.0 remains supported. The external-key, Transit, PKI and
+Select `exact(OpenBaoVersion::new(2, 7, 2))` or strict automatic detection to
+enable the reviewed 2.7.2 profile; exact 2.7.0 and 2.7.1 remain supported. The external-key, Transit, PKI and
 control-group controls reject unconfigured and unknown-newer fallback clients.
 Assumed 2.7 selection enables those controls but does not verify the server.
 Workflow CAS and consistency require stricter verified policies; an assumed
 profile or rolling range does not satisfy those requirements.
 
 LDAP auth/secrets, Kerberos and RADIUS are not built into the reviewed 2.7
-images. SDK 2.2.4 supports the separately reviewed official v0.1.0 Linux amd64
-plugins through explicit `ExternalPluginSelection` for the exact server and
+images. SDK 2.2.5 supports the separately reviewed official plugin versions in
+[the exact plugin table](OPENBAO_EXTERNAL_PLUGINS.md) through explicit
+`ExternalPluginSelection` for the exact server and
 mount. Assumed, unverified and unknown-newer policies cannot enable these
 plugin contracts. See [external plugin selection](OPENBAO_EXTERNAL_PLUGINS.md).
 Historical built-in profiles remain available; selecting an older profile is
@@ -157,7 +158,8 @@ not a workaround for a removed engine on a 2.7 server.
 The historical matrix covers 25 releases through 2.6.3. The separately retained
 [2.7.0 evidence and reviews](OPENBAO_2_7_0_PLAN.md),
 [2.6.4 review](OPENBAO_2_6_4_REVIEW.md), and
-[2.7.1 review](OPENBAO_2_7_1_REVIEW.md) cover the additional profiles. Neither
+[2.7.1 review](OPENBAO_2_7_1_REVIEW.md) and retained 2.6.5/2.7.2 evidence cover
+the additional profiles. Neither
 set claims that every operation was executed live, and neither establishes
 compatibility with unreviewed external services or plugins.
 

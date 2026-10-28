@@ -31,8 +31,16 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn("workflow-cas-rejected-write-preserves-state", report["checks"])
 
     def test_archived_candidate_cannot_pass_as_current(self):
+        archived = evidence.fixture.base.read_regular_file(
+            evidence.HISTORICAL_OUTPUT, 128 * 1024)
         with self.assertRaises(evidence.fixture.harness.HarnessError):
-            evidence.verify()
+            evidence.validate(archived)
+
+    def test_source_current_candidate_evidence(self):
+        report = evidence.verify()
+        self.assertEqual(report["candidate_registry_sha256"],
+                         evidence.fixture.candidate.EXPECTED_SHA256)
+        self.assertEqual(report["test_binary_sha256"], evidence.TEST_BINARY_SHA256)
 
     def test_original_capture_is_not_current_independently_of_digest(self):
         data = evidence.fixture.base.read_regular_file(

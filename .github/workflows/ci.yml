@@ -30,15 +30,15 @@ jobs:
         run: scripts/ci_install_rust.sh
 
       - name: Cache Rust build output
-        # Swatinem/rust-cache v2.9.2
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        # Swatinem/rust-cache v2.9.3
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         with:
           cache-on-failure: true
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
 
       - name: Install security tools
-        # taiki-e/install-action v2.87.29
-        uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283
+        # taiki-e/install-action v2.87.32
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037
         with:
           tool: cargo-deny@0.20.2,cargo-audit@0.22.2,cargo-sbom@0.10.0
 
@@ -48,7 +48,7 @@ jobs:
       - name: Generate SBOM
         run: scripts/generate-sbom.sh
 
-      # rust-cache 2.9.2 treats any nested directory named `tests` as a Cargo
+      # rust-cache 2.9.3 treats any nested directory named `tests` as a Cargo
       # test profile during post-job cleanup. cargo package leaves an extracted
       # package below target/package, so remove that disposable verification
       # output before the cache is saved to avoid misleading ENOENT diagnostics.

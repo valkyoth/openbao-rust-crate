@@ -50,7 +50,7 @@ EXPECTED_OPERATION_COUNT = 691
 EXPECTED_STAGED_OPERATION_COUNT = 690
 EXPECTED_REGISTRY_SHA256 = "df09afef362fa0301eafbf1c04782452559e140a0af09d33baac41f690062748"
 EXPECTED_STAGED_REGISTRY_SHA256 = "397f94126d3756d51cd779bbbef91aa8f993287f85561d4330a3734902f2a87e"
-EXPECTED_RUST_SHA256 = "8c2ea9da29f25a260d3db471742c3a5c3607806608f37261dcb6114b1b20f7f0"
+EXPECTED_RUST_SHA256 = "02bde329f5f2ffd9743942d44b60fe7a6fbb87776b293db007d2d100a4cf8000"
 HISTORICAL_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -935,8 +935,11 @@ def rust_output(registry: dict[str, Any], *, verification_candidate: bool = Fals
     candidate_inventories = (
         (*EXPECTED_VERSIONS, "2.7.0"),
         (*EXPECTED_VERSIONS, "2.7.0", "2.7.1"),
+        (*EXPECTED_VERSIONS, "2.7.0", "2.7.1", "2.7.2"),
         (*EXPECTED_VERSIONS, "2.6.4", "2.7.0"),
+        (*EXPECTED_VERSIONS, "2.6.4", "2.6.5", "2.7.0"),
         (*EXPECTED_VERSIONS, "2.6.4", "2.7.0", "2.7.1"),
+        (*EXPECTED_VERSIONS, "2.6.4", "2.6.5", "2.7.0", "2.7.1", "2.7.2"),
     )
     if registry_versions in candidate_inventories:
         routable = (*EXPECTED_VERSIONS, "2.7.0")
@@ -948,7 +951,8 @@ def rust_output(registry: dict[str, Any], *, verification_candidate: bool = Fals
         import generate_openbao_patch_registry as patches
 
         if (verification_candidate
-                or registry_versions != (*EXPECTED_VERSIONS, "2.6.4", "2.7.0", "2.7.1")
+                or registry_versions != (*EXPECTED_VERSIONS, "2.6.4", "2.6.5", "2.7.0",
+                                         "2.7.1", "2.7.2")
                 or sha256(canonical_json(registry)) != patches.EXPECTED_SHA256):
             raise RegistryError("patch promotion requires the exact reviewed combined registry")
         routable = registry_versions

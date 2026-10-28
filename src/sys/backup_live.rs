@@ -35,6 +35,12 @@ async fn public_patch_rotation_backup_strict_tls() {
     verify_backup(true, crate::OpenBaoVersion::new(2, 7, 1)).await;
 }
 
+#[tokio::test]
+#[ignore = "requires exact 2.7.2 candidate, real PGP recovery backup and private stdin"]
+async fn public_patch_272_rotation_backup_strict_tls() {
+    verify_backup(true, crate::OpenBaoVersion::new(2, 7, 2)).await;
+}
+
 async fn verify_backup(strict: bool, version: crate::OpenBaoVersion) {
     let fixture: Fixture = checked(serde_json::from_reader(std::io::stdin().lock().take(65536)));
     let address = &fixture.addresses[0];

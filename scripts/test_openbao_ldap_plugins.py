@@ -264,8 +264,8 @@ class DirectoryFixtureTests(unittest.TestCase):
 
     def test_mount_identity_mismatch_fails_closed(self):
         digests = {name: "a" * 64 for name in fixture.PLUGINS}
-        for actual in ({"running_sha256": "b" * 64, "running_plugin_version": "v0.1.0"},
-                       {"running_sha256": "a" * 64, "running_plugin_version": "v0.2.0"}, {}):
+        for actual in ({"running_sha256": "b" * 64, "running_plugin_version": "v0.2.0"},
+                       {"running_sha256": "a" * 64, "running_plugin_version": "v9.9.9"}, {}):
             with patch.object(fixture, "api", side_effect=[{}, {}, {
                     "data": {fixture.AUTH_MOUNT + "/": actual}}]):
                 with self.assertRaises(fixture.harness.HarnessError):
@@ -274,14 +274,15 @@ class DirectoryFixtureTests(unittest.TestCase):
     def test_mounts_require_versioned_catalog_and_verified_running_identity(self):
         digests = {name: "a" * 64 for name in fixture.PLUGINS}
         replies = []
-        for mount in (fixture.AUTH_MOUNT, fixture.SECRET_MOUNT):
+        versions = ("v0.2.0", "v0.1.1")
+        for mount, version in zip((fixture.AUTH_MOUNT, fixture.SECRET_MOUNT), versions):
             replies.extend([{}, {}, {"data": {mount + "/": {
-                "running_sha256": "a" * 64, "running_plugin_version": "v0.1.0"}}}])
+                "running_sha256": "a" * 64, "running_plugin_version": version}}}])
         with patch.object(fixture, "api", side_effect=replies) as api:
             fixture.register("https://127.0.0.1", Path("/ca"), "test-token", digests)
-            for index in (0, 3):
-                self.assertEqual(api.call_args_list[index].args[-1]["version"], "v0.1.0")
-                self.assertEqual(api.call_args_list[index + 1].args[-1]["config"]["plugin_version"], "v0.1.0")
+            for index, version in zip((0, 3), versions):
+                self.assertEqual(api.call_args_list[index].args[-1]["version"], version)
+                self.assertEqual(api.call_args_list[index + 1].args[-1]["config"]["plugin_version"], version)
 
     def test_http_success_cannot_satisfy_a_denial_check(self):
         with patch.object(fixture.tls, "request", return_value=(200, {})):

@@ -1,14 +1,16 @@
 #!/usr/bin/python3 -EsSB
-"""Verify immutable local validation of the supplemental 2.2.4 CI runner."""
+"""Verify immutable local validation of the supplemental 2.2.5 CI runner."""
 
 import openbao_current_ci as fixture
 
-ROOT = fixture.ROOT / "compat/ci/2.2.4"
-BINARY_SHA256 = "e6862dbd6c3ba1cae32c00839fc1149a24a923ecd83fa3c54a90d8c48b7aefee"
+ROOT = fixture.ROOT / "compat/ci/2.2.5/v2"
+BINARY_SHA256 = "43af4a573e836ff92c89da3c2ae2537e7df57fe6305081ca51f762f6fd4ceb2d"
 PINS = {
-    "2.6.4": "0f41d2d66239aeb96765281527ba3bbdbd674ee83a52315ca5559319d5605941",
-    "2.7.0": "4c5a7ee9aa75b1251d834881d523fd8ddb56e561783f7012c748e6563030cf2d",
-    "2.7.1": "9ddf7a50e32cc8c30498041aa98f1da1e01f9c1252940dc607509f258f52e8cd",
+    "2.6.4": "d2a3cbfd7aa3137d600fa7f765040540099a52b4e099fd6a8c57d2c9e8b67d06",
+    "2.6.5": "f86829d6bd982b532514903f9da0b92c24cee85c7ffe77f657e9013c6f39fb22",
+    "2.7.0": "9b764641bf4845901c5a6c6ad7d72a096e4022ce5d8562bdd89a5bca3827673f",
+    "2.7.1": "e2734aa0845faecd994a3fc827d32685c238ecaf73a39c77415d06a751d6f44c",
+    "2.7.2": "089e706c19d0427f12c57a6255b087fff9916e5a65657d6d55740bdbb5c142f7",
 }
 
 
@@ -43,7 +45,7 @@ def main():
     except (fixture.harness.HarnessError, fixture.base.SnapshotError, OSError, ValueError, KeyError, TypeError):
         print("Retained current-profile CI evidence missing or invalid")
         return 1
-    print("Three local CI-runner TLS/SDK reports verified; GitHub execution approval remains separate")
+    print("Five local CI-runner TLS/SDK reports verified; GitHub execution approval remains separate")
     return 0
 
 

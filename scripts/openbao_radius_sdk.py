@@ -51,12 +51,14 @@ def input_hashes():
     return {**fixture.input_hashes(), **{path: fixture.base.sha256(value) for path, value in inputs.items()}}
 
 
-def build():
+def build(*, normal=False):
+    require(type(normal) is bool)
     require(os.geteuid() != 0)
     before = input_hashes()
     values = builder.backup_inputs(builder.source_inputs())
     path = "src/plugin/compatibility.rs"
-    values[path] = candidate_source(values[path].decode()).encode()
+    if not normal:
+        values[path] = candidate_source(values[path].decode()).encode()
     with tempfile.TemporaryDirectory(prefix="openbao-radius-sdk-build-") as temporary:
         root = Path(temporary)
         for path, data in values.items():
@@ -64,6 +66,8 @@ def build():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
         env = builder.build_environment(root)
+        if normal:
+            env["CARGO_TARGET_DIR"] = str(fixture.ldap.ROOT / "target")
         messages = builder.run(["cargo", "test", "--locked", "--offline", "--no-default-features",
             "--features", FEATURES, "--lib", "--no-run", "--message-format=json-render-diagnostics"],
             root, env, capture=True)
@@ -73,7 +77,7 @@ def build():
             and row.get("profile", {}).get("test") is True]
         require(len(binaries) == 1)
     require(before == input_hashes())
-    print("RADIUS candidate SDK binary: " + binaries[0])
+    print("RADIUS " + ("normal" if normal else "candidate") + " SDK binary: " + binaries[0])
 
 
 class Progress:
@@ -185,8 +189,8 @@ def main():
     args = parser.parse_args()
     try:
         if args.build:
-            require(args.version is None and args.test_binary is None and not args.normal)
-            build()
+            require(args.version is None and args.test_binary is None)
+            build(normal=args.normal)
         else:
             require(args.version is not None and args.test_binary is not None)
             run(args.test_binary, args.version, args.acknowledge_unsigned_directory_image,

@@ -25,10 +25,13 @@ def verify():
 
 def input_hashes():
     paths = ("scripts/openbao_patch_normal_sdk.py", "scripts/generate_openbao_patch_registry.py",
-             "scripts/generate_openbao_2_6_4_candidate.py", "scripts/generate_openbao_2_7_1_candidate.py",
+             "scripts/generate_openbao_2_6_4_candidate.py", "scripts/generate_openbao_2_6_5_candidate.py",
+             "scripts/generate_openbao_2_7_1_candidate.py", "scripts/generate_openbao_2_7_2_candidate.py",
              "scripts/generate_openbao_capability_registry.py",
              "compat/onboarding/2.6.4/candidate-capability-registry.json",
+             "compat/onboarding/2.6.5/candidate-capability-registry.json",
              "compat/onboarding/2.7.1/candidate-capability-registry-v2.json",
+             "compat/onboarding/2.7.2/candidate-capability-registry.json",
              str(combined.OUTPUT.relative_to(registry.ROOT)))
     return {path: registry.sha256(registry.read_regular_file(registry.ROOT / path, registry.MAX_OUTPUT_BYTES))
             for path in paths}

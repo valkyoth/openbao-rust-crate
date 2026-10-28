@@ -44,6 +44,15 @@ impl ExternalPluginKind {
         }
     }
 
+    /// Reviewed release version for this plugin kind.
+    pub const fn plugin_version(self) -> &'static str {
+        match self {
+            Self::LdapAuth | Self::RadiusAuth => "v0.2.0",
+            Self::KerberosAuth => "v0.1.0",
+            Self::LdapSecrets => "v0.1.1",
+        }
+    }
+
     pub(crate) const fn is_auth(self) -> bool {
         !matches!(self, Self::LdapSecrets)
     }
@@ -90,8 +99,8 @@ pub struct ExternalPluginSelection {
 impl ExternalPluginSelection {
     /// Selects an exact reviewed artifact for a mount, without promoting support.
     ///
-    /// Only `v0.1.0` Linux amd64 v1 artifacts and the exact 2.7.0/2.7.1 server
-    /// targets are accepted. `mount` excludes the `auth/` prefix for auth engines.
+    /// Only the kind-specific reviewed Linux amd64 v1 artifact and exact reviewed
+    /// 2.7 server targets are accepted. `mount` excludes the `auth/` prefix for auth engines.
     /// Floating versions, archive digests and alternate binaries are rejected.
     pub fn new(
         kind: ExternalPluginKind,
@@ -100,8 +109,13 @@ impl ExternalPluginSelection {
         plugin_version: &str,
         binary_sha256: &str,
     ) -> Result<Self> {
-        if ![OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)].contains(&server)
-            || plugin_version != "v0.1.0"
+        if ![
+            OpenBaoVersion::new(2, 7, 0),
+            OpenBaoVersion::new(2, 7, 1),
+            OpenBaoVersion::new(2, 7, 2),
+        ]
+        .contains(&server)
+            || plugin_version != kind.plugin_version()
             || binary_sha256 != kind.binary_sha256()
         {
             return Err(Error::InvalidParameter(
@@ -135,7 +149,7 @@ impl ExternalPluginSelection {
 
     /// Exact reviewed plugin artifact version.
     pub const fn plugin_version(&self) -> &'static str {
-        "v0.1.0"
+        self.kind.plugin_version()
     }
 
     pub(crate) fn same_mount(&self, other: &Self) -> bool {
@@ -164,7 +178,13 @@ fn reviewed_operations(
     kind: ExternalPluginKind,
     server: OpenBaoVersion,
 ) -> &'static [&'static str] {
-    if ![OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)].contains(&server) {
+    if ![
+        OpenBaoVersion::new(2, 7, 0),
+        OpenBaoVersion::new(2, 7, 1),
+        OpenBaoVersion::new(2, 7, 2),
+    ]
+    .contains(&server)
+    {
         return &[];
     }
     match kind {
@@ -223,7 +243,7 @@ mod tests {
             kind,
             server,
             "sensitive/mount",
-            "v0.1.0",
+            kind.plugin_version(),
             kind.binary_sha256(),
         )
         .unwrap_or_else(|_| panic!("selection failed"))
@@ -232,13 +252,28 @@ mod tests {
     #[test]
     fn exact_artifacts_and_server_targets_only() {
         for kind in KINDS {
-            for server in [OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)] {
+            for server in [
+                OpenBaoVersion::new(2, 7, 0),
+                OpenBaoVersion::new(2, 7, 1),
+                OpenBaoVersion::new(2, 7, 2),
+            ] {
                 let selected = selection(kind, server);
                 assert_eq!(selected.kind(), kind);
                 assert_eq!(selected.server_version(), server);
-                assert_eq!(selected.plugin_version(), "v0.1.0");
+                assert_eq!(selected.plugin_version(), kind.plugin_version());
                 assert!(!format!("{selected:?}").contains("sensitive/mount"));
-                for version in ["latest", "0.1.0", "v0.1.1", "v0.1.0+metadata", "v0.1.0-rc1"] {
+                for version in [
+                    "latest",
+                    "0.1.0",
+                    "v0.1.0",
+                    "v0.1.1",
+                    "v0.2.0",
+                    "v0.1.0+metadata",
+                    "v0.1.0-rc1",
+                ]
+                .into_iter()
+                .filter(|version| *version != kind.plugin_version())
+                {
                     assert!(
                         ExternalPluginSelection::new(
                             kind,
@@ -251,24 +286,25 @@ mod tests {
                     );
                 }
                 for digest in ["", "wrong", &"0".repeat(64)] {
-                    let error =
-                        ExternalPluginSelection::new(kind, server, "mount", "v0.1.0", digest)
-                            .err()
-                            .unwrap_or_else(|| panic!("accepted invalid digest"));
+                    let error = ExternalPluginSelection::new(
+                        kind,
+                        server,
+                        "mount",
+                        kind.plugin_version(),
+                        digest,
+                    )
+                    .err()
+                    .unwrap_or_else(|| panic!("accepted invalid digest"));
                     assert!(!format!("{error:?}").contains("wrong"));
                 }
             }
-            for server in [
-                OpenBaoVersion::new(2, 6, 4),
-                OpenBaoVersion::new(2, 7, 2),
-                OpenBaoVersion::new(2, 8, 0),
-            ] {
+            for server in [OpenBaoVersion::new(2, 6, 4), OpenBaoVersion::new(2, 8, 0)] {
                 assert!(
                     ExternalPluginSelection::new(
                         kind,
                         server,
                         "mount",
-                        "v0.1.0",
+                        kind.plugin_version(),
                         kind.binary_sha256()
                     )
                     .is_err()
@@ -310,7 +346,7 @@ mod tests {
                 kind,
                 server,
                 &format!("mount-{index}"),
-                "v0.1.0",
+                kind.plugin_version(),
                 kind.binary_sha256(),
             )
             .unwrap_or_else(|_| panic!("selection failed"));
@@ -336,8 +372,14 @@ mod tests {
             "mount\n",
         ] {
             assert!(
-                ExternalPluginSelection::new(kind, server, mount, "v0.1.0", kind.binary_sha256())
-                    .is_err()
+                ExternalPluginSelection::new(
+                    kind,
+                    server,
+                    mount,
+                    kind.plugin_version(),
+                    kind.binary_sha256(),
+                )
+                .is_err()
             );
         }
         let selected = selection(kind, server);
@@ -364,7 +406,11 @@ mod tests {
     #[test]
     fn only_reviewed_operations_are_promoted_for_verified_exact_servers() {
         for kind in KINDS {
-            for server in [OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)] {
+            for server in [
+                OpenBaoVersion::new(2, 7, 0),
+                OpenBaoVersion::new(2, 7, 1),
+                OpenBaoVersion::new(2, 7, 2),
+            ] {
                 let selected = selection(kind, server);
                 let verified = OpenBaoCompatibilityPolicy::automatic_strict()
                     .evaluate_detected(server)
@@ -398,13 +444,17 @@ mod tests {
             .len(),
             9
         );
-        for version in [OpenBaoVersion::new(2, 7, 0), OpenBaoVersion::new(2, 7, 1)] {
+        for version in [
+            OpenBaoVersion::new(2, 7, 0),
+            OpenBaoVersion::new(2, 7, 1),
+            OpenBaoVersion::new(2, 7, 2),
+        ] {
             let operations = reviewed_operations(ExternalPluginKind::RadiusAuth, version);
             assert_eq!(operations.len(), 6);
             assert!(!operations.contains(&"openbao.post.auth.radius.login.ea2f3680af864d92"));
         }
         for kind in KINDS {
-            for version in [OpenBaoVersion::new(2, 6, 4), OpenBaoVersion::new(2, 7, 2)] {
+            for version in [OpenBaoVersion::new(2, 6, 4), OpenBaoVersion::new(2, 8, 0)] {
                 assert!(reviewed_operations(kind, version).is_empty());
             }
         }

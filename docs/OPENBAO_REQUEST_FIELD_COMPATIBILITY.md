@@ -33,6 +33,7 @@ does not make it a routable profile.
 | `ssh.role` | `allow_empty_principals` | `2.0.2` | `-` |
 | `ssh.role` | `issuer_ref` | `2.3.1` | `-` |
 | `ssh.role` | `allow_commas_in_identity_templates` | `2.6.0` | `-` |
+| `ssh.role` | `allow_wildcards_in_identity_templates` | `2.6.5` | `2.6.5` |
 | `sys.policy.write` | `expiration` | `2.3.1` | `-` |
 | `sys.policy.write` | `ttl` | `2.3.1` | `-` |
 | `sys.policy.write` | `cas` | `2.3.1` | `-` |
@@ -97,6 +98,9 @@ proof when tagged documentation or live behavior contradicts it.
   `configure` preserves the historical request body.
 - SSH `issuer_ref` changes which CA signs certificates in a multi-issuer
   mount. Omitting it preserves the server's default-issuer behavior.
+- The SSH wildcard template override is available in `2.6.5`, absent from
+  `2.7.0` and `2.7.1`, and available again from `2.7.2`. The typed client
+  enforces those exact reviewed ranges before transport.
 - ACL `cas`, `cas_required`, `expiration`, and `ttl` are policy lifecycle and
   concurrency controls. `expiration` and `ttl` remain mutually exclusive.
   Policy PATCH is available only from `2.6.1` and preserves omitted fields.

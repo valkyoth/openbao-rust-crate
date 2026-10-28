@@ -10,8 +10,9 @@ base = fixture.base
 require = ldap.require
 ROOT = fixture.ldap.ROOT / "compat/plugins/radius"
 ANCHORS = {
-    "2.7.0": "c66a7e7e44e7b2d9eaffa6665fd48cc09e36838e930a8654342b9506c6ee4a44",
-    "2.7.1": "b6993fb0b84d0dd60de8b5a69c1c16dd86a9cd584cb5001905040c21d9a5e809",
+    "2.7.0": "5034bf9702576741a35663ae9ee850f9e13b47f14d168cbfc110dcdc9bfdd219",
+    "2.7.1": "847a21f60316f6b8101ce16e961d8b9b122900cd60cbace1734c6cd1a6e68c63",
+    "2.7.2": "53312f06029265b32d7fd6f5f8073bd29b0a8f3266af950f1c36fabfa063ff12",
 }
 
 

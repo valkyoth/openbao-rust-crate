@@ -9,6 +9,7 @@ pub(crate) struct VersionedRequestField {
     field: &'static str,
     minimum: OpenBaoVersion,
     maximum: Option<OpenBaoVersion>,
+    resumed_at: Option<OpenBaoVersion>,
 }
 
 impl VersionedRequestField {
@@ -22,6 +23,7 @@ impl VersionedRequestField {
             field,
             minimum,
             maximum: None,
+            resumed_at: None,
         }
     }
 
@@ -37,11 +39,30 @@ impl VersionedRequestField {
             field,
             minimum,
             maximum: Some(maximum),
+            resumed_at: None,
+        }
+    }
+
+    #[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
+    pub(crate) const fn split_since(
+        endpoint: &'static str,
+        field: &'static str,
+        minimum: OpenBaoVersion,
+        maximum: OpenBaoVersion,
+        resumed_at: OpenBaoVersion,
+    ) -> Self {
+        Self {
+            endpoint,
+            field,
+            minimum,
+            maximum: Some(maximum),
+            resumed_at: Some(resumed_at),
         }
     }
 
     fn supports(self, version: OpenBaoVersion) -> bool {
-        version >= self.minimum && self.maximum.is_none_or(|maximum| version <= maximum)
+        (version >= self.minimum && self.maximum.is_none_or(|maximum| version <= maximum))
+            || self.resumed_at.is_some_and(|minimum| version >= minimum)
     }
 
     pub(crate) fn validate_selection(
@@ -51,7 +72,11 @@ impl VersionedRequestField {
     ) -> Result<()> {
         // Newly introduced controls must not become enabled merely because the
         // default/fallback profile advances during a dependency update.
-        if self.minimum >= OpenBaoVersion::new(2, 7, 0)
+        let selected_minimum = self
+            .resumed_at
+            .filter(|minimum| version >= *minimum)
+            .unwrap_or(self.minimum);
+        if selected_minimum >= OpenBaoVersion::new(2, 7, 0)
             && !matches!(
                 status,
                 crate::OpenBaoCompatibilityStatus::Verified
@@ -96,8 +121,12 @@ const V2_5_2: OpenBaoVersion = OpenBaoVersion::new(2, 5, 2);
 #[cfg(any(feature = "operator-ops", test))]
 const V2_5_5: OpenBaoVersion = OpenBaoVersion::new(2, 5, 5);
 const V2_6_0: OpenBaoVersion = OpenBaoVersion::new(2, 6, 0);
+#[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
+const V2_6_5: OpenBaoVersion = OpenBaoVersion::new(2, 6, 5);
 #[cfg(any(feature = "operator-ops", test))]
 const V2_6_3: OpenBaoVersion = OpenBaoVersion::new(2, 6, 3);
+#[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
+const V2_7_2: OpenBaoVersion = OpenBaoVersion::new(2, 7, 2);
 
 pub(crate) mod fields {
     use super::*;
@@ -134,6 +163,15 @@ pub(crate) mod fields {
     #[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
     pub(crate) const SSH_ROLE_ALLOW_TEMPLATE_COMMAS: VersionedRequestField =
         VersionedRequestField::since("ssh.role", "allow_commas_in_identity_templates", V2_6_0);
+    #[cfg(any(feature = "identity-template-overrides-acknowledged", test))]
+    pub(crate) const SSH_ROLE_ALLOW_TEMPLATE_WILDCARDS: VersionedRequestField =
+        VersionedRequestField::split_since(
+            "ssh.role",
+            "allow_wildcards_in_identity_templates",
+            V2_6_5,
+            V2_6_5,
+            V2_7_2,
+        );
 
     pub(crate) const POLICY_EXPIRATION: VersionedRequestField =
         VersionedRequestField::since("sys.policy.write", "expiration", V2_3_1);
@@ -225,6 +263,7 @@ pub(crate) mod fields {
         SSH_ROLE_ALLOW_EMPTY_PRINCIPALS,
         SSH_ROLE_ISSUER_REF,
         SSH_ROLE_ALLOW_TEMPLATE_COMMAS,
+        SSH_ROLE_ALLOW_TEMPLATE_WILDCARDS,
         POLICY_EXPIRATION,
         POLICY_TTL,
         POLICY_CAS,
@@ -329,6 +368,24 @@ mod tests {
     }
 
     #[test]
+    fn split_maintenance_field_supports_only_reviewed_release_lines() {
+        let rule = &fields::SSH_ROLE_ALLOW_TEMPLATE_WILDCARDS;
+        for (version, supported) in [
+            (OpenBaoVersion::new(2, 6, 4), false),
+            (OpenBaoVersion::new(2, 6, 5), true),
+            (OpenBaoVersion::new(2, 7, 0), false),
+            (OpenBaoVersion::new(2, 7, 1), false),
+            (OpenBaoVersion::new(2, 7, 2), true),
+        ] {
+            assert_eq!(
+                validate_request_fields(version, &[(rule, true)]).is_ok(),
+                supported,
+                "unexpected wildcard override support for {version}"
+            );
+        }
+    }
+
+    #[test]
     fn unset_fields_preserve_old_profile_compatibility() {
         assert!(
             validate_request_fields(
@@ -384,7 +441,15 @@ mod tests {
                     Err(Error::UnsupportedOpenBaoRequestField { .. })
                 ));
             }
+            if let Some(resumed_at) = rule.resumed_at {
+                assert!(
+                    validate_request_fields(resumed_at, &[(rule, true)]).is_ok(),
+                    "resumed profile rejected {}.{}",
+                    rule.endpoint,
+                    rule.field
+                );
+            }
         }
-        assert_eq!(identities.len(), 41);
+        assert_eq!(identities.len(), 42);
     }
 }

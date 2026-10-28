@@ -1,11 +1,11 @@
 #!/usr/bin/python3 -EsSB
-"""Require current server and normal-SDK evidence for all eight plugin pairs."""
+"""Require current server and normal-SDK evidence for all twelve plugin pairs."""
 
 import verify_openbao_ldap_sdk as ldap
 import verify_openbao_kerberos_sdk as kerberos
 import verify_openbao_radius_sdk as radius
 
-VERSIONS = ("2.7.0", "2.7.1")
+VERSIONS = ("2.7.0", "2.7.1", "2.7.2")
 FAMILIES = ((ldap, 33), (kerberos, 9), (radius, 6))
 
 
@@ -27,4 +27,4 @@ def verify():
 
 if __name__ == "__main__":
     verify()
-    print("All eight exact plugin/server pairs have current server and normal-SDK evidence")
+    print("All twelve exact plugin/server pairs have current server and normal-SDK evidence")

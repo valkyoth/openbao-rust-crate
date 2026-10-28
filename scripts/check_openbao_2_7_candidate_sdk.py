@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 import tomllib
 
-import generate_openbao_2_7_candidate as candidate
+import generate_openbao_patch_registry as candidate
 
 registry = candidate.registry
 ROOT = registry.ROOT

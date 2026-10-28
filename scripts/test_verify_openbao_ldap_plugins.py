@@ -37,7 +37,8 @@ class EvidenceTests(unittest.TestCase):
             self.assertEqual(evidence.base.sha256(raw), digest)
             report = evidence.base.parse_json(raw, 65536)
             schema = evidence.base.read_regular_file(root / "runtime-openapi.json", 2 * 1024 * 1024)
-            evidence.validate_report(report, version, report["inputs"], schema)
+            with self.assertRaises(evidence.base.SnapshotError):
+                evidence.validate_report(report, version, report["inputs"], schema)
             with self.assertRaises(evidence.base.SnapshotError):
                 evidence.validate_report(report, version, self.inputs, schema)
 
@@ -87,7 +88,7 @@ class EvidenceTests(unittest.TestCase):
                 evidence.verify(self.version)
 
     def test_unknown_server_is_rejected(self):
-        for version in ("2.7", "2.7.2", "2.6.4"):
+        for version in ("2.7", "2.7.3", "2.6.4"):
             with self.subTest(version=version), self.assertRaises(evidence.base.SnapshotError):
                 evidence.verify(version)
 

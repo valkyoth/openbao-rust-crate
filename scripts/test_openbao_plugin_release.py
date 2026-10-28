@@ -46,11 +46,14 @@ class ReleaseTests(unittest.TestCase):
                 self.assertEqual(module.base.sha256(raw), digest)
                 report = module.base.parse_json(raw, 65536)
                 schema = module.base.read_regular_file(root / "runtime-openapi.json", 2 * 1024 * 1024)
-                # Even restoring the old binary anchor cannot make stale source inputs current.
-                with patch.object(module, binary_field, report["binary_sha256"]):
-                    module.validate_report(report, version, report["inputs"], schema)
-                    with self.assertRaises(module.base.SnapshotError):
-                        module.validate_report(report, version, module.sdk.input_hashes(), schema)
+                self.assertEqual(report["server_version"], version)
+                self.assertEqual(report["scope"], "public-sdk-normal-build")
+                self.assertEqual(module.base.sha256(schema), report["runtime_openapi_sha256"])
+                # Restoring the old binary anchor still cannot make historical
+                # plugin digests or stale source inputs current release evidence.
+                with patch.object(module, binary_field, report["binary_sha256"]), \
+                     self.assertRaises(module.base.SnapshotError):
+                    module.validate_report(report, version, module.sdk.input_hashes(), schema)
 
     def families(self):
         return tuple((SimpleNamespace(
@@ -59,13 +62,13 @@ class ReleaseTests(unittest.TestCase):
             verify=Mock(return_value={"scope": "public-sdk-normal-build"})), count)
             for prefix, count in (("ldap", 33), ("kerberos", 9), ("radius", 6)))
 
-    def test_all_families_and_both_versions_required(self):
+    def test_all_families_and_all_versions_required(self):
         families = self.families()
         with patch.object(gate, "FAMILIES", families):
             gate.verify()
         for module, _ in families:
-            self.assertEqual(module.verify.call_count, 2)
-            self.assertEqual(module.server.verify.call_count, 2)
+            self.assertEqual(module.verify.call_count, 3)
+            self.assertEqual(module.server.verify.call_count, 3)
             for version in gate.VERSIONS:
                 module.verify.assert_any_call(version)
                 module.server.verify.assert_any_call(version)

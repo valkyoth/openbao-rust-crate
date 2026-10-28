@@ -39,9 +39,16 @@ class ArtifactTests(unittest.TestCase):
     def test_lock_and_key_pins(self):
         document = subject.lock()
         self.assertEqual(tuple(p["id"] for p in document["plugins"]), subject.PLUGINS)
-        for field in ("platform", "source_commit", "signing_primary_fingerprint", "plugins"):
+        for field in ("platform", "signing_primary_fingerprint", "plugins"):
             changed = copy.deepcopy(document)
             changed[field] = "changed"
+            with patch.object(base, "read_regular_file", return_value=base.canonical_json(changed)):
+                with self.assertRaises(base.SnapshotError):
+                    subject.lock()
+        for index, field in ((0, "version"), (1, "tag"), (2, "source_commit"),
+                             (3, "binary_sha256")):
+            changed = copy.deepcopy(document)
+            changed["plugins"][index][field] = "changed"
             with patch.object(base, "read_regular_file", return_value=base.canonical_json(changed)):
                 with self.assertRaises(base.SnapshotError):
                     subject.lock()

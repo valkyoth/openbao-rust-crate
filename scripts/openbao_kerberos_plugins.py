@@ -105,13 +105,14 @@ def check_auth(auth, user, policies):
 def register(address, ca, token):
     plugin = next(row for row in ldap.artifacts.lock()["plugins"] if row["id"] == "auth-kerberos")
     ldap.api(address, ca, token, "POST", "sys/plugins/catalog/auth/kerberos",
-        {"sha256": plugin["binary_sha256"], "command": "openbao-plugin-auth-kerberos", "version": "v0.1.0"}, expected=204)
+        {"sha256": plugin["binary_sha256"], "command": "openbao-plugin-auth-kerberos",
+         "version": plugin["version"]}, expected=204)
     ldap.api(address, ca, token, "POST", "sys/auth/" + MOUNT,
-        {"type": "kerberos", "config": {"plugin_version": "v0.1.0",
+        {"type": "kerberos", "config": {"plugin_version": plugin["version"],
           "passthrough_request_headers": ["Authorization"]}}, expected=204)
     mounted = ldap.api(address, ca, token, "GET", "sys/auth")["data"][MOUNT + "/"]
     ldap.require(mounted.get("running_sha256") == plugin["binary_sha256"]
-                 and mounted.get("running_plugin_version") == "v0.1.0")
+                 and mounted.get("running_plugin_version") == plugin["version"])
 
 
 def server_checks(address, ca, token, passwords, ticket, keytab):

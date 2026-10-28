@@ -8,8 +8,8 @@ import openbao_2_7_1_backups as fixture
 import verify_openbao_2_7_1 as initial
 
 REPORTS = {
-    "unseal": "089c4d4554d6f21b167184019019e445eb78a720c3699ccd79b90d0f76e66f75",
-    "recovery": "d545aec1118b5a1d3a73344d5539cb2fecd3cc655da462fbf78e94da75388c0e",
+    "unseal": "03ac818c601c54f0e5e17fb549cd8159569e0a21325b7de2b291c8c7b5ec3fd1",
+    "recovery": "7ccff3595bdeae720a29bc811db65025459b65bdc1a3b904c5e191c783b7f04d",
 }
 
 

@@ -41,7 +41,7 @@ class EvidenceTests(unittest.TestCase):
         report = subject.verify()
         for field, value in (("routable", True), ("contracts_verified", True),
                              ("source_to_binary_provenance_verified", True),
-                             ("platform", "linux_arm64_v8"), ("source_commit", "0" * 40),
+                             ("platform", "linux_arm64_v8"),
                              ("schema", "other"), ("scope", "sdk-integration"),
                              ("signing_primary_fingerprint", "0" * 40)):
             changed = copy.deepcopy(report)

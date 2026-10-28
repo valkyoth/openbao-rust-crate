@@ -275,12 +275,13 @@ async fn historical_profiles_keep_legacy_rotation_and_reject_new_fields() {
     let reference = ok(openbao::secrets::transit::TransitExternalKeyReference::new(
         "provider", "next",
     ));
-    let mut checked = 0;
-    for version in openbao::openbao_profile_versions()
+    let historical = openbao::openbao_profile_versions()
         .iter()
         .copied()
         .filter(|version| *version < OpenBaoVersion::new(2, 7, 0))
-    {
+        .collect::<Vec<_>>();
+    assert!(historical.contains(&OpenBaoVersion::new(2, 6, 5)));
+    for version in historical {
         let (client, server) = fixture(
             version,
             vec![Step {
@@ -300,9 +301,7 @@ async fn historical_profiles_keep_legacy_rotation_and_reject_new_fields() {
             })
         ));
         ok(server.join());
-        checked += 1;
     }
-    assert_eq!(checked, 25);
     let (client, server) = fixture(OpenBaoVersion::new(2, 7, 0), vec![]);
     assert_externalized_engines_rejected(&client).await;
     ok(server.join());

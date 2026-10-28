@@ -14,11 +14,17 @@ CANDIDATE_ANCHORS = {
     "2.7.1": "fe147582ce38f457a50f7012416600c2f36009e663f3b964f6d2fa9f5ca0519a",
 }
 CANDIDATE_BINARY = "a3d1fda2541adb4d76369ecf4da4897fd99c4914bcf61996fd20cf07533072f7"
-NORMAL_ANCHORS = {
-    "2.7.0": "e258f36cf06c7dfd6858d55e12d69751128b082921bfc29fa118e29e5632133c",
-    "2.7.1": "cd2ad3995578aa0edae02d0e6f2357507507122a1678a51fbf66b2376d3f3664",
+CANDIDATE_PLUGINS = {
+    "auth-ldap": "18fa83d993c629a969cfa234d48e451921004c36ac8dc6a9fcc37d9e256d8818",
+    "auth-radius": "771be7e9ee028d87bdc79412eb66fe330ca1e54e21a50ebe59584e6b8a5aa69b",
+    "secrets-ldap": "47292935509894d8b4feb0fc9b6429455da87181a8fc53999eb986128ab8d73a",
 }
-NORMAL_BINARY = "21320e97ff3ea3b6deae30deadcf2851a08924adea64839b7226f213c7aa290b"
+NORMAL_ANCHORS = {
+    "2.7.0": "fb4981c3cd2b6ffcdb5e5134aaa9cbf40581b37b7171092305629b779f94e15e",
+    "2.7.1": "c4f7fecdd2bdb260e72877cf66c0fe5bc2fe491aaf79b5c7a75b1bf22cb9ec54",
+    "2.7.2": "61417c06e6931824da062dee18eafe10f908de8390200793e4744d0f0e91ae99",
+}
+NORMAL_BINARY = "c249b236ec49e90dc1fb9d5b06fc8c5f5bc37ada800228d05a4b4acc4a954ab2"
 
 
 def validate_operations(schema):
@@ -54,11 +60,22 @@ def validate_report(report, version, inputs, schema, *, candidate=False):
                 "execution": sdk.execution.EXECUTION_ASSURANCE}
     require(expected["binary_sha256"] is not None)
     require(all(report.get(key) == value for key, value in expected.items()))
+    if candidate:
+        require(report.get("plugins") == CANDIDATE_PLUGINS)
     converted = dict(report)
     del converted["binary_sha256"]
     del converted["execution"]
     converted.update(schema="openbao-radius-plugin-server/v1", checks=list(sdk.fixture.CHECKS),
                      scope="server-fixture-only-not-public-sdk-integration")
+    if candidate:
+        # The candidate reports are anchored history with prior plugin
+        # binaries. Check those identities above, then substitute only while
+        # reusing the current strict structural and schema validator.
+        converted["plugins"] = {
+            row["id"]: row["binary_sha256"]
+            for row in sdk.fixture.ldap.artifacts.lock()["plugins"]
+            if row["id"] in (*sdk.fixture.ldap.PLUGINS, "auth-radius")
+        }
     server.validate_report(converted, version, inputs, schema)
     validate_operations(base.parse_json(schema, 2 * 1024 * 1024))
 
@@ -66,7 +83,7 @@ def validate_report(report, version, inputs, schema, *, candidate=False):
 def verify(version, *, candidate=False):
     anchors = CANDIDATE_ANCHORS if candidate else NORMAL_ANCHORS
     require(version in anchors)
-    root = server.ROOT / version / ("sdk-candidate" if candidate else "sdk-normal-v4")
+    root = server.ROOT / version / ("sdk-candidate" if candidate else "sdk-normal-v7")
     raw = base.read_regular_file(root / "report.json", 64 * 1024)
     require(base.sha256(raw) == anchors[version])
     report = base.parse_json(raw, 64 * 1024)
@@ -83,13 +100,14 @@ def main():
     parser.add_argument("--candidate-history", action="store_true")
     args = parser.parse_args()
     try:
-        for version in server.ANCHORS:
+        anchors = CANDIDATE_ANCHORS if args.candidate_history else NORMAL_ANCHORS
+        for version in anchors:
             verify(version, candidate=args.candidate_history)
     except (base.SnapshotError, sdk.fixture.harness.HarnessError, OSError, ValueError, KeyError, TypeError):
         print("RADIUS SDK evidence verification failed")
         return 1
     print("RADIUS candidate history verified; not normal-build acceptance" if args.candidate_history
-          else "RADIUS current normal-build SDK evidence verified for both exact servers")
+          else "RADIUS current normal-build SDK evidence verified for all exact servers")
     return 0
 
 

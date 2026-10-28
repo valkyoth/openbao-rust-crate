@@ -62,6 +62,23 @@ class EvidenceTests(unittest.TestCase):
             with self.subTest(suite=suite), self.assertRaises(evidence.runner.harness.HarnessError):
                 evidence.validate_report(suite, data + b" ")
 
+    def test_openapi_comparison_normalizes_only_reviewed_list_scan_aliases(self):
+        before = evidence.base.parse_json(
+            evidence.patch.tls.staged.verify()["openapi.json"],
+            evidence.base.MAX_OPENAPI_BYTES,
+        )
+        after = evidence.base.parse_json(
+            evidence.base.read_regular_file(
+                evidence.OUTPUT / "openapi.json", evidence.base.MAX_OPENAPI_BYTES
+            ),
+            evidence.base.MAX_OPENAPI_BYTES,
+        )
+        evidence.compare_api(before, after)
+        changed = copy.deepcopy(after)
+        changed["document"]["info"]["title"] = "unreviewed change"
+        with self.assertRaises(evidence.runner.harness.HarnessError):
+            evidence.compare_api(before, changed)
+
     def test_invalid_report_is_never_retained(self):
         with patch("sys.argv", ["verifier", "--retain", "system", "--result", "/capture"]), \
              patch.object(evidence.base, "read_regular_file", return_value=b"{}\n"), \

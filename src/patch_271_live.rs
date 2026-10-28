@@ -53,6 +53,13 @@ async fn public_patch_tls() {
     verify_workflow_cas(&client).await;
 }
 
+#[tokio::test]
+#[ignore = "requires a constrained exact 2.7.2 TLS server and a candidate registry build"]
+async fn public_patch_272_tls() {
+    let client = run_patch(OpenBaoVersion::new(2, 7, 2)).await;
+    verify_workflow_cas(&client).await;
+}
+
 async fn verify_workflow_cas(client: &Client<crate::Authenticated>) {
     stage!("workflow-cas");
     let sys = client.sys();
@@ -112,8 +119,8 @@ pub(super) async fn run_patch(version: OpenBaoVersion) -> Client<crate::Authenti
         report.profile_version() == Some(version) && report.detected_version() == Some(version)
     );
     assert!(checked(client.sys().health().await).version == version.to_string());
-    assert!(OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 7, 2)).is_err());
-    assert!(OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 6, 5)).is_err());
+    assert!(OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 7, 3)).is_err());
+    assert!(OpenBaoCompatibilityPolicy::exact(OpenBaoVersion::new(2, 6, 6)).is_err());
 
     stage!("approle");
     checked(

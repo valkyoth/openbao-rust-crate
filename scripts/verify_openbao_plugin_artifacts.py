@@ -7,7 +7,7 @@ import openbao_api_snapshots as base
 import openbao_plugin_artifacts as artifacts
 
 EVIDENCE = artifacts.ROOT / "compat/plugins/artifact-review-v1.json"
-EXPECTED_SHA256 = "20326b44fe331ce43b3a6174ef02e487244f769dee21be8dbf1fdf23464b55a6"
+EXPECTED_SHA256 = "fe8c381daa337797763a0f58979bc25218e99da1d80ba3bccb0782655f587799"
 LICENSE_SHA256 = "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
 
 
@@ -16,10 +16,11 @@ def expected():
     inputs = {str(path.relative_to(artifacts.ROOT)): base.sha256(base.read_regular_file(path, 1024 * 1024))
               for path in (artifacts.LOCK, artifacts.KEY, Path(artifacts.__file__),
                            artifacts.ROOT / "scripts/openbao_api_snapshots.py")}
-    return {"schema": "openbao-plugin-artifact-review/v1", "inputs": inputs,
-            "platform": document["platform"], "source_commit": document["source_commit"],
+    return {"schema": "openbao-plugin-artifact-review/v2", "inputs": inputs,
+            "platform": document["platform"],
             "signing_primary_fingerprint": artifacts.PRIMARY,
             "plugins": [{"id": plugin["id"], "version": plugin["version"],
+                         "source_commit": plugin["source_commit"],
                          "binary_sha256": plugin["binary_sha256"],
                          "license_sha256": LICENSE_SHA256, "signature_verified": True}
                         for plugin in document["plugins"]],

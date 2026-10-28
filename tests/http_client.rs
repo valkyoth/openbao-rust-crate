@@ -1850,7 +1850,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
             write_json_response(
                 &mut stream,
                 "200 OK",
-                r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
+                r#"{"initialized":true,"sealed":false,"version":"2.7.3"}"#,
             );
         });
         let policy = if acknowledged {
@@ -1872,7 +1872,7 @@ async fn unknown_newer_requires_explicit_acknowledgement() {
                 report.status(),
                 OpenBaoCompatibilityStatus::AcknowledgedUnknownNewer
             );
-            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 7, 1)));
+            assert_eq!(report.profile_version(), Some(OpenBaoVersion::new(2, 7, 2)));
         } else {
             assert!(matches!(result, Err(Error::UnknownOpenBaoVersion(_))));
         }
@@ -1932,7 +1932,7 @@ async fn acknowledged_newer_server_cannot_restore_externalized_builtin_routes() 
                 kind,
                 version.min(OpenBaoVersion::new(2, 7, 1)),
                 mount,
-                "v0.1.0",
+                kind.plugin_version(),
                 kind.binary_sha256(),
             )
             .unwrap_or_else(|_| panic!("selection failed"));
@@ -2019,7 +2019,7 @@ async fn reviewed_external_ldap_exact_pairs_use_the_selected_custom_mount() {
             kind,
             version,
             "custom/ldap",
-            "v0.1.0",
+            kind.plugin_version(),
             kind.binary_sha256(),
         )
         .unwrap_or_else(|_| panic!("selection failed"));
@@ -2087,7 +2087,7 @@ async fn reviewed_external_kerberos_exact_pairs_use_the_selected_custom_mount() 
             kind,
             version,
             "custom/kerberos",
-            "v0.1.0",
+            kind.plugin_version(),
             kind.binary_sha256(),
         )
         .unwrap_or_else(|_| panic!("selection failed"));
@@ -2155,7 +2155,7 @@ async fn reviewed_external_radius_exact_pairs_use_the_selected_custom_mount() {
             kind,
             version,
             "custom/radius",
-            "v0.1.0",
+            kind.plugin_version(),
             kind.binary_sha256(),
         )
         .unwrap_or_else(|_| panic!("selection failed"));
@@ -2203,7 +2203,7 @@ async fn declared_external_plugin_cannot_use_assumed_builtin_profile_or_custom_m
                 Kind::LdapAuth,
                 OpenBaoVersion::new(2, 7, 0),
                 mount,
-                "v0.1.0",
+                Kind::LdapAuth.plugin_version(),
                 Kind::LdapAuth.binary_sha256(),
             )
             .unwrap_or_else(|_| panic!("selection failed"));
@@ -2329,7 +2329,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.3"}"#,
         );
         listener
     });
@@ -2353,7 +2353,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("operation reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 1)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 2)));
     let result = tokio::time::timeout(
         Duration::from_secs(2),
         client.sys().read_control_group_request(&accessor),
@@ -2361,7 +2361,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("review reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 1)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 2)));
     let policy = control_group_policy();
     let result = tokio::time::timeout(
         Duration::from_secs(2),
@@ -2372,7 +2372,7 @@ async fn control_group_operations_cannot_use_newer_server_fallback() {
     .await
     .unwrap_or_else(|_| panic!("policy reached transport"));
     assert!(matches!(result, Err(Error::UnsupportedOpenBaoCapability {
-        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 1)));
+        endpoint: "sys.control-group", version }) if version == OpenBaoVersion::new(2, 7, 2)));
     let listener = server.join().unwrap_or_else(|_| panic!("server failed"));
     listener
         .set_nonblocking(true)
@@ -2626,7 +2626,7 @@ async fn transit_27_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.3"}"#,
         );
         listener
     });
@@ -2643,7 +2643,7 @@ async fn transit_27_cannot_use_a_newer_server_fallback() {
         .with_token(test_secret(&["fixture-", "client-token"]));
     tokio::time::timeout(
         Duration::from_secs(2),
-        assert_transit_27_rejected(&client, OpenBaoVersion::new(2, 7, 1)),
+        assert_transit_27_rejected(&client, OpenBaoVersion::new(2, 7, 2)),
     )
     .await
     .unwrap_or_else(|_| panic!("Transit 2.7 operation reached transport"));
@@ -3487,7 +3487,7 @@ async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.3"}"#,
         );
         listener
     });
@@ -3503,10 +3503,10 @@ async fn pki_27_generation_cannot_use_a_newer_server_fallback() {
         .unwrap_or_else(|error| panic!("{error}"))
         .with_token(test_secret(&["fixture-", "client-token"]));
     tokio::time::timeout(Duration::from_secs(2), async {
-        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 7, 1)).await;
-        assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 7, 1)).await;
-        assert_pki_signing_options_rejected(&client, OpenBaoVersion::new(2, 7, 1)).await;
-        assert_pki_authority_options_rejected(&client, OpenBaoVersion::new(2, 7, 1)).await;
+        assert_pki_mldsa_rejected(&client, OpenBaoVersion::new(2, 7, 2)).await;
+        assert_pki_kms_rejected(&client, OpenBaoVersion::new(2, 7, 2)).await;
+        assert_pki_signing_options_rejected(&client, OpenBaoVersion::new(2, 7, 2)).await;
+        assert_pki_authority_options_rejected(&client, OpenBaoVersion::new(2, 7, 2)).await;
     })
     .await
     .unwrap_or_else(|_| panic!("PKI 2.7 generation reached transport"));
@@ -3537,7 +3537,7 @@ async fn external_key_administration_cannot_use_a_newer_server_fallback() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.3"}"#,
         );
         listener
     });
@@ -6188,7 +6188,7 @@ async fn workflow_cas_rejects_unknown_27_patch_before_write() {
         write_json_response(
             &mut stream,
             "200 OK",
-            r#"{"initialized":true,"sealed":false,"version":"2.7.2"}"#,
+            r#"{"initialized":true,"sealed":false,"version":"2.7.3"}"#,
         );
         listener
     });
@@ -6210,7 +6210,7 @@ async fn workflow_cas_rejects_unknown_27_patch_before_write() {
     .await
     .unwrap_or_else(|_| panic!("CAS request reached transport"));
     assert!(
-        matches!(result, Err(Error::UnknownOpenBaoVersion(version)) if version == OpenBaoVersion::new(2, 7, 2))
+        matches!(result, Err(Error::UnknownOpenBaoVersion(version)) if version == OpenBaoVersion::new(2, 7, 3))
     );
     let listener = server
         .join()
@@ -6392,6 +6392,88 @@ async fn jwt_cel_patch_requires_acknowledgement_and_a_fixed_profile() {
 
 #[cfg(feature = "identity-template-overrides-acknowledged")]
 #[tokio::test]
+async fn ssh_atomic_template_overrides_and_complete_readback() {
+    use openbao::secrets::ssh::{SshIdentityTemplateOverrides, SshRoleRequest};
+
+    for version in ["2.6.5", "2.7.2"] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap_or_else(|e| panic!("{e}"));
+        let addr = listener.local_addr().unwrap_or_else(|e| panic!("{e}"));
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap_or_else(|e| panic!("{e}"));
+            assert!(read_http_request(&mut stream).starts_with("GET /v1/sys/health"));
+            write_json_response(
+                &mut stream,
+                "200 OK",
+                &format!(r#"{{"initialized":true,"sealed":false,"version":"{version}"}}"#),
+            );
+            for (commas, wildcards) in [(true, false), (false, true), (true, true)] {
+                let (mut stream, _) = listener.accept().unwrap_or_else(|e| panic!("{e}"));
+                let request = read_http_request(&mut stream);
+                assert!(request.starts_with("POST /v1/custom-ssh/roles/service HTTP/1.1"));
+                let body: serde_json::Value = serde_json::from_str(
+                    request
+                        .split_once("\r\n\r\n")
+                        .unwrap_or_else(|| panic!("missing body"))
+                        .1,
+                )
+                .unwrap_or_else(|e| panic!("{e}"));
+                assert_eq!(body["allow_commas_in_identity_templates"], commas);
+                assert_eq!(body["allow_wildcards_in_identity_templates"], wildcards);
+                assert_eq!(body["allowed_users"], "service");
+                assert_eq!(body["key_type"], "ca");
+                assert_eq!(body["allow_user_certificates"], true);
+                write_json_response(&mut stream, "200 OK", "{}");
+            }
+            for _ in 0..2 {
+                let (mut stream, _) = listener.accept().unwrap_or_else(|e| panic!("{e}"));
+                assert!(
+                    read_http_request(&mut stream)
+                        .starts_with("GET /v1/custom-ssh/roles/service HTTP/1.1")
+                );
+                write_json_response(
+                    &mut stream,
+                    "200 OK",
+                    r#"{"data":{"key_type":"ca","allow_commas_in_identity_templates":true,"allow_wildcards_in_identity_templates":true}}"#,
+                );
+            }
+        });
+        let config = OpenBaoConfig::new(format!("http://{addr}"))
+            .and_then(allow_mock_http)
+            .unwrap_or_else(|e| panic!("{e}"))
+            .compatibility_policy(OpenBaoCompatibilityPolicy::automatic_strict());
+        let client = Client::from_config(config)
+            .unwrap_or_else(|e| panic!("{e}"))
+            .with_token(test_secret(&["ssh-", "audit-token"]));
+        let ssh = client.ssh("custom-ssh").unwrap_or_else(|e| panic!("{e}"));
+        for overrides in [
+            SshIdentityTemplateOverrides::acknowledge_commas(),
+            SshIdentityTemplateOverrides::acknowledge_wildcards(),
+            SshIdentityTemplateOverrides::acknowledge_both(),
+        ] {
+            ssh.write_role_with_identity_template_overrides(
+                "service",
+                &SshRoleRequest::ca("service"),
+                overrides,
+            )
+            .await
+            .unwrap_or_else(|e| panic!("{e}"));
+        }
+        assert!(matches!(
+            ssh.read_role_details("service").await,
+            Err(Error::Decode(_))
+        ));
+        let complete = ssh
+            .read_role_template_details("service")
+            .await
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert!(complete.allow_commas_in_identity_templates);
+        assert!(complete.allow_wildcards_in_identity_templates);
+        server.join().unwrap_or_else(|e| panic!("{e:?}"));
+    }
+}
+
+#[cfg(feature = "identity-template-overrides-acknowledged")]
+#[tokio::test]
 async fn identity_template_overrides_reject_old_profiles_before_transport() {
     let version = OpenBaoVersion::new(2, 5, 5);
     let policy =
@@ -6449,6 +6531,60 @@ async fn identity_template_overrides_reject_old_profiles_before_transport() {
             version: rejected,
         }) if rejected == version
     ));
+
+    for version in [
+        OpenBaoVersion::new(2, 6, 4),
+        OpenBaoVersion::new(2, 7, 0),
+        OpenBaoVersion::new(2, 7, 1),
+    ] {
+        let policy =
+            OpenBaoCompatibilityPolicy::assume(version).unwrap_or_else(|error| panic!("{error}"));
+        let config = OpenBaoConfig::new("https://127.0.0.1:1")
+            .map(|config| config.compatibility_policy(policy))
+            .unwrap_or_else(|error| panic!("{error}"));
+        let client = Client::from_config(config)
+            .and_then(|client| {
+                client.try_with_token(SecretString::from("template-wildcard-operator-token"))
+            })
+            .unwrap_or_else(|error| panic!("{error}"));
+        let ssh = client.ssh("ssh").unwrap_or_else(|error| panic!("{error}"));
+        for overrides in [
+            openbao::secrets::ssh::SshIdentityTemplateOverrides::acknowledge_commas(),
+            openbao::secrets::ssh::SshIdentityTemplateOverrides::acknowledge_wildcards(),
+            openbao::secrets::ssh::SshIdentityTemplateOverrides::acknowledge_both(),
+        ] {
+            assert!(matches!(
+                ssh.write_role_with_identity_template_overrides(
+                    "templated",
+                    &openbao::secrets::ssh::SshRoleRequest::ca("service"),
+                    overrides,
+                )
+                .await,
+                Err(Error::UnsupportedOpenBaoRequestField {
+                    field: "allow_wildcards_in_identity_templates",
+                    ..
+                })
+            ));
+        }
+        let result = ssh
+            .write_role_with_identity_template_wildcards(
+                "templated",
+                &openbao::secrets::ssh::SshRoleRequest::ca("service"),
+                openbao::secrets::ssh::SshIdentityTemplateWildcardOverride::acknowledge(),
+            )
+            .await;
+        assert!(
+            matches!(
+                result,
+                Err(Error::UnsupportedOpenBaoRequestField {
+                    endpoint: "ssh.role",
+                    field: "allow_wildcards_in_identity_templates",
+                    version: rejected,
+                }) if rejected == version
+            ),
+            "unexpected result for {version}: {result:?}"
+        );
+    }
 }
 
 #[tokio::test]
@@ -15255,7 +15391,7 @@ async fn admin_bootstrap_preview_marks_identity_template_overrides_as_unsafe_dri
                 }
                 2 => {
                     assert!(request.starts_with("GET /v1/ssh/roles/operators HTTP/1.1"));
-                    r#"{"data":{"key_type":"ca","allowed_users":"service","allow_commas_in_identity_templates":true}}"#
+                    r#"{"data":{"key_type":"ca","allowed_users":"service","allow_commas_in_identity_templates":true,"allow_wildcards_in_identity_templates":false}}"#
                 }
                 _ => unreachable!(),
             };

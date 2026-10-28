@@ -18,13 +18,14 @@ import time
 
 import openbao_2_7_api as initial
 import openbao_2_7_1 as modern
+import openbao_2_7_2 as latest
 import openbao_2_7_tls as tls
 import openbao_ldap_directory_image as directory
 import openbao_plugin_artifacts as artifacts
 
 base, harness = tls.base, tls.harness
 ROOT = artifacts.ROOT
-VERSIONS = {"2.7.0": initial, "2.7.1": modern}
+VERSIONS = {"2.7.0": initial, "2.7.1": modern, "2.7.2": latest}
 BASE_DN = "dc=fixture,dc=invalid"
 PEOPLE = "ou=people," + BASE_DN
 ROOT_DN = "cn=bootstrap," + BASE_DN
@@ -301,17 +302,19 @@ def api(address, ca, token, method, path, payload=None, expected=200):
 
 
 def register(address, ca, token, digests):
+    versions = {plugin["id"]: plugin["version"] for plugin in artifacts.lock()["plugins"]}
     for identifier, kind, mount in (("auth-ldap", "auth", AUTH_MOUNT),
                                     ("secrets-ldap", "secret", SECRET_MOUNT)):
+        version = versions[identifier]
         api(address, ca, token, "POST", "sys/plugins/catalog/" + kind + "/ldap",
             {"sha256": digests[identifier], "command": "openbao-plugin-" + identifier,
-             "version": "v0.1.0"}, expected=204)
+             "version": version}, expected=204)
         endpoint = "sys/auth/" if kind == "auth" else "sys/mounts/"
         api(address, ca, token, "POST", endpoint + mount,
-            {"type": "ldap", "config": {"plugin_version": "v0.1.0"}}, expected=204)
+            {"type": "ldap", "config": {"plugin_version": version}}, expected=204)
         catalog = api(address, ca, token, "GET", endpoint.rstrip("/"))["data"][mount + "/"]
         require(catalog.get("running_sha256") == digests[identifier]
-                and catalog.get("running_plugin_version") == "v0.1.0")
+                and catalog.get("running_plugin_version") == version)
 
 
 def server_checks(address, ca, token, root, port, passwords):
@@ -378,7 +381,7 @@ def input_hashes():
     names = ("scripts/openbao_ldap_plugins.py", "scripts/openbao_ldap_directory_image.py",
              "scripts/openbao_plugin_artifacts.py", "scripts/openbao_api_snapshots.py",
              "scripts/openbao_test_harness.py", "scripts/openbao_2_7_tls.py", "scripts/evidence_tools.py",
-             "scripts/openbao_2_7_api.py", "scripts/openbao_2_7_1.py",
+             "scripts/openbao_2_7_api.py", "scripts/openbao_2_7_1.py", "scripts/openbao_2_7_2.py",
              "scripts/test_openbao_ldap_plugins.py", "compat/plugins/artifacts.lock.json",
              "compat/plugins/openbao-release-key.asc")
     return {name: base.sha256(base.read_regular_file(ROOT / name, 2 * 1024 * 1024)) for name in names}

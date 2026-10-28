@@ -10,7 +10,7 @@ import verify_openbao_ldap_sdk as evidence
 
 class EvidenceTests(unittest.TestCase):
     def setUp(self):
-        root = evidence.server.ROOT / "2.7.0/sdk-normal-v4"
+        root = evidence.server.ROOT / "2.7.0/sdk-normal-v7"
         self.report = evidence.base.parse_json((root / "report.json").read_bytes(), 65536)
         self.schema = (root / "runtime-openapi.json").read_bytes()
         self.inputs = evidence.sdk.input_hashes()
@@ -51,7 +51,7 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(evidence.base.SnapshotError):
             evidence.validate_report(self.report, "2.7.0", self.inputs, self.schema + b" ")
         with self.assertRaises(evidence.base.SnapshotError):
-            evidence.verify("2.7.2")
+            evidence.verify("2.7.3")
 
     def test_anchor_precedes_report_claim_validation(self):
         report = copy.deepcopy(self.report)

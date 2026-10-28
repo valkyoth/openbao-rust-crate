@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.2.5
+
+- Add exact OpenBao 2.6.5 and 2.7.2 compatibility profiles while preserving
+  every historical capability cell.
+- Add the reviewed SSH identity-template wildcard control exposed by those two
+  maintenance lines.
+- Fail closed when legacy SSH detailed readback encounters enabled wildcard
+  overrides; deprecate that method in favor of complete template readback.
+- Add an explicitly acknowledged atomic SSH role writer for both template
+  controls and document replacement semantics and exact version support.
+- Refresh official external plugin pins to LDAP auth 0.2.0, LDAP secrets 0.1.1,
+  Kerberos auth 0.1.0 and RADIUS auth 0.2.0, tested on OpenBao 2.7.0-2.7.2.
+- Document the plugin compatibility table and batch plugin refreshes with
+  OpenBao compatibility releases unless security or incompatibility requires
+  an earlier update.
+- Retain the documented control-group single-use enforcement limitation after
+  strict testing showed it remains present in OpenBao 2.7.2.
+
 ## 2.2.4
 
 - Update the primary Rust toolchain to 1.99.1; retain the Rust 1.90 MSRV.

@@ -1,20 +1,31 @@
 # External Plugin Selection
 
-SDK 2.2.4 supports these official v0.1.0 Linux amd64 artifacts on exact OpenBao
-2.7.0 and 2.7.1. Built-in compatibility remains separate from plugin selection.
+SDK 2.2.5 supports the exact official Linux amd64 v1 artifacts below on exact
+OpenBao 2.7.0, 2.7.1 and 2.7.2. Built-in compatibility remains separate from
+plugin selection.
 
-| Plugin | Feature | Reviewed operations |
-| --- | --- | --- |
-| LDAP authentication | `ldap-auth` | 11 |
-| LDAP secrets | `ldap` | 22 |
-| Kerberos authentication | `kerberos-auth` | 9 |
-| RADIUS authentication | `radius-auth`, `radius-auth-acknowledged` | 6 |
+| Plugin | Version | Binary SHA-256 | Feature | Operations | Tested servers |
+| --- | --- | --- | --- | ---: | --- |
+| LDAP authentication | `v0.2.0` | `b323b200b2dec50199f36de7dc95a661ce6662da3d53905973c0d7700b4185bb` | `ldap-auth` | 11 | `2.7.0`, `2.7.1`, `2.7.2` |
+| LDAP secrets | `v0.1.1` | `4b24d4deec624d76bd8f950dfaf6f59822de14cfb9bd344e2e7c4c492cc77789` | `ldap` | 22 | `2.7.0`, `2.7.1`, `2.7.2` |
+| Kerberos authentication | `v0.1.0` | `57ac030fea755adf791600eb2b30aa410d2e848ab7ec7bb54cc515cdce4b89ae` | `kerberos-auth` | 9 | `2.7.0`, `2.7.1`, `2.7.2` |
+| RADIUS authentication | `v0.2.0` | `ae2ac43287ed297a9536456b0cbb79c8749a82ffe74a54e3fe886d3285443f07` | `radius-auth`, `radius-auth-acknowledged` | 6 | `2.7.0`, `2.7.1`, `2.7.2` |
+
+## Update Policy
+
+Plugin versions are reviewed, pinned and retested as part of OpenBao
+compatibility releases. The SDK does not issue a maintenance release for every
+routine upstream plugin patch. A plugin security fix, incompatible contract
+change, revoked artifact, or other material risk can trigger an earlier review.
+Until a new row is published, the table above remains the complete support
+claim; newer plugin versions are not inferred compatible.
 
 ## Configuration
 
 Use `OpenBaoCompatibilityPolicy::exact` for the server and add an
 `ExternalPluginSelection` to `OpenBaoConfig` with `external_plugin`. Supply the
-plugin kind, exact server version, mount, `v0.1.0` and the reviewed binary SHA-256.
+plugin kind, exact server version, mount, the kind-specific version above and
+the reviewed binary SHA-256.
 `ExternalPluginKind::binary_sha256()` exposes the pinned digest. Use the typed
 client's `_at` helper for a non-default mount. Unknown versions, digests,
 operations, conflicting mounts and unverified or assumed profiles fail closed.

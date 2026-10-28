@@ -121,12 +121,13 @@ def probe(podman, name, environment, label):
 def register(address, ca, token):
     plugin = next(row for row in ldap.artifacts.lock()["plugins"] if row["id"] == "auth-radius")
     ldap.api(address, ca, token, "POST", "sys/plugins/catalog/auth/radius",
-             {"sha256": plugin["binary_sha256"], "command": "openbao-plugin-auth-radius", "version": "v0.1.0"}, 204)
+             {"sha256": plugin["binary_sha256"], "command": "openbao-plugin-auth-radius",
+              "version": plugin["version"]}, 204)
     ldap.api(address, ca, token, "POST", "sys/auth/" + MOUNT,
-             {"type": "radius", "config": {"plugin_version": "v0.1.0"}}, 204)
+             {"type": "radius", "config": {"plugin_version": plugin["version"]}}, 204)
     mounted = ldap.api(address, ca, token, "GET", "sys/auth")["data"][MOUNT + "/"]
     ldap.require(mounted.get("running_sha256") == plugin["binary_sha256"]
-                 and mounted.get("running_plugin_version") == "v0.1.0")
+                 and mounted.get("running_plugin_version") == plugin["version"])
 
 
 def check_auth(response, user, policies):

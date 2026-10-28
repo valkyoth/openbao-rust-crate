@@ -33,7 +33,7 @@ class ToolingRefreshTests(unittest.TestCase):
                     ci.validate(version, raw)
 
     def test_pre_inout_ci_reports_rejected_even_with_restored_pins(self):
-        for version in ci.PINS:
+        for version in ("2.6.4", "2.7.0", "2.7.1"):
             with self.subTest(version=version):
                 raw = ci.fixture.base.read_regular_file(HISTORICAL_CI / f"{version}-v3.json", 131072)
                 report = ci.fixture.base.parse_json(raw, 131072)
@@ -89,7 +89,7 @@ class ToolingRefreshTests(unittest.TestCase):
         }
         for name, digest in pins.items():
             module = importlib.import_module("verify_openbao_2_7_" + name)
-            previous = module.RESULT.with_name(module.RESULT.name.replace("-v10.json", "-v7.json"))
+            previous = module.RESULT.with_name(module.RESULT.stem.rsplit("-v", 1)[0] + "-v7.json")
             with self.subTest(name=name):
                 raw = sdk.base.read_regular_file(previous, 131072)
                 self.assertEqual(sdk.base.sha256(raw), digest)
@@ -99,6 +99,18 @@ class ToolingRefreshTests(unittest.TestCase):
                      patch.object(module, "TEST_BINARY_SHA256", report["test_binary_sha256"]), \
                      self.assertRaises((sdk.harness.HarnessError, sdk.base.SnapshotError)):
                     module.verify()
+
+    def test_pre_pentest_ci_reports_cannot_be_repinned_as_current(self):
+        for version in ci.fixture.VERSIONS:
+            with self.subTest(version=version):
+                raw = (ci.fixture.ROOT / "compat/ci/2.2.5" / f"{version}.json").read_bytes()
+                report = ci.fixture.base.parse_json(raw, 131072)
+                self.assertNotEqual(report["inputs"]["src/secrets/ssh.rs"],
+                                    ci.fixture.input_hashes()["src/secrets/ssh.rs"])
+                with patch.object(ci, "PINS", {version: ci.fixture.base.sha256(raw)}), \
+                     patch.object(ci, "BINARY_SHA256", report["test_binary_sha256"]), \
+                     self.assertRaises(ci.fixture.harness.HarnessError):
+                    ci.validate(version, raw)
 
 
 if __name__ == "__main__":

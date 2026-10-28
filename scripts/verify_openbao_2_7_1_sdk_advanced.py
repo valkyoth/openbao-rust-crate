@@ -7,30 +7,42 @@ from pathlib import Path
 import openbao_2_7_1_sdk_advanced as fixture
 import verify_openbao_2_7_1 as initial
 
-OUTPUT = initial.OUTPUT / "sdk-advanced-candidate-tls-v2.json"
-EXPECTED_SHA256 = "ab0e3a80466da2e5fafaf04084a3c598812f7ab4670d3fc366c6175f3687215b"
-TEST_BINARY_SHA256 = "fb8de36a1d0bf386757d58e395d9b0b1501c6b427e7b76a76cc1c1a90695cdce"
+OUTPUT = initial.OUTPUT / "sdk-advanced-candidate-tls-v5.json"
+HISTORICAL_OUTPUT = initial.OUTPUT / "sdk-advanced-candidate-tls-v2.json"
+EXPECTED_SHA256 = "b9979323a0a247f26c6e2140ff4be226704cc18a8d8c9b19361c36b03f74b727"
+TEST_BINARY_SHA256 = "b96fb69cd8466e350970046cc1eb49c375ba4343cedf33835ee5a5f17707a50e"
+HISTORICAL_EXPECTED_SHA256 = "ab0e3a80466da2e5fafaf04084a3c598812f7ab4670d3fc366c6175f3687215b"
+HISTORICAL_TEST_BINARY_SHA256 = "fb8de36a1d0bf386757d58e395d9b0b1501c6b427e7b76a76cc1c1a90695cdce"
+HISTORICAL_CANDIDATE_REGISTRY_SHA256 = "876182f813520e1a51c8bcf3b0a8910c133a0c88f3f9ab7608a691a30e05ffb6"
 HISTORICAL_INPUTS_SHA256 = "baf799f8663e10fafaee1e29129988e86ae0381b9f7270386eddef06bcfe917e"
 HISTORICAL_GENERATED_SHA256 = "7abf8c20b0e74fb37eab2189bc52588c33359443c869625d6eb6aca18bb10b92"
 
 
 def validate(data, *, historical=False):
-    report = initial.checked(data, EXPECTED_SHA256, 128 * 1024)
+    report = initial.checked(
+        data,
+        HISTORICAL_EXPECTED_SHA256 if historical else EXPECTED_SHA256,
+        128 * 1024,
+    )
     if historical:
         inputs = report.get("inputs")
         fixture.patch.require(fixture.base.sha256(fixture.base.canonical_json(inputs)) == HISTORICAL_INPUTS_SHA256)
         generated = HISTORICAL_GENERATED_SHA256
+        candidate_registry = HISTORICAL_CANDIDATE_REGISTRY_SHA256
+        binary = HISTORICAL_TEST_BINARY_SHA256
     else:
         inputs = fixture.input_hashes()
         fixture.patch.require(report.get("inputs") == inputs)
         generated = fixture.base.sha256(
             fixture.candidate.registry.rust_output(fixture.candidate.verify(), verification_candidate=True))
+        candidate_registry = fixture.candidate.EXPECTED_SHA256
+        binary = TEST_BINARY_SHA256
     expected = {
         **fixture.execution.EXECUTION_ASSURANCE,
         "schema": "openbao-patch-sdk-advanced-tls/v1", "version": fixture.patch.VERSION,
-        "inputs": inputs, "test_binary_sha256": TEST_BINARY_SHA256,
+        "inputs": inputs, "test_binary_sha256": binary,
         "tests": fixture.TESTS, "features": fixture.FEATURES, "checks": fixture.CHECKS,
-        "candidate_registry_sha256": fixture.candidate.EXPECTED_SHA256,
+        "candidate_registry_sha256": candidate_registry,
         "candidate_generated_rust_sha256": generated,
         "source_scope": "repository-inputs-with-explicit-generated-candidate-override",
         "scope": "public-sdk-strict-disposable-candidate-build",
@@ -43,7 +55,8 @@ def validate(data, *, historical=False):
 
 
 def verify(*, historical=False):
-    return validate(fixture.base.read_regular_file(OUTPUT, 128 * 1024), historical=historical)
+    output = HISTORICAL_OUTPUT if historical else OUTPUT
+    return validate(fixture.base.read_regular_file(output, 128 * 1024), historical=historical)
 
 
 def main():
