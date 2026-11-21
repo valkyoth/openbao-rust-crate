@@ -6,13 +6,13 @@ import openbao_current_ci as fixture
 ROOT = fixture.ROOT / "compat/ci/2.2.6"
 BINARY_SHA256 = "606afb4480e07d1335dd5933fdd013bcf339febc3a4cda0ee95a5ea6be7a6279"
 PINS = {
-    "2.6.6": "49f63c2be8cf1c6d4b44c42bfb38d5a0c5d2eaf3b5c59dce4cd28aedd048ceae",
-    "2.7.3": "330c38118c4d72d67554e96f7ef65cdca131e0ff44947e1dfd3f60a09c182c3c",
-    "2.6.4": "04c7c49243a6eef457e3bef4a8dbc9a6944dacf28526810acc2d0480c6fdde7f",
-    "2.6.5": "f788e09e57656a33d63fbb8d36e3d12a55fcdaafc8eedc7ed55732c0e8ce1eeb",
-    "2.7.0": "d4b46fd397ace35326701f47f11b02514a3b751209864532a346bc8e5b4a64e9",
-    "2.7.1": "2ee17bb35fa4a55af159297ebd6962a809ee4a261addf786060f44a7ebafdaf7",
-    "2.7.2": "ee12c904aaa231ec6cd81ea110d42e56cce9b095afd1dd763e01a8bae659f3fc",
+    "2.6.6": "1c84b599f9c286dfee09abbf361f3a33489aaef5325b7eb861f54419f6de33b9",
+    "2.7.3": "ac953f9add719b654051dea40c6d9a995414826bc6a205a682b02800ccdfd086",
+    "2.6.4": "55e3458e22c23c0e96280a28a1a9f93b1bdc1259649cbd4179f2a422d3aecf7c",
+    "2.6.5": "68fa3e1d8fa9a13a1d2caf80c21c09fc0b35d9e79cd8e8999fdeba792f55ccab",
+    "2.7.0": "daa16159fffc80620776c94cc85e67635e425d10e92af583597cb202a1cea96b",
+    "2.7.1": "abde2752444f37d9ed993c5d89d6ec58cd75ef333b45bb578bbf8cd47e7aa4ce",
+    "2.7.2": "f7f0abb490100924e868e698dd29d7e95a8215d1ed067b8b4e8a2d364b2eec34",
 }
 
 

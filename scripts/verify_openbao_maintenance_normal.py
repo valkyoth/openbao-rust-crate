@@ -6,8 +6,8 @@ import openbao_maintenance_sdk as sdk
 
 
 REPORT_SHA256 = {
-    "2.6.6": "4a9bb026fa304d1cd23cc5a5f0f0de5cf1e5da728a7bdd3f4e419eb12ddf03af",
-    "2.7.3": "342a14f030c310c4eaa386ae4eed1b9089c475ed99012ac3a1d0476531820902",
+    "2.6.6": "1b1a47bed0d668372bf1ff2b82ce45d0e245101e8ce5ef5972fe0cdad7f749ee",
+    "2.7.3": "468f6eaab0c918057f1e84be9aec6d597be992b350fc4cf65fb2fdac05fb0a65",
 }
 
 

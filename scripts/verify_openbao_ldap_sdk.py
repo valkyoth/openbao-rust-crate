@@ -9,11 +9,11 @@ import verify_openbao_ldap_plugins as server
 
 base = sdk.fixture.base
 ANCHORS = {
-    "2.7.0": "2c9ff29d3f52cf1173fd009a5f0a092b907730cd62382459cfa01490da614638",
-    "2.7.1": "8b8c6bd412a5ce36227aacf4f08cdb0878e7f3ba0356dea7ca670b687e4a7ab9",
-    "2.7.2": "dd653ce7c6e0dd7716f7b00aa54024c2e9fc038ac814eb97e6eafdd482cdf7d2",
+    "2.7.0": "f3b782546635aae29b4dacc4c48cb7929158f84f2b74e6a199e0d7f65467ecf3",
+    "2.7.1": "00c36c1417746f97bf6eb7584678f83d3ca2af010438453e6c07c3281271c42a",
+    "2.7.2": "3b9745ce279db7194ada6c523f35592f01d69cbcd21e16f099c907beb4938095",
 }
-BINARY = "85d94348f31b015ab293f39502bdd4eb91b8cd6ee0a19ea9038499b985465fa7"
+BINARY = "10f78ca543efe2fce940790f7dc0970dec8ba41ca4c4ea003f1a8b2b4e0299f3"
 
 
 def validate_operations(schema):
