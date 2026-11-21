@@ -43,13 +43,13 @@ class SdkRunnerTests(unittest.TestCase):
 
             mock(fixture.pwd, "getpwuid", return_value=SimpleNamespace(pw_gid=1000))
             binary_hash = mock(fixture.execution, "binary_hash", return_value="a" * 64)
-            mock(fixture.normal_sdk, "verify", side_effect=[
+            mock(fixture.normal_sdk, "verify_build", side_effect=[
                 {"scope": "public-sdk-strict-normal-build", "routable": True},
                 {"scope": "changed" if failure == "registry-drift"
                  else "public-sdk-strict-normal-build", "routable": True}])
             mock(fixture, "input_hashes", side_effect=[{"source": "before"},
                  {"source": "changed" if failure == "inputs" else "before"}])
-            mock(fixture.candidate, "verify", return_value={})
+            mock(fixture.candidate, "for_sdk_build", return_value={})
             mock(fixture.candidate.registry, "rust_output", return_value=b"candidate")
             signature = mock(fixture.patch, "verify_signature")
             mock(fixture.tls.evidence_tools, "protected_path", side_effect=lambda value: value)

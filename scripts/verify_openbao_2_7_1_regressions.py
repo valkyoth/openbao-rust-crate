@@ -7,19 +7,32 @@ from pathlib import Path
 
 import openbao_2_7_1_regressions as runner
 import verify_openbao_2_7_1 as initial
+from maintenance_control_evidence import expected_inputs
 
 patch, base = runner.patch, runner.base
 OUTPUT = initial.OUTPUT
 OPENAPI_SHA256 = "7e7e778beb427a7be13576076f0a68ae1d4db19fc4bc0819df8fb0f8956d90dc"
+REFRESH_OPENAPI_SHA256 = "5197838a955d3a7ea188c93595f44aa38999cd04a01ec1e04de1335feb1d025d"
+# The immutable candidate registry includes these historical report identities.
 REPORTS = {
     "api": "2584a5833089a5b1d99b75eb94f402f8a9253572e3efb12a29514faca08cec55",
-    "external-keys": "6b7e420082add2f612178e660e751de2814404b9e15174b5144e1774a083ac4f",
-    "transit": "d9995a9cbb0e869d98539ecb7656056f7610660d19e2eb4ea9b5fe7568e10e5a",
-    "pki": "eeb1b4dcb157ef9d629e9dea1add18062ed061864c70e1eaec9dbf9fe05c47ee",
-    "workflow-cas": "06bc49b04cfa991f73b027906f5cde8ff5980527165eade1c4d05b9ba09874ec",
     "control-groups": "5731d362fa9a907aad5c304a6ddba0935a4cf0e0b98f5b3d478429a605674d8d",
-    "system": "7378657bfc58b3658a2831068263f078b03d90f21aeac22b3024fa7f8632c587",
+    "external-keys": "6b7e420082add2f612178e660e751de2814404b9e15174b5144e1774a083ac4f",
     "mfa-totp": "f60afaad5b747fadd5a04635277b932f49d761317964199e3e9fbc79a5929558",
+    "pki": "eeb1b4dcb157ef9d629e9dea1add18062ed061864c70e1eaec9dbf9fe05c47ee",
+    "system": "7378657bfc58b3658a2831068263f078b03d90f21aeac22b3024fa7f8632c587",
+    "transit": "d9995a9cbb0e869d98539ecb7656056f7610660d19e2eb4ea9b5fe7568e10e5a",
+    "workflow-cas": "06bc49b04cfa991f73b027906f5cde8ff5980527165eade1c4d05b9ba09874ec",
+}
+CURRENT_REPORTS = {
+    "api": "0f67b4587238d526d2cd3533907b2ba844322fe9aca00fff9b29931c5444e11d",
+    "external-keys": "232e28334a3884594a8b27de86ca1bdbb261d7c0c1f935e5f8da00d0a4fac1a4",
+    "transit": "88495a95ec057b46f5b0b4ceb71a22256f62e04048addd9c1afa9269b1ababa4",
+    "pki": "1b39d27b8098563056f4515c334fa4e4d9171e38f52edd7249508840724843cc",
+    "workflow-cas": "17781632fb09ac55a3245bd0ca6302794362f42e56737ad1bcbcedf92a0c2a95",
+    "control-groups": "5731d362fa9a907aad5c304a6ddba0935a4cf0e0b98f5b3d478429a605674d8d",
+    "system": "eb1821a61146f1eaedf2449a14a8d3e2ac098c1c149a57cd018f9ec94471e57a",
+    "mfa-totp": "d08f0d3c0c66edab2cc5fc46f9078007375831142d360c62934d3c82b9c1eeff",
 }
 MODULES = {"external-keys": runner.external, "transit": runner.transit, "pki": runner.pki,
            "workflow-cas": runner.workflow, "control-groups": runner.control,
@@ -63,8 +76,14 @@ def compare_api(before, after):
     patch.require(left == right)
 
 
+def report_path(suite):
+    patch.require(suite in REPORTS)
+    suffix = "-tls-v2.json" if suite == "control-groups" else "-tls-v3.json"
+    return OUTPUT / (suite + suffix)
+
+
 def validate_report(suite, data):
-    report = initial.checked(data, REPORTS[suite], 128 * 1024)
+    report = initial.checked(data, CURRENT_REPORTS[suite], 128 * 1024)
     expected = {"schema": "openbao-patch-regression/v1", "version": patch.VERSION, "suite": suite,
                 "inputs": runner.input_hashes(), "image_linux_amd64_digest": patch.AMD64,
                 "image_index_digest": patch.INDEX, "tls": "TLSv1.3",
@@ -72,17 +91,18 @@ def validate_report(suite, data):
                 "harness_checks": ["exact-version", "tls-rejections", "resource-limits", "network-isolation", "cleanup"]}
     if suite == "api":
         expected.update(checks=["full-builtin-openapi", "raw-storage-enabled", "external-plugins-absent"],
-                        openapi_sha256=OPENAPI_SHA256)
+                        openapi_sha256=REFRESH_OPENAPI_SHA256)
     else:
         expected["checks"] = MODULES[suite].CHECKS
     if suite == "control-groups":
+        expected["inputs"] = expected_inputs(patch.VERSION, base.sha256(data), expected["inputs"])
         expected.update(server_replay_rejected=False, outcome="completed-with-known-upstream-replay-failure")
     patch.require(base.canonical_json(report) == base.canonical_json(expected))
     return report
 
 
-def validate_api(data):
-    api = initial.checked(data, OPENAPI_SHA256, base.MAX_OPENAPI_BYTES)
+def validate_api(data, *, refreshed=False):
+    api = initial.checked(data, REFRESH_OPENAPI_SHA256 if refreshed else OPENAPI_SHA256, base.MAX_OPENAPI_BYTES)
     mounts = initial.verify()["initial-openapi.json"]["mounts"]
     patch.require(api == patch.normalize_api(api["document"], mounts))
     prior = patch.tls.staged.verify()
@@ -92,8 +112,9 @@ def validate_api(data):
 
 def verify():
     api = validate_api(base.read_regular_file(OUTPUT / "openapi.json", base.MAX_OPENAPI_BYTES))
+    validate_api(base.read_regular_file(OUTPUT / "openapi-v3.json", base.MAX_OPENAPI_BYTES), refreshed=True)
     for suite in REPORTS:
-        validate_report(suite, base.read_regular_file(OUTPUT / (suite + "-tls-v2.json"), 128 * 1024))
+        validate_report(suite, base.read_regular_file(report_path(suite), 128 * 1024))
     return api
 
 
@@ -111,9 +132,9 @@ def main():
             validate_report(args.retain, data)
             if args.retain == "api":
                 api = base.read_regular_file(args.result / "openapi.json", base.MAX_OPENAPI_BYTES)
-                validate_api(api)
-                base.write_immutable(OUTPUT / "openapi.json", api)
-            base.write_immutable(OUTPUT / (args.retain + "-tls-v2.json"), data)
+                validate_api(api, refreshed=True)
+                base.write_immutable(OUTPUT / "openapi-v3.json", api)
+            base.write_immutable(report_path(args.retain), data)
         else:
             verify()
     except (runner.harness.HarnessError, base.SnapshotError, OSError, ValueError, KeyError, TypeError):

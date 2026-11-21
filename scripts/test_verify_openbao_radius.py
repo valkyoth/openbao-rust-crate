@@ -11,7 +11,7 @@ import verify_openbao_radius_sdk as sdk
 
 class EvidenceTests(unittest.TestCase):
     def setUp(self):
-        root = evidence.ROOT / "2.7.0"
+        root = evidence.ldap.server_directory(evidence.ROOT, "2.7.0")
         self.report = evidence.base.parse_json((root / "report.json").read_bytes(), 65536)
         self.schema = (root / "runtime-openapi.json").read_bytes()
         self.inputs = evidence.fixture.input_hashes()
@@ -19,11 +19,12 @@ class EvidenceTests(unittest.TestCase):
     def test_exact_pairs_pass(self):
         for version in evidence.ANCHORS:
             self.assertIs(evidence.verify(version)["routable"], False)
+        for version in sdk.NORMAL_ANCHORS:
             self.assertEqual(sdk.verify(version)["scope"], "public-sdk-normal-build")
 
     def test_normal_sdk_requires_every_current_source_input(self):
         report = sdk.verify("2.7.0")
-        schema = (evidence.ROOT / "2.7.0/sdk-normal-v8/runtime-openapi.json").read_bytes()
+        schema = (evidence.ROOT / "2.7.0/sdk-normal-v9/runtime-openapi.json").read_bytes()
         for path in report["inputs"]:
             inputs = dict(report["inputs"])
             inputs[path] = "0" * 64
@@ -35,7 +36,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_normal_sdk_identity_scope_schema_and_anchor_are_exact(self):
         report = sdk.verify("2.7.0")
-        schema = (evidence.ROOT / "2.7.0/sdk-normal-v8/runtime-openapi.json").read_bytes()
+        schema = (evidence.ROOT / "2.7.0/sdk-normal-v9/runtime-openapi.json").read_bytes()
         for field, value in (("checks", []), ("execution", {}), ("binary_sha256", "0" * 64),
                              ("scope", "public-sdk-candidate-only"), ("cleanup", "failed"),
                              ("plugins", {}), ("routable", True), ("extra", True)):
@@ -132,7 +133,7 @@ class EvidenceTests(unittest.TestCase):
             with self.assertRaises(evidence.base.SnapshotError):
                 evidence.verify("2.7.0")
         with self.assertRaises(evidence.base.SnapshotError):
-            evidence.verify("2.7.3")
+            evidence.verify("2.7.4")
 
 
 if __name__ == "__main__":

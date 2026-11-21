@@ -39,7 +39,7 @@ def input_hashes():
 def build():
     patch.require(os.geteuid() != 0)
     before = input_hashes()
-    verified = candidate.verify()
+    verified = candidate.for_sdk_build()
     inputs = builder.backup_inputs(builder.source_inputs())
     with tempfile.TemporaryDirectory(prefix="openbao-271-sdk-build-") as temporary:
         root = Path(temporary)
@@ -64,7 +64,7 @@ def run(binary, strict_candidate=False):
     patch.require(uid > 0 and gid > 0 and pwd.getpwuid(uid).pw_gid == gid)
     digest = execution.binary_hash(binary, uid, candidate=True)
     inputs = input_hashes()
-    candidate.verify()
+    candidate.for_sdk_build()
     print("2.7.1 SDK fixture: verifying signed image", flush=True)
     patch.verify_signature()
     podman = str(tls.evidence_tools.protected_path(Path("/usr/bin/podman")))
@@ -117,7 +117,7 @@ def run(binary, strict_candidate=False):
     report = {**execution.EXECUTION_ASSURANCE, "schema": "openbao-patch-sdk-tls/v1", "version": patch.VERSION,
               "inputs": inputs, "test_binary_sha256": digest, "test": TEST, "features": FEATURES,
               "candidate_registry_sha256": candidate.EXPECTED_SHA256,
-              "candidate_generated_rust_sha256": base.sha256(candidate.registry.rust_output(candidate.verify(), verification_candidate=True)),
+              "candidate_generated_rust_sha256": base.sha256(candidate.registry.rust_output(candidate.for_sdk_build(), verification_candidate=True)),
               "source_scope": "repository-inputs-with-explicit-generated-candidate-override",
               "image_linux_amd64_digest": patch.AMD64, "image_index_digest": patch.INDEX,
               "scope": "public-sdk-strict-disposable-candidate-build", "outcome": "passed", "routable": False,

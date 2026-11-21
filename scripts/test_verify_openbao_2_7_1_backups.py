@@ -15,7 +15,7 @@ class EvidenceTests(unittest.TestCase):
     def test_changed_or_mislabelled_report_rejected(self):
         for suite in evidence.REPORTS:
             data = evidence.fixture.base.read_regular_file(
-                evidence.initial.OUTPUT / (suite + "-backup-tls-v2.json"), 128 * 1024)
+                evidence.initial.OUTPUT / (suite + "-backup-tls-v3.json"), 128 * 1024)
             with self.assertRaises(evidence.fixture.harness.HarnessError):
                 evidence.validate(suite, data + b" ")
             original = evidence.fixture.base.parse_json(data, 128 * 1024)

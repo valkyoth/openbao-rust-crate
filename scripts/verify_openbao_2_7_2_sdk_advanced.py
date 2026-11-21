@@ -8,16 +8,16 @@ import openbao_2_7_2_sdk_advanced as fixture
 import verify_openbao_2_7_2 as initial
 
 PINS = {
-    "normal": ("1b8e424047bcec331fd891defbf0539d056b43e5f8e97c645e22902b350565f2",
-               "ff2a02283d9caf85643a9edc22030ef2df67eaa590bfa766ebcfe2dba98d8726"),
-    "candidate": ("be7022a34c3b18f043a40d70de4d11c9760819c92bf771a22c3436344e454b91",
-                  "91dce38089177cc3851f230847953e312b532a844fce38661c08f190e9ffb5fe"),
+    "normal": ("adb0f85f793d2ff0dd428808661156c3658119e97800ca4984b1c55bafa721ed",
+               "2e0ef81986510b71736fb26f7283ba22a66a2da21394c6a2879200ba5467ba69"),
+    "candidate": ("46e5936e5264a830cd34c280de2e6362705dba4717191f85c52907dc5193535f",
+                  "b7eeb87cf920a24e05962285e99647bd2c6acb96af2d3d8f372db765d8a62fef"),
 }
 
 
 def output(mode):
     fixture.patch.require(mode in PINS)
-    return initial.OUTPUT / (f"sdk-advanced-{mode}-tls-v4.json")
+    return initial.OUTPUT / (f"sdk-advanced-{mode}-tls-v6.json")
 
 
 def expected(mode, binary):

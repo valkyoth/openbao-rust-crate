@@ -122,8 +122,14 @@ def main(build_backup=False):
         print("Candidate SDK verification must run without root")
         return 1
     try:
-        registry.verify_outputs()
-        verified = candidate.verify()
+        if build_backup:
+            import generate_openbao_2_7_candidate as backup_candidate
+            import openbao_patch_normal_sdk as normal
+            normal.verify_build()
+            verified = backup_candidate.verify()
+        else:
+            registry.verify_outputs()
+            verified = candidate.verify()
         inputs = source_inputs()
         if build_backup:
             inputs = backup_inputs(inputs)
@@ -154,7 +160,10 @@ def main(build_backup=False):
         current = backup_inputs(source_inputs()) if build_backup else source_inputs()
         if current != inputs:
             raise registry.RegistryError("candidate SDK inputs changed during verification")
-        registry.verify_outputs()
+        if build_backup:
+            normal.verify_build()
+        else:
+            registry.verify_outputs()
     except (OSError, ValueError, registry.RegistryError, registry.SnapshotError,
             subprocess.TimeoutExpired):
         print("Candidate SDK verification failed; public promotion unchanged")

@@ -20,11 +20,11 @@ CANDIDATE_PLUGINS = {
     "secrets-ldap": "47292935509894d8b4feb0fc9b6429455da87181a8fc53999eb986128ab8d73a",
 }
 NORMAL_ANCHORS = {
-    "2.7.0": "95b60bdfa72ed86dd36161ceb26fe9bbc6c8e5747fdae94c38b5e529ca5773a7",
-    "2.7.1": "ffb81adc599012edeba4121f4d6235bee10fd5cea9b5cfc0536a9cda18adf045",
-    "2.7.2": "a36087df385b1f1304032fa49a2174d577953a4a73951d3b5f6fd0a1a350dd1b",
+    "2.7.0": "616a9e4ca6c2c56c1480edde57579b4c237b69006adc1b92dc159759097548cc",
+    "2.7.1": "36f220104940cab83c8f5819546d207fe0c038d594d676d2437534cf70b2a411",
+    "2.7.2": "03ac045af81c7e0c32a83c67344584cc801867a69898c33207b893332d33cf15",
 }
-NORMAL_BINARY = "eefe9652c7d036048bbcd715b3ab489ab93c988db446207182c626cf7dcf6ff7"
+NORMAL_BINARY = "3744a2e1982d8edc529519c3dac9de3068578673ff21fd126273d698be168d14"
 
 
 def validate_operations(schema):
@@ -83,7 +83,7 @@ def validate_report(report, version, inputs, schema, *, candidate=False):
 def verify(version, *, candidate=False):
     anchors = CANDIDATE_ANCHORS if candidate else NORMAL_ANCHORS
     require(version in anchors)
-    root = server.ROOT / version / ("sdk-candidate" if candidate else "sdk-normal-v8")
+    root = server.ROOT / version / ("sdk-candidate" if candidate else "sdk-normal-v9")
     raw = base.read_regular_file(root / "report.json", 64 * 1024)
     require(base.sha256(raw) == anchors[version])
     report = base.parse_json(raw, 64 * 1024)

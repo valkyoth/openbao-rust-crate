@@ -23,12 +23,20 @@ import openbao_2_7_1 as modern
 import openbao_2_7_2 as modern_latest
 import openbao_2_7_api as initial
 import openbao_2_7_tls as tls
+import openbao_maintenance_capture as maintenance
+from functools import partial
+from types import SimpleNamespace
 
 base, harness = tls.base, tls.harness
 ROOT = modern.ROOT
-VERSIONS = ("2.6.4", "2.6.5", "2.7.0", "2.7.1", "2.7.2")
+VERSIONS = ("2.6.4", "2.6.5", "2.6.6", "2.7.0", "2.7.1", "2.7.2", "2.7.3")
 RELEASES = {"2.6.4": legacy, "2.6.5": legacy_latest, "2.7.0": initial,
             "2.7.1": modern, "2.7.2": modern_latest}
+for version, (index, platform) in maintenance.PINS.items():
+    RELEASES[version] = SimpleNamespace(
+        AMD64=platform, verify_signature=partial(maintenance.verify_signature, version),
+        RELEASE={"version": version, "image": {"index_digest": index, "linux_amd64_digest": platform}},
+    )
 FEATURES = "kv1,kv2,sys,token,rustls-tls"
 TEST = "real_openbao_default_feature_flow"
 OPERATIONS = harness.CORE_OPERATION_IDS[:8]
@@ -49,16 +57,38 @@ def coverage(historical, supported, supplemental=VERSIONS):
 
 def check_coverage():
     from validate_openbao_release_lock import validate_lock_files
-    import generate_openbao_patch_registry as registry
     import openbao_patch_normal_sdk as normal
-    normal.verify()
+    normal.verify_build()
     historical = [row["version"] for row in validate_lock_files()["records"]]
-    supported = registry.verify()["versions"]
+    supported = normal.profiles.normal_registry()["versions"]
     coverage(historical, supported)
     workflow = (ROOT / ".github/workflows/openbao-current-compatibility.yml").read_text()
     matrices = re.findall(r"^        version: (\[[^\n]+\])$", workflow, re.M)
     require(len(matrices) == 1 and json.loads(matrices[0]) == list(VERSIONS))
-    print("All 30 supported profiles covered by historical and supplemental CI")
+    print(f"All {len(supported)} supported profiles covered by historical and supplemental CI")
+
+
+def stage_binary(binary):
+    directory = ROOT / "target/debug/deps"
+    require(re.fullmatch(r"openbao_integration-[0-9a-f]{16}", binary.name) is not None)
+    if binary.parent == directory:
+        return binary
+    data = base.read_regular_file(binary, 256 * 1024 * 1024)
+    require(0 < len(data) and directory.resolve(strict=True) == directory)
+    digest = hashlib.sha256(data).hexdigest()
+    target = directory / ("openbao_integration-" + digest[:16])
+    with tempfile.NamedTemporaryFile(dir=directory) as temporary:
+        temporary.write(data)
+        temporary.flush()
+        os.fchmod(temporary.fileno(), 0o555)
+        try:
+            os.link(temporary.name, target)
+        except FileExistsError:
+            pass
+    descriptor, actual = freeze_binary(target, os.getuid())
+    os.close(descriptor)
+    require(actual == digest)
+    return target
 
 
 def build():
@@ -73,7 +103,7 @@ def build():
              and item.get("executable") and item.get("target", {}).get("name") == "openbao_integration"
              and item.get("profile", {}).get("test") is True]
     require(len(paths) == 1)
-    binary = harness.validate_test_binary(Path(paths[0]))
+    binary = stage_binary(harness.validate_test_binary(Path(paths[0])))
     if "GITHUB_OUTPUT" in os.environ:
         with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
             output.write(f"test_binary={binary}\n")
@@ -260,7 +290,7 @@ def input_hashes():
              "tests/openbao_integration.rs"]
     paths.extend(str(path.relative_to(ROOT)) for path in sorted((ROOT / "src").rglob("*.rs")))
     groups = [fixture.input_hashes()
-              for fixture in (legacy, legacy_latest, modern, modern_latest)]
+              for fixture in (legacy, legacy_latest, modern, modern_latest, maintenance)]
     groups.append({path: base.sha256(base.read_regular_file(ROOT / path, 2 * 1024 * 1024))
                    for path in paths})
     merged = {}

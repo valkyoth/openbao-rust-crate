@@ -8,15 +8,21 @@ import openbao_ldap_plugins as fixture
 base = fixture.base
 ROOT = fixture.ROOT / "compat/plugins/ldap"
 ANCHORS = {
-    "2.7.0": "9b39c3782b3dbc5181e8fff043b1a095a562d5a2b2a66b34b1a58723b293ee25",
-    "2.7.1": "6828e2f39cb039255359368426e957d416dd204effecf1181aae619cabfe057f",
-    "2.7.2": "c1a115ab94395391a7acb4760c8178c956896118aa5d6c187a51423efb9eab1f",
+    "2.7.3": "a927ea67e17e815b03b0d7c29101d3063253ffcc57c9ea7086ae17af45504126",
+    "2.7.0": "1414da8b7316bf9a5eb25f2d170a791cf5d18e8d3cf146da393474403c780896",
+    "2.7.1": "219afa273006ed5a61d612c88ee0909f0d8d129f39b14cf60f2a29ea579b0fdc",
+    "2.7.2": "bac87d417a344d2da55a86b1ae1171d4a8a6c2af1d40a25807aa332787bf5fb6",
 }
 
 
 def require(condition):
     if not condition:
         raise base.SnapshotError("LDAP server evidence validation failed")
+
+
+def server_directory(root, version):
+    require(version in ANCHORS)
+    return root / version / "server-v2" if version in ("2.7.0", "2.7.1", "2.7.2") else root / version
 
 
 def validate_report(report, version, inputs, schema_bytes):
@@ -51,7 +57,7 @@ def validate_report(report, version, inputs, schema_bytes):
 
 def verify(version):
     require(version in ANCHORS)
-    directory = ROOT / version
+    directory = server_directory(ROOT, version)
     data = base.read_regular_file(directory / "report.json", 64 * 1024)
     require(base.sha256(data) == ANCHORS[version])
     report = base.parse_json(data, 64 * 1024)
@@ -70,7 +76,7 @@ def main():
             KeyError, TypeError):
         print("LDAP server evidence verification failed")
         return 1
-    print("LDAP server evidence verified for 2.7.0, 2.7.1 and 2.7.2; public SDK evidence remains a separate gate")
+    print("LDAP server evidence verified; public SDK evidence remains a separate gate")
     return 0
 
 

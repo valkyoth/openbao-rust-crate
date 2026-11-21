@@ -11,6 +11,15 @@ import verify_openbao_2_7_1_regressions as evidence
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_capture_refresh_preserves_registry_report_identities(self):
+        raw = evidence.base.read_regular_file(evidence.OUTPUT / "candidate-capability-registry-v2.json", 4 * 1024 * 1024)
+        historical = evidence.base.parse_json(raw, 4 * 1024 * 1024)["patch_report_sha256"]
+        self.assertEqual(evidence.REPORTS, historical)
+        self.assertEqual(set(evidence.CURRENT_REPORTS), set(historical))
+        for suite, digest in evidence.CURRENT_REPORTS.items():
+            capture = evidence.base.read_regular_file(evidence.report_path(suite), 128 * 1024)
+            self.assertEqual(evidence.base.sha256(capture), digest)
+
     def test_current_reports_and_unchanged_openapi(self):
         self.assertEqual(evidence.verify()["document"]["info"]["version"], "2.7.1")
 
@@ -24,7 +33,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_all_source_inputs_and_report_fields_are_checked(self):
         for suite in evidence.REPORTS:
-            data = evidence.base.read_regular_file(evidence.OUTPUT / (suite + "-tls-v2.json"), 131072)
+            data = evidence.base.read_regular_file(evidence.report_path(suite), 131072)
             original = evidence.validate_report(suite, data)
             for name in original["inputs"]:
                 for omit in (False, True):
@@ -58,7 +67,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_changed_bytes_are_rejected(self):
         for suite in evidence.REPORTS:
-            data = evidence.base.read_regular_file(evidence.OUTPUT / (suite + "-tls-v2.json"), 131072)
+            data = evidence.base.read_regular_file(evidence.report_path(suite), 131072)
             with self.subTest(suite=suite), self.assertRaises(evidence.runner.harness.HarnessError):
                 evidence.validate_report(suite, data + b" ")
 

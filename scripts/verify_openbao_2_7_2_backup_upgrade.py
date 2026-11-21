@@ -7,8 +7,8 @@ from pathlib import Path
 import openbao_2_7_2_backup_upgrade as fixture
 import verify_openbao_2_7_2 as initial
 
-OUTPUT = initial.OUTPUT / "recovery-backup-upgrade-tls.json"
-EXPECTED_SHA256 = "0d19778507ef4d4b88fe3a6bb2307ec29bfe042622986beec16252a300ed98ed"
+OUTPUT = initial.OUTPUT / "recovery-backup-upgrade-tls-v2.json"
+EXPECTED_SHA256 = "9aaf1e3ff2a3c90b0cecddd243eee16763241acb6088ac4e6492952c7d3610da"
 
 
 def validate(data):

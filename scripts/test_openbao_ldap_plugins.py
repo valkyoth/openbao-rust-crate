@@ -17,6 +17,18 @@ import openbao_ldap_plugins as fixture
 ROOT = fixture.ROOT
 
 
+class MaintenancePluginTests(unittest.TestCase):
+    def test_signed_image_selection_does_not_promote_sdk(self):
+        self.assertNotIn("2.7.3", fixture.VERSIONS)
+        self.assertIn("2.7.3", fixture.SERVER_VERSIONS)
+        with patch.object(fixture.maintenance, "verify_signature") as verify:
+            release = fixture.verified_release("2.7.3")
+            verify.assert_called_once_with("2.7.3")
+        self.assertEqual(release["version"], "2.7.3")
+        self.assertEqual((release["image"]["index_digest"], release["image"]["linux_amd64_digest"]),
+                         fixture.maintenance.PINS["2.7.3"])
+
+
 class DirectoryImageTests(unittest.TestCase):
     def setUp(self):
         root = ROOT / "compat/plugins/ldap-directory"

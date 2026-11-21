@@ -133,11 +133,10 @@ check_grep 'persist-credentials: false' .github/workflows/openbao-current-compat
 check_grep 'runs-on: ubuntu-26.04' .github/workflows/openbao-current-compatibility.yml
 
 check_grep 'name = "openbao"' Cargo.toml
-check_grep 'version = "2.2.5"' Cargo.toml
 check_grep 'edition = "2024"' Cargo.toml
 check_grep 'rust-version = "1.90"' Cargo.toml
 check_grep '"/tests/package_smoke.rs"' Cargo.toml
-check_grep 'channel = "1.99.1"' rust-toolchain.toml
+check_grep 'channel = "1.100.0"' rust-toolchain.toml
 check_grep 'rustup toolchain install 1.90.0' scripts/ci_install_rust.sh
 check_grep 'cargo +1.90.0 check --locked --all-targets --all-features' scripts/checks.sh
 check_grep 'generate_openbao_contract_matrix.py --verify' scripts/checks.sh
@@ -154,8 +153,6 @@ check_grep 'workflow_dispatch:' .github/workflows/openbao-compatibility.yml
 check_grep 'persist-credentials: false' .github/workflows/openbao-compatibility.yml
 check_grep 'openbao_ci_matrix.py aggregate' .github/workflows/openbao-compatibility.yml
 check_grep 'scripts/release_2_0_gate.sh' release-notes/RELEASE_NOTES_2.0.0.md
-check_grep 'version = "=2.2.5"' fuzz/Cargo.toml
-check_grep 'version = "=2.2.5"' tests/fixtures/reqwest-native-unification/Cargo.toml
 check_file docs/OPENBAO_2_7_0_PLAN.md
 check_file docs/OPENBAO_2_7_0_REVIEW.md
 check_file docs/OPENBAO_2_7_0_PLUGIN_REVIEW.md
@@ -170,6 +167,8 @@ check_file release-notes/RELEASE_NOTES_2.2.4.md
 check_grep 'Version: 2.2.4' release-notes/RELEASE_NOTES_2.2.4.md
 check_file release-notes/RELEASE_NOTES_2.2.5.md
 check_grep 'Version: 2.2.5' release-notes/RELEASE_NOTES_2.2.5.md
+check_file release-notes/RELEASE_NOTES_2.2.6.md
+check_grep 'Version: 2.2.6' release-notes/RELEASE_NOTES_2.2.6.md
 /usr/bin/python3 -E -s -S -B scripts/check_release_documentation.py
 /usr/bin/python3 -E -s -S -B scripts/test_release_documentation.py
 check_grep 'openbao_2_7_source_inventory.py --verify' scripts/checks.sh

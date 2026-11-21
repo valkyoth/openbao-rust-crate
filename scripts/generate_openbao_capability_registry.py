@@ -50,7 +50,8 @@ EXPECTED_OPERATION_COUNT = 691
 EXPECTED_STAGED_OPERATION_COUNT = 690
 EXPECTED_REGISTRY_SHA256 = "df09afef362fa0301eafbf1c04782452559e140a0af09d33baac41f690062748"
 EXPECTED_STAGED_REGISTRY_SHA256 = "397f94126d3756d51cd779bbbef91aa8f993287f85561d4330a3734902f2a87e"
-EXPECTED_RUST_SHA256 = "02bde329f5f2ffd9743942d44b60fe7a6fbb87776b293db007d2d100a4cf8000"
+EXPECTED_RUST_SHA256 = "6a742e8b2c525233c726603fbb3d8f9e9384ef66dd6c4af8fd524c620c012ace"
+MAINTENANCE_REGISTRY_SHA256 = "a8307e4df88338025d69f92b467814339caab69b5c5a20feb52f85a5082b6de2"
 HISTORICAL_VERSIONS = (
     "2.0.0", "2.0.1", "2.0.2", "2.0.3", "2.1.0", "2.1.1", "2.2.0",
     "2.2.1", "2.2.2", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.4.3",
@@ -940,6 +941,7 @@ def rust_output(registry: dict[str, Any], *, verification_candidate: bool = Fals
         (*EXPECTED_VERSIONS, "2.6.4", "2.6.5", "2.7.0"),
         (*EXPECTED_VERSIONS, "2.6.4", "2.7.0", "2.7.1"),
         (*EXPECTED_VERSIONS, "2.6.4", "2.6.5", "2.7.0", "2.7.1", "2.7.2"),
+        (*EXPECTED_VERSIONS, "2.6.4", "2.6.5", "2.6.6", "2.7.0", "2.7.1", "2.7.2", "2.7.3"),
     )
     if registry_versions in candidate_inventories:
         routable = (*EXPECTED_VERSIONS, "2.7.0")
@@ -1009,13 +1011,22 @@ def rust_output(registry: dict[str, Any], *, verification_candidate: bool = Fals
     return "\n".join(lines).encode()
 
 
+def maintenance_rust(reviewed):
+    if sha256(canonical_json(reviewed)) != MAINTENANCE_REGISTRY_SHA256:
+        raise RegistryError("unreviewed maintenance profile input")
+    return rust_output(reviewed, verification_candidate=True)
+
+
 def outputs() -> dict[Path, bytes]:
     import generate_openbao_patch_registry as candidate
+    import openbao_maintenance_profiles as profiles
 
     active = build_registry()
+    candidate.verify()
+    profiles.verify_normal_reports()
     return {
         REGISTRY_PATH: canonical_json(active),
-        RUST_PATH: rust_output(candidate.verify(), promoted_patches=True),
+        RUST_PATH: maintenance_rust(profiles.normal_registry()),
     }
 
 
@@ -1048,6 +1059,17 @@ def verify_historical_registry() -> None:
         raise RegistryError("historical capability registry checksum changed")
     if read_regular_file(REGISTRY_PATH, MAX_OUTPUT_BYTES) != expected:
         raise RegistryError("historical capability registry is stale")
+
+
+def pinned_build_registry(path, digest):
+    """Load an immutable compiler input. This does not validate release evidence."""
+    raw = read_regular_file(path, MAX_OUTPUT_BYTES)
+    if sha256(raw) != digest:
+        raise RegistryError("SDK build registry digest mismatch")
+    value = parse_json(raw, MAX_OUTPUT_BYTES)
+    if canonical_json(value) != raw:
+        raise RegistryError("SDK build registry is not canonical")
+    return value
 
 
 def verify_outputs() -> None:

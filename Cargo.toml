@@ -1,6 +1,6 @@
 [package]
 name = "openbao"
-version = "2.2.5"
+version = "2.2.6"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -149,14 +149,14 @@ sensitive-http-test-only-acknowledged = []
 
 [dependencies]
 aes-kw = { version = "0.3.1", default-features = false, optional = true }
-base64-ng = { version = "2.1.0", default-features = false, features = ["alloc"], optional = true }
-bytes = "1.12.1"
+base64-ng = { version = "2.1.1", default-features = false, features = ["alloc"], optional = true }
+bytes = "1.12.2"
 futures-core = { version = "0.3.34", optional = true }
 getrandom = "0.4.3"
-rand = { version = "0.10.3", default-features = false, features = ["std", "thread_rng"], optional = true }
+rand = { version = "0.10.4", default-features = false, features = ["std", "thread_rng"], optional = true }
 reqwest = { version = "0.13.5", default-features = false, features = ["json"] }
-openssl = { version = "0.10.81", optional = true }
-secrecy = { package = "sanitization-secrecy", version = "2.1.1", default-features = false, features = ["serde"] }
+openssl = { version = "0.10.82", optional = true }
+secrecy = { package = "sanitization-secrecy", version = "2.2.0", default-features = false, features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["raw_value"] }
 subtle = "2.6.1"
@@ -164,7 +164,7 @@ time = { version = "0.3.55", default-features = false, features = ["parsing"], o
 tokio = { version = "1.54.1", default-features = false, features = ["time"], optional = true }
 tracing = { version = "0.1.44", default-features = false, features = ["std"], optional = true }
 url = { version = "2.5.8", default-features = false }
-sanitization = { version = "2.1.1", default-features = false, features = ["alloc"] }
+sanitization = { version = "2.2.0", default-features = false, features = ["alloc"] }
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.6", default-features = false, features = ["fs", "std"] }
@@ -173,7 +173,7 @@ rustix = { version = "1.1.6", default-features = false, features = ["fs", "std"]
 windows-sys = { version = "0.61.2", default-features = false, features = ["Win32_Storage_FileSystem"] }
 
 [dev-dependencies]
-openssl = "0.10.81"
+openssl = "0.10.82"
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
 
 [lints.rust]

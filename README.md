@@ -36,9 +36,8 @@ OpenBao-to-backend boundaries.
 
 [API documentation](https://docs.rs/openbao) | [Source](https://github.com/valkyoth/openbao-rust-crate) | [Security](https://github.com/valkyoth/openbao-rust-crate/security) | [Releases](https://github.com/valkyoth/openbao-rust-crate/releases)
 
-`2.2.5` adds exact OpenBao `2.6.5` and `2.7.2` profiles and refreshes the
-reviewed official external-plugin set. It retains Rust `1.99.1` as the primary
-toolchain and Rust `1.90.0` as the MSRV. The known upstream control-group
+`2.2.6` adds exact OpenBao `2.6.6` and `2.7.3` profiles. The primary
+toolchain is Rust `1.100.0`; the MSRV remains `1.90.0`. The known upstream control-group
 single-use enforcement limitation remains present in OpenBao `2.7.2`; use the
 operational restrictions in the security documentation for affected workflows.
 
@@ -56,13 +55,17 @@ earlier review. Only the exact versions and server pairs in this table are
 supported. External plugins require a verified exact server and explicit
 artifact/mount selection, not merely a server profile.
 
+The four plugin pins above also passed server and candidate SDK checks on
+OpenBao `2.7.3`. Those results do not add a normal-build plugin/server pair
+to the table.
+
 | Rust version | Support policy |
 | --- | --- |
-| `1.99.1` | Primary toolchain for development and CI. |
+| `1.100.0` | Primary toolchain for development and CI. |
 | `1.90.0` | Minimum supported Rust version; separately checked in CI. |
-| `1.91.0` through `1.98.x` | Within the supported range; not individually tested on every commit. |
+| `1.91.0` through `1.99.x` | Within the supported range; not individually tested on every commit. |
 
-See the [2.2.5 release notes](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.5/release-notes/RELEASE_NOTES_2.2.5.md)
+See the [2.2.6 release notes](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.6/release-notes/RELEASE_NOTES_2.2.6.md)
 for maintenance changes and trust boundaries, the [2.2.1 release notes](release-notes/RELEASE_NOTES_2.2.1.md)
 for the OIDC secret-field migration and explicit limitations, and the
 [2.2.0 release notes](release-notes/RELEASE_NOTES_2.2.0.md) for migration changes. The
@@ -72,7 +75,7 @@ Clients without a compatibility policy retain the
 unverified 2.6.3 API contract. Select an explicit profile (preferably exact or
 automatic strict verification) to use 2.7 controls. LDAP auth/secrets, Kerberos
 and RADIUS on 2.7 additionally require `ExternalPluginSelection`; see the
-[plugin selection guide](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.5/docs/OPENBAO_EXTERNAL_PLUGINS.md).
+[plugin selection guide](https://github.com/valkyoth/openbao-rust-crate/blob/v2.2.6/docs/OPENBAO_EXTERNAL_PLUGINS.md).
 Selection asserts the deployment's installed artifact; it is not remote
 attestation. RADIUS still requires `radius-auth-acknowledged` and audited
 transport protection.
@@ -81,7 +84,7 @@ transport protection.
 
 ```toml
 [dependencies]
-openbao = "2.2.5"
+openbao = "2.2.6"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import openbao_2_7_control_groups as fixture
 import openbao_api_snapshots as snapshots
+from maintenance_control_evidence import expected_inputs
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULT = ROOT / "compat/onboarding/2.7.0/control-group-tls-v3.json"
@@ -19,7 +20,7 @@ def verify():
     report = snapshots.parse_json(data, 64 * 1024)
     if snapshots.canonical_json(report) != data:
         raise snapshots.SnapshotError("control-group evidence is not canonical")
-    fixture.validate_report(report, fixture.input_hashes())
+    fixture.validate_report(report, expected_inputs("2.7.0", snapshots.sha256(data), fixture.input_hashes()))
     return report
 
 
@@ -30,7 +31,7 @@ def main():
     except (fixture.harness.HarnessError, snapshots.SnapshotError, OSError, ValueError):
         print("Control-group evidence verification failed")
         return 1
-    print("Control-group compatibility evidence verified; known server replay failure remains; no release-approval claim")
+    print("Historical control-group evidence verified; no new server run or replay-fix claim")
     return 0
 
 

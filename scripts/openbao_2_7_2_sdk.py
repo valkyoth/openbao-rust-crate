@@ -49,7 +49,7 @@ def input_hashes(*, normal=False):
 def build():
     patch.require(os.geteuid() != 0)
     before = input_hashes()
-    verified = candidate.verify()
+    verified = candidate.for_sdk_build()
     inputs = builder.backup_inputs(builder.source_inputs())
     with tempfile.TemporaryDirectory(prefix="openbao-272-sdk-build-") as temporary:
         root = Path(temporary)
@@ -106,9 +106,9 @@ def run(binary, strict_candidate=False, normal=False):
     patch.require(uid > 0 and gid > 0 and pwd.getpwuid(uid).pw_gid == gid)
     digest = execution.binary_hash(binary, uid, candidate=strict_candidate)
     inputs = input_hashes(normal=True) if normal else input_hashes()
-    provenance = normal_sdk.verify() if normal else None
+    provenance = normal_sdk.verify_build() if normal else None
     if not normal:
-        candidate.verify()
+        candidate.for_sdk_build()
     print("2.7.2 SDK fixture: verifying signed image", flush=True)
     patch.verify_signature()
     podman = str(tls.evidence_tools.protected_path(Path("/usr/bin/podman")))
@@ -165,12 +165,12 @@ def run(binary, strict_candidate=False, normal=False):
               "scope": "public-sdk-strict-disposable-candidate-build", "outcome": "passed", "routable": False,
               "checks": CHECKS}
     if normal:
-        patch.require(provenance == normal_sdk.verify())
+        patch.require(provenance == normal_sdk.verify_build())
         report.update(provenance)
     else:
         report.update(candidate_registry_sha256=candidate.EXPECTED_SHA256,
                       candidate_generated_rust_sha256=base.sha256(candidate.registry.rust_output(
-                          candidate.verify(), verification_candidate=True)),
+                          candidate.for_sdk_build(), verification_candidate=True)),
                       source_scope="repository-inputs-with-explicit-generated-candidate-override")
     with tempfile.NamedTemporaryFile(prefix="openbao-272-sdk-result-", suffix=".json", delete=False) as output:
         output.write(base.canonical_json(report))

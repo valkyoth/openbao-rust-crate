@@ -54,7 +54,7 @@ class CandidateSdkTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.candidate = subject.candidate.verify()
+        cls.candidate = subject.registry.pinned_build_registry(combined.OUTPUT, combined.EXPECTED_SHA256)
 
     def test_historical_candidate_build_does_not_mutate_normal_patch_routing(self):
         registry = subject.registry
@@ -69,7 +69,7 @@ class CandidateSdkTests(unittest.TestCase):
             self.assertEqual((destination / "Cargo.toml").read_bytes(), b"manifest")
             self.assertEqual((destination / "src/generated/openbao_capabilities.rs").read_bytes(), promoted)
         self.assertEqual(registry.read_regular_file(registry.RUST_PATH, registry.MAX_OUTPUT_BYTES), original)
-        self.assertEqual(original, registry.rust_output(combined.verify(), promoted_patches=True))
+        self.assertEqual(registry.sha256(original), registry.EXPECTED_RUST_SHA256)
         self.assertNotEqual(original, normal)
 
     def test_verification_inventory_is_exact(self):
@@ -96,6 +96,7 @@ class CandidateSdkTests(unittest.TestCase):
             process.wait.assert_called_once()
 
     def test_empty_or_incomplete_test_listing_fails(self):
+        # Full mock verification still requires fresh release evidence.
         for listing in ("", "0 tests", "strict_inspection_routes_are_version_specific: test\n"):
             with patch.object(subject.os, "geteuid", return_value=1000), \
                  patch.object(subject.registry, "verify_outputs"), \
@@ -106,6 +107,21 @@ class CandidateSdkTests(unittest.TestCase):
                  patch.object(subject, "run", return_value=listing) as run:
                 self.assertEqual(subject.main(), 1)
                 self.assertEqual(run.call_count, 1)
+
+    def test_backup_build_uses_registry_identified_by_live_report(self):
+        import generate_openbao_2_7_candidate as backup
+        import openbao_patch_normal_sdk as normal
+        with patch.object(subject.os, "geteuid", return_value=1000), \
+             patch.object(normal, "verify_build"), \
+             patch.object(subject.registry, "verify_outputs", side_effect=AssertionError("release path")), \
+             patch.object(subject.candidate, "verify", side_effect=AssertionError("combined registry")), \
+             patch.object(backup, "verify", return_value={}) as exact, \
+             patch.object(subject, "source_inputs", return_value={}), \
+             patch.object(subject, "backup_inputs", return_value={}), \
+             patch.object(subject, "prepare", side_effect=subject.registry.RegistryError("stop")) as prepare:
+            self.assertEqual(subject.main(build_backup=True), 1)
+            exact.assert_called_once_with()
+            self.assertIs(prepare.call_args.args[2], exact.return_value)
 
 
 if __name__ == "__main__":

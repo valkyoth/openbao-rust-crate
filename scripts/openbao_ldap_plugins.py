@@ -19,6 +19,7 @@ import time
 import openbao_2_7_api as initial
 import openbao_2_7_1 as modern
 import openbao_2_7_2 as latest
+import openbao_maintenance_capture as maintenance
 import openbao_2_7_tls as tls
 import openbao_ldap_directory_image as directory
 import openbao_plugin_artifacts as artifacts
@@ -26,6 +27,7 @@ import openbao_plugin_artifacts as artifacts
 base, harness = tls.base, tls.harness
 ROOT = artifacts.ROOT
 VERSIONS = {"2.7.0": initial, "2.7.1": modern, "2.7.2": latest}
+SERVER_VERSIONS = (*VERSIONS, "2.7.3")
 BASE_DN = "dc=fixture,dc=invalid"
 PEOPLE = "ou=people," + BASE_DN
 ROOT_DN = "cn=bootstrap," + BASE_DN
@@ -382,13 +384,29 @@ def input_hashes():
              "scripts/openbao_plugin_artifacts.py", "scripts/openbao_api_snapshots.py",
              "scripts/openbao_test_harness.py", "scripts/openbao_2_7_tls.py", "scripts/evidence_tools.py",
              "scripts/openbao_2_7_api.py", "scripts/openbao_2_7_1.py", "scripts/openbao_2_7_2.py",
+             "scripts/openbao_maintenance_capture.py",
              "scripts/test_openbao_ldap_plugins.py", "compat/plugins/artifacts.lock.json",
              "compat/plugins/openbao-release-key.asc")
     return {name: base.sha256(base.read_regular_file(ROOT / name, 2 * 1024 * 1024)) for name in names}
 
 
+def verified_release(version):
+    if version == "2.7.3":
+        maintenance.verify_signature(version)
+        index, platform = maintenance.PINS[version]
+        return {"version": version, "image": {"index_digest": index, "linux_amd64_digest": platform}}
+    require(version in VERSIONS)
+    release = VERSIONS[version]
+    if version == "2.7.0":
+        release.verify_image_signature()
+    else:
+        release.verify_signature()
+    return release.RELEASE
+
+
 def run(version, acknowledge_unsigned, *, sdk_exercise=None, extra_plugins=(), extra_exercise=None):
-    require(os.geteuid() == 0 and version in VERSIONS and acknowledge_unsigned is True)
+    require(os.geteuid() == 0 and version in SERVER_VERSIONS and acknowledge_unsigned is True)
+    require(sdk_exercise is None or version in VERSIONS)
     require(isinstance(extra_plugins, tuple) and set(extra_plugins) <= {"auth-kerberos", "auth-radius"}
             and (extra_exercise is None) == (not extra_plugins)
             and not (extra_exercise is not None and sdk_exercise is not None))
@@ -402,11 +420,7 @@ def run(version, acknowledge_unsigned, *, sdk_exercise=None, extra_plugins=(), e
     try:
         podman = str(tls.evidence_tools.protected_path(Path("/usr/bin/podman")))
         progress("verifying signed OpenBao and pinned directory image")
-        release = VERSIONS[version]
-        if version == "2.7.0":
-            release.verify_image_signature()
-        else:
-            release.verify_signature()
+        release = verified_release(version)
         observation = directory.verify(environment, acknowledge_unsigned)
         progress("verifying signed plugin archives")
         plugins, digests = install_plugins(root, PLUGINS + extra_plugins)
@@ -422,7 +436,7 @@ def run(version, acknowledge_unsigned, *, sdk_exercise=None, extra_plugins=(), e
         passwords = {name: secrets.token_hex(24) for name in ("bootstrap", "manager", "alice", "static")}
         ldap_config = directory_config(root, passwords["bootstrap"])
         harness.write_private(root / "ldap-client.conf", ("TLS_CACERT " + str(ca) + "\nTLS_REQCERT demand\n").encode())
-        image = harness.inspect_image(podman, release.RELEASE, environment)
+        image = harness.inspect_image(podman, release, environment)
         ldap_image = directory.prepare(podman, environment)
         network, server, ldap = (prefix + owner for prefix in ("openbao-ldap-net-", "openbao-ldap-server-", "openbao-ldap-directory-"))
         resources.append(("network", network))
@@ -499,7 +513,7 @@ def run(version, acknowledge_unsigned, *, sdk_exercise=None, extra_plugins=(), e
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--version", choices=tuple(VERSIONS), required=True)
+    parser.add_argument("--version", choices=SERVER_VERSIONS, required=True)
     parser.add_argument("--acknowledge-unsigned-directory-image", action="store_true")
     args = parser.parse_args()
     try:

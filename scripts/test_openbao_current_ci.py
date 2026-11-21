@@ -15,6 +15,25 @@ import openbao_current_ci as ci
 
 
 class CurrentCiTests(unittest.TestCase):
+    def test_new_cargo_layout_stages_without_overwriting_existing_artifact(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(ci, "ROOT", Path(directory)):
+            deps = ci.ROOT / "target/debug/deps"
+            binary = deps.parent / "build/openbao/hash/out/openbao_integration-1234567890abcdef"
+            binary.parent.mkdir(parents=True)
+            deps.mkdir()
+            binary.write_bytes(b"integration test")
+            binary.chmod(0o700)
+            staged = ci.stage_binary(binary)
+            self.assertEqual(staged.parent, deps)
+            self.assertEqual(staged.read_bytes(), binary.read_bytes())
+            self.assertEqual(ci.stage_binary(binary), staged)
+            self.assertEqual(ci.stage_binary(staged), staged)
+            staged.chmod(0o700)
+            staged.write_bytes(b"different")
+            with self.assertRaises(ci.harness.HarnessError):
+                ci.stage_binary(binary)
+            self.assertEqual(staged.read_bytes(), b"different")
+
     def test_real_input_collection_covers_all_patch_fixtures_and_sdk(self):
         inputs = ci.input_hashes()
         self.assertGreater(len(inputs), 20)
@@ -35,10 +54,16 @@ class CurrentCiTests(unittest.TestCase):
                          {"scripts/openbao_current_ci.py"})
 
     def test_supported_profile_coverage(self):
+        self.assertEqual(set(ci.VERSIONS), set(ci.RELEASES))
+        for version, (index, platform) in ci.maintenance.PINS.items():
+            release = ci.RELEASES[version]
+            self.assertEqual(release.verify_signature.args, (version,))
+            self.assertIs(release.verify_signature.func, ci.maintenance.verify_signature)
+            self.assertEqual(release.RELEASE["image"], {"index_digest": index, "linux_amd64_digest": platform})
         ci.coverage(["2.6.3"], ["2.6.3", *ci.VERSIONS])
         for historical, supported, supplemental in (
             (["2.6.3"], ["2.6.3", "2.6.4"], ci.VERSIONS),
-            (["2.6.3"], ["2.6.3", *ci.VERSIONS, "2.7.3"], ci.VERSIONS),
+            (["2.6.3"], ["2.6.3", *ci.VERSIONS, "2.7.4"], ci.VERSIONS),
             (["2.6.3", "2.6.4"], ["2.6.3", *ci.VERSIONS], ci.VERSIONS),
             (["2.6.3"], ["2.6.3", *ci.VERSIONS], ["2.6.4", "2.7.0"]),
             (["2.6.3", "2.6.3"], ["2.6.3", *ci.VERSIONS], ci.VERSIONS),

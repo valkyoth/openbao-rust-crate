@@ -8,14 +8,14 @@ import openbao_2_7_2_backups as fixture
 import verify_openbao_2_7_2 as initial
 
 REPORTS = {
-    "unseal": "f381a30454e47171a19815cdf7ed4de5b6c19627a24ca7e3caa2baa5208554f4",
-    "recovery": "5dfa524a82c083389667ef69c2372631f02aa6d2ca477cd7b80f0fd4712a319b",
+    "unseal": "252fe40809072a68c75e4d6a7b19f1f271033a6c5f396a8c219b78263572ed96",
+    "recovery": "2077f47072af337de61a3297bbdb08faf803f1e4649521657cb33d6c535feeea",
 }
 
 
 def output(suite):
     fixture.patch.require(suite in REPORTS)
-    return initial.OUTPUT / (suite + "-backup-tls.json")
+    return initial.OUTPUT / (suite + "-backup-tls-v2.json")
 
 
 def validate(suite, data):

@@ -47,7 +47,7 @@ def input_hashes(*, normal=False):
 def build():
     patch.require(os.geteuid() != 0)
     before = input_hashes()
-    verified = candidate.verify()
+    verified = candidate.for_sdk_build()
     inputs = builder.backup_inputs(builder.source_inputs())
     with tempfile.TemporaryDirectory(prefix="openbao-271-advanced-build-") as temporary:
         root = Path(temporary)
@@ -219,8 +219,8 @@ def run(binary, strict_candidate=False, normal=False):
     patch.require(uid > 0 and gid > 0 and pwd.getpwuid(uid).pw_gid == gid)
     digest = execution.binary_hash(binary, uid, candidate=strict_candidate)
     inputs = input_hashes(normal=True) if normal else input_hashes()
-    provenance = normal_sdk.verify() if normal else None
-    verified = None if normal else candidate.verify()
+    provenance = normal_sdk.verify_build() if normal else None
+    verified = None if normal else candidate.for_sdk_build()
     calls = 0
 
     def observe(address, ca, token):
@@ -243,7 +243,7 @@ def run(binary, strict_candidate=False, normal=False):
             "image_index_digest": patch.INDEX, "routable": False, "outcome": "passed",
             "backup_decryption_verified": False, "synthetic_indices": "test-only-never-observable-cancellation-and-timeout"}
     if normal:
-        patch.require(provenance == normal_sdk.verify())
+        patch.require(provenance == normal_sdk.verify_build())
         report.update(provenance)
     else:
         report.update(candidate_registry_sha256=candidate.EXPECTED_SHA256,

@@ -37,6 +37,10 @@ def build():
     return result
 
 
+def for_sdk_build():
+    return registry.pinned_build_registry(OUTPUT, EXPECTED_SHA256)
+
+
 def verify():
     expected = build()
     data = registry.read_regular_file(OUTPUT, registry.MAX_OUTPUT_BYTES)

@@ -8,6 +8,17 @@ import verify_openbao_current_ci as evidence
 
 
 class CurrentCiEvidenceTests(unittest.TestCase):
+    def test_released_225_reports_do_not_verify_against_current_runner(self):
+        directory = evidence.fixture.ROOT / "compat/ci/2.2.5/v3"
+        for version in ("2.6.4", "2.6.5", "2.7.0", "2.7.1", "2.7.2"):
+            raw = evidence.fixture.base.read_regular_file(directory / f"{version}.json", 128 * 1024)
+            report = evidence.fixture.base.parse_json(raw, 128 * 1024)
+            with self.subTest(version=version), \
+                 patch.object(evidence, "PINS", {version: evidence.fixture.base.sha256(raw)}), \
+                 patch.object(evidence, "BINARY_SHA256", report["test_binary_sha256"]), \
+                 self.assertRaises(evidence.fixture.harness.HarnessError):
+                evidence.validate(version, raw)
+
     def test_pre_tokio_reports_are_preserved_but_stale(self):
         pins = {
             "2.6.4": "bf3584cd2cd1370c075a06108ce2e68ef868017aa89ca60224ce259b2bf95b59",
@@ -30,7 +41,7 @@ class CurrentCiEvidenceTests(unittest.TestCase):
                  self.assertRaises(evidence.fixture.harness.HarnessError):
                 evidence.validate(version, raw)
 
-    def test_all_five_retained_reports(self):
+    def test_every_current_version_has_a_retained_report(self):
         self.assertEqual(set(evidence.PINS), set(evidence.fixture.VERSIONS))
         for version in evidence.PINS:
             self.assertEqual(evidence.verify(version)["version"], version)

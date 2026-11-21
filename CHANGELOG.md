@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## 2.2.6
+
+- Add exact core SDK profiles for OpenBao 2.6.6 and 2.7.3.
+- Update the primary Rust toolchain to 1.100.0, retaining the 1.90.0 MSRV.
+- Refresh crate dependencies and CI tooling. External plugin pins are unchanged.
+
 ## 2.2.5
 
 - Add exact OpenBao 2.6.5 and 2.7.2 compatibility profiles while preserving

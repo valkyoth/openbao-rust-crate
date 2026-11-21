@@ -224,7 +224,7 @@ def run(version, acknowledgement, *, sdk_exercise=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
-    parser.add_argument("--version", choices=tuple(ldap.VERSIONS), required=True)
+    parser.add_argument("--version", choices=ldap.SERVER_VERSIONS, required=True)
     parser.add_argument("--acknowledge-unsigned-directory-image", action="store_true")
     args = parser.parse_args()
     try:

@@ -11,7 +11,7 @@ import verify_openbao_ldap_plugins as evidence
 class EvidenceTests(unittest.TestCase):
     def setUp(self):
         self.version = "2.7.0"
-        root = evidence.ROOT / self.version
+        root = evidence.server_directory(evidence.ROOT, self.version)
         self.schema = (root / "runtime-openapi.json").read_bytes()
         self.report = evidence.base.parse_json((root / "report.json").read_bytes(), 65536)
         self.inputs = evidence.fixture.input_hashes()
@@ -88,7 +88,7 @@ class EvidenceTests(unittest.TestCase):
                 evidence.verify(self.version)
 
     def test_unknown_server_is_rejected(self):
-        for version in ("2.7", "2.7.3", "2.6.4"):
+        for version in ("2.7", "2.7.4", "2.6.4"):
             with self.subTest(version=version), self.assertRaises(evidence.base.SnapshotError):
                 evidence.verify(version)
 

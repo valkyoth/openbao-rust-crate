@@ -10,9 +10,10 @@ base = fixture.base
 require = ldap.require
 ROOT = fixture.ldap.ROOT / "compat/plugins/radius"
 ANCHORS = {
-    "2.7.0": "5034bf9702576741a35663ae9ee850f9e13b47f14d168cbfc110dcdc9bfdd219",
-    "2.7.1": "847a21f60316f6b8101ce16e961d8b9b122900cd60cbace1734c6cd1a6e68c63",
-    "2.7.2": "53312f06029265b32d7fd6f5f8073bd29b0a8f3266af950f1c36fabfa063ff12",
+    "2.7.3": "eb1d043471bb0a6d93628a763cad26436f77bf073fcd8d00e71c2cd43417d208",
+    "2.7.0": "c68fb9cddcdbf835ede561b7e6fec457ab4233f6b5121405ed5b5097a16306bd",
+    "2.7.1": "1b45f69c95d3848375975ea60649ddaee8a2b2ea4be8a8f089f78de148613ecd",
+    "2.7.2": "58faaa4593ab21b9ce9452c33423e49a68ca539f450af487953382483cb6003e",
 }
 
 
@@ -48,7 +49,7 @@ def validate_report(report, version, inputs, schema):
 
 def verify(version):
     require(version in ANCHORS)
-    root = ROOT / version
+    root = ldap.server_directory(ROOT, version)
     raw = base.read_regular_file(root / "report.json", 64 * 1024)
     require(base.sha256(raw) == ANCHORS[version])
     report = base.parse_json(raw, 64 * 1024)

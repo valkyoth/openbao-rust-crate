@@ -10257,6 +10257,7 @@ fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> R
         crate::OpenBaoVersion::new(2, 7, 0),
         crate::OpenBaoVersion::new(2, 7, 1),
         crate::OpenBaoVersion::new(2, 7, 2),
+        crate::OpenBaoVersion::new(2, 7, 3),
     ];
     // Routing independently requires promotion; a verified version alone never
     // bypasses the generated endpoint registry.
@@ -10268,9 +10269,9 @@ fn validate_workflow_cas_profile(report: crate::OpenBaoCompatibilityReport) -> R
                     | OpenBaoCompatibilityPolicyKind::AutomaticStrict
             )
         )
-        || !report
-            .profile_version()
-            .is_some_and(|version| reviewed.contains(&version))
+        || !report.profile_version().is_some_and(|version| {
+            reviewed.contains(&version) && crate::OpenBaoCompatibilityPolicy::exact(version).is_ok()
+        })
         || report.detected_version() != report.profile_version()
     {
         return Err(Error::InvalidParameter(
@@ -11367,26 +11368,25 @@ mod tests {
 
     #[test]
     fn latest_plugin_selection_requires_exact_verified_profile() {
-        assert_reviewed_patch_profiles(super::validate_latest_plugin_profile);
+        assert_reviewed_patch_profiles(super::validate_latest_plugin_profile, 2);
     }
 
     #[test]
     fn workflow_cas_requires_exact_verified_reviewed_profile() {
-        assert_reviewed_patch_profiles(super::validate_workflow_cas_profile);
+        assert_reviewed_patch_profiles(super::validate_workflow_cas_profile, 3);
     }
 
     fn assert_reviewed_patch_profiles(
         validate: fn(crate::OpenBaoCompatibilityReport) -> crate::Result<()>,
+        last_reviewed_patch: u32,
     ) {
         use crate::OpenBaoVersion as Version;
         use crate::compatibility::{
             OpenBaoCompatibilityPolicyKind as Policy, OpenBaoCompatibilityReport as Report,
         };
-        let reviewed = [
-            Version::new(2, 7, 0),
-            Version::new(2, 7, 1),
-            Version::new(2, 7, 2),
-        ];
+        let reviewed: Vec<_> = (0..=last_reviewed_patch)
+            .map(|patch| Version::new(2, 7, patch))
+            .collect();
         for version in crate::compatibility::openbao_profile_versions() {
             assert!(validate(Report::assumed(*version)).is_err());
             assert!(validate(Report::verified(Policy::Range, *version, None)).is_err());

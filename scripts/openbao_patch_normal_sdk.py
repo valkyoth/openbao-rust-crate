@@ -8,23 +8,33 @@ import tempfile
 
 import check_openbao_2_7_candidate_sdk as builder
 import generate_openbao_patch_registry as combined
+import openbao_maintenance_profiles as profiles
 
 registry = combined.registry
 
 
 def verify():
-    reviewed = combined.verify()
-    expected = registry.rust_output(reviewed, promoted_patches=True)
+    combined.verify()
+    return verify_build()
+
+
+def verify_build():
+    registry.pinned_build_registry(combined.OUTPUT, combined.EXPECTED_SHA256)
+    return provenance(profiles.normal_registry())
+
+
+def provenance(reviewed):
+    expected = registry.maintenance_rust(reviewed)
     actual = registry.read_regular_file(registry.RUST_PATH, registry.MAX_OUTPUT_BYTES)
     combined.require(actual == expected and registry.sha256(actual) == registry.EXPECTED_RUST_SHA256)
-    return {"combined_registry_sha256": combined.EXPECTED_SHA256,
+    return {"combined_registry_sha256": registry.MAINTENANCE_REGISTRY_SHA256,
             "generated_rust_sha256": registry.sha256(actual),
             "source_scope": "repository-normal-build-no-generated-override",
             "scope": "public-sdk-strict-normal-build", "routable": True}
 
 
 def input_hashes():
-    paths = ("scripts/openbao_patch_normal_sdk.py", "scripts/generate_openbao_patch_registry.py",
+    paths = ("scripts/openbao_patch_normal_sdk.py", "scripts/openbao_maintenance_profiles.py", "scripts/generate_openbao_patch_registry.py",
              "scripts/generate_openbao_2_6_4_candidate.py", "scripts/generate_openbao_2_6_5_candidate.py",
              "scripts/generate_openbao_2_7_1_candidate.py", "scripts/generate_openbao_2_7_2_candidate.py",
              "scripts/generate_openbao_capability_registry.py",
@@ -50,7 +60,7 @@ def prepare(destination, inputs):
 
 def build(features, hashes):
     combined.require(os.geteuid() != 0)
-    before, provenance = hashes(), verify()
+    before, provenance = hashes(), verify_build()
     inputs = builder.backup_inputs(builder.source_inputs())
     with tempfile.TemporaryDirectory(prefix="openbao-normal-sdk-build-") as temporary:
         root = Path(temporary)
@@ -64,7 +74,7 @@ def build(features, hashes):
                     and item.get("executable") and item.get("target", {}).get("name") == "openbao"
                     and item.get("profile", {}).get("test") is True]
         combined.require(len(binaries) == 1)
-    combined.require(before == hashes() and provenance == verify()
+    combined.require(before == hashes() and provenance == verify_build()
                      and inputs == builder.backup_inputs(builder.source_inputs()))
     print(f"Normal-build SDK binary: {binaries[0]}")
     print("Build only; final live verification remains pending")

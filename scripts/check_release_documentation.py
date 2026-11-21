@@ -29,6 +29,12 @@ def validate(package, documents, notes):
 
 def main():
     package = tomllib.loads((ROOT / "Cargo.toml").read_text())["package"]
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", package["version"]):
+        raise ValueError("expected a stable release version")
+    for folder in ("fuzz", "tests/fixtures/reqwest-native-unification"):
+        dep = tomllib.loads((ROOT / folder / "Cargo.toml").read_text())["dependencies"]["openbao"]
+        if dep.get("version") != "=" + package["version"]:
+            raise ValueError(f"{folder} must use the exact workspace package version")
     documents = {name: (ROOT / name).read_text() for name in CURRENT_DOCUMENTS}
     notes = (ROOT / "release-notes" / f'RELEASE_NOTES_{package["version"]}.md').read_text()
     validate(package, documents, notes)

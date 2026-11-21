@@ -85,7 +85,7 @@ class AdvancedTests(unittest.TestCase):
                  patch.object(fixture.pwd, "getpwuid", return_value=SimpleNamespace(pw_gid=1000)), \
                  patch.object(fixture, "input_hashes", side_effect=[{"source": "a"}, {"source": "b" if mode == "source-drift" else "a"}]), \
                  patch.object(fixture.execution, "binary_hash", side_effect=["a" * 64, ("b" if mode == "binary-drift" else "a") * 64]), \
-                 patch.object(fixture.candidate, "verify", return_value={}), \
+                 patch.object(fixture.candidate, "for_sdk_build", return_value={}), \
                  patch.object(fixture.candidate.registry, "rust_output", return_value=b"candidate"), \
                  patch.object(fixture.backups, "run", side_effect=server), \
                  patch.object(fixture.execution, "run_test", side_effect=fixture.harness.HarnessError("failed") if mode == "test-failure" else None) as test, \

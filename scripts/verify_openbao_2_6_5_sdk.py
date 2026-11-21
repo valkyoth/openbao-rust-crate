@@ -8,10 +8,10 @@ import openbao_2_6_5_sdk as fixture
 import verify_openbao_2_6_5 as initial
 
 PINS = {
-    "normal": ("6e6a539596c111b9ff4d5129f100f419eba4ebaf5d7e05100cd87c05cc03455e",
-               "982c24f70614c97f2609b0eb492a17a09960225ca2a78d796b68f7e8c1200880"),
-    "candidate": ("e30557929e8d1e56503bbae55eee3a959c5cdc911e598a161717f40ab16c933c",
-                  "45fa0112732e726ede9d434aea1789b6a0ef37b60e304c10bbd0da4d15832f77"),
+    "normal": ("c7d0b885a752a8d7020022a78ebac71164202b23a36974805912aa9e7f4312a4",
+               "d8b5305648ac434de7081318ac4e9deee2916e99c15b28dc45e1be66d521187d"),
+    "candidate": ("1fbe56b96496d0cb496f5f988ea1827180c52890c2f3e841f826a2af646cbea9",
+                  "88b782ac1e4e755f5982532b38ab8512b5a449198951a9f0bac8e7676849503d"),
 }
 CHECKS = ["exact-version", "tls13", "tls-rejections", "resource-limits", "network-isolation",
           "strict-sdk-profile", "approle-login", "expired-secret-id-denied-without-tidy",
@@ -23,7 +23,7 @@ CHECKS = ["exact-version", "tls13", "tls-rejections", "resource-limits", "networ
 
 def output(mode):
     fixture.patch.require(mode in PINS)
-    return initial.OUTPUT / ("sdk-normal-tls-v4.json" if mode == "normal" else "sdk-candidate-tls-v4.json")
+    return initial.OUTPUT / ("sdk-normal-tls-v5.json" if mode == "normal" else "sdk-candidate-tls-v5.json")
 
 
 def expected(mode, binary):

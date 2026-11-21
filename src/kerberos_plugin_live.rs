@@ -56,6 +56,7 @@ async fn public_kerberos_tls() {
         "2.7.0" => OpenBaoVersion::new(2, 7, 0),
         "2.7.1" => OpenBaoVersion::new(2, 7, 1),
         "2.7.2" => OpenBaoVersion::new(2, 7, 2),
+        "2.7.3" => OpenBaoVersion::new(2, 7, 3),
         _ => checked(Err::<OpenBaoVersion, _>(())),
     };
     let url = checked(reqwest::Url::parse(&fixture.address));

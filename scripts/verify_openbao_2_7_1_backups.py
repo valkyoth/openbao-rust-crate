@@ -8,8 +8,8 @@ import openbao_2_7_1_backups as fixture
 import verify_openbao_2_7_1 as initial
 
 REPORTS = {
-    "unseal": "03ac818c601c54f0e5e17fb549cd8159569e0a21325b7de2b291c8c7b5ec3fd1",
-    "recovery": "7ccff3595bdeae720a29bc811db65025459b65bdc1a3b904c5e191c783b7f04d",
+    "unseal": "b2513f243be9be96d48e6f5833c216b9e2d42cb59a1981594af5140699c17355",
+    "recovery": "59c7f98dff2b1f7399d7e22a67d13cdde79c25169bb7da47a213ccdd00fa1e11",
 }
 
 
@@ -28,7 +28,7 @@ def validate(suite, data):
 
 def verify():
     return {suite: validate(suite, fixture.base.read_regular_file(
-        initial.OUTPUT / (suite + "-backup-tls-v2.json"), 128 * 1024)) for suite in REPORTS}
+        initial.OUTPUT / (suite + "-backup-tls-v3.json"), 128 * 1024)) for suite in REPORTS}
 
 
 def main():
@@ -42,7 +42,7 @@ def main():
                 parser.error("--retain requires --result")
             data = fixture.base.read_regular_file(args.result, 128 * 1024)
             validate(args.retain, data)
-            fixture.base.write_immutable(initial.OUTPUT / (args.retain + "-backup-tls-v2.json"), data)
+            fixture.base.write_immutable(initial.OUTPUT / (args.retain + "-backup-tls-v3.json"), data)
         else:
             verify()
     except (fixture.harness.HarnessError, fixture.base.SnapshotError, OSError, ValueError, KeyError, TypeError):

@@ -143,7 +143,7 @@ def run(binary, strict_candidate=False, normal=False):
     patch.require(uid > 0 and gid > 0 and pwd.getpwuid(uid).pw_gid == gid)
     digest = execution.binary_hash(binary, uid, candidate=strict_candidate)
     inputs = input_hashes(normal=True) if normal else input_hashes()
-    provenance = normal_sdk.verify() if normal else None
+    provenance = normal_sdk.verify_build() if normal else None
     if not normal:
         candidate.verify()
     print("2.6.4 SDK fixture: verifying signed image", flush=True)
@@ -207,7 +207,7 @@ def run(binary, strict_candidate=False, normal=False):
                          "ldap-auth-mapping", "kerberos-group-mapping", "radius-user-mapping",
                          "ldap-dynamic-role-administration", "cleanup"]}
     if normal:
-        patch.require(provenance == normal_sdk.verify())
+        patch.require(provenance == normal_sdk.verify_build())
         report.update(provenance)
     else:
         report.update(candidate_registry_sha256=candidate.EXPECTED_SHA256,

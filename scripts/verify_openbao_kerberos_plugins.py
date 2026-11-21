@@ -10,9 +10,10 @@ base = fixture.base
 require = ldap.require
 ROOT = fixture.ldap.ROOT / "compat/plugins/kerberos"
 ANCHORS = {
-    "2.7.0": "7009194db7c36e03866d343c6755dde576cd9492b26897d0db017bef5ad5247b",
-    "2.7.1": "f36b4a7a5965f007a8060218e6d00672aaf7fea6ece4e13804cf3dadac45d181",
-    "2.7.2": "2b4540f6b1937251c81b4b0ec1e84c39356408b51949fcae5fa88f76a0c83902",
+    "2.7.3": "6e140dcde334f08cc0694f7b733650e607f4f46d02f8e2806064d872390f899b",
+    "2.7.0": "18967d4a31ae4634c630db58d0e379363b7be2cbf5854fa139eacd3144b1828b",
+    "2.7.1": "25c240f5f2e066be390dc1e45da7ae772ac10c03114d86e9451728229face4a7",
+    "2.7.2": "01eb8eeeacf283bcab6f81a8f0a229dba128281114348c3a3b8b96428cfafb90",
 }
 
 
@@ -43,7 +44,7 @@ def validate_report(report, version, inputs, schema):
 
 def verify(version):
     require(version in ANCHORS)
-    root = ROOT / version
+    root = ldap.server_directory(ROOT, version)
     raw = base.read_regular_file(root / "report.json", 64 * 1024)
     require(base.sha256(raw) == ANCHORS[version])
     report = base.parse_json(raw, 64 * 1024)

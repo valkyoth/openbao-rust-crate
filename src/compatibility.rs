@@ -1066,7 +1066,7 @@ mod tests {
     #[test]
     fn strict_and_unknown_newer_policies_fail_closed_or_report_acknowledgement() -> Result<()> {
         let strict = OpenBaoCompatibilityPolicy::automatic_strict();
-        let unknown = OpenBaoVersion::new(2, 7, 3);
+        let unknown = OpenBaoVersion::new(2, 7, 4);
         assert_eq!(
             strict.evaluate_detected(unknown),
             Err(OpenBaoCompatibilityFailure::UnknownVersion(unknown))
@@ -1084,7 +1084,7 @@ mod tests {
         assert_eq!(acknowledged.detected_version(), Some(unknown));
         assert_eq!(
             acknowledged.profile_version(),
-            Some(OpenBaoVersion::new(2, 7, 2))
+            Some(OpenBaoVersion::new(2, 7, 3))
         );
         Ok(())
     }
@@ -1237,7 +1237,7 @@ mod tests {
         let versions = openbao_profile_versions();
 
         assert_eq!(operations.len(), 707);
-        assert_eq!(versions.len(), 30);
+        assert_eq!(versions.len(), 32);
         assert_eq!(versions[0], OpenBaoVersion::new(2, 0, 0));
         assert_eq!(versions[20], OpenBaoVersion::new(2, 5, 5));
         assert_eq!(versions[21], OpenBaoVersion::new(2, 6, 0));
@@ -1246,12 +1246,14 @@ mod tests {
         assert_eq!(versions[24], OpenBaoVersion::new(2, 6, 3));
         assert_eq!(versions[25], OpenBaoVersion::new(2, 6, 4));
         assert_eq!(versions[26], OpenBaoVersion::new(2, 6, 5));
-        assert_eq!(versions[27], OpenBaoVersion::new(2, 7, 0));
-        assert_eq!(versions[28], OpenBaoVersion::new(2, 7, 1));
-        assert_eq!(versions[29], OpenBaoVersion::new(2, 7, 2));
+        assert_eq!(versions[27], OpenBaoVersion::new(2, 6, 6));
+        assert_eq!(versions[28], OpenBaoVersion::new(2, 7, 0));
+        assert_eq!(versions[29], OpenBaoVersion::new(2, 7, 1));
+        assert_eq!(versions[30], OpenBaoVersion::new(2, 7, 2));
+        assert_eq!(versions[31], OpenBaoVersion::new(2, 7, 3));
         assert_eq!(
             latest_routable_profile(),
-            Some(OpenBaoVersion::new(2, 7, 2))
+            Some(OpenBaoVersion::new(2, 7, 3))
         );
         assert!(is_routable_profile(OpenBaoVersion::new(2, 5, 5)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 0)));
@@ -1263,6 +1265,8 @@ mod tests {
         assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 5)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 7, 1)));
         assert!(is_routable_profile(OpenBaoVersion::new(2, 7, 2)));
+        assert!(is_routable_profile(OpenBaoVersion::new(2, 6, 6)));
+        assert!(is_routable_profile(OpenBaoVersion::new(2, 7, 3)));
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 6, 0)).is_some());
         assert!(OpenBaoCapabilityProfile::for_version(OpenBaoVersion::new(2, 4, 2)).is_none());
 
@@ -1387,7 +1391,7 @@ mod tests {
 
         for endpoint in endpoints {
             let variants = endpoint.variants();
-            assert_eq!(variants.len(), 4);
+            assert_eq!(variants.len(), 5);
             assert_eq!(variants[0].minimum(), OpenBaoVersion::new(2, 0, 0));
             assert_eq!(variants[0].maximum(), OpenBaoVersion::new(2, 5, 5));
             assert_eq!(variants[1].minimum(), OpenBaoVersion::new(2, 6, 0));
@@ -1396,6 +1400,8 @@ mod tests {
             assert_eq!(variants[2].maximum(), OpenBaoVersion::new(2, 7, 1));
             assert_eq!(variants[3].minimum(), OpenBaoVersion::new(2, 7, 2));
             assert_eq!(variants[3].maximum(), OpenBaoVersion::new(2, 7, 2));
+            assert_eq!(variants[4].minimum(), OpenBaoVersion::new(2, 7, 3));
+            assert_eq!(variants[4].maximum(), OpenBaoVersion::new(2, 7, 3));
             assert_eq!(variants[1].operation_id(), variants[2].operation_id());
             assert_eq!(variants[2].operation_id(), variants[3].operation_id());
             assert_ne!(variants[0].operation_id(), variants[1].operation_id());
@@ -1405,6 +1411,7 @@ mod tests {
                 (variants[1], OpenBaoVersion::new(2, 6, 4)),
                 (variants[2], OpenBaoVersion::new(2, 7, 1)),
                 (variants[3], OpenBaoVersion::new(2, 7, 2)),
+                (variants[4], OpenBaoVersion::new(2, 7, 3)),
             ] {
                 let operation = openbao_operation(variant.operation_id())
                     .unwrap_or_else(|| panic!("missing root-generation operation"));

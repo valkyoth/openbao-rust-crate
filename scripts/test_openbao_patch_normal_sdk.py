@@ -17,7 +17,7 @@ import openbao_2_7_2_sdk as patch_272
 
 class NormalTests(unittest.TestCase):
     def test_normal_registry_is_exact_and_mutation_rejected(self):
-        proof = normal.verify()
+        proof = normal.verify_build()
         self.assertIs(proof["routable"], True)
         self.assertEqual(proof["generated_rust_sha256"], normal.registry.EXPECTED_RUST_SHA256)
         read = normal.registry.read_regular_file
@@ -26,7 +26,16 @@ class NormalTests(unittest.TestCase):
             return value + b"\n" if path == normal.registry.RUST_PATH else value
         with patch.object(normal.registry, "read_regular_file", side_effect=altered), \
              self.assertRaises(advanced.harness.HarnessError):
-            normal.verify()
+            normal.verify_build()
+
+    def test_stale_release_evidence_blocks_release_not_build(self):
+        with patch.object(normal.combined, "verify", side_effect=normal.registry.RegistryError("stale")):
+            normal.verify_build()
+            with self.assertRaisesRegex(normal.registry.RegistryError, "stale"):
+                normal.verify()
+        with patch.object(normal.combined, "EXPECTED_SHA256", "0" * 64):
+            with self.assertRaisesRegex(normal.registry.RegistryError, "digest mismatch"):
+                normal.verify_build()
 
     def test_prepare_preserves_every_byte_without_rendering(self):
         inputs = {"Cargo.toml": b"package", "src/generated/openbao_capabilities.rs": b"normal bytes"}
@@ -73,9 +82,9 @@ class NormalTests(unittest.TestCase):
                 mock(advanced.pwd, "getpwuid", return_value=SimpleNamespace(pw_gid=1000))
                 hashes = mock(advanced, "input_hashes", side_effect=[{"a": "b"}, {"a": "c" if failure == "source" else "b"}])
                 binary = mock(advanced.execution, "binary_hash", side_effect=["a" * 64, ("b" if failure == "binary" else "a") * 64])
-                mock(normal, "verify", side_effect=[{"scope": "public-sdk-strict-normal-build", "routable": True},
+                mock(normal, "verify_build", side_effect=[{"scope": "public-sdk-strict-normal-build", "routable": True},
                      {"scope": "changed" if failure == "registry" else "public-sdk-strict-normal-build", "routable": True}])
-                candidate = mock(advanced.candidate, "verify")
+                candidate = mock(advanced.candidate, "for_sdk_build")
                 def backup(suite, backup_observer):
                     self.assertEqual(suite, "recovery")
                     backup_observer("https://127.0.0.1:1", Path("/ca"), "disposable")

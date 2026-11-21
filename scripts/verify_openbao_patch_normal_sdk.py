@@ -5,22 +5,26 @@ import argparse
 from pathlib import Path
 
 import openbao_2_6_5_sdk as legacy
+import openbao_2_7_1_sdk_advanced as patch_271
 import openbao_2_7_2_sdk_advanced as modern
 import verify_openbao_2_6_5_sdk as legacy_evidence
 
 base, harness = legacy.base, legacy.harness
-FIXTURES = {"2.6.5": legacy, "2.7.2": modern}
+FIXTURES = {"2.6.5": legacy, "2.7.1": patch_271, "2.7.2": modern}
 # Report and sealed executable identities, independently retained for each patch.
 PINS = {
-    "2.6.5": ("6e6a539596c111b9ff4d5129f100f419eba4ebaf5d7e05100cd87c05cc03455e",
-              "982c24f70614c97f2609b0eb492a17a09960225ca2a78d796b68f7e8c1200880"),
-    "2.7.2": ("1b8e424047bcec331fd891defbf0539d056b43e5f8e97c645e22902b350565f2",
-              "ff2a02283d9caf85643a9edc22030ef2df67eaa590bfa766ebcfe2dba98d8726"),
+    "2.7.1": ("d4cbd77763f57e7c32edb3c87b0aa1b07dbf454b59fccb1fc7a87ed43361b064",
+              "56d0f9e23d131908899278aafb8ccd91847ac6620ecf21119b6abcb0a8224f08"),
+    "2.6.5": ("c7d0b885a752a8d7020022a78ebac71164202b23a36974805912aa9e7f4312a4",
+              "d8b5305648ac434de7081318ac4e9deee2916e99c15b28dc45e1be66d521187d"),
+    "2.7.2": ("adb0f85f793d2ff0dd428808661156c3658119e97800ca4984b1c55bafa721ed",
+              "2e0ef81986510b71736fb26f7283ba22a66a2da21394c6a2879200ba5467ba69"),
 }
 
 
 def output(version):
-    name = "sdk-normal-tls-v4.json" if version == "2.6.5" else "sdk-advanced-normal-tls-v4.json"
+    name = {"2.6.5": "sdk-normal-tls-v5.json", "2.7.1": "sdk-advanced-normal-tls-v2.json",
+            "2.7.2": "sdk-advanced-normal-tls-v6.json"}[version]
     return legacy.patch.ROOT / "compat/onboarding" / version / name
 
 

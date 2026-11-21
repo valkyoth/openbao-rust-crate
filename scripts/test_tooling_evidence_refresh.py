@@ -72,7 +72,8 @@ class ToolingRefreshTests(unittest.TestCase):
         }
         for version, digest in pins.items():
             with self.subTest(version=version):
-                raw = sdk.base.read_regular_file(sdk.output(version).with_name("sdk-normal-tls-v6.json"), 131072)
+                raw = sdk.base.read_regular_file(ci.fixture.ROOT / "compat/onboarding" / version
+                                                 / "sdk-normal-tls-v6.json", 131072)
                 self.assertEqual(sdk.base.sha256(raw), digest)
                 report = sdk.base.parse_json(raw, 131072)
                 with patch.object(sdk, "PINS", {version: (digest, report["test_binary_sha256"])}), \
@@ -101,7 +102,7 @@ class ToolingRefreshTests(unittest.TestCase):
                     module.verify()
 
     def test_pre_pentest_ci_reports_cannot_be_repinned_as_current(self):
-        for version in ci.fixture.VERSIONS:
+        for version in ("2.6.4", "2.6.5", "2.7.0", "2.7.1", "2.7.2"):
             with self.subTest(version=version):
                 raw = (ci.fixture.ROOT / "compat/ci/2.2.5" / f"{version}.json").read_bytes()
                 report = ci.fixture.base.parse_json(raw, 131072)

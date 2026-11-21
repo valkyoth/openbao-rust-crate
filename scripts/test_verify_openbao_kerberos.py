@@ -12,20 +12,22 @@ import verify_openbao_kerberos_sdk as sdk
 class EvidenceTests(unittest.TestCase):
     def setUp(self):
         self.root = server.ROOT / "2.7.0"
-        self.report = server.base.parse_json((self.root / "report.json").read_bytes(), 65536)
-        self.schema = (self.root / "runtime-openapi.json").read_bytes()
+        capture = server.ldap.server_directory(server.ROOT, "2.7.0")
+        self.report = server.base.parse_json((capture / "report.json").read_bytes(), 65536)
+        self.schema = (capture / "runtime-openapi.json").read_bytes()
         self.inputs = server.fixture.input_hashes()
 
     def test_exact_server_pairs_and_candidate_history(self):
         for version in server.ANCHORS:
             self.assertIs(server.verify(version)["routable"], False)
+        for version in sdk.NORMAL_ANCHORS:
             self.assertEqual(sdk.verify(version)["scope"], "public-sdk-normal-build")
         for version in sdk.CANDIDATE_ANCHORS:
             self.assertEqual(sdk.verify(version, candidate=True)["scope"], "public-sdk-candidate-only")
 
     def test_normal_evidence_rejects_every_omitted_or_mutated_input(self):
         report = sdk.verify("2.7.0")
-        schema = (self.root / "sdk-normal-v8/runtime-openapi.json").read_bytes()
+        schema = (self.root / "sdk-normal-v9/runtime-openapi.json").read_bytes()
         for path in report["inputs"]:
             inputs = dict(report["inputs"])
             inputs[path] = "0" * 64
@@ -37,7 +39,7 @@ class EvidenceTests(unittest.TestCase):
 
     def test_normal_evidence_rejects_identity_scope_and_schema_drift(self):
         report = sdk.verify("2.7.0")
-        schema = (self.root / "sdk-normal-v8/runtime-openapi.json").read_bytes()
+        schema = (self.root / "sdk-normal-v9/runtime-openapi.json").read_bytes()
         for key, value in (("binary_sha256", "0" * 64), ("checks", []), ("execution", {}),
                            ("scope", "public-sdk-candidate-only"), ("plugins", {}),
                            ("cleanup", "failed"), ("routable", True), ("extra", True)):
@@ -103,7 +105,7 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(server.base.SnapshotError):
             server.validate_report(self.report, "2.7.0", self.inputs, self.schema + b" ")
         with self.assertRaises(server.base.SnapshotError):
-            server.verify("2.7.3")
+            server.verify("2.7.4")
 
 
 if __name__ == "__main__":

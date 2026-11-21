@@ -7,10 +7,10 @@ from pathlib import Path
 import openbao_2_7_1_sdk_advanced as fixture
 import verify_openbao_2_7_1 as initial
 
-OUTPUT = initial.OUTPUT / "sdk-advanced-candidate-tls-v6.json"
+OUTPUT = initial.OUTPUT / "sdk-advanced-candidate-tls-v8.json"
 HISTORICAL_OUTPUT = initial.OUTPUT / "sdk-advanced-candidate-tls-v2.json"
-EXPECTED_SHA256 = "c63aaf6294787c3219da6f2a8556942f56f3ec64535ceececcd1639ef643d5bb"
-TEST_BINARY_SHA256 = "4cef8846a114330cbb912c9cc61d9fa18179af456cc2b455e53132db35b2e3e9"
+EXPECTED_SHA256 = "8d6567023932ea9ef096eae86c573bd02a3d68de4573dcbbffaf9706c669ef2f"
+TEST_BINARY_SHA256 = "bb76fade53b7ec12b002c0cb6a1f16980d5b9dc09d277476918399fc4e559b32"
 HISTORICAL_EXPECTED_SHA256 = "ab0e3a80466da2e5fafaf04084a3c598812f7ab4670d3fc366c6175f3687215b"
 HISTORICAL_TEST_BINARY_SHA256 = "fb8de36a1d0bf386757d58e395d9b0b1501c6b427e7b76a76cc1c1a90695cdce"
 HISTORICAL_CANDIDATE_REGISTRY_SHA256 = "876182f813520e1a51c8bcf3b0a8910c133a0c88f3f9ab7608a691a30e05ffb6"

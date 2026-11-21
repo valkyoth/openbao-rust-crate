@@ -39,8 +39,8 @@ class EvidenceTests(unittest.TestCase):
                             evidence.validate(version, data)
 
     def test_reports_cannot_be_swapped_or_replaced_by_candidates(self):
-        pairs = {"2.6.5": "sdk-candidate-tls-v4.json",
-                 "2.7.2": "sdk-advanced-candidate-tls-v4.json"}
+        pairs = {"2.6.5": "sdk-candidate-tls-v5.json", "2.7.1": "sdk-advanced-candidate-tls-v7.json",
+                 "2.7.2": "sdk-advanced-candidate-tls-v5.json"}
         for version, candidate_name in pairs.items():
             normal = evidence.base.read_regular_file(evidence.output(version), 128 * 1024)
             candidate = evidence.base.read_regular_file(

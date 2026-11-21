@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ".github/workflows/openbao-current-compatibility.yml"
 ACTIONS = {
     "actions/checkout": ("7", "v7.0.1", "3d3c42e5aac5ba805825da76410c181273ba90b1"),
-    "sigstore/cosign-installer": ("4", "v4.1.2", "6f9f17788090df1f26f669e9d70d6ae9567deba6"),
+    "sigstore/cosign-installer": ("4", "v4.1.3", "756fe2d284c7292c4e9b62c8a28f1e5629c59532"),
     "actions/upload-artifact": ("7", "v7.0.2", "cf430e030ddbb5b0abf93d22962f4752f3646cd9"),
 }
 
@@ -71,7 +71,7 @@ class CurrentCiReleaseControlsTests(unittest.TestCase):
         historical.validate_workflow()
         original = historical.WORKFLOW_PATH.read_bytes()
         mutations = (
-            original.replace(b"1.99.1", b"1.99.0"),
+            original.replace(b"1.100.0", b"1.99.0"),
             original.replace(b"contents: read", b"contents: write"),
             original.replace(b"persist-credentials: false", b"persist-credentials: true"),
             original.replace(b"actions/upload-artifact@", b"actions/upload-artifact@unreviewed-"),
@@ -88,7 +88,7 @@ class CurrentCiReleaseControlsTests(unittest.TestCase):
     def test_primary_toolchain_pins_agree(self):
         toolchain = tomllib.loads((ROOT / "rust-toolchain.toml").read_text())
         version = toolchain["toolchain"]["channel"]
-        self.assertEqual(version, "1.99.1")
+        self.assertEqual(version, "1.100.0")
         for path in ("scripts/ci_install_rust.sh",
                      ".github/workflows/openbao-compatibility.yml",
                      WORKFLOW):

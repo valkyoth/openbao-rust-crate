@@ -8,6 +8,12 @@ the [README](../README.md). For endpoint-level classifications, see
 
 ## Release Snapshot
 
+### SDK 2.2.6
+
+The normal SDK registry contains 32 exact profiles, adding OpenBao 2.6.6
+and 2.7.3. The external plugin pins and normal-build plugin/server pairs
+are unchanged. See the [2.2.6 release notes](../release-notes/RELEASE_NOTES_2.2.6.md).
+
 ### SDK 2.2.5
 
 SDK `2.2.5` adds exact OpenBao `2.6.5` and `2.7.2` profiles, bringing the

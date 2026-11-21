@@ -6,9 +6,9 @@ import argparse
 import openbao_2_7_consistency_sdk_lag as fixture
 
 snapshots = fixture.server.snapshots
-RESULT = fixture.server.ROOT / "compat/onboarding/2.7.0/consistency-sdk-lag-tls-v12.json"
-EXPECTED_SHA256 = "ab97a562736ca6a55dbec518fb5e88864611c1d8435b9bfd62e00be23ddd5c6f"
-TEST_BINARY_SHA256 = "ff2a02283d9caf85643a9edc22030ef2df67eaa590bfa766ebcfe2dba98d8726"
+RESULT = fixture.server.ROOT / "compat/onboarding/2.7.0/consistency-sdk-lag-tls-v13.json"
+EXPECTED_SHA256 = "e519b895bd0b4f287910060c652479762b3614276ef4281b5aa93b3b61f1b473"
+TEST_BINARY_SHA256 = "f975495d4087eb31008c4688e22e7e086a5e5def8a07b2a3fcb1c58a1c3f96fa"
 
 
 def validate_report(report):
