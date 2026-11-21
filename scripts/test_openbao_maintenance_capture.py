@@ -75,7 +75,7 @@ class MaintenanceCaptureTests(unittest.TestCase):
     def test_retained_advanced_candidate_report(self):
         path = sdk.patch.ROOT / "compat/onboarding/2.7.3/sdk-advanced-candidate-tls.json"
         raw = sdk.base.read_regular_file(path, 65536)
-        self.assertEqual(sdk.base.sha256(raw), "8209d06d4d73da4139c636f28a47f1a581bdb6202cd8d5cf9ecf26c71245359a")
+        self.assertEqual(sdk.base.sha256(raw), "2a73fa09edc10834f7009ca04cc02e4b9cc2d056f6e64dc316826b38bf8bb4ce")
         report = sdk.base.parse_json(raw, 65536)
         self.assertEqual((report["version"], report["scope"], report["outcome"]),
                          ("2.7.3", "public-sdk-strict-disposable-candidate-build", "passed"))
@@ -229,8 +229,8 @@ class MaintenanceCaptureTests(unittest.TestCase):
 
     def test_retained_candidate_reports(self):
         for version, digest in (
-            ("2.6.6", "c9f4ab2ad630289ee3bd5c23049151b76df39b4f530a0020a7595c58c55e536b"),
-            ("2.7.3", "30b696c87ae0504d13adcd2627d2d76032130e94504ab2c41e264450da28c617"),
+            ("2.6.6", "f17d9c89b88b496fe7a004b75a93f0cb596edefe510f905aaa91342ea30aca23"),
+            ("2.7.3", "4b4c0fd1672fbd5bd6deee146ffc47250922e74fb6cf9f3131c79fdd2459c713"),
         ):
             with self.subTest(version=version):
                 raw = sdk.base.read_regular_file(sdk.patch.ROOT / "compat/onboarding" / version
@@ -285,7 +285,7 @@ class MaintenanceCaptureTests(unittest.TestCase):
         limit = 2 * 1024 * 1024
         raw = capture.base.read_regular_file(directory / "report.json", limit)
         self.assertEqual(capture.base.sha256(raw),
-                         "79ec07411a0391ac6a58a38bb589f59c241119b26ddc67f3ae98e622fc00b930")
+                         "b06a029dcf6bd19e30eb2e03ea75ef94a8227026df7b14ae0457f61e2efc0173")
         report = capture.base.parse_json(raw, limit)
         self.assertEqual((report["server_version"], report["scope"], report["outcome"]),
                          ("2.7.3", "public-sdk-candidate-only", "passed"))

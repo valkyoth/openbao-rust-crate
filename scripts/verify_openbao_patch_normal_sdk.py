@@ -13,12 +13,12 @@ base, harness = legacy.base, legacy.harness
 FIXTURES = {"2.6.5": legacy, "2.7.1": patch_271, "2.7.2": modern}
 # Report and sealed executable identities, independently retained for each patch.
 PINS = {
-    "2.7.1": ("d4cbd77763f57e7c32edb3c87b0aa1b07dbf454b59fccb1fc7a87ed43361b064",
-              "56d0f9e23d131908899278aafb8ccd91847ac6620ecf21119b6abcb0a8224f08"),
-    "2.6.5": ("c7d0b885a752a8d7020022a78ebac71164202b23a36974805912aa9e7f4312a4",
-              "d8b5305648ac434de7081318ac4e9deee2916e99c15b28dc45e1be66d521187d"),
-    "2.7.2": ("adb0f85f793d2ff0dd428808661156c3658119e97800ca4984b1c55bafa721ed",
-              "2e0ef81986510b71736fb26f7283ba22a66a2da21394c6a2879200ba5467ba69"),
+    "2.7.1": ("d1d851f9555f25231431c4f54a93093b0f79e8f4a5da0786a24646bf6903da96",
+              "b444bf94ddcf5ad3896a2bcda73ac442a7249772fd79180d9c707906b5f190b2"),
+    "2.6.5": ("b1a82f9b7a6836ab88972c2181de7992878551c38f5bcf6391280e058aadfcae",
+              "0aa97908c6a2c533d1ad676302ec7b7077b4ea1d93c3353f9a6d16ae509e2f10"),
+    "2.7.2": ("b93303ae9182c2228d3134f714aaed8136034a4620719e8634b2576af4f473a3",
+              "0e776adfd7c95b7c2186462c4ef2c0fec8b0b6d93faddb94984628c1481c7862"),
 }
 
 
