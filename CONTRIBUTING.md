@@ -41,6 +41,11 @@ Before adding a dependency:
 
 ## Release Rules
 
+Use `bash scripts/package_cargo.sh package --locked` to verify the archive
+and `bash scripts/package_cargo.sh publish --locked` when publishing. The
+wrapper omits only Cargo's notices for the six repository-only integration
+test targets. The packaged smoke test and all other diagnostics remain visible.
+
 Every release must have:
 
 - a release-notes file under `release-notes/`;

@@ -292,7 +292,7 @@ echo "checks: docs"
 cargo doc --no-deps --all-features
 
 echo "checks: package"
-package_files="$(cargo package --locked --allow-dirty --list)"
+package_files="$(bash scripts/package_cargo.sh package --locked --allow-dirty --list)"
 for forbidden in \
   '.github/' \
   'compat/' \
@@ -315,7 +315,7 @@ do
     exit 1
   fi
 done
-cargo package --locked --allow-dirty
+bash scripts/package_cargo.sh package --locked --allow-dirty
 package_version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' Cargo.toml | head -n 1)"
 package_archive="target/package/openbao-${package_version}.crate"
 package_bytes="$(wc -c < "$package_archive")"
