@@ -8,10 +8,10 @@ import openbao_2_6_5_sdk as fixture
 import verify_openbao_2_6_5 as initial
 
 PINS = {
-    "normal": ("c7d0b885a752a8d7020022a78ebac71164202b23a36974805912aa9e7f4312a4",
-               "d8b5305648ac434de7081318ac4e9deee2916e99c15b28dc45e1be66d521187d"),
-    "candidate": ("1fbe56b96496d0cb496f5f988ea1827180c52890c2f3e841f826a2af646cbea9",
-                  "88b782ac1e4e755f5982532b38ab8512b5a449198951a9f0bac8e7676849503d"),
+    "normal": ("b1a82f9b7a6836ab88972c2181de7992878551c38f5bcf6391280e058aadfcae",
+               "0aa97908c6a2c533d1ad676302ec7b7077b4ea1d93c3353f9a6d16ae509e2f10"),
+    "candidate": ("fae6036e3ee4267cbcf7965c9cca16e2d7232534a878932ee1eb3f2aba2f2207",
+                  "3f3530306c3bb29eebc68388f40cb52bb801f49f3916cc4e0a724e3e63bfee67"),
 }
 CHECKS = ["exact-version", "tls13", "tls-rejections", "resource-limits", "network-isolation",
           "strict-sdk-profile", "approle-login", "expired-secret-id-denied-without-tidy",

@@ -8,10 +8,10 @@ import openbao_2_7_2_sdk_advanced as fixture
 import verify_openbao_2_7_2 as initial
 
 PINS = {
-    "normal": ("adb0f85f793d2ff0dd428808661156c3658119e97800ca4984b1c55bafa721ed",
-               "2e0ef81986510b71736fb26f7283ba22a66a2da21394c6a2879200ba5467ba69"),
-    "candidate": ("46e5936e5264a830cd34c280de2e6362705dba4717191f85c52907dc5193535f",
-                  "b7eeb87cf920a24e05962285e99647bd2c6acb96af2d3d8f372db765d8a62fef"),
+    "normal": ("b93303ae9182c2228d3134f714aaed8136034a4620719e8634b2576af4f473a3",
+               "0e776adfd7c95b7c2186462c4ef2c0fec8b0b6d93faddb94984628c1481c7862"),
+    "candidate": ("3b00fb9c67e472d2a56a1fbf912fd163afd44dafbfa8c22d2882620ddb684ec5",
+                  "7ec1152d83f233d30d95bd103b18fd940b017805a8d3ea94f5e307b1a6b4f865"),
 }
 
 
