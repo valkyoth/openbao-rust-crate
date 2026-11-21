@@ -64,3 +64,7 @@ class MaintenanceBatchTests(unittest.TestCase):
                 for mode in ("normal", "candidate")
                 for status, step, code in (("FAIL", "build", "2"), ("BLOCKED", "live", "-"))
             })
+
+
+if __name__ == "__main__":
+    unittest.main()

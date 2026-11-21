@@ -13,10 +13,16 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use sanitization::SecretVec;
 use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
+use subtle::ConstantTimeEq;
 
 use crate::{Error, Result};
 
 const MAX_INDEX_HEADER_BYTES: usize = 4096;
+
+pub(crate) fn cluster_ids_equal(left: &str, right: &str) -> bool {
+    // Cluster ID length is not confidential; equal-length contents must not short-circuit.
+    bool::from(left.as_bytes().ct_eq(right.as_bytes()))
+}
 
 /// An opaque storage index with the cluster identity supplied by OpenBao.
 ///
@@ -94,7 +100,7 @@ impl ConsistencyIndex {
     /// namespace validation; the caller must establish the expected cluster.
     #[must_use]
     pub fn matches_cluster(&self, expected: &str) -> bool {
-        self.cluster.expose_secret() == expected
+        cluster_ids_equal(self.cluster.expose_secret(), expected)
     }
 
     /// Explicitly copies this index into a sensitive-marked HTTP header value.
@@ -174,6 +180,8 @@ mod tests {
         let index =
             ConsistencyIndex::from_encoded(wire).unwrap_or_else(|_| panic!("valid index rejected"));
         assert!(index.matches_cluster("synthetic-cluster"));
+        assert!(!index.matches_cluster("Synthetic-cluster"));
+        assert!(!index.matches_cluster("synthetic-clusteR"));
         assert!(!index.matches_cluster("other"));
         let header = index
             .to_header_value()

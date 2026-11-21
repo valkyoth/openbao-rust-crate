@@ -15,7 +15,9 @@ echo "checks: release metadata"
 test -f docs/PANIC_POLICY.md
 grep -q 'No production exception is currently approved' docs/PANIC_POLICY.md
 scripts/validate-release-metadata.sh
+# Includes test_maintenance_control_evidence.py and the SDK one-attempt regression.
 /usr/bin/python3 -E -s -S -B scripts/maintenance_checks.py --control-groups
+/usr/bin/python3 -E -s -S -B scripts/test_maintenance_batch.py
 /usr/bin/python3 -E -s -S -B scripts/test_maintenance_checks.py
 /usr/bin/python3 -E -s -S -B scripts/test_current_ci_release_controls.py
 /usr/bin/python3 -E -s -S -B scripts/test_openbao_maintenance_capture.py

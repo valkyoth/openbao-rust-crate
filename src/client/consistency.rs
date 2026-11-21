@@ -1,6 +1,6 @@
 use super::*;
 use crate::compatibility::OpenBaoCompatibilityStatus;
-use crate::consistency::{ConsistencyIndex, ConsistencyPolicy};
+use crate::consistency::{ConsistencyIndex, ConsistencyPolicy, cluster_ids_equal};
 
 const REVIEWED_VERSIONS: &[OpenBaoVersion] = &[
     OpenBaoVersion::new(2, 7, 0),
@@ -201,7 +201,7 @@ impl ConsistencyContext<'_> {
         self.client
             .require_encrypted_transport_for_sensitive_request(&url)?;
         let cluster = discover_cluster(self.client, self.version).await?;
-        if cluster.expose_secret() != self.cluster.expose_secret() {
+        if !cluster_ids_equal(cluster.expose_secret(), self.cluster.expose_secret()) {
             return Err(Error::OpenBaoCompatibilityProbe(
                 "consistency cluster changed",
             ));
@@ -672,7 +672,7 @@ mod tests {
             let (client, task) = server(vec![(
                 200,
                 String::new(),
-                HEALTH.replace("test-cluster", "restored-cluster"),
+                HEALTH.replace("test-cluster", "test-clusteR"),
             )])
             .await;
             let context = context(&client);
