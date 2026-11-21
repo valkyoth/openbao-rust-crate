@@ -9,8 +9,8 @@ if (( $# == 0 )) || [[ $# == 1 && ( $1 == --plan || $1 == --full || $1 == --cont
   exec /usr/bin/python3 -E -s -S -B scripts/maintenance_checks.py "$@"
 fi
 case "$#:${1-}" in
-  1:--prior-patch-sdk|1:--remaining-sdk|1:--maintenance-normal|1:--maintenance-core|1:--maintenance-patches|1:--release-refresh) ;;
-  *) echo "Usage: bash scripts/maintenance_batch.sh [--plan|--full|--control-groups|--prior-patch-sdk|--remaining-sdk|--maintenance-normal|--maintenance-core|--maintenance-patches|--release-refresh]" >&2; exit 2 ;;
+  1:--prior-patch-sdk|1:--remaining-sdk|1:--maintenance-normal|1:--maintenance-core|1:--maintenance-patches|1:--sdk-refresh|1:--release-refresh) ;;
+  *) echo "Usage: bash scripts/maintenance_batch.sh [--plan|--full|--control-groups|--prior-patch-sdk|--remaining-sdk|--maintenance-normal|--maintenance-core|--maintenance-patches|--sdk-refresh|--release-refresh]" >&2; exit 2 ;;
 esac
 # mktemp creates a private directory. Do not change the umask inherited by fixtures.
 dir=$(mktemp -d /tmp/openbao-maintenance-batch-XXXXXXXX)
@@ -93,13 +93,17 @@ fi
 sdk_job 270-backup-candidate check_openbao_2_7_candidate_sdk openbao_2_7_backup_sdk candidate --build-backup-test --strict-candidate
 }
 
-patch_refresh() {
-  local suite
+patch_sdk_refresh() {
   maintenance_pair normal
   maintenance_pair candidate
   sdk_job 273-advanced-candidate openbao_2_7_3_sdk_advanced openbao_2_7_3_sdk_advanced candidate --build
   sdk_job 273-plugin-candidate openbao_2_7_3_plugin_sdk openbao_2_7_3_plugin_sdk candidate --build \
     --acknowledge-unsigned-directory-image --acknowledge-unsigned-radius-image
+}
+
+patch_refresh() {
+  local suite
+  patch_sdk_refresh
   for suite in external-keys transit pki workflow-cas system mfa-totp; do
     step "273-$suite" sudo "${py[@]}" scripts/openbao_2_7_3_regressions.py --suite "$suite" || :
   done
@@ -142,9 +146,8 @@ current_ci_refresh() {
   done
 }
 
-prior_refresh() {
-  local suite patch plugin version dest
-  local -a args
+prior_server_refresh() {
+  local suite patch
   for suite in workflow_cas system_behavior mfa_totp raw_backup recovery_backup backup_upgrade; do
     step "270-$suite" sudo "${py[@]}" "scripts/openbao_2_7_$suite.py" || :
   done
@@ -156,6 +159,11 @@ prior_refresh() {
       step "27$patch-$suite" sudo "${py[@]}" "scripts/openbao_2_7_${patch}_$suite.py" || :
     done
   done
+}
+
+prior_sdk_refresh() {
+  local suite plugin version dest
+  local -a args
   # The preceding normal advanced build includes the backup and consistency tests.
   dest=
   if [[ -f $dir/2_7_2_sdk_advanced-normal-build.log ]]; then
@@ -187,12 +195,13 @@ main() {
   git rev-parse HEAD > "$dir/commit.txt"
   git status --short > "$dir/worktree.txt"
   trap 'record INTERRUPTED batch -; exit 130' INT TERM HUP
-  if [[ ${1-} == --release-refresh ]]; then
+  if [[ ${1-} == --release-refresh || ${1-} == --sdk-refresh ]]; then
     current_ci_refresh
     remaining_sdk
     sdk_job 270-backup-candidate check_openbao_2_7_candidate_sdk openbao_2_7_backup_sdk candidate --build-backup-test --strict-candidate
-    prior_refresh
-    patch_refresh
+    if [[ $1 == --release-refresh ]]; then prior_server_refresh; fi
+    prior_sdk_refresh
+    if [[ $1 == --release-refresh ]]; then patch_refresh; else patch_sdk_refresh; fi
   elif [[ ${1-} == --maintenance-normal ]]; then
     maintenance_pair normal
   elif [[ ${1-} == --maintenance-patches ]]; then

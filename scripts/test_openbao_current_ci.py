@@ -20,7 +20,7 @@ class CurrentCiTests(unittest.TestCase):
             deps = ci.ROOT / "target/debug/deps"
             binary = deps.parent / "build/openbao/hash/out/openbao_integration-1234567890abcdef"
             binary.parent.mkdir(parents=True)
-            deps.mkdir()
+            self.assertFalse(deps.exists())
             binary.write_bytes(b"integration test")
             binary.chmod(0o700)
             staged = ci.stage_binary(binary)
@@ -33,6 +33,17 @@ class CurrentCiTests(unittest.TestCase):
             with self.assertRaises(ci.harness.HarnessError):
                 ci.stage_binary(binary)
             self.assertEqual(staged.read_bytes(), b"different")
+
+    def test_staging_rejects_symlinked_destination(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(ci, "ROOT", Path(directory)):
+            debug = ci.ROOT / "target/debug"
+            binary = debug / "build/openbao_integration-1234567890abcdef"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"integration test")
+            (debug / "deps").symlink_to(binary.parent, target_is_directory=True)
+            with self.assertRaises(ci.harness.HarnessError):
+                ci.stage_binary(binary)
+            self.assertEqual(list(binary.parent.iterdir()), [binary])
 
     def test_real_input_collection_covers_all_patch_fixtures_and_sdk(self):
         inputs = ci.input_hashes()

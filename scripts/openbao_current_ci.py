@@ -73,6 +73,9 @@ def stage_binary(binary):
     require(re.fullmatch(r"openbao_integration-[0-9a-f]{16}", binary.name) is not None)
     if binary.parent == directory:
         return binary
+    # A clean build with Cargo's split artifact layout has no deps directory.
+    require(directory.parent.resolve(strict=True) == directory.parent)
+    directory.mkdir(mode=0o700, exist_ok=True)
     data = base.read_regular_file(binary, 256 * 1024 * 1024)
     require(0 < len(data) and directory.resolve(strict=True) == directory)
     digest = hashlib.sha256(data).hexdigest()

@@ -6393,11 +6393,10 @@ mod tests {
             .and_then(|client| client.try_with_token(SecretString::from("locked-token")))
             .unwrap_or_else(|error| panic!("failed to construct locked-token client: {error}"));
 
-        assert!(
-            client
-                .authentication_token_is_memory_locked()
-                .unwrap_or_else(|error| panic!("failed to inspect token storage: {error}"))
-        );
+        assert!(matches!(
+            client.authentication_token_is_memory_locked(),
+            Ok(true)
+        ));
     }
 
     #[cfg(feature = "memory-lock")]
@@ -6409,11 +6408,10 @@ mod tests {
             .and_then(|client| client.try_with_locked_token(token))
             .unwrap_or_else(|_| panic!("failed to construct locked-token client"));
 
-        assert!(
-            client
-                .authentication_token_is_memory_locked()
-                .unwrap_or_else(|error| panic!("failed to inspect token storage: {error}"))
-        );
+        assert!(matches!(
+            client.authentication_token_is_memory_locked(),
+            Ok(true)
+        ));
     }
 
     #[cfg(feature = "memory-lock")]
@@ -6531,11 +6529,10 @@ mod tests {
             .and_then(|client| client.try_with_locked_token(token))
             .unwrap_or_else(|_| panic!("hard-limit locked token was rejected"));
 
-        assert!(
-            client
-                .authentication_token_is_memory_locked()
-                .unwrap_or_else(|error| panic!("failed to inspect token storage: {error}"))
-        );
+        assert!(matches!(
+            client.authentication_token_is_memory_locked(),
+            Ok(true)
+        ));
     }
 
     #[cfg(feature = "memory-lock")]
